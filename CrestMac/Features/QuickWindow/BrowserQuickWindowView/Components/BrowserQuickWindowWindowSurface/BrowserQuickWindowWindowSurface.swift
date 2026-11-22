@@ -51,11 +51,13 @@ struct BrowserQuickWindowWindowSurface: View {
     }
 }
 
-#Preview("Quick Window") {
-    BrowserQuickWindowWindowSurface(
-        model: BrowserQuickWindowPreviewFixture.makeModel(),
-        spaceAccess: BrowserQuickWindowPreviewFixture.makeAccessController(), pagePoolRegistry: nil, dismiss: {},
-        openBrowserWindow: {}
-    )
-    .frame(width: BrowserQuickWindowLayout.defaultWidth, height: BrowserQuickWindowLayout.defaultHeight)
-}
+#if DEBUG
+    #Preview("Quick Window") {
+        BrowserQuickWindowWindowSurface(
+            model: BrowserQuickWindowPreviewFixture.makeModel(),
+            spaceAccess: BrowserQuickWindowPreviewFixture.makeAccessController(), pagePoolRegistry: nil, dismiss: {},
+            openBrowserWindow: {}
+        )
+        .frame(width: BrowserQuickWindowLayout.defaultWidth, height: BrowserQuickWindowLayout.defaultHeight)
+    }
+#endif

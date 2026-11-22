@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "split-click-focuses-field",
+      "category": "fixed",
+      "message": "Clicking a field in the other half of a split view lets you type there on the first click."
+    }
+  ]
+}

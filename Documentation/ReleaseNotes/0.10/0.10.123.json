@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "project-home-at-crest-browser",
+      "category": "internal",
+      "message": "Crest's project home is now github.com/crest-browser/Crest. Update checks, the content filter's resources and the link to report an issue use the new address, so they no longer depend on GitHub's redirect from the old one."
+    }
+  ]
+}

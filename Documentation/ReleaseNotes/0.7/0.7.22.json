@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "full-screen-page-top-band",
+      "category": "fixed",
+      "message": "On Mac, pages no longer show a dark band across their tops after the window enters full screen.",
+      "platforms": ["mac"]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "release": {
+    "summary": "Crest 0.9.1 updates Chromium to fix a security flaw that is being exploited in the wild. Mac users should update as soon as it arrives.",
+    "security": [
+      "Chromium 157.0.8103.51 fixes CVE-2026-125350, which Google reports is being exploited in the wild, along with eight other security flaws. Pages in WebKit, and Crest on iPhone and iPad, don't use Chromium, so this flaw doesn't affect them."
+    ]
+  },
+  "entries": [
+    {
+      "id": "chromium-upstream-157-0-8103-51",
+      "category": "fixed",
+      "message": "Chromium is updated to 157.0.8103.51, which fixes CVE-2026-125350, a security flaw being exploited in the wild, and eight other security flaws.",
+      "platforms": ["mac"]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "updates-install-after-restart",
+      "category": "fixed",
+      "message": "Restarting to install an update, or choosing Quit from the Dock, quits Crest so the update installs instead of waiting forever."
+    }
+  ]
+}

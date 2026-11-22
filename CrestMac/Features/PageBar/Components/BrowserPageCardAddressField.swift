@@ -77,7 +77,7 @@ struct BrowserPageCardAddressField: View {
             branding: space?.settings.look,
             activate: activate
         )
-        // Fades as the palette's glass grows out of it, and back as the
+        // Fades as the palette's surface grows out of it, and back as the
         // palette shrinks into it, at the sidebar field's pace.
         .animation(isUnderPalette ? BrowserCommandSurfaceMorph.leadingFade : BrowserCommandSurfaceMorph.trailingFade) {
             $0.opacity(isUnderPalette ? 0 : 1)
@@ -114,8 +114,7 @@ struct BrowserPageCardAddressField: View {
     }
 
     private var isSecure: Bool {
-        if let page { return page.live.security.isSecure }
-        return tab?.url.flatMap(URL.init(string:))?.scheme?.lowercased() == "https"
+        PageSecurity.isSecure(page: page?.live, storedAddress: tab?.url)
     }
 
     /// The page the Copy URL button copies, while the person turned the

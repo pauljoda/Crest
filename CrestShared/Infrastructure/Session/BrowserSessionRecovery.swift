@@ -10,7 +10,7 @@ struct BrowserSessionStartupFailure: Error {
 
     /// The file was written by a newer release, which a restore must not undo.
     var requiresNewerApp: Bool {
-        if case .storageFromNewerApp = underlying as? Rejection { return true }
+        if (underlying as? Rejection)?.storageFromNewerApp != nil { return true }
         return false
     }
 

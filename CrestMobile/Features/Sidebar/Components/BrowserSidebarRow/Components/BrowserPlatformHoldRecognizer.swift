@@ -41,9 +41,6 @@ private struct MobileHoldAnchor: UIViewRepresentable {
 final class MobileHoldAnchorView: UIView {
     // MARK: - Static Variables
 
-    /// How long a finger holds still before the row's card opens, as long as
-    /// the system waits before a menu.
-    private static let duration: TimeInterval = 0.5
     /// How far a finger may drift and still hold.
     private static let allowableMovement: CGFloat = 10
 
@@ -52,7 +49,7 @@ final class MobileHoldAnchorView: UIView {
     var hold: () -> Void = {}
     private lazy var recognizer: UILongPressGestureRecognizer = {
         let recognizer = UILongPressGestureRecognizer(target: self, action: #selector(held(_:)))
-        recognizer.minimumPressDuration = Self.duration
+        recognizer.minimumPressDuration = CrestMotion.longPressRecognitionDelay
         recognizer.allowableMovement = Self.allowableMovement
         recognizer.delegate = self
         return recognizer

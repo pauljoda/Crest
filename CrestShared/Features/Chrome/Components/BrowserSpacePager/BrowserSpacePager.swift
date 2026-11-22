@@ -53,11 +53,11 @@ struct BrowserSpacePager<Content: View>: View {
         #endif
     }
 
-    private func selectAdjacentSpace(_ direction: BrowserSpaceSwipeDirection) {
+    private func selectAdjacentSpace(_ direction: AdjacentDirection) {
         guard !isInteractionLocked,
             let spaceID = BrowserChromeAccessibility.adjacentSpaceID(
                 spaces: spaces, selectedSpaceID: selectedSpaceID,
-                direction: direction == .next ? .next : .previous)
+                direction: direction)
         else { return }
         _ = selectSpace(spaceID)
     }

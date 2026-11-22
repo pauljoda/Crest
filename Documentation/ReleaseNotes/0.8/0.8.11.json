@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "chromium-whole-page-translation",
+      "category": "new",
+      "message": "Translate whole pages on device in Chromium too, with the same translation toolbar, automatic translation and Show Original as WebKit pages.",
+      "platforms": ["mac"]
+    }
+  ]
+}

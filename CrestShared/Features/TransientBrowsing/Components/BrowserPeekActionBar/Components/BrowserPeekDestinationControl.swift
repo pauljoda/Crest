@@ -19,7 +19,7 @@ struct BrowserPeekDestinationControl: View {
     }
 
     private var spaceTint: Color {
-        selectedSpace?.branding.backgroundColor.color ?? .accentColor
+        selectedSpace?.branding.backgroundColor.color ?? CrestBrandTheme.accent
     }
 
     var body: some View {

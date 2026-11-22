@@ -10,6 +10,9 @@ struct BrowserTabDragSourceModifier: ViewModifier {
     var parentSplitGroupID: UUID?
     var isEnabled = true
     var requiresSelectedSpace = false
+    /// Whether the tab is the selected one, whose lift stays the sheet of
+    /// paper its row is.
+    var isTabSelected = false
 
     @Environment(\.sidebarSpaceIsSelected) private var isSelected
 
@@ -34,7 +37,8 @@ struct BrowserTabDragSourceModifier: ViewModifier {
                     dragState: dragState,
                     reorder: reorder,
                     parentSplitGroupID: parentSplitGroupID,
-                    isEnabled: isEnabled
+                    isEnabled: isEnabled,
+                    isTabSelected: isTabSelected
                 )
             )
     }

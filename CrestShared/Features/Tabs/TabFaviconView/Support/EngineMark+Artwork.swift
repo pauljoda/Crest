@@ -10,7 +10,7 @@ extension EngineMark {
             Image(systemName: "globe")
                 .resizable()
                 .scaledToFit()
-                .foregroundStyle(.blue)
+                .foregroundStyle(CrestBrandPalette.crestBlue)
         }
     }
 }

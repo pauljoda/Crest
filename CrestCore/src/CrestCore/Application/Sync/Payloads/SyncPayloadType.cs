@@ -70,7 +70,7 @@ internal abstract class SyncPayloadType {
         Subject(value)[Kind.NamesItsSpace ? StoredSessionCodec.Key.Id : StoredSessionCodec.Key.SpaceId]!;
 
     /// Whether the sync category `preferences` syncs `value`.
-    public virtual bool SyncsUnder(JsonNode preferences, JsonObject value) => preferences["historyAndArchive"]!.GetValue<bool>();
+    public virtual bool SyncsUnder(JsonNode preferences, JsonObject value) => preferences[NativeSyncJournal.Key.HistoryAndArchive]!.GetValue<bool>();
 
     /// Whether every device can take `value`: one naming an address only this
     /// device opens stays on it.
@@ -169,7 +169,7 @@ internal abstract class SyncPayloadType {
     /// Whether `preferences` syncs a value placed where `value[member]` says:
     /// the current tabs, or the saved structure.
     private static bool SyncsPlaced(JsonNode preferences, JsonObject value, string member) =>
-        preferences[TabPlacement.Named(value[member]!.GetValue<string>())?.IsDurable == false ? "currentTabs" : "savedStructure"]!
+        preferences[TabPlacement.Named(value[member]!.GetValue<string>())?.IsDurable == false ? NativeSyncJournal.Key.CurrentTabs : NativeSyncJournal.Key.SavedStructure]!
             .GetValue<bool>();
 
     #endregion
@@ -235,7 +235,7 @@ internal abstract class SyncPayloadType {
         /// what it holds otherwise.
         public override bool HidesWhenEmpty(JsonObject value) =>
             value[StoredSessionCodec.Key.Location] is JsonValue location && location.TryGetValue<string>(out var placed)
-            && placed == TabPlacement.Current.Name && (value[SyncPayload.Key.EmptiedAt] is not null
+            && TabPlacement.Named(placed)?.IsDurable == false && (value[SyncPayload.Key.EmptiedAt] is not null
                 || value[StoredSessionCodec.Key.IsGroup] is JsonValue group && group.TryGetValue<bool>(out var isGroup) && isGroup);
     }
 

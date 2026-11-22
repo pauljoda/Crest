@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-04-side-panel-frame-and-event-diagnostics",
+      "category": "internal",
+      "message": "Log side panel subframe responses, sidebar watch subscriptions and published events, and trace side panel event delivery in the extension runtime"
+    }
+  ]
+}

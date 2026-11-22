@@ -228,13 +228,16 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
     #region Actions - Lifetime
 
     /// Stages and saves any accepted revision still pending and closes the
-    /// session file. The stored session accepts no edits afterwards, and no
-    /// engine binding hears from the core again.
+    /// session file, then waits for the filter lists' conversions under way,
+    /// so none is left running and nothing writes in the storage directory
+    /// once this returns. The stored session accepts no edits afterwards, and
+    /// no engine binding hears from the core again.
     public void Dispose() {
         lock (gate) engines.Clear();
         storedSync?.Stop();
         storedSession?.Close();
         storage?.Dispose();
+        filters.Stop();
     }
 
     #endregion

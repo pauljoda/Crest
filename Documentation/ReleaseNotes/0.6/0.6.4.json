@@ -1,0 +1,24 @@
+{
+  "entries": [
+    {
+      "id": "macos-approved-browser-passkey-access",
+      "category": "new",
+      "message": "Allow Crest on Mac to request access to system passkeys and connect to the iCloud Passwords extension"
+    },
+    {
+      "id": "quick-window-promotion-reuses-normal-window",
+      "category": "fixed",
+      "message": "Open Quick Window pages in an existing normal browser window instead of creating a duplicate"
+    },
+    {
+      "id": "native-password-helper-session-retention",
+      "category": "fixed",
+      "message": "Keep password manager extensions connected while idle to avoid repeated pairing prompts"
+    },
+    {
+      "id": "sync-settings-section-composition",
+      "category": "internal",
+      "message": "Extract the sync content summary into a settings component"
+    }
+  ]
+}

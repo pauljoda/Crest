@@ -60,7 +60,7 @@ struct BrowserSpaceBannerBackground: View {
     /// The sidebar's colors as its gradient runs them.
     private var resolvedFill: CrestColorFill {
         CrestColorFill(
-            branding.colors.isEmpty ? [.indigo] : Array(branding.colors),
+            branding.colors.isEmpty ? [SpaceBranding.fallbackColor] : Array(branding.colors),
             kind: CrestGradientKind(branding.gradientKind), degrees: branding.gradientAngle)
     }
 
@@ -68,7 +68,8 @@ struct BrowserSpaceBannerBackground: View {
     /// own gradient where it has one.
     private var resolvedFills: [AnyShapeStyle] {
         branding.colors.isEmpty
-            ? [AnyShapeStyle(BrandColor.indigo.color)] : branding.colors.indices.map { branding.slotFill($0).style }
+            ? [AnyShapeStyle(SpaceBranding.fallbackColor.color)]
+            : branding.colors.indices.map { branding.slotFill($0).style }
     }
 
     private var fieldOpacity: Double {

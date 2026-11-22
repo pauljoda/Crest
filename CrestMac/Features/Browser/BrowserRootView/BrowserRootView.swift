@@ -95,50 +95,56 @@ private struct BrowserRootWindowTitle: ViewModifier {
     }
 }
 
-#Preview("Browser Root — Docked") {
-    let browser = BrowserRootPreviewFixture.makeBrowser()
-    BrowserRootView(
-        browser: browser,
-        pages: BrowserPagePool(browser: browser),
-        chrome: BrowserRootPreviewFixture.makeChrome(state: .docked),
-        transientBrowsing: BrowserTransientBrowsingCoordinator(),
-        windowState: BrowserRootPreviewFixture.makeWindowState(
-            browser: browser
-        ),
-        initialSidebarWidth: Double(BrowserChromeLayout.sidebarIdealWidth),
-        persistSidebarWidth: { _ in }
-    )
-    .frame(width: 1_120, height: 720)
-}
+#if DEBUG
+    #Preview("Browser Root — Docked") {
+        let browser = BrowserRootPreviewFixture.makeBrowser()
+        BrowserRootView(
+            browser: browser,
+            pages: BrowserPagePool(browser: browser),
+            chrome: BrowserRootPreviewFixture.makeChrome(state: .docked),
+            transientBrowsing: BrowserTransientBrowsingCoordinator(),
+            windowState: BrowserRootPreviewFixture.makeWindowState(
+                browser: browser
+            ),
+            initialSidebarWidth: Double(BrowserChromeLayout.sidebarIdealWidth),
+            persistSidebarWidth: { _ in }
+        )
+        .frame(width: 1_120, height: 720)
+    }
+#endif
 
-#Preview("Browser Root — Collapsed") {
-    let browser = BrowserRootPreviewFixture.makeBrowser()
-    BrowserRootView(
-        browser: browser,
-        pages: BrowserPagePool(browser: browser),
-        chrome: BrowserRootPreviewFixture.makeChrome(state: .collapsed),
-        transientBrowsing: BrowserTransientBrowsingCoordinator(),
-        windowState: BrowserRootPreviewFixture.makeWindowState(
-            browser: browser
-        ),
-        initialSidebarWidth: Double(BrowserChromeLayout.sidebarIdealWidth),
-        persistSidebarWidth: { _ in }
-    )
-    .frame(width: 1_120, height: 720)
-}
+#if DEBUG
+    #Preview("Browser Root — Collapsed") {
+        let browser = BrowserRootPreviewFixture.makeBrowser()
+        BrowserRootView(
+            browser: browser,
+            pages: BrowserPagePool(browser: browser),
+            chrome: BrowserRootPreviewFixture.makeChrome(state: .collapsed),
+            transientBrowsing: BrowserTransientBrowsingCoordinator(),
+            windowState: BrowserRootPreviewFixture.makeWindowState(
+                browser: browser
+            ),
+            initialSidebarWidth: Double(BrowserChromeLayout.sidebarIdealWidth),
+            persistSidebarWidth: { _ in }
+        )
+        .frame(width: 1_120, height: 720)
+    }
+#endif
 
-#Preview("Browser Root — Command Palette") {
-    let browser = BrowserRootPreviewFixture.makeBrowser()
-    BrowserRootView(
-        browser: browser,
-        pages: BrowserPagePool(browser: browser),
-        chrome: BrowserRootPreviewFixture.makeChrome(state: .commandPalette),
-        transientBrowsing: BrowserTransientBrowsingCoordinator(),
-        windowState: BrowserRootPreviewFixture.makeWindowState(
-            browser: browser
-        ),
-        initialSidebarWidth: Double(BrowserChromeLayout.sidebarIdealWidth),
-        persistSidebarWidth: { _ in }
-    )
-    .frame(width: 1_120, height: 720)
-}
+#if DEBUG
+    #Preview("Browser Root — Command Palette") {
+        let browser = BrowserRootPreviewFixture.makeBrowser()
+        BrowserRootView(
+            browser: browser,
+            pages: BrowserPagePool(browser: browser),
+            chrome: BrowserRootPreviewFixture.makeChrome(state: .commandPalette),
+            transientBrowsing: BrowserTransientBrowsingCoordinator(),
+            windowState: BrowserRootPreviewFixture.makeWindowState(
+                browser: browser
+            ),
+            initialSidebarWidth: Double(BrowserChromeLayout.sidebarIdealWidth),
+            persistSidebarWidth: { _ in }
+        )
+        .frame(width: 1_120, height: 720)
+    }
+#endif

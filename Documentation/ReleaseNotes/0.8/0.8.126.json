@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "chromium-extension-popup-crash",
+      "category": "fixed",
+      "message": "Crest on Mac no longer quits when an extension such as 1Password opens its popup by itself."
+    }
+  ]
+}

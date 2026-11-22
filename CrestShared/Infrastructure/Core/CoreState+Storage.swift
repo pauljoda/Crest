@@ -11,6 +11,6 @@ extension CoreState {
 
     /// What the app says of a save the core could not finish.
     nonisolated static func description(of failure: StorageFailure) -> String {
-        "The session could not be saved (\(failure))."
+        String(localized: failure.message)
     }
 }

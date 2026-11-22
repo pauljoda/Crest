@@ -80,6 +80,10 @@ public sealed record TransientPageClosed(Guid PageId, Guid WorkspaceId) : Change
 
 #region Rejections - Pages
 
+/// The Quick Window's or Peek's page was already kept as a tab or archived,
+/// so it is not kept again.
+public sealed record TransientAlreadyCompleted(Guid PageId) : Rejection;
+
 /// A page with this identity is already open.
 public sealed record DuplicatePage(Guid PageId) : Rejection;
 

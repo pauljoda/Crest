@@ -5,8 +5,7 @@ struct BrowserNavigationFailureBackButton: View {
 
     var body: some View {
         Button("Go Back", systemImage: "chevron.backward", action: action)
-            .buttonStyle(.bordered)
-            .controlSize(.large)
+            .buttonStyle(.crestSecondary)
             .accessibilityHint("Returns to the last page")
             .accessibilityIdentifier("navigation-failure-back")
     }

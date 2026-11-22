@@ -37,7 +37,7 @@ struct BrowserIconPickerHeader: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
-                .transition(.scale(scale: BrowserIconPickerLayout.resetTransitionScale).combined(with: .opacity))
+                .transition(.scale(scale: CrestMotion.entranceScale).combined(with: .opacity))
                 .help(Text(resetTitle))
                 .accessibilityLabel(Text(resetTitle))
                 .accessibilityIdentifier("browser-icon-picker-reset")

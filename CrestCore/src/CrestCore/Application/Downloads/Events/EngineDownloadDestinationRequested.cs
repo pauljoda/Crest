@@ -22,7 +22,7 @@ public sealed record EngineDownloadDestinationRequested(Guid PromptId, EngineDow
             turn.Issue(engine, new SettleDownloadDestination(PromptId, Path: null));
             return;
         }
-        download.SourceHost = SourceHost is { Length: > 0 and <= EngineDownloads.MaximumHostLength } host ? host : null;
+        download.SourceHost = SourceHost is { Length: > 0 and <= SiteOrigin.MaximumDnsHostLength } host ? host : null;
         var verdict = engineDownloads.Verdict(Facts, UserInitiated);
         engineDownloads.Record(new AssessDownloadRisk(download.DownloadId, verdict.Assessment), turn.Changes);
         download.Reasons = verdict.Assessment.Reasons;

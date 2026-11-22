@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "phone-color-picker-above-or-below",
+      "category": "fixed",
+      "message": "On iPhone, every color's picker opens above or below it at full width, with more room around its edges, so the accent color's picker no longer runs off the screen.",
+      "platforms": ["ios"]
+    }
+  ]
+}

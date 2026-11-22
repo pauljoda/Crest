@@ -18,9 +18,7 @@ struct BrowserUtilityListRow: View {
                     BrowserUtilityListRowLabel(
                         title: archived.tab.shownTitle,
                         subtitle: archiveSubtitle(archived),
-                        subtitleStyle: AnyShapeStyle(
-                            archived.reason.tint.color
-                        )
+                        subtitleStyle: CrestStatusTone(archived.reason.tone).map { AnyShapeStyle($0.color) }
                     ) {
                         TabFaviconView(
                             subject: BrowserTabFaviconSubject(

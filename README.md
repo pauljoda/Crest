@@ -3,8 +3,8 @@
   <p><strong>An open source browser for Mac, iPhone, and iPad.</strong></p>
   <p>Built with SwiftUI, running Chromium and WebKit on Mac, with separate Spaces for different parts of your life.</p>
   <p>
-    <a href="https://github.com/pauljoda/Crest/actions/workflows/ci.yml"><img alt="Build Crest" src="https://github.com/pauljoda/Crest/actions/workflows/ci.yml/badge.svg"></a>
-    <a href="https://github.com/pauljoda/Crest/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/pauljoda/Crest?display_name=tag&sort=semver&filter=v*"></a>
+    <a href="https://github.com/crest-browser/Crest/actions/workflows/ci.yml"><img alt="Build Crest" src="https://github.com/crest-browser/Crest/actions/workflows/ci.yml/badge.svg"></a>
+    <a href="https://github.com/crest-browser/Crest/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/crest-browser/Crest?display_name=tag&sort=semver&filter=v*"></a>
     <a href="LICENSE"><img alt="MPL-2.0 license" src="https://img.shields.io/badge/license-MPL--2.0-2B6CC4"></a>
   </p>
   <p>
@@ -12,7 +12,7 @@
     ·
     <a href="https://crestbrowser.com/guides/">Read the guides</a>
     ·
-    <a href="https://github.com/pauljoda/Crest/releases/latest">Download for Mac</a>
+    <a href="https://github.com/crest-browser/Crest/releases/latest">Download for Mac</a>
     ·
     <a href="https://github.com/users/pauljoda/projects/3">Roadmap</a>
     ·
@@ -20,9 +20,9 @@
   </p>
 </div>
 
-Browse Mac releases by channel: [Stable](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse),
-[Nightly](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22), or
-[Development](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22).
+Browse Mac releases by channel: [Stable](https://github.com/crest-browser/Crest/releases?q=prerelease%3Afalse),
+[Nightly](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22), or
+[Development](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22).
 
 <p align="center">
   <img src="Website/assets/readme/hero.png" width="100%" alt="Crest on Mac: the Work Space with its pins and the Launch Atlas folder, and the command palette searching for launch">
@@ -122,7 +122,7 @@ The same Spaces, shaped for each screen. iPad keeps the sidebar beside your page
 
 | Platform | Install |
 | --- | --- |
-| Mac · Apple silicon · macOS 26.1+ | [Signed, notarized download](https://github.com/pauljoda/Crest/releases/latest) with built-in Sparkle updates.<br><br>Or install via Homebrew:<br>`brew install --cask crest-browser` |
+| Mac · Apple silicon · macOS 26.1+ | [Signed, notarized download](https://github.com/crest-browser/Crest/releases/latest) with built-in Sparkle updates.<br><br>Or install via Homebrew:<br>`brew install --cask crest-browser` |
 | iPhone · iOS 26.1+ | [App Store](https://apps.apple.com/us/app/crest-browser/id6797335023) |
 | iPad · iPadOS 26.1+ | [App Store](https://apps.apple.com/us/app/crest-browser/id6797335023) |
 | iPhone & iPad beta | [TestFlight](https://testflight.apple.com/join/vV1CM49Q) |
@@ -152,7 +152,7 @@ Requirements:
 - .NET SDK pinned by `CrestCore/global.json`, installable with `Scripts/control-plane/install-dotnet.sh`
 
 ```bash
-git clone https://github.com/pauljoda/Crest.git
+git clone https://github.com/crest-browser/Crest.git
 cd Crest
 Scripts/bootstrap.sh
 open Crest.xcodeproj
@@ -164,7 +164,7 @@ Xcode builds and embeds the self-contained .NET core for Mac, iOS, and Simulator
 
 ## Releases and updates
 
-The [Crest 0.10 release notes](CHANGELOG.md#0108---2026-11-16) describe three
+The [Crest 0.10 release notes](https://crestbrowser.com/releases/mac/stable/0.10.8/) describe three
 styles, the address bar above the page on Mac, and new sidebar and color
 settings. Crest requires Apple silicon and macOS 26.1 or later on Mac; iPhone
 and iPad use WebKit.
@@ -208,9 +208,9 @@ Crest is under active development. The current implementation includes the core 
 
 Use [r/CrestBrowser](https://www.reddit.com/r/CrestBrowser) for questions,
 feedback, ideas, and website or extension compatibility discussion. Use
-[GitHub Issues](https://github.com/pauljoda/Crest/issues/new/choose) for
+[GitHub Issues](https://github.com/crest-browser/Crest/issues/new/choose) for
 reproducible bugs and concrete tracked outcomes. Security concerns belong in a
-[private vulnerability report](https://github.com/pauljoda/Crest/security/advisories/new),
+[private vulnerability report](https://github.com/crest-browser/Crest/security/advisories/new),
 never a public post. [SUPPORT.md](SUPPORT.md) explains each route in detail.
 
 Crest is one of several open source projects built by Paul Davis. You can
@@ -222,17 +222,19 @@ buy roadmap priority or private access.
 ## Sponsors
 
 Monthly support helps pay for hosting, signing, testing, and development across
-Paul's open source projects. Sponsors can be recognized in the public
-[sponsor roll](SPONSORS.md) at one of three levels:
+Paul's open source projects. Monthly supporters are listed on the
+[credits page](https://crestbrowser.com/credits/#supporters) at one of three
+levels:
 
 - **Sponsor — $25/month:** top placement with an optional approved link.
 - **Sustainer — $10/month:** higher placement with an optional approved link.
-- **Supporter — $3/month:** name in the public roll.
+- **Supporter — $3/month:** name on the credits page.
 
-Every level can also have a sponsor flair on
-[r/CrestBrowser](https://www.reddit.com/r/CrestBrowser). Recognition is
-optional. A listing is a thank-you, not an endorsement or a way to buy roadmap
-priority, private support, or project ownership. See the membership tiers on
+Supporters are listed by their Ko-fi or Patreon name. Ask there to add a link,
+change your listing, or be hidden. Every level can also have a sponsor flair on
+[r/CrestBrowser](https://www.reddit.com/r/CrestBrowser). A listing is a
+thank-you, not an endorsement or a way to buy roadmap priority, private support,
+or project ownership. See the membership tiers on
 [Ko-fi](https://ko-fi.com/pauljoda/tiers) or
 [Patreon](https://www.patreon.com/CrestBrowser) to become a monthly sponsor.
 
@@ -285,8 +287,8 @@ of each platform.
 
 ## Contributors
 
-<a href="https://github.com/pauljoda/Crest/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=pauljoda/Crest" alt="People who have contributed to Crest">
+<a href="https://github.com/crest-browser/Crest/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=crest-browser/Crest" alt="People who have contributed to Crest">
 </a>
 
 ## License and brand
@@ -300,10 +302,10 @@ in [TRADEMARKS.md](TRADEMARKS.md). Third-party notices are collected in
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=pauljoda%2Fcrest&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=crest-browser%2Fcrest&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=pauljoda/crest&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=pauljoda/crest&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=pauljoda/crest&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=crest-browser/crest&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=crest-browser/crest&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=crest-browser/crest&type=date&legend=top-left" />
  </picture>
 </a>

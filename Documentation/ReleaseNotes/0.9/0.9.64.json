@@ -1,0 +1,21 @@
+{
+  "entries": [
+    {
+      "id": "arc-import-damaged-data",
+      "category": "fixed",
+      "message": "On Mac, Crest no longer quits while it prepares an import from Arc or another browser when some of that browser's data is damaged.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "import-review-shows-errors",
+      "category": "fixed",
+      "message": "On Mac, when Crest can't prepare an import from another browser, the review now shows an error with Back and Skip instead of quitting.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "arc-import-keeps-tab-renames",
+      "category": "fixed",
+      "message": "Importing from Arc keeps the names you gave tabs there, and the import review shows them. Clearing a name shows the page's title again."
+    }
+  ]
+}

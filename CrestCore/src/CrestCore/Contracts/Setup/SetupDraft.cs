@@ -62,25 +62,6 @@ public sealed record SetupDraft(Guid WorkspaceId, IReadOnlyList<SetupDraftSpace>
         return this with { Spaces = [.. Spaces, space] };
     }
 
-    /// The setup with its new Spaces, and a first launch's disposable ones
-    /// in `session`, wearing `look` in place of `previous`: a new Space the
-    /// person has not edited takes the look a new Space of `look` gets, and
-    /// any other keeps its colors and crest in the new mode. An existing
-    /// Space the person made keeps its own.
-    internal SetupDraft Restyled(SetupLook previous, SetupLook look, SessionState session) {
-        ArgumentNullException.ThrowIfNull(previous);
-        ArgumentNullException.ThrowIfNull(look);
-        ArgumentNullException.ThrowIfNull(session);
-        bool disposable = session.DisposableSeedMarker is not null;
-        return this with {
-            Spaces = [.. Spaces.Select(space =>
-                space.IsNew && space.Customization.Branding == previous.NewSpaceLook(space.Customization.Accent)
-                    ? space with { Customization = space.Customization with { Branding = look.NewSpaceLook(space.Customization.Accent) } }
-                    : space.IsNew || disposable ? space.Restyled(look)
-                    : space)]
-        };
-    }
-
     /// The setup with a new Sub-Space of the Space `fromId`, sharing its
     /// group's session, right after the group's last Space: named with the
     /// next number of its Space's name, as "Work 2", and wearing that Space's
@@ -94,7 +75,7 @@ public sealed record SetupDraft(Guid WorkspaceId, IReadOnlyList<SetupDraftSpace>
         var primaryId = from.PrimaryId ?? from.SpaceId;
         var primary = Spaces.FirstOrDefault(space => space.SpaceId == primaryId) ?? from;
         var space = new SetupDraftSpace(nextId(), nextId(), IsNew: true,
-            from.Customization with { Name = NextName(primary.ShownName) }, primaryId);
+            from.Customization with { Name = SpaceCustomization.NextName(primary.ShownName, Spaces.Select(space => space.ShownName)) }, primaryId);
         var spaces = Spaces.ToList();
         int last = spaces.FindLastIndex(candidate => candidate.SpaceId == primaryId || candidate.PrimaryId == primaryId);
         spaces.Insert(last + 1, space);
@@ -109,19 +90,6 @@ public sealed record SetupDraft(Guid WorkspaceId, IReadOnlyList<SetupDraftSpace>
                 Spaces = [.. Spaces.Where(space => space.SpaceId != spaceId && !(space.IsNew && space.PrimaryId == spaceId))]
             }
             : this;
-
-    /// `name` with the next number no Space of the setup wears: "Work" and
-    /// "Work 2" both give "Work 2" while no Space is named that, else
-    /// "Work 3", and on.
-    private string NextName(string name) {
-        var trimmed = name.TrimEnd();
-        var gap = trimmed.LastIndexOf(' ');
-        var stem = gap > 0 && int.TryParse(trimmed.AsSpan(gap + 1), out _) ? trimmed[..gap] : trimmed;
-        var taken = Spaces.Select(space => space.ShownName.Trim()).ToHashSet(StringComparer.CurrentCultureIgnoreCase);
-        var number = 2;
-        while (taken.Contains($"{stem} {number}")) number++;
-        return $"{stem} {number}";
-    }
 
     /// The setup with `spaceId` where `targetId` stands, keeping its order.
     internal SetupDraft Moving(Guid spaceId, Guid targetId) {

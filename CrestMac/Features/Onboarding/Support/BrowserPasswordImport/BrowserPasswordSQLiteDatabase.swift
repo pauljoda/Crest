@@ -62,14 +62,14 @@ final class BrowserPasswordSQLiteDatabase {
             guard result == SQLITE_ROW else {
                 throw BrowserPasswordImportError.unreadableDatabase
             }
+            // A password for a site without HTTPS comes in too: the core's
+            // review cautions about it, and Crest never fills it in there.
             guard let urlString = string(statement, column: 0),
                 let url = URL(string: urlString),
                 let origin = CredentialOrigin(url: url),
-                origin.isSecure,
                 let username = string(statement, column: 1),
                 let encryptedPassword = data(statement, column: 2),
-                encryptedPassword.prefix(3) == Data("v10".utf8)
-                    || encryptedPassword.prefix(3) == Data("v11".utf8)
+                ChromiumPasswordCrypto.canDecrypt(encryptedPassword)
             else {
                 continue
             }

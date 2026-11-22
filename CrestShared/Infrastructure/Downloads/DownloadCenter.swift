@@ -30,7 +30,7 @@ final class BrowserDownloadCenter: NSObject {
 
     // MARK: - Variables
 
-    private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "Downloads")
+    private static let logger = DiagnosticLog.downloads.logger
 
     /// The core whose read model holds the download records. Views observe
     /// its records directly.

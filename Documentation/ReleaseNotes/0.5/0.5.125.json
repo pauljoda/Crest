@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "native-tab-loaded-state",
+      "category": "fixed",
+      "message": "Keep Settings and Getting Started where you left them when switching tabs or Spaces"
+    }
+  ]
+}

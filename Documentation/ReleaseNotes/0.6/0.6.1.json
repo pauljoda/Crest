@@ -1,0 +1,24 @@
+{
+  "entries": [
+    {
+      "id": "folder-full-sf-symbol-picker",
+      "category": "improved",
+      "message": "Choose folder icons from the full searchable SF Symbols catalog"
+    },
+    {
+      "id": "folder-tinted-title-contrast",
+      "category": "improved",
+      "message": "Read tinted folder titles more easily with semibold text and stronger contrast"
+    },
+    {
+      "id": "folder-symbols-fit-icon-column",
+      "category": "fixed",
+      "message": "Keep wide folder symbols fully visible in Icon only mode"
+    },
+    {
+      "id": "pinned-tab-website-color-consistency",
+      "category": "fixed",
+      "message": "Keep pinned-tab colors consistent when pages unload and use more representative website colors"
+    }
+  ]
+}

@@ -114,11 +114,15 @@ internal sealed partial class Device {
         keptSetupDraft = platform.KeepsSetupDraft ? records.SetupDraft : null;
         setupCompleted = records.SetupCompleted;
         reopeningPages = quitWhileReopening = records.ReopeningPages;
+        launchedRelease = records.LaunchedRelease;
         adopted.UnionWith(records.Adopted);
         keptTabGroups.AddRange(records.TabGroups);
         paletteMemories = records.PaletteMemories.ToImmutableDictionary();
         searchCatalog = records.SearchCatalog;
         RestoreContentBlocking(records);
+        pages = records.Pages;
+        downloads.AddRange(records.Downloads);
+        syncsWithICloud = records.SyncsWithICloud;
     }
 
     #endregion
@@ -347,11 +351,15 @@ internal sealed partial class Device {
         SearchCatalog = searchCatalog,
         Agents = agents,
         ReopeningPages = reopeningPages,
+        LaunchedRelease = launchedRelease,
         ContentBlockingLevel = contentBlockingLevel,
         FilterListChoices = new Dictionary<FilterList, bool>(filterListChoices),
         BlockingSites = [.. keptBlockingSites],
         CustomFilterLists = [.. customFilterLists],
-        CustomFilters = customFilters
+        CustomFilters = customFilters,
+        Pages = pages,
+        Downloads = [.. downloads],
+        SyncsWithICloud = syncsWithICloud
     };
 
     #endregion

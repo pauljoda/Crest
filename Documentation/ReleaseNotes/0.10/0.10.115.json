@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "core-results-taken-by-type",
+      "category": "internal",
+      "message": "Core changes and refusals are taken by their type, the core's followers share one list, and search suggestions have their own client."
+    }
+  ]
+}

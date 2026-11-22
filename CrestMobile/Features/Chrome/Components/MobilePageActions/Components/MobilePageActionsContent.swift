@@ -2,7 +2,7 @@ import SwiftUI
 
 struct MobilePageActionsContent: View {
     let browser: BrowserStore
-    let pages: any MobilePageActions
+    let pages: MobileSelectedPageActionPort
     var downloadsAccess: MobileDownloadsMenuAccess? = nil
     var hideToolbar: (() -> Void)? = nil
     /// The frame in the window of the control that opened these actions,
@@ -22,7 +22,7 @@ struct MobilePageActionsContent: View {
                     plural: "new downloads"
                 )
             )
-            .accessibilityIdentifier("page-actions-downloads")
+            .accessibilityIdentifier(BrowserMobileAccessibilityID.pageActionsDownloads)
         }
 
         if let notice = pages.blockedPopupNotice {
@@ -42,7 +42,7 @@ struct MobilePageActionsContent: View {
                     .accessibilityHint(
                         notice.allowActionAccessibilityHint
                     )
-                    .accessibilityIdentifier("allow-blocked-automatic-popups")
+                    .accessibilityIdentifier(BrowserMobileAccessibilityID.allowBlockedAutomaticPopups)
                 } else {
                     Label(notice.title, systemImage: notice.status.symbol)
                         .accessibilityLabel(
@@ -76,7 +76,7 @@ struct MobilePageActionsContent: View {
             Button("Add to Home Screen", systemImage: "plus.app") {
                 pages.addToHomeScreen(from: source)
             }
-            .accessibilityIdentifier("page-actions-add-to-home-screen")
+            .accessibilityIdentifier(BrowserMobileAccessibilityID.pageActionsAddToHomeScreen)
         }
 
         Button(
@@ -225,9 +225,7 @@ struct MobilePageActionsContent: View {
     private func sitePermissions(for page: MobileBrowserPage) -> some View {
         if let origin = page.live.documentURL.flatMap(SiteOrigin.init(url:)) {
             Menu("Site Permissions", systemImage: "slider.horizontal.3") {
-                // A page on iOS cannot share the screen, so that choice is
-                // not offered here.
-                ForEach(SitePermission.all.filter { $0 != .screenSharing }, id: \.self) { permission in
+                ForEach(SitePermission.all.filter { $0.platforms.contains(.current) }, id: \.self) { permission in
                     Picker(
                         permission.title,
                         selection: Binding {
@@ -248,7 +246,7 @@ struct MobilePageActionsContent: View {
     }
 
     private var blockedElements: BrowserBlockedElements {
-        BrowserBlockedElements(core: browser.core, pageURL: pages.activePage?.webView.url)
+        BrowserBlockedElements(core: browser.core, pageURL: pages.activePage?.live.documentURL)
     }
 
     private var contentBlockingAction: MobileContentBlockingAction {

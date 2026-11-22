@@ -7,7 +7,7 @@ namespace CrestCore.Contracts;
 /// whole with `InvalidSyncRecords` naming `UnreadablePayload` when any of its
 /// records is one this build cannot read, so an incomplete snapshot never
 /// decides what this device holds.
-[MessageLimit(64 * 1024 * 1024)]
+[MessageLimit(MessageLimitAttribute.SessionBytes)]
 public sealed record MergeCloudSnapshot(IReadOnlyList<SyncRecord> Records) : CloudSyncIntent {
     #region Actions - Sync
 

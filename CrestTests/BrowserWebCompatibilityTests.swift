@@ -346,15 +346,6 @@ final class BrowserWebCompatibilityTests: XCTestCase {
         }
     }
 
-    private func fixtureURL(_ serverURL: URL, run: String, tab: Int) throws -> URL {
-        try XCTUnwrap(
-            URL(
-                string: "performance.html?run=\(run)&tab=\(tab)",
-                relativeTo: serverURL
-            )?.absoluteURL
-        )
-    }
-
     private func makeSpace(
         profile: UUID,
         tabs: [TabState.Seed]
@@ -368,19 +359,6 @@ final class BrowserWebCompatibilityTests: XCTestCase {
             tabs: tabs,
             browsingPreferences: BrowsingPreferences.seeded(cleanup: .never, blocking: .off)
         )
-    }
-
-    private func waitUntil(
-        _ description: String,
-        timeout: Duration = .seconds(10),
-        condition: () async throws -> Bool
-    ) async throws {
-        let deadline = ContinuousClock.now.advanced(by: timeout)
-        while ContinuousClock.now < deadline {
-            if try await condition() { return }
-            try await Task.sleep(for: .milliseconds(25))
-        }
-        XCTFail("Timed out waiting for \(description).")
     }
 
     private var fixtureHTML: String {
@@ -508,26 +486,6 @@ private final class NavigationWaiter: NSObject, WKNavigationDelegate {
         }
     }
 
-    func load(_ request: URLRequest) async throws {
-        guard let webView else { throw NavigationWaiterError.releasedWebView }
-        try await withCheckedThrowingContinuation { continuation in
-            self.continuation = continuation
-            webView.load(request)
-        }
-    }
-
-    func reload() async throws {
-        guard let webView else { throw NavigationWaiterError.releasedWebView }
-        try await withCheckedThrowingContinuation { continuation in
-            self.continuation = continuation
-            guard webView.reload() != nil else {
-                self.continuation = nil
-                continuation.resume(throwing: NavigationWaiterError.navigationUnavailable)
-                return
-            }
-        }
-    }
-
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) {
         continuation?.resume()
         continuation = nil
@@ -554,5 +512,4 @@ private final class NavigationWaiter: NSObject, WKNavigationDelegate {
 
 private enum NavigationWaiterError: Error {
     case releasedWebView
-    case navigationUnavailable
 }

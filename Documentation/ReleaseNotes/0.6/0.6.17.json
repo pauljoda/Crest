@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "stop-location-watches-after-permission-revocation",
+      "category": "fixed",
+      "message": "Stop sharing your location immediately when you block or reset a site's location permission"
+    }
+  ]
+}

@@ -61,15 +61,6 @@ enum MobileBrowserRootPreferences {
     /// Keep the existing key so current installs retain their preferred width.
     /// The value now applies to every expanded iOS layout, not only iPad.
     static let adaptiveSidebarWidthKey = "crest.sidebar.width.ipad"
-
-    /// Whether a narrow window may float its sidebar over the page instead of
-    /// keeping the full-screen tab viewer. Off unless the person allows it.
-    static let allowsFloatingSidebarKey = "crest.sidebar.allows-floating"
-
-    @MainActor
-    static var allowsFloatingSidebar: Bool {
-        BrowserChromeAppearancePreference.defaults.bool(forKey: allowsFloatingSidebarKey)
-    }
 }
 
 enum MobileCompactDomainChipLayout {
@@ -77,8 +68,4 @@ enum MobileCompactDomainChipLayout {
     static let minimumHitTarget = CrestLayout.minimumHitTarget
     static let horizontalPadding: CGFloat = 14
     static let outerHorizontalPadding: CGFloat = 12
-}
-
-enum MobileCompactTabViewerLayout {
-    static let showsTopAddressBar = false
 }

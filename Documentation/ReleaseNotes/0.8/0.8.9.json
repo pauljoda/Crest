@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-utility-shortcuts",
+      "category": "improved",
+      "message": "The History, Archive and Downloads shortcuts open and close their list, showing the sidebar for the moment when it is hidden, and Command-F searches the list that is open."
+    }
+  ]
+}

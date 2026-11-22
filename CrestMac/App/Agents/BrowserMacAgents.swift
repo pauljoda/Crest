@@ -19,7 +19,7 @@ final class BrowserMacAgents {
 
     static let maximumConnections = 32
 
-    private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "Agents")
+    private static let logger = DiagnosticLog.agents.logger
 
     // MARK: - Types
 

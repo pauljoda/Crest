@@ -57,21 +57,6 @@ struct MobileBrowserSidebarTopChrome: View {
                 .padding(.bottom, 4)
             }
         }
-
-        if configuration.showsCompactAddressBar {
-            GlassEffectContainer(spacing: 0) {
-                MobileCompactNewTabPrompt(
-                    namespace: configuration.compactChromeNamespace,
-                    geometryID: configuration.context.browser
-                        .selectedSpaceID,
-                    transitionEnded: configuration.compactTransitionEnded,
-                    openNewTab: configuration.openNewTab
-                )
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 8)
-            .padding(.bottom, 4)
-        }
     }
 
     /// The strip's controls as items in the side toolbar's top group, or at
@@ -112,7 +97,7 @@ struct MobileBrowserSidebarTopChrome: View {
                     .crestMenuActionLabelStyle()
                 }
             }
-            .accessibilityIdentifier("reload-control")
+            .accessibilityIdentifier(BrowserMobileAccessibilityID.reloadControl)
         }
         .collapsing(at: .navigation)
         ToolbarItem(placement: controlPlacement.pageControlsPlacement) {
@@ -132,7 +117,7 @@ struct MobileBrowserSidebarTopChrome: View {
                 systemImage: "ellipsis.circle",
                 isToolbarItem: isToolbarItem
             )
-            .font(.system(size: 17, weight: .medium))
+            .font(CrestTypography.touchControlGlyph)
         } else {
             Button(
                 "Page Actions",
@@ -140,7 +125,7 @@ struct MobileBrowserSidebarTopChrome: View {
                 action: {}
             )
             .disabled(true)
-            .font(.system(size: 17, weight: .medium))
+            .font(CrestTypography.touchControlGlyph)
         }
     }
 
@@ -157,7 +142,10 @@ struct MobileBrowserSidebarTopChrome: View {
         BrowserSidebarAddressFieldConfiguration(
             text: configuration.address,
             isEditing: configuration.isAddressEditing,
-            isSecure: displayedURL?.scheme?.lowercased() == "https",
+            isSecure: PageSecurity.isSecure(
+                page: selectedPageActions?.activePage?.live,
+                storedAddress: configuration.context.browser.shownTab?.url
+            ),
             progress: selectedPageActions?.activePage?.estimatedProgress ?? 0,
             isLoading: selectedPageActions?.activePage?.live.isLoading == true,
             hasResidentPage: false,
@@ -186,11 +174,6 @@ struct MobileBrowserSidebarTopChrome: View {
         let browser = configuration.context.browser
         guard let tabID = browser.selectedTabID(in: selectedSpaceID) else { return false }
         return browser.spaceModel(selectedSpaceID)?.shownTab(tabID)?.url?.isEmpty == false
-    }
-
-    private var displayedURL: URL? {
-        selectedPageActions?.activeURL
-            ?? configuration.context.browser.shownTab?.url.flatMap(URL.init(string:))
     }
 
     /// The chrome sits above the pager, so the field and the toolbar belong

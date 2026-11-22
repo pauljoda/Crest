@@ -27,10 +27,9 @@ struct BrowserAgentPointer: Equatable, Sendable {
 final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     // MARK: - Static Variables
 
-    @ObservationIgnored static let lifecycleSignposter = OSSignposter(
-        subsystem: "com.pauldavis.crest",
-        category: "WebKitLifecycle"
-    )
+    @ObservationIgnored static let lifecycleSignposter = DiagnosticLog.webKitLifecycle.signposter
+    /// How long Share waits before it shows the sharing picker over the page.
+    @ObservationIgnored private static let sharePickerDelay: Duration = .milliseconds(100)
 
     // MARK: - Variables
 
@@ -110,7 +109,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     let translation = BrowserPageTranslation()
     var readerModeState: BrowserReaderModeState { readerModeSession?.state ?? .unavailable }
     var isContentBlockingActive: Bool { engineAdapter.isContentBlockingActive }
-    var developerPanel: BrowserDeveloperPanel?
+    var developerPanel: InspectorPanel?
     private(set) var isRegionCapturePresented = false
     /// Where the agent using the page's tab last acted, which the page shows
     /// as the agent's pointer while the agent uses the tab.
@@ -193,8 +192,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored var sharingPicker: NSSharingServicePicker?
     @ObservationIgnored private var printOperation: NSPrintOperation?
     @ObservationIgnored private var preparingPrint = false
-    /// The link the pending web-content context menu is over. Read and cleared
-    /// by this page's `BrowserDesktopWebViewMenuHost` conformance.
+    /// The link the pending web-content context menu is over, read and
+    /// cleared as WebKit builds that menu.
     @ObservationIgnored var linkContextCapture = BrowserLinkContextCapture()
     @ObservationIgnored var downloadSourceStore = BrowserDownloadSourceStore()
     @ObservationIgnored var splitLinkHost: BrowserSplitLinkHost
@@ -628,12 +627,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// Closes the inspector showing `panel`, or opens one on it. An engine
     /// that cannot start on `panel` opens wherever it last was, and the page
     /// claims no panel it did not choose.
-    func toggleDeveloperPanel(_ panel: BrowserDeveloperPanel) {
-        let requested = InspectorPanel(panel)
+    func toggleDeveloperPanel(_ panel: InspectorPanel) {
         if developerPanel == panel, enginePage.isInspected {
             if enginePage.closeInspector() { developerPanel = nil } else { NSSound.beep() }
-        } else if enginePage.openInspector(on: requested) {
-            developerPanel = enginePage.inspectorStarts(on: requested) ? panel : nil
+        } else if enginePage.openInspector(on: panel) {
+            developerPanel = enginePage.inspectorStarts(on: panel) ? panel : nil
         } else {
             NSSound.beep()
         }
@@ -702,8 +700,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 panel.allowedContentTypes = [.png]
                 panel.canCreateDirectories = true
                 panel.nameFieldStringValue = live.suggestedFilename(pathExtension: "png")
-                panel.title = "Save Portrait Capture"
-                panel.prompt = "Save"
+                panel.title = String(localized: "Save Portrait Capture")
+                panel.prompt = String(localized: "Save")
                 guard await panel.beginSheetModal(for: window) == .OK,
                     let destinationURL = panel.url
                 else { return }
@@ -1002,7 +1000,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         picker.delegate = self
         sharingPicker = picker
         Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(100))
+            try? await Task.sleep(for: Self.sharePickerDelay)
             guard let self, self.nativeView.window != nil, self.sharingPicker === picker else { return }
             let anchor = NSRect(
                 x: self.nativeView.bounds.maxX - 1,
@@ -1069,8 +1067,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 panel.allowedContentTypes = [.pdf]
                 panel.canCreateDirectories = true
                 panel.nameFieldStringValue = suggestedFilename
-                panel.title = "Export Page as PDF"
-                panel.prompt = "Export"
+                panel.title = String(localized: "Export Page as PDF")
+                panel.prompt = String(localized: "Export")
                 guard await panel.beginSheetModal(for: window) == .OK,
                     let destinationURL = panel.url
                 else { return }
@@ -1101,8 +1099,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 panel.allowedContentTypes = [format.contentType]
                 panel.canCreateDirectories = true
                 panel.nameFieldStringValue = suggestedFilename
-                panel.title = "Save Page as Web Archive"
-                panel.prompt = "Save"
+                panel.title = String(localized: "Save Page as Web Archive")
+                panel.prompt = String(localized: "Save")
                 guard await panel.beginSheetModal(for: window) == .OK,
                     let destinationURL = panel.url
                 else { return }

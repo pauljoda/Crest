@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "chromium-lens-menu-crash",
+      "category": "fixed",
+      "message": "Choosing Google Lens from a page's right-click menu on Mac no longer quits Crest. Lens isn't offered there any more, and images keep their plain image search."
+    }
+  ]
+}

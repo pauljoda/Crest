@@ -7,7 +7,7 @@ namespace CrestCore.Application;
 /// has none, takes the group's title, color or collapsed state where it gave
 /// one, moves the tabs `LeavingTabIds` names out to the folder's own level,
 /// just after it, and files the tabs `JoiningTabIds` names into it, each taken
-/// out of its split as Chrome takes a grouped tab out of one. The core sends
+/// out of its split, since a grouped tab never stays in one. The core sends
 /// it for a change an extension made; no platform does.
 internal sealed record ShowTabGroup(Guid WorkspaceId, Guid SpaceId, Guid FolderId, string? Title, BrandColor? Color,
     bool? IsCollapsed, IReadOnlyList<Guid> JoiningTabIds, IReadOnlyList<Guid> LeavingTabIds) : SessionIntent(WorkspaceId) {

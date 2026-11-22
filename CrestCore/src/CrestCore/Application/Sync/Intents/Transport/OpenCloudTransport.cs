@@ -17,7 +17,7 @@ namespace CrestCore.Contracts;
 /// host need not read the file: `CloudTransportState.IsAdopted` says so. A
 /// file that does not read is `LegacyCloudStateUnreadable`, and nothing is
 /// adopted.
-[MessageLimit(128 * 1024 * 1024)]
+[MessageLimit(MessageLimitAttribute.LegacySyncBytes)]
 public sealed record OpenCloudTransport(int RecordSchema, byte[]? Legacy) : CloudTransportIntent {
     #region Actions - Sync
 

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-08-26-scoped-auxiliary-mouse-navigation",
+      "category": "fixed",
+      "message": "Keep mouse back and forward navigation within the webpage or sidebar under the pointer"
+    }
+  ]
+}

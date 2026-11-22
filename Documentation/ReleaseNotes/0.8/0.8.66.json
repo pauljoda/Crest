@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "pins-stretch-to-fill-row",
+      "category": "new",
+      "message": "Pins can stretch to fill the width of a row that isn't full, so an uneven number of pins no longer leaves empty space."
+    }
+  ]
+}

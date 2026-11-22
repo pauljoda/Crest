@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "find-return-steps-one-match",
+      "category": "fixed",
+      "message": "Pressing Return in Find moves to the next match instead of skipping several ahead."
+    },
+    {
+      "id": "single-mac-download",
+      "category": "improved",
+      "message": "Crest for Mac is one download with both engines. Copies of the separate WebKit download update to it automatically."
+    }
+  ]
+}

@@ -29,7 +29,7 @@ struct MobileSpaceDownloadsButton: View {
                 plural: "downloads"
             )
         )
-        .accessibilityIdentifier("downloads-button")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.downloadsButton)
     }
 
     private var symbol: String {

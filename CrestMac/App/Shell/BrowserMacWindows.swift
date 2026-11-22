@@ -623,22 +623,6 @@ final class BrowserMacWindows {
         }
     }
 
-    // MARK: - Actions - Update details
-
-    /// The release notes for the update the sidebar card presents. One window,
-    /// brought forward when asked again, and never restored at launch.
-    func openSoftwareUpdateDetails() {
-        guard !bringForwardOpenWindow(of: .updateDetails) else { return }
-        show(
-            .updateDetails,
-            content: { window in
-                BrowserSoftwareUpdateDetailsView(
-                    model: application.softwareUpdates.model, closeWindow: { [weak window] in window?.close() }
-                ).tint(CrestBrandTheme.accent)
-            },
-            closed: { [weak self] controller in self?.forget(controller) })
-    }
-
     // MARK: - Actions - Presenting
 
     /// Opens a window of `kind` under `id` showing `content`, which opens

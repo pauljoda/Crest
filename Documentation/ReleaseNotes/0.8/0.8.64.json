@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "capture-page-shortcut",
+      "category": "new",
+      "message": "On Mac, Capture Page in the Page menu and the command palette lets you drag over part of a page to copy it as an image. Its shortcut is Command-Shift-2.",
+      "platforms": ["mac"]
+    }
+  ]
+}

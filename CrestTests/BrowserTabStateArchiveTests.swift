@@ -78,7 +78,3 @@ final class BrowserTabStateArchiveTests: XCTestCase {
         )
     }
 }
-
-/// The favicon side store the session core no longer carries bytes for.
-final class BrowserFaviconFileStoreTests: XCTestCase {
-}

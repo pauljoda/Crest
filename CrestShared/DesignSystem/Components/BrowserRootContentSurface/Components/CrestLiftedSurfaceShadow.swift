@@ -9,7 +9,6 @@ struct CrestLiftedSurfaceShadow: View {
     static let pageShadowOpacity = 0.11
     static let pageShadowRadius: CGFloat = 7
     static let pageShadowYOffset: CGFloat = 2
-    static let drawingOutset = pageShadowRadius * 2 + abs(pageShadowYOffset)
 
     let cornerRadius: CGFloat
     let opacity: Double
@@ -28,7 +27,7 @@ struct CrestLiftedSurfaceShadow: View {
                 // A translucent surface must not show its own shadow through it.
                 .mask {
                     Rectangle()
-                        .padding(-Self.drawingOutset)
+                        .padding(-drawingOutset)
                         .overlay { shape.blendMode(.destinationOut) }
                         .compositingGroup()
                 }
@@ -36,4 +35,7 @@ struct CrestLiftedSurfaceShadow: View {
                 .accessibilityHidden(true)
         }
     }
+
+    /// How far past the shape the shadow reaches, which the cut must cover.
+    private var drawingOutset: CGFloat { radius * 2 + abs(yOffset) }
 }

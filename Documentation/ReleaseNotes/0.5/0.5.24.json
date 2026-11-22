@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-02-smooth-space-switching",
+      "category": "fixed",
+      "message": "Switch Spaces without flashing blank pages on macOS",
+      "platforms": ["mac"]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "entries": [
+    {
+      "id": "phone-color-picker-fits",
+      "category": "fixed",
+      "message": "On iPhone, the color picker fits on screen: it opens on the side with more room, and its wheel and colors make way when space is short.",
+      "platforms": ["ios"]
+    },
+    {
+      "id": "phone-setup-back-glass",
+      "category": "improved",
+      "message": "On iPhone and iPad, setup's Back button sits on frosted glass, so the page scrolling behind it no longer shows through.",
+      "platforms": ["ios"]
+    },
+    {
+      "id": "duo-setup-paper-fills-screen",
+      "category": "fixed",
+      "message": "On iPhone Duo, setup's welcome fills the whole screen, including the strip beside the status bar.",
+      "platforms": ["ios"]
+    }
+  ]
+}

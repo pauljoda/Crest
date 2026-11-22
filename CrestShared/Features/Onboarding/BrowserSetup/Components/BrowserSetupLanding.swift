@@ -71,7 +71,7 @@ enum BrowserSetupLandingMetrics {
     static let markSize: CGFloat = 76
     static let titleSize: CGFloat = 84
     /// Display type set tight, as Crest's headlines are.
-    static let titleTracking: CGFloat = -2.5
+    static let titleTracking: CGFloat = -1
     static let bodySize: CGFloat = 20
     static let bodyWidth: CGFloat = 560
     static let inset: CGFloat = 48

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "install-and-agent-boundary-tests",
+      "category": "internal",
+      "message": "Extension install failures and the agent attach and identity rules have tests."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-08-31-direct-media-link-playback",
+      "category": "fixed",
+      "message": "Play direct audio and video file links reliably across browser windows and devices"
+    }
+  ]
+}

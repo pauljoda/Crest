@@ -10,16 +10,38 @@ namespace CrestCore.Application;
 /// Immutable sync state. Copies share records until a semantic transition
 /// replaces them; failed transitions never publish clocks, records or pending IDs.
 public sealed class NativeSyncJournal {
+    #region Types
+
+    /// The journal's own members and the record categories its preferences
+    /// name, as the stored journal spells them.
+    internal static class Key {
+        public const string SchemaVersion = "schemaVersion";
+        public const string Preferences = "preferences";
+        public const string Records = "records";
+        public const string PendingRecordIds = "pendingRecordIDs";
+        public const string SavedStructure = "savedStructure";
+        public const string CurrentTabs = "currentTabs";
+        public const string HistoryAndArchive = "historyAndArchive";
+        public const string ExtensionSettings = "extensionSettings";
+    }
+
+    #endregion
+
+    #region Static Variables
+
+    public const int MaximumBytes = MessageLimitAttribute.SessionBytes;
+    public const int MaximumRecords = 250_000;
+
+    #endregion
+
     #region Variables
 
-    public const int MaximumBytes = 64 * 1024 * 1024;
-    public const int MaximumRecords = 250_000;
     private readonly JsonObject metadata;
     private readonly Dictionary<string, JsonObject> records;
     private readonly HashSet<string> pending;
     private readonly Lazy<byte[]> encoded;
     internal IEnumerable<JsonObject> Records => records.Values;
-    internal JsonNode Preferences => metadata["preferences"]!.DeepClone();
+    internal JsonNode Preferences => metadata[Key.Preferences]!.DeepClone();
     /// How many records wait to upload.
     internal int PendingCount => pending.Count;
     /// How many records the journal holds, tombstones included.
@@ -34,17 +56,17 @@ public sealed class NativeSyncJournal {
     /// The journal `source`, a stored journal parsed once, which it takes
     /// over: nothing else may hold it.
     internal NativeSyncJournal(JsonObject source) {
-        if (SyncJson.Int(source["schemaVersion"]!) != 1) throw new BrowserRuleException(BrowserRule.VersionMismatch);
+        if (SyncJson.Int(source[Key.SchemaVersion]!) != 1) throw new BrowserRuleException(BrowserRule.VersionMismatch);
         // Every member but the records, which the journal keeps by name.
-        metadata = new JsonObject(source.Where(member => member.Key is not ("records" or "pendingRecordIDs"))
+        metadata = new JsonObject(source.Where(member => member.Key is not (Key.Records or Key.PendingRecordIds))
             .Select(member => KeyValuePair.Create(member.Key, member.Value?.DeepClone())));
-        _ = Id(metadata["deviceID"]);
-        records = RecordMap(source["records"]!.AsArray());
-        pending = source["pendingRecordIDs"]!.AsArray().Select(n => SyncJournalRecord.NameOf(n!)).ToHashSet(StringComparer.Ordinal);
+        _ = Id(metadata[SyncJournalRecord.Key.DeviceId]);
+        records = RecordMap(source[Key.Records]!.AsArray());
+        pending = source[Key.PendingRecordIds]!.AsArray().Select(n => SyncJournalRecord.NameOf(n!)).ToHashSet(StringComparer.Ordinal);
         if (!pending.IsSubsetOf(records.Keys)) throw new BrowserRuleException(BrowserRule.InvalidSyncPending);
-        ulong clock = SyncJson.ULong(metadata["logicalClock"]!);
+        ulong clock = SyncJson.ULong(metadata[SyncJournalRecord.Key.LogicalClock]!);
         foreach (var record in records.Values) clock = Math.Max(clock, new SyncJournalRecord(record).Clock);
-        metadata["logicalClock"] = clock;
+        metadata[SyncJournalRecord.Key.LogicalClock] = clock;
         encoded = new(Encode, true);
     }
 
@@ -53,17 +75,17 @@ public sealed class NativeSyncJournal {
     /// The journal of a device that has staged nothing yet: no records, the
     /// clock at zero, and every record category synced.
     public static NativeSyncJournal Fresh(Guid deviceId) => new(Encoding.UTF8.GetBytes(new JsonObject {
-        ["schemaVersion"] = 1,
-        ["deviceID"] = deviceId.ToString("D").ToUpperInvariant(),
-        ["logicalClock"] = 0,
-        ["preferences"] = new JsonObject {
-            ["savedStructure"] = true,
-            ["currentTabs"] = true,
-            ["historyAndArchive"] = true,
-            ["extensionSettings"] = true
+        [Key.SchemaVersion] = 1,
+        [SyncJournalRecord.Key.DeviceId] = deviceId.ToString("D").ToUpperInvariant(),
+        [SyncJournalRecord.Key.LogicalClock] = 0,
+        [Key.Preferences] = new JsonObject {
+            [Key.SavedStructure] = true,
+            [Key.CurrentTabs] = true,
+            [Key.HistoryAndArchive] = true,
+            [Key.ExtensionSettings] = true
         },
-        ["records"] = new JsonArray(),
-        ["pendingRecordIDs"] = new JsonArray()
+        [Key.Records] = new JsonArray(),
+        [Key.PendingRecordIds] = new JsonArray()
     }.ToJsonString()));
 
     #endregion
@@ -72,7 +94,7 @@ public sealed class NativeSyncJournal {
 
     private static JsonObject Parse(ReadOnlySpan<byte> bytes) {
         if (bytes.Length is 0 or > MaximumBytes) throw new BrowserRuleException(BrowserRule.SyncSizeLimit);
-        return JsonNode.Parse(bytes, documentOptions: new() { MaxDepth = 64 })!.AsObject();
+        return JsonNode.Parse(bytes, documentOptions: JsonDepth.Session.Options)!.AsObject();
     }
 
     private static Guid Id(JsonNode? node) => SyncJson.Identity(node);
@@ -92,9 +114,9 @@ public sealed class NativeSyncJournal {
     /// it never reissues a version it issued after the checkpoint was taken.
     /// Its records, clock and pending uploads are unchanged.
     public NativeSyncJournal Recovered(Guid deviceId) {
-        if (deviceId == Id(metadata["deviceID"])) throw new ArgumentException("A recovered journal takes a new device identity.", nameof(deviceId));
+        if (deviceId == Id(metadata[SyncJournalRecord.Key.DeviceId])) throw new ArgumentException("A recovered journal takes a new device identity.", nameof(deviceId));
         var fields = metadata.DeepClone().AsObject();
-        fields["deviceID"] = deviceId.ToString("D").ToUpperInvariant();
+        fields[SyncJournalRecord.Key.DeviceId] = deviceId.ToString("D").ToUpperInvariant();
         return new(fields, new(records, StringComparer.Ordinal), new(pending, StringComparer.Ordinal));
     }
 
@@ -383,8 +405,8 @@ public sealed class NativeSyncJournal {
 
     private byte[] Encode() {
         var value = metadata.DeepClone().AsObject();
-        value["records"] = new JsonArray(records.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Value.DeepClone()).ToArray());
-        value["pendingRecordIDs"] = new JsonArray(pending.Order(StringComparer.Ordinal)
+        value[Key.Records] = new JsonArray(records.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Value.DeepClone()).ToArray());
+        value[Key.PendingRecordIds] = new JsonArray(pending.Order(StringComparer.Ordinal)
             .Select(id => records[id][SyncJournalRecord.Key.Id]!.DeepClone()).ToArray());
         var result = Encoding.UTF8.GetBytes(value.ToJsonString());
         if (result.Length > MaximumBytes) throw new BrowserRuleException(BrowserRule.SyncSizeLimit);
@@ -429,7 +451,7 @@ public sealed class NativeSyncJournal {
             fields = journal.metadata.DeepClone().AsObject();
             Records = new(journal.records, StringComparer.Ordinal);
             Pending = new(journal.pending, StringComparer.Ordinal);
-            clock = SyncJson.ULong(fields["logicalClock"]!);
+            clock = SyncJson.ULong(fields[SyncJournalRecord.Key.LogicalClock]!);
         }
 
         #endregion
@@ -489,13 +511,13 @@ public sealed class NativeSyncJournal {
         /// The journal the update made.
         public NativeSyncJournal Finish() {
             if (Records.Count > MaximumRecords) throw new BrowserRuleException(BrowserRule.SyncRecordLimit);
-            fields["logicalClock"] = clock;
+            fields[SyncJournalRecord.Key.LogicalClock] = clock;
             return new(fields, Records, Pending);
         }
 
         private JsonObject NextVersion() {
             if (clock == ulong.MaxValue) throw new BrowserRuleException(BrowserRule.SyncClockExhausted);
-            return SyncJournalRecord.VersionOf(++clock, fields["deviceID"]!);
+            return SyncJournalRecord.VersionOf(++clock, fields[SyncJournalRecord.Key.DeviceId]!);
         }
 
         #endregion

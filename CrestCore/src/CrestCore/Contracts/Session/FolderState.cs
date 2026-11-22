@@ -31,6 +31,12 @@ public sealed record FolderState(
     /// The SF Symbol a folder shows until someone chooses one.
     public const string DefaultSymbol = "folder";
 
+    /// What a folder without a title is called, wherever it comes from.
+    public const string UntitledTitle = "Untitled Folder";
+
+    /// The longest title a folder takes, renamed or imported.
+    public const int MaximumTitleLength = 500;
+
     /// The color a folder the core makes for a person's tabs is drawn in, and the one
     /// a folder shows until someone chooses one.
     public static BrandColor DefaultColor { get; } = new(0.43, 0.48, 0.54);
@@ -49,7 +55,7 @@ public sealed record FolderState(
 
     /// Whether the folder goes when its last tab leaves it: a folder of the
     /// open tabs does, and a saved folder stays empty.
-    internal bool GoesWhenEmptied => Location == TabPlacement.Current;
+    internal bool GoesWhenEmptied => !Location.IsDurable;
 
     /// Whether collapsing every folder closes this one: an open folder, at
     /// any depth. A group keeps its own state.

@@ -72,8 +72,4 @@ public sealed record TranslationRule(string SourceLanguage, string TargetId, boo
 /// <summary>A color a person chose for a Space, folder or split. Components run 0 through 1.</summary>
 public sealed record BrandColor(double Red, double Green, double Blue, double Alpha = 1);
 
-/// A system color a set's presentation tints a symbol with. Each platform maps
-/// it to its own color once. A tint travels as its value, so new tints go last.
-public enum SystemTint { Red, Orange, Purple, Blue, Indigo, Teal, Pink, Green }
-
 #endregion

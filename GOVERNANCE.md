@@ -20,7 +20,7 @@ Crest name and visual identity remain governed by [TRADEMARKS.md](TRADEMARKS.md)
 - User problems, alternatives, and early feedback are discussed publicly in
   [r/CrestBrowser](https://www.reddit.com/r/CrestBrowser).
 - Reproducible work is tracked in
-  [GitHub Issues](https://github.com/pauljoda/Crest/issues).
+  [GitHub Issues](https://github.com/crest-browser/Crest/issues).
 - Planned release outcomes are summarized in the public GitHub Project and
   milestones. Only the maintainer adds items to them; an issue or pull request
   is not a commitment.

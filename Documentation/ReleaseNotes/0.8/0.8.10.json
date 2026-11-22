@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "translation-download-languages-no-crash",
+      "category": "fixed",
+      "message": "Download Languages in Page Translation settings opens language downloads without Crest quitting."
+    }
+  ]
+}

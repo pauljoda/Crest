@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "default-browser-update-status-tones",
+      "category": "internal",
+      "message": "The default browser status and software update phases carry Crest's shared status tones instead of tone lists of their own."
+    }
+  ]
+}

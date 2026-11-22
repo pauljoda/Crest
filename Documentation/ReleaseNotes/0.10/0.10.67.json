@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "ios-page-closed-mid-load-crash",
+      "category": "fixed",
+      "message": "On iPhone and iPad, fixed a crash when a page closed while it was loading another site.",
+      "platforms": ["ios"]
+    }
+  ]
+}

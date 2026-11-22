@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "extension-download-startup-hold",
+      "category": "fixed",
+      "message": "Installing an extension right after Crest opens no longer stays on “Preparing extension…” for up to three minutes."
+    }
+  ]
+}

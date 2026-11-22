@@ -77,26 +77,6 @@ private struct LayoutKeyPress: BrowserShortcutKeyPress {
 final class BrowserShortcutKeyboardLayoutTests: XCTestCase {
     // MARK: - Actions - Reading
 
-    func testStandardLayoutsReadEveryChordAsTypedAndShiftedDigitsAsTheirDigit() throws {
-        let layouts = [
-            "com.apple.keylayout.US", "com.apple.keylayout.ABC", "com.apple.keylayout.British",
-            "com.apple.keylayout.Dvorak", "com.apple.keylayout.Colemak", "com.apple.keylayout.German",
-            "com.apple.keylayout.French", "com.apple.keylayout.Swedish-Pro",
-        ].compactMap(KeyboardLayout.init)
-        try XCTSkipIf(layouts.isEmpty, "No standard keyboard layout is installed")
-        let everyModifierSet = (0..<16).map(ShortcutModifiers.init(rawValue:))
-        for layout in layouts {
-            for keyCode in 0..<128 {
-                for modifiers in everyModifierSet {
-                    let press = layout.press(keyCode, modifiers)
-                    XCTAssertEqual(
-                        BrowserShortcutKey(event: press), Self.typedKey(press),
-                        "\(layout.id) key \(keyCode) \(modifiers.rawValue)")
-                }
-            }
-        }
-    }
-
     /// ⇧⌘2 is the same chord on a US layout, where Shift types @ on the key,
     /// on German, where it types ", and on French, where Shift types the digit
     /// itself.
@@ -152,23 +132,5 @@ final class BrowserShortcutKeyboardLayoutTests: XCTestCase {
                     "\(layout.id) key \(keyCode) \(modifiers.rawValue)")
             }
         }
-    }
-
-    // MARK: - Actions - Support
-
-    /// What the press read before layers were considered: a digit key with
-    /// Shift as its digit, any other key as typed with only Shift, and a
-    /// special key by its code.
-    private static func typedKey(_ press: LayoutKeyPress) -> BrowserShortcutKey? {
-        if let special = ShortcutSpecialKey(keyCode: press.keyCode) { return .special(special) }
-        if press.modifierFlags.contains(.shift), let unshifted = press.characters(byApplyingModifiers: []),
-            unshifted.count == 1, let digit = unshifted.first, digit.isASCII, digit.isNumber
-        {
-            return .character(digit)
-        }
-        guard let characters = press.charactersIgnoringModifiers?.lowercased(), characters.count == 1,
-            let character = characters.first, !character.isNewline, !character.isWhitespace
-        else { return nil }
-        return .character(character)
     }
 }

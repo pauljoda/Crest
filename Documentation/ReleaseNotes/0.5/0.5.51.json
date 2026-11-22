@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-04-side-panel-tab-indicators",
+      "category": "new",
+      "message": "See which tabs hold an extension side panel from a mark on their sidebar rows and pinned tiles"
+    }
+  ]
+}

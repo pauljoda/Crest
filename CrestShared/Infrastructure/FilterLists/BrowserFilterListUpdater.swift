@@ -23,16 +23,17 @@ final class BrowserFilterListUpdater {
             newRequest request: URLRequest,
             completionHandler: @escaping @Sendable (URLRequest?) -> Void
         ) {
-            completionHandler(request.url?.scheme?.lowercased() == "https" ? request : nil)
+            completionHandler(request.url?.webScheme?.isSecure == true ? request : nil)
         }
     }
 
     // MARK: - Static Variables
 
     private static let interval: Duration = .seconds(60 * 60)
-    /// The most a list may hold, as the core keeps it
-    /// (`FilterLibrary.MaximumListBytes`).
-    nonisolated private static let maximumBytes = 15 * 1024 * 1024
+    /// How long a list's server may go silent before the update gives up.
+    private static let requestTimeout: TimeInterval = 60
+    /// The most a list may hold, as the core keeps it.
+    nonisolated private static let maximumBytes = CapacityLimits.current.filterListBytes
 
     // MARK: - Variables
 
@@ -53,7 +54,7 @@ final class BrowserFilterListUpdater {
         configuration.urlCredentialStorage = nil
         configuration.urlCache = nil
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-        configuration.timeoutIntervalForRequest = 60
+        configuration.timeoutIntervalForRequest = Self.requestTimeout
         session = URLSession(configuration: configuration)
     }
 

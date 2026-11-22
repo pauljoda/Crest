@@ -59,7 +59,7 @@ final class BrowserPeekModelTests: XCTestCase {
     }
 
     private func makeContext(
-        browsingMode: BrowserBrowsingMode = .privateBrowsing, sourceURL: URL? = nil
+        workspaceKind: WorkspaceKind = .private, sourceURL: URL? = nil
     ) throws -> PeekTestContext {
         let source = makeSpace(name: "Source", url: sourceURL)
         let destination = makeSpace(name: "Destination")
@@ -68,12 +68,12 @@ final class BrowserPeekModelTests: XCTestCase {
             seed: SessionState.Seed(spaces: [source, destination]),
             showing: source.id, tabs: [source.id: sourceTabID],
             credentialVault: InMemoryCredentialVault(),
-            browsingMode: browsingMode,
+            workspaceKind: workspaceKind,
             core: .hostingPages()
         )
         let pages = BrowserPagePool(
             browser: browser,
-            browsingMode: browsingMode,
+            workspaceKind: workspaceKind,
             usesEphemeralWebsiteDataStores: true
         )
         let request = BrowserPeekRequest(

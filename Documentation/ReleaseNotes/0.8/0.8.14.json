@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "palette-control-a-e-line-edges",
+      "category": "fixed",
+      "message": "Control-A and Control-E move to the start and end of the line in the address bar instead of jumping between result sections."
+    }
+  ]
+}

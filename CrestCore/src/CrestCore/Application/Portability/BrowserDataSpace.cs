@@ -40,7 +40,7 @@ internal sealed record BrowserDataSpace(string Name, string Symbol, SpaceAccent 
     /// `ArchiveInvalid` for anything a Space would not keep.
     public SpaceState Materialize(IIdSource ids, DateTimeOffset now) {
         ArgumentNullException.ThrowIfNull(ids);
-        Require(ImportText.IsKept(Name, ImportText.MaximumSpaceName) && ImportText.IsKept(Symbol, ImportText.MaximumSymbol));
+        Require(ImportText.IsKept(Name, SpaceCustomization.MaximumNameLength) && ImportText.IsKept(Symbol, ImportText.MaximumSymbol));
         Require(Folders.Count <= FolderTree.MaximumCount && Tabs.Count <= MaximumTabs && ArchivedTabs.Count <= MaximumTabs
             && History.Count <= HistoryEntryState.MaximumEntries);
 

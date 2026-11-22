@@ -13,7 +13,7 @@ namespace CrestCore.Contracts;
 ///
 /// Refused with `InvalidImport` for Spaces that repeat an identity or hold a
 /// split repair would rewrite.
-[MessageLimit(64 * 1024 * 1024)]
+[MessageLimit(MessageLimitAttribute.SessionBytes)]
 public sealed record ReviewImport(ImportSource Source, IReadOnlyList<SpaceState> Spaces, IReadOnlyList<ImportPasswordSource> Passwords,
     IReadOnlyList<ImportSpaceExtensions>? Extensions = null, IReadOnlyList<ImportLeftOut>? LeftOut = null, string? Title = null)
     : SetupFlowIntent {
@@ -35,6 +35,7 @@ public sealed record ReviewImport(ImportSource Source, IReadOnlyList<SpaceState>
             Step = SetupStep.Review,
             Phase = SetupPhase.Reviewing,
             Review = SetupImportReview.Started(Source, Spaces, Source.PasswordCounts(Passwords, Spaces),
+                Source.PasswordCounts([.. Passwords.Where(password => !password.IsSecure)], Spaces),
                 Extensions ?? [], LeftOut ?? [], session, flow.Look) with { BrowserTitle = Title },
             Failure = null
         };

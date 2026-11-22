@@ -66,6 +66,21 @@ final class CoreState {
         set { publish(newValue, into: \.agentSessionsStorage, as: \.agentSessions) }
     }
     @ObservationIgnored private var agentSessionsStorage: [AgentSessionState] = []
+    /// How this device shows pages: the zoom a page starts at, what a page
+    /// out of sight keeps doing, and whether pages may draw faster than 60
+    /// frames a second.
+    var pagePreferences: PagePreferences {
+        get { observed(\.pagePreferencesStorage, as: \.pagePreferences) }
+        set { publish(newValue, into: \.pagePreferencesStorage, as: \.pagePreferences) }
+    }
+    @ObservationIgnored private var pagePreferencesStorage = PagePreferences.default
+    /// Where each Space's downloads go on this device, for the Spaces that do
+    /// not keep the device's Downloads folder.
+    var downloadPreferences: [SpaceDownloadPreferences] {
+        get { observed(\.downloadPreferencesStorage, as: \.downloadPreferences) }
+        set { publish(newValue, into: \.downloadPreferencesStorage, as: \.downloadPreferences) }
+    }
+    @ObservationIgnored private var downloadPreferencesStorage: [SpaceDownloadPreferences] = []
     /// The newest file revision the core has on disk, counting the stored
     /// session's edits and this device's saved windows; zero before its first
     /// save and for a core that keeps nothing.

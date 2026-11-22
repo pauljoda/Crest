@@ -1,4 +1,5 @@
-#if DEBUG
+// Test fixtures: Debug builds, and CI's Release test build, which alone passes CREST_TEST_FIXTURES.
+#if DEBUG || CREST_TEST_FIXTURES
     import Foundation
 
     extension BrowserStore {
@@ -38,9 +39,8 @@
                 preconditionFailure("The core refused to erase a profile for a test: \(error)")
             }
             // What the engines answered arrives through the core's next drain.
-            let erased = (sent + core.drain()).contains { change in
-                guard case .dataDeleted(let deleted) = change else { return false }
-                return deleted.requestID == requestID && deleted.deleted
+            let erased = (sent + core.drain()).compactMap(\.dataDeleted).contains {
+                $0.requestID == requestID && $0.deleted
             }
             guard erased else { preconditionFailure("The engines did not erase a profile for a test.") }
         }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// While what is typed is still one word, every search provider it names or
-/// starts to name, as a row of glass chips under the field: each with its
+/// starts to name, as a row of chips under the field: each with its
 /// icon and the shortcut that enters it, on one line. The first is the one
 /// Tab enters. Choosing one enters it.
 struct BrowserCommandPaletteProviderChips: View {
@@ -11,20 +11,18 @@ struct BrowserCommandPaletteProviderChips: View {
 
     var body: some View {
         ScrollView(.horizontal) {
-            GlassEffectContainer(spacing: CrestSpacing.small) {
-                HStack(spacing: CrestSpacing.small) {
-                    ForEach(Array(model.providerChips.enumerated()), id: \.element.name) { index, provider in
-                        BrowserCommandPaletteProviderChip(
-                            provider: provider, isOffered: index == 0 && model.preferences.searchesSitesWithTab,
-                            profileID: model.space?.profileID
-                        ) {
-                            model.enter(provider)
-                        }
+            HStack(spacing: CrestSpacing.small) {
+                ForEach(Array(model.providerChips.enumerated()), id: \.element.name) { index, provider in
+                    BrowserCommandPaletteProviderChip(
+                        provider: provider, isOffered: index == 0 && model.preferences.searchesSitesWithTab,
+                        profileID: model.space?.profileID
+                    ) {
+                        model.enter(provider)
                     }
                 }
-                .padding(.horizontal, BrowserCommandPaletteMetrics.resultContentPadding)
-                .padding(.vertical, CrestSpacing.small)
             }
+            .padding(.horizontal, BrowserCommandPaletteMetrics.resultContentPadding)
+            .padding(.vertical, CrestSpacing.small)
         }
         .scrollIndicators(.hidden)
         // As tall as its chips, which a larger text size makes taller.
@@ -38,7 +36,7 @@ struct BrowserCommandPaletteProviderChips: View {
 
 /// One provider among the palette's chips: its icon on a neutral plate and
 /// the shortcut that enters it, or its name when it has none, with Tab's
-/// glyph on the one Tab enters, on glass in its brand color.
+/// glyph on the one Tab enters, in its brand color.
 private struct BrowserCommandPaletteProviderChip: View {
     // MARK: - Variables
 
@@ -67,7 +65,7 @@ private struct BrowserCommandPaletteProviderChip: View {
             .lineLimit(1)
             .contentShape(.capsule)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.browserPaletteChip)
         .help(provider.actionTitle)
         .accessibilityLabel(Text(verbatim: provider.actionTitle))
         .accessibilityHint(isOffered ? Text("Press Tab, enter your query, then press Return.") : Text(verbatim: ""))

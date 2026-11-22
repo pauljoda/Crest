@@ -17,14 +17,17 @@ import SwiftUI
 /// )
 /// ```
 enum CrestMotion {
-    /// The deliberate hold that distinguishes a long press from an ordinary tap.
-    static let longPressRecognitionDelay: TimeInterval = 0.55
+    /// The deliberate hold that distinguishes a long press from an ordinary
+    /// tap: as long as the system waits before it opens a menu.
+    static let longPressRecognitionDelay: TimeInterval = 0.5
+    /// How large a card, preview or control starts when it appears in
+    /// place, as a share of its own size. It grows the rest of the way as it
+    /// fades in, a small, quick change rather than growth out of a point.
+    static let entranceScale: CGFloat = 0.8
     /// Advancing or retreating a step in a multi-step flow.
     static let stepTransition: TimeInterval = 0.22
     /// A control acknowledging a press.
     static let pressFeedback: TimeInterval = 0.1
-    /// A compact control acknowledging a press without moving surrounding chrome.
-    static let compactPressFeedback: TimeInterval = 0.09
     /// A dense developer control acknowledging a press.
     static let developerPressFeedback: TimeInterval = 0.12
     /// Hover and selection changes on compact interactive surfaces.
@@ -121,8 +124,6 @@ enum CrestMotion {
     static let peekLinkMenuTransition: TimeInterval = 0.26
     /// Revealing one destination in the utility fan.
     static let utilityFanRevealTransition: TimeInterval = 0.3
-    /// The complete press-and-return cycle for reload feedback.
-    static let reloadFeedbackDuration: Duration = .milliseconds(240)
     /// One half of the reload feedback cycle.
     static let reloadFeedbackPhaseDuration: Duration = .milliseconds(120)
     /// SwiftUI animation APIs express the reload phase in seconds.
@@ -132,8 +133,6 @@ enum CrestMotion {
     /// Moving from one onboarding step to the next.
     static var onboardingStep: Animation { .snappy(duration: onboardingStepTransition) }
     static let onboardingStepTransition: TimeInterval = 0.26
-    /// Progress selection feedback, such as moving to the next reviewed Space.
-    static var onboardingProgress: Animation { .snappy(duration: stepTransition) }
     /// Uses SwiftUI's native snappy curve for onboarding presentation state.
     static var onboardingPresentation: Animation { .snappy(duration: onboardingPresentationTransition) }
     static let onboardingPresentationTransition: TimeInterval = 0.3
@@ -149,7 +148,6 @@ enum CrestMotion {
     static var onboardingHandOver: Animation { .smooth(duration: onboardingHandOverTransition) }
     static let onboardingHandOverTransition: TimeInterval = 0.32
     static var press: Animation { .easeOut(duration: pressFeedback) }
-    static var compactPress: Animation { .easeOut(duration: compactPressFeedback) }
     static var developerPress: Animation { .snappy(duration: developerPressFeedback) }
     static var surface: Animation { .easeInOut(duration: surfaceTransition) }
     static var collection: Animation { .snappy(duration: collectionTransition) }

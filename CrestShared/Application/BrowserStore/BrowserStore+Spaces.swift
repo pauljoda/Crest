@@ -68,7 +68,8 @@ extension BrowserStore {
         }) {
             attempted.insert(intent.spaceID)
             do { try await deleteSpace(intent.spaceID, dataDeleter: dataDeleter) } catch {
-                localSyncErrorDescription = "Space cleanup needs another attempt: \(error.localizedDescription)"
+                localSyncErrorDescription = String(
+                    localized: "Space cleanup needs another attempt: \(error.localizedDescription)")
             }
         }
     }
@@ -156,13 +157,6 @@ extension BrowserStore {
         return owner.family.send(intent, from: owner)
     }
 
-    func moveSpaces(from source: IndexSet, to destination: Int) {
-        var order = spaceModels.map(\.id)
-        order.move(fromOffsets: source, toOffset: destination)
-        family.send(
-            ReorderSpaces(workspaceID: family.workspaceID, spaceIDs: order), from: self)
-    }
-
     /// Sets a Space's browsing preferences through the core: when it cleans up
     /// current tabs, how it blocks content and how long it keeps what it
     /// browses, only when they differ from what the read model holds. What the
@@ -232,7 +226,8 @@ extension BrowserStore {
             family.send(
                 CreateFolder(
                     workspaceID: family.workspaceID, spaceID: spaceID, folderID: folderID,
-                    placement: .saved, parentID: parentID, title: title, color: color, symbol: "folder",
+                    placement: .saved, parentID: parentID, title: title, color: color,
+                    symbol: FolderState.defaultSymbol,
                     tabIDs: [], leavesSplits: false, isGroup: false),
                 from: self)
         else { return nil }
@@ -553,16 +548,18 @@ extension BrowserStore {
         guard !isDeleting(assignment.spaceID), let space = spaceModel(matching: assignment),
             space.folders.contains(folderID)
         else { return false }
-        // Each page of the folder's tabs is asked whether it may go before the core deletes them.
-        let tabIDs = space.tabIDs(inFolder: folderID)
+        // Each page of the tabs the core would delete is asked whether it may
+        // go before the core deletes them.
+        let deleting = FolderDeletionTabs(workspaceID: family.workspaceID, spaceID: space.id, folderID: folderID)
+        guard let tabIDs = try? core.query(deleting).tabIDs else { return false }
         let tabs = tabIDs.map {
             BrowserTabRuntimeAssignment(tabID: $0, spaceID: assignment.spaceID, profileID: assignment.profileID)
         }
         return performPageDismissal(of: tabs) { [weak self] in
             // A tab that joined or left the folder while its pages were asked
             // was not asked itself, so the folder stays as it is.
-            guard let self, let current = self.spaceModel(matching: assignment),
-                Set(current.tabIDs(inFolder: folderID)) == Set(tabIDs)
+            guard let self, self.spaceModel(matching: assignment) != nil,
+                Set((try? self.core.query(deleting).tabIDs) ?? []) == Set(tabIDs)
             else { return false }
             return self.family.send(
                 DeleteFolderAndContents(

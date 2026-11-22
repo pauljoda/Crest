@@ -9,10 +9,7 @@ enum BrowserVisitedLinkStyler {
     )
 
     nonisolated static func supports(_ pageURL: URL) -> Bool {
-        guard let scheme = pageURL.scheme?.lowercased(), pageURL.host() != nil else {
-            return false
-        }
-        return scheme == "http" || scheme == "https"
+        pageURL.webScheme != nil && pageURL.host() != nil
     }
 
     nonisolated static func normalizedVisitedURLStrings(
@@ -45,7 +42,8 @@ enum BrowserVisitedLinkStyler {
     }
 
     #if os(macOS)
-        #if DEBUG
+        // A test hook: Debug builds, and CI's Release test build, which alone passes CREST_TEST_FIXTURES.
+        #if DEBUG || CREST_TEST_FIXTURES
             static func containsVisitedURL(_ url: URL, in webView: WKWebView) -> Bool {
                 BrowserNativeVisitedLinkStore(webView: webView)?.contains(url) == true
             }

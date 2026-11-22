@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "paste-and-match-style-web-pages",
+      "category": "fixed",
+      "message": "Paste and Match Style now works in editable web content, from the Edit menu, its shortcut and the page's right-click menu."
+    }
+  ]
+}

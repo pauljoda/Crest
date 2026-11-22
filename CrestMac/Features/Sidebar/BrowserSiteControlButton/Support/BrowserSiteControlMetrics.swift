@@ -12,6 +12,7 @@ enum BrowserSiteControlMetrics {
     static let extensionColumnCount = 4
     static let extensionGridSpacing: CGFloat = 6
     static let manageExtensionControlSize: CGFloat = 20
+    static let manageExtensionGlyphSize: CGFloat = 11
     static let triggerSize = CGSize(
         width: BrowserTabTrailingControlMetrics.pointer.controlSize.height,
         height: BrowserTabTrailingControlMetrics.pointer.controlSize.height

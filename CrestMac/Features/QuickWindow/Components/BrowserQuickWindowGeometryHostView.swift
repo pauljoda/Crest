@@ -192,7 +192,7 @@ final class BrowserQuickWindowGeometryHostView: NSView {
             ? person?.window
             : sourceTarget.flatMap { targetWindowID in
                 NSApp.windows.first {
-                    $0 !== window && $0.identifier?.rawValue == targetWindowID.uuidString
+                    $0 !== window && ($0 as? BrowserMacWindow)?.windowID == targetWindowID
                 }?.frame
             }
         // The screen the source window is on, which the Quick Window opens

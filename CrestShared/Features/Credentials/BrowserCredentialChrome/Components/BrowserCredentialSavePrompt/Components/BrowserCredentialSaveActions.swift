@@ -29,6 +29,7 @@ struct BrowserCredentialSaveActions: View {
         Button(action: dismiss) {
             Text(route.dismissActionTitle)
         }
+        .buttonStyle(.crestSecondary)
         .disabled(route.isBusy)
     }
 
@@ -50,8 +51,7 @@ struct BrowserCredentialSaveActions: View {
             } label: {
                 Text(title)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(space?.accent.tint.color ?? .accentColor)
+            .buttonStyle(.crestPrimary)
         }
     }
 }

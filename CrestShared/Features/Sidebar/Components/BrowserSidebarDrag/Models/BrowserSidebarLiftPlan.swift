@@ -116,7 +116,7 @@ final class BrowserSidebarDropRefusals {
         }
     }
 
-    private func answer(_ target: Target, drop: (BrowserStore) -> some Intent) -> Rejection? {
+    private func answer(_ target: Target, drop: (BrowserStore) -> some SessionIntent) -> Rejection? {
         if let known = answers[target] { return known }
         guard let browser else { return nil }
         let refusal = browser.family.refusal(of: drop(browser), from: browser)

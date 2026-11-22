@@ -19,7 +19,7 @@ protocol EngineHostedPage: AnyObject {}
 final class Engines {
     // MARK: - Static Variables
 
-    private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "Pages")
+    private static let logger = DiagnosticLog.pages.logger
 
     // MARK: - Types
 

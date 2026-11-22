@@ -7,7 +7,7 @@ using static CrestCore.Application.ContentFilterLibrary;
 
 namespace CrestCore.Application;
 
-/// Filter lists compiled by Brave's adblock engine into one immutable filter.
+/// Filter lists compiled by the `adblock` engine into one immutable filter.
 /// A change of lists compiles a new filter; a filter the core saved loads back
 /// without compiling, but only into the same library that saved it.
 internal sealed class ContentFilter : IDisposable {

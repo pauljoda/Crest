@@ -22,11 +22,14 @@ struct MobileBrowserSettingsDestinationList: View {
                     } label: {
                         MobileSettingsDestinationRow(destination: destination)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(.rect)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("settings-\(destination.name)")
-                    .listRowBackground(rowBackground(for: destination))
+                    // The design system's row surface marks the page that's
+                    // showing, and answers the pointer and a press.
+                    .buttonStyle(
+                        CrestFormRowButtonStyle(isSelected: selection == destination, cornerRadius: CrestRadius.control)
+                    )
+                    .accessibilityIdentifier(BrowserMobileAccessibilityID.settingsDestination(destination))
+                    .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .accessibilityAddTraits(selection == destination ? .isSelected : [])
                 }
@@ -39,17 +42,10 @@ struct MobileBrowserSettingsDestinationList: View {
     }
 
     private var filteredDestinations: [BrowserSettingsDestination] {
-        MobileSettingsDestinationFilter.destinations(
+        BrowserSettingsDestination.visible(
             matching: searchText,
             locale: locale,
             in: state
         )
-    }
-
-    /// The system's own fill behind the row that's showing.
-    private func rowBackground(for destination: BrowserSettingsDestination) -> some View {
-        RoundedRectangle(cornerRadius: 12)
-            .fill(selection == destination ? Color(uiColor: .systemFill) : .clear)
-            .padding(.vertical, 2)
     }
 }

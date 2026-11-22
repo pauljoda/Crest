@@ -34,6 +34,10 @@ struct BrowserSetupSourcePage: View {
                     }
                     .accessibilityIdentifier("setup-import-extensions")
                 }
+            } footer: {
+                if flow.includesPasswords, flow.insecurePasswordCount > 0 {
+                    Text("Passwords for sites without HTTPS come in, but Crest won’t fill them in.")
+                }
             }
         }
         .formStyle(.grouped)
@@ -65,7 +69,7 @@ struct BrowserSetupSourcePage: View {
             }
             .contentShape(.rect)
         }
-        .buttonStyle(.browserSetupRow)
+        .buttonStyle(.crestFormRow)
         .accessibilityAddTraits(shownSpaceID == shownID ? .isSelected : [])
     }
 

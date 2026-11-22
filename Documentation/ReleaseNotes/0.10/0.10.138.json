@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "macos-dark-page-opening-flash",
+      "category": "fixed",
+      "message": "Dark pages on macOS open without a white flash from the browser background.",
+      "platforms": ["mac"]
+    }
+  ]
+}

@@ -58,12 +58,12 @@ public sealed partial class CrestApp {
         SessionState repaired;
         IReadOnlyList<NativeSessionMaintenance.TabOrigin> origins;
         try {
-            repaired = NativeSessionMaintenance.Repair(stored, DateTimeOffset.UtcNow, null, new SystemIdSource(), out origins);
+            repaired = NativeSessionMaintenance.Repair(stored, clock.Now, null, new SystemIdSource(), out origins);
         } catch (BrowserRuleException) {
             throw new Rejected(new StorageUnreadable(StorageFailure.Damaged));
         }
         storedSession = new NativeSessionAuthority(repaired, target);
-        storedSync = new NativeSyncAuthority(journal ?? NativeSyncJournal.Fresh(Guid.NewGuid()));
+        storedSync = new NativeSyncAuthority(journal ?? NativeSyncJournal.Fresh(Guid.NewGuid()), clock);
         storedSelection = legacySelection;
         repairedCopies = NativeSessionMaintenance.Copies(repaired, origins);
     }

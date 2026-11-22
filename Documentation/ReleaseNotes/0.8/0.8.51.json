@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "appearance-light-dark-follow-system",
+      "category": "new",
+      "message": "Keep Crest light or dark, or let it follow macOS, in Settings › Appearance. Spaces can also dim their colors in dark.",
+      "platforms": ["mac"]
+    }
+  ]
+}

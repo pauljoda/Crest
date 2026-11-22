@@ -12,7 +12,6 @@ enum MobileOnboardingLayout {
     static let pageActionsMaximumWidth: CGFloat = 430
     static let pageActionsSpacing: CGFloat = 6
     static let primaryActionSpacing: CGFloat = 8
-    static let secondaryActionMinimumHeight: CGFloat = 34
 
     static let progressStepCount = 4
     static let progressSpacing: CGFloat = 7

@@ -48,8 +48,7 @@ public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Gui
             };
         } else {
             var fallback = Fallback(followUp, space.Id, space.Tabs.Select(candidate => candidate.Id).ToHashSet());
-            selected = edited.DismissTabs([tab.Id], shown, fallback, turn.Now, deleting: false, ensureSelection: false,
-                resetArchivePlacement: false);
+            selected = edited.DismissTabs([tab.Id], shown, fallback, turn.Now, ArchiveReason.Closed, ensureSelection: false);
             edited.PruneSplitMetadata();
         }
         followUp.ShowTab(space.Id, selected);

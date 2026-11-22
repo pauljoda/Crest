@@ -9,7 +9,7 @@ struct MobileSpaceSettingsButton: View {
         }
         .foregroundStyle(.primary)
         .accessibilityLabel("Settings")
-        .accessibilityIdentifier("space-settings-button")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.spaceSettingsButton)
     }
 }
 

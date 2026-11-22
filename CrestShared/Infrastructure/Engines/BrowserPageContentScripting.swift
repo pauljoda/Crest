@@ -12,9 +12,26 @@ struct BrowserContentFrame {
 }
 
 struct BrowserContentMessage {
+    // MARK: - Static Variables
+
+    /// The longest identity, in UTF-8 bytes, a bridge's message may name a
+    /// document, request or notification by: the longest Crest's bridges
+    /// issue.
+    static let maximumIdentityBytes = 128
+
+    // MARK: - Variables
+
     let handlerName: String
     let body: Any
     let frame: BrowserContentFrame
+
+    // MARK: - Actions - Validation
+
+    /// Whether `identity`, a document's, a request's or a notification's, is
+    /// one a bridge accepts.
+    static func isValidIdentity(_ identity: String) -> Bool {
+        !identity.isEmpty && identity.utf8.count <= maximumIdentityBytes
+    }
 }
 
 /// A script one of Crest's content bridges runs in every document of a page.

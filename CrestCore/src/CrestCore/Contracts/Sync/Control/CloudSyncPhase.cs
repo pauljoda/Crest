@@ -7,24 +7,24 @@ public sealed class CloudSyncPhase {
     #region Variables
 
     public static readonly CloudSyncPhase Disabled = new(name: "disabled", isRetryable: false, title: "Off", symbol: "icloud.slash",
-        tint: null, keepsCloudOutOfReach: false);
+        tone: null, keepsCloudOutOfReach: false);
     public static readonly CloudSyncPhase Checking = new(name: "checking", isRetryable: false, title: "Checking iCloud",
-        symbol: "arrow.triangle.2.circlepath.icloud", tint: SystemTint.Blue, keepsCloudOutOfReach: true);
+        symbol: "arrow.triangle.2.circlepath.icloud", tone: StatusTone.Info, keepsCloudOutOfReach: true);
     /// Sync works, and this device's journal holds records that have not
     /// reached iCloud yet.
     public static readonly CloudSyncPhase WaitingToUpload = new(name: "waitingToUpload", isRetryable: false, title: "Waiting to upload",
-        symbol: "icloud.and.arrow.up", tint: SystemTint.Blue, keepsCloudOutOfReach: false);
+        symbol: "icloud.and.arrow.up", tone: StatusTone.Info, keepsCloudOutOfReach: false);
     /// Sync works, and nothing on this device waits to upload.
     public static readonly CloudSyncPhase Ready = new(name: "ready", isRetryable: false, title: "Up to date", symbol: "checkmark.icloud.fill",
-        tint: SystemTint.Green, keepsCloudOutOfReach: false, whileUploadsWait: WaitingToUpload);
+        tone: StatusTone.Success, keepsCloudOutOfReach: false, whileUploadsWait: WaitingToUpload);
     public static readonly CloudSyncPhase Syncing = new(name: "syncing", isRetryable: false, title: "Syncing",
-        symbol: "arrow.triangle.2.circlepath.icloud", tint: SystemTint.Blue, keepsCloudOutOfReach: false);
+        symbol: "arrow.triangle.2.circlepath.icloud", tone: StatusTone.Info, keepsCloudOutOfReach: false);
     public static readonly CloudSyncPhase NeedsReconciliation = new(name: "needsReconciliation", isRetryable: false,
-        title: "Choose which copy to keep", symbol: "exclamationmark.icloud.fill", tint: SystemTint.Orange, keepsCloudOutOfReach: false);
+        title: "Choose which copy to keep", symbol: "exclamationmark.icloud.fill", tone: StatusTone.Warning, keepsCloudOutOfReach: false);
     public static readonly CloudSyncPhase WaitingForAccount = new(name: "waitingForAccount", isRetryable: true, title: "Waiting for iCloud",
-        symbol: "person.crop.circle.badge.exclamationmark", tint: SystemTint.Orange, keepsCloudOutOfReach: true);
+        symbol: "person.crop.circle.badge.exclamationmark", tone: StatusTone.Warning, keepsCloudOutOfReach: true);
     public static readonly CloudSyncPhase Failed = new(name: "failed", isRetryable: true, title: "Needs attention",
-        symbol: "xmark.icloud.fill", tint: SystemTint.Red, keepsCloudOutOfReach: true);
+        symbol: "xmark.icloud.fill", tone: StatusTone.Danger, keepsCloudOutOfReach: true);
 
     public static IReadOnlyList<CloudSyncPhase> All { get; } =
         [Disabled, Checking, Ready, Syncing, NeedsReconciliation, WaitingForAccount, Failed, WaitingToUpload];
@@ -44,9 +44,9 @@ public sealed class CloudSyncPhase {
     /// The SF Symbol the settings show beside the phase.
     public string Symbol { get; }
 
-    /// The color the settings tint the phase with, or null for the secondary
-    /// color of a phase that needs nothing.
-    public SystemTint? Tint { get; }
+    /// How the phase reads in the settings, or null for the quiet style of a
+    /// phase that needs nothing.
+    public StatusTone? Tone { get; }
 
     /// Whether iCloud's content is out of this device's reach: the check for
     /// it has not answered, no account is signed in, or sync failed.
@@ -61,13 +61,13 @@ public sealed class CloudSyncPhase {
 
     #region Constructors
 
-    private CloudSyncPhase(string name, bool isRetryable, string title, string symbol, SystemTint? tint, bool keepsCloudOutOfReach,
+    private CloudSyncPhase(string name, bool isRetryable, string title, string symbol, StatusTone? tone, bool keepsCloudOutOfReach,
         CloudSyncPhase? whileUploadsWait = null) {
         Name = name;
         IsRetryable = isRetryable;
         Title = title;
         Symbol = symbol;
-        Tint = tint;
+        Tone = tone;
         KeepsCloudOutOfReach = keepsCloudOutOfReach;
         WhileUploadsWait = whileUploadsWait;
     }

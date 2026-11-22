@@ -20,8 +20,8 @@ struct BrowserWebsiteDataSection: View {
                 } else {
                     // Remove All also clears what an engine could not list.
                     if !sites.isEmpty {
-                        BrowserCredentialSearchField(
-                            title: "Search Websites", text: $query, accessibilityIdentifier: "website-data-search")
+                        CrestSearchField("Search Websites", text: $query)
+                            .accessibilityIdentifier("website-data-search")
                         CrestFormRows(list.sites(matching: query), id: \.site) { site in
                             BrowserWebsiteDataRow(site: site, isRemoving: list.isRemoving) {
                                 Task { await list.remove([site]) }

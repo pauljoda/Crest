@@ -38,10 +38,10 @@ class ReleasePreflightTests(unittest.TestCase):
         self.git("remote", "add", "origin", str(self.repository))
         (self.repository / "Config").mkdir()
         (self.repository / "Config/Version.xcconfig").write_text("MARKETING_VERSION = 0.5.25\n")
-        (self.repository / "Documentation").mkdir()
-        shutil.copyfile(
-            REPOSITORY_ROOT / "Documentation/ReleaseNotes.json",
-            self.repository / "Documentation/ReleaseNotes.json",
+        notes = self.repository / "Documentation/ReleaseNotes/0.5/0.5.25.json"
+        notes.parent.mkdir(parents=True)
+        notes.write_text(
+            '{"entries": [{"id": "release-history", "category": "fixed", "message": "Keep release history"}]}\n'
         )
         (self.repository / "Scripts").symlink_to(REPOSITORY_ROOT / "Scripts")
         self.git("add", "Config", "Documentation")
@@ -52,7 +52,14 @@ class ReleasePreflightTests(unittest.TestCase):
         self.git("add", "change.txt")
         self.git("commit", "-m", "Current build")
         self.current_commit = self.git("rev-parse", "HEAD")
-        self.git("branch", "updates")
+        self.git("checkout", "-b", "updates")
+        (self.repository / "release-note-publication.json").write_text(
+            '{"schemaVersion": 1, "channels": {"stable": "release-history", '
+            '"development": "release-history", "nightly": "release-history"}}\n'
+        )
+        self.git("add", "release-note-publication.json")
+        self.git("commit", "-m", "Publication cursors")
+        self.git("checkout", "main")
 
         bin_directory = self.root / "bin"
         bin_directory.mkdir()
@@ -79,7 +86,7 @@ class ReleasePreflightTests(unittest.TestCase):
             "GITHUB_EVENT_NAME": "schedule",
             "GITHUB_REF_TYPE": "branch",
             "GITHUB_REF_NAME": "main",
-            "GITHUB_REPOSITORY": "pauljoda/Crest",
+            "GITHUB_REPOSITORY": "crest-browser/Crest",
             "GITHUB_SHA": self.current_commit,
             "GITHUB_RUN_NUMBER": "61",
             "GITHUB_RUN_ATTEMPT": "1",
@@ -103,7 +110,7 @@ class ReleasePreflightTests(unittest.TestCase):
             '<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">'
             f"<channel><item><sparkle:channel>{channel}</sparkle:channel>"
             f"<sparkle:version>{build}</sparkle:version>"
-            f'<enclosure url="https://github.com/pauljoda/Crest/releases/download/{tag}/'
+            f'<enclosure url="https://github.com/crest-browser/Crest/releases/download/{tag}/'
             f'Installer-Crest-0.5.25-{channel}-2026-09-03-{commit[:7]}-arm64.dmg" />'
             "</item></channel></rss>"
         )

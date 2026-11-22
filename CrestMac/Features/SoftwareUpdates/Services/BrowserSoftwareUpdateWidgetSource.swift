@@ -51,7 +51,6 @@ final class BrowserSoftwareUpdateWidgetSource:
                 kindID: .softwareUpdate,
                 instanceID: snapshot.build ?? snapshot.version ?? "available"
             ),
-            scope: .application,
             orderingOrdinal: 0,
             presentation: .softwareUpdate(snapshot),
             availableActions: snapshot.phase.cardActions(for: snapshot)

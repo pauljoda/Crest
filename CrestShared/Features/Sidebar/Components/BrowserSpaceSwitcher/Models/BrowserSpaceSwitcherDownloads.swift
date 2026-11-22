@@ -21,6 +21,6 @@ struct BrowserSpaceSwitcherDownloads {
     static let none = BrowserSpaceSwitcherDownloads(
         items: [],
         newItems: [],
-        badgeColor: .accentColor
+        badgeColor: CrestBrandTheme.accent
     )
 }

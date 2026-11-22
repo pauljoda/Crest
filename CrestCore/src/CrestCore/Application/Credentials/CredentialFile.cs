@@ -14,8 +14,9 @@ internal sealed record CredentialFile(CredentialFileFormat Format, IReadOnlyList
     IReadOnlyList<CredentialRowRejection> Rejections) {
     #region Static Variables
 
-    /// The largest file an import reads, in bytes.
-    public const int MaximumBytes = 16 * 1024 * 1024;
+    /// The largest file an import reads, in megabytes and in bytes.
+    public const int MaximumMegabytes = 16;
+    public const int MaximumBytes = MaximumMegabytes * 1024 * 1024;
     /// The most credential rows a file may hold.
     public const int MaximumRows = 10_000;
     /// The most columns a row may hold.

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-10-12-sidebar-layer-shapes",
+      "category": "improved",
+      "message": "Tabs, folders, Split Views, pinned tabs and the address bar now share one shape and spacing that follows your corner setting."
+    }
+  ]
+}

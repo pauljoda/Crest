@@ -1,7 +1,5 @@
-/// Settings destinations whose implementations are available in the macOS shell.
+/// How the Mac's Settings sidebar groups its destinations.
 enum BrowserPlatformSettingsDestinationCatalog {
-    static let cases = BrowserSettingsDestination.all
-
     /// The sidebar's groups of destinations, in order. Spaces list between
     /// the last two groups. Spaces, Passwords and Extensions are pages of a
     /// Space, and Feature Flags is a page of Advanced, so none has a row.

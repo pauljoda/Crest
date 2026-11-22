@@ -12,6 +12,14 @@ public sealed class MessageLimitAttribute(int bytes) : Attribute {
     /// The limit of every intent and query that names none.
     public const int DefaultBytes = 16 * 1024 * 1024;
 
+    /// The limit of a message that carries a whole session or its records,
+    /// which is as large as a stored session or sync journal may grow.
+    public const int SessionBytes = 64 * 1024 * 1024;
+
+    /// The limit of a message that also carries a legacy sync state beside a
+    /// session's worth of records.
+    public const int LegacySyncBytes = 2 * SessionBytes;
+
     public int Bytes { get; } = bytes;
 
     #endregion

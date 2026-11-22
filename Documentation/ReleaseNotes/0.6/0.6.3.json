@@ -1,0 +1,51 @@
+{
+  "release": {
+    "summary": "Crest 0.6 brings more ways to organize, personalize, and work across pages on Mac, iPhone, and iPad.",
+    "added": [
+      "Create Space banners in Crest Studio with templates, heraldic artwork, shapes, patterns, independent colors, emoji, monograms, and searchable symbols.",
+      "Customize sidebar placement, borderless windows, tab shape and scale, pin layout, address-field colors, app icon palettes, and page zoom from 25% to 500% in Look and Feel, with live previews and individual resets.",
+      "Translate webpages on device with language detection and optional automatic translation. Supported languages may require a download.",
+      "Open multiple Mac windows with shared Spaces and tabs while keeping your place in each window. Open disposable blank windows with the Space's cookies and extensions, or tear off a tab where you want its window to appear.",
+      "Drag webpage links into a live Peek on Mac. Peeks stay with their tabs when opening another tab or switching Spaces.",
+      "Use compatible extension side panels, Firefox sidebars, tab groups, and approved page debugging on Mac. Extension compatibility still depends on WebKit and the APIs each extension requires.",
+      "Preview phone, desktop, and custom viewport sizes from the Mac developer toolbar with Shift-Command-I."
+    ],
+    "changed": [
+      "Select tabs, Split Views, and folders together to move and organize them on every platform, including touch menus and VoiceOver actions on iPhone and iPad.",
+      "Drag individual tabs out of a Split View, or move the whole group from its header. Return pinned and saved tabs to their home URL with a double-click or an optional reset when closing.",
+      "Open Settings in the browsing canvas on wider layouts and in a dismissible sheet on compact layouts. Keep Settings and Getting Started where you left them when switching tabs or Spaces.",
+      "Choose folder icons from the full searchable SF Symbols catalog or use emoji. Customize folder colors and tab counts, with semibold tinted titles that adjust for stronger contrast. Reorder Spaces directly in Settings.",
+      "Preview link destinations on hover, complete addresses from the current Space, and copy a tab's link from its menu. Search selected text in a new Crest tab.",
+      {
+        "text": "Use native link and image menus and choose Photos, camera, or Files for webpage uploads on iPhone and iPad. Clear current tabs with a dedicated control while retaining pinned and saved tabs.",
+        "platforms": ["ios"]
+      },
+      "Open Getting Started in the first Space after setup, and rerun onboarding from Advanced settings.",
+      "Open a blank Mac window with Command-Option-N and a Quick Window with Command-Option-Shift-N."
+    ],
+    "fixed": [
+      "Keep a collapsed Mac sidebar collapsed when opening the address editor with Command-L.",
+      "Use the system dark background for Crest's app icon and every color palette.",
+      "Keep wide folder symbols fully visible in Icon only mode.",
+      "Keep pinned-tab outline colors consistent when pages unload. Prefer favicon colors when site themes are neutral, preserve black and white logos, and fade smoothly between color changes.",
+      "Recover missing iCloud changes with a confirmed Pull from iCloud action. Preserve Space customization during overlapping sync, and keep blank, built-in, and extension pages from blocking web-tab synchronization.",
+      "Keep page titles, history, Reader requests, favicons, extension panels, and sign-in links attached to their owning page and Space.",
+      "Keep visible pages loaded when switching windows during memory cleanup, and reduce unnecessary background work while preserving loaded browsing state.",
+      "Improve extension sign-in, background wake-up, popups, screenshots, permission prompts, and side-panel restoration, with stronger cookie and request-rule boundaries.",
+      "Restore website camera and notification permission prompts with remembered per-Space choices, and stop camera capture when permission is revoked.",
+      "Keep private and locked Space actions protected, clear unfinished drags when private browsing ends, and keep site-icon discovery private with bounded downloads.",
+      {
+        "text": "Improve first-page loading on iPhone and iPad, Space switching, webpage editor focus, high-resolution canvas rendering, and tab dragging through long sidebars.",
+        "platforms": ["ios"]
+      },
+      "Keep sidebar selection, address completions, icon pickers, touch navigation, download feedback, and media controls consistent as pages and layouts change."
+    ]
+  },
+  "entries": [
+    {
+      "id": "pinned-outlines-preserve-monochrome-favicons",
+      "category": "fixed",
+      "message": "Keep black, white, and gray favicon colors in pinned-tab outlines"
+    }
+  ]
+}

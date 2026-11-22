@@ -3,6 +3,10 @@ import Foundation
 
 @MainActor
 final class BrowserGeolocationSystemService: NSObject, BrowserGeolocationServicing {
+    /// How long the system's location prompt may go unanswered before the
+    /// page's request goes by the authorization the system holds then.
+    static let defaultAuthorizationTimeout: Duration = .seconds(30)
+
     private struct Registration {
         let options: BrowserGeolocationRequestOptions
         let receive: @MainActor (Result<BrowserGeolocationPosition, BrowserGeolocationError>) -> Void
@@ -18,7 +22,7 @@ final class BrowserGeolocationSystemService: NSObject, BrowserGeolocationServici
     private let authorizationTimeout: Duration
     private var authorizationTimeoutTask: Task<Void, Never>?
 
-    init(manager: CLLocationManager? = nil, authorizationTimeout: Duration = .seconds(30)) {
+    init(manager: CLLocationManager? = nil, authorizationTimeout: Duration = defaultAuthorizationTimeout) {
         self.providedManager = manager
         self.authorizationTimeout = authorizationTimeout
         super.init()

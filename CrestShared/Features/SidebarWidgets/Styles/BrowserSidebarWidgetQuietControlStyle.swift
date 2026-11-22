@@ -1,67 +1,24 @@
 import SwiftUI
 
-/// Reveals a secondary control surface on hover, focus, or press.
+/// A glyph on a widget card: the design system's round chrome control at the
+/// card's glyph size, in its place within a full hit target, such as the
+/// top trailing corner for a card's hide control.
 struct BrowserSidebarWidgetQuietControlStyle: ButtonStyle {
+    // MARK: - Variables
+
     var alignment: Alignment = .center
 
+    // MARK: - Actions - Drawing
+
     func makeBody(configuration: Configuration) -> some View {
-        BrowserSidebarWidgetQuietControlSurface(
-            configuration: configuration,
-            alignment: alignment
-        )
-    }
-}
-
-private struct BrowserSidebarWidgetQuietControlSurface: View {
-    let configuration: ButtonStyleConfiguration
-    let alignment: Alignment
-
-    @Environment(\.isEnabled) private var isEnabled
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isHovering = false
-
-    var body: some View {
-        configuration.label
+        CrestChromeButtonStyle.circle(diameter: BrowserSidebarWidgetDeckStyle.quietControlDiameter)
+            .makeBody(configuration: configuration)
             .font(BrowserSidebarWidgetDeckStyle.quietControlSymbolFont)
-            .foregroundStyle(foreground)
-            .frame(
-                width: BrowserSidebarWidgetDeckStyle.quietControlDiameter,
-                height: BrowserSidebarWidgetDeckStyle.quietControlDiameter
-            )
-            .background {
-                Circle()
-                    .fill(emphasis)
-            }
             .frame(
                 width: BrowserSidebarWidgetDeckStyle.quietControlHitTarget,
                 height: BrowserSidebarWidgetDeckStyle.quietControlHitTarget,
                 alignment: alignment
             )
             .contentShape(.rect)
-            .crestFocusShape(Circle())
-            .animation(surfaceAnimation, value: isHovering)
-            .animation(surfaceAnimation, value: configuration.isPressed)
-            .onHover { isHovering = $0 && isEnabled }
-    }
-
-    private var foreground: Color {
-        isEnabled
-            ? .primary
-            : .secondary.opacity(CrestOpacity.controlDisabledForeground)
-    }
-
-    private var emphasis: Color {
-        switch (configuration.isPressed && isEnabled, isHovering) {
-        case (true, _):
-            CrestColor.selection
-        case (false, true):
-            CrestColor.hover
-        case (false, false):
-            .clear
-        }
-    }
-
-    private var surfaceAnimation: Animation? {
-        CrestMotion.surface.unlessReducingMotion(reduceMotion)
     }
 }

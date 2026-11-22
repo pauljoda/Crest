@@ -10,29 +10,13 @@ import json
 import os
 from pathlib import Path
 import re
+import sys
 
 from chromium_fork import ENGINE, REPO, read_json, run
 import chromium_engine
 
-
-def append_release_note(catalog, identifier, note):
-    """The release-note catalog text with `note` appended as its last entry.
-
-    The catalog keeps literal characters beside older escapes, so its existing
-    text is left exactly as it is instead of being serialized again.
-    """
-    entries = json.loads(catalog)["entries"]
-    if identifier in entries:
-        raise ValueError("This upstream update already has a release note")
-    closing = "\n    }\n  }\n}\n"
-    if not catalog.endswith(closing):
-        raise ValueError("The release-note catalog no longer ends with its entries")
-    fields = ",\n".join(f"      {json.dumps(name)}: {json.dumps(value, ensure_ascii=False)}"
-                        for name, value in note.items())
-    appended = f"{catalog[:-len(closing)]}\n    }},\n    {json.dumps(identifier)}: {{\n{fields}\n    }}\n  }}\n}}\n"
-    if list(json.loads(appended)["entries"].items()) != list((entries | {identifier: note}).items()):
-        raise ValueError("The release-note catalog did not take the update's entry last")
-    return appended
+sys.path.insert(0, str(REPO / "Scripts"))
+import release_note_catalog  # noqa: E402
 
 
 def update_plan(receipt, *, version, base_sha, engine_key):
@@ -83,14 +67,13 @@ def main():
     run("git", "config", "user.name", "github-actions[bot]")
     run("git", "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com")
     run(REPO / "Scripts/set-version.sh", "--patch")
-    notes_path = REPO / "Documentation/ReleaseNotes.json"
-    entry = f"chromium-upstream-{version.replace('.', '-')}-{args.base_sha[:12]}"
-    note = {"category": "fixed", "message": f"Chromium is updated to {version} with upstream security and compatibility fixes."}
-    try:
-        notes_path.write_text(append_release_note(notes_path.read_text(), entry, note))
-    except ValueError as error:
-        parser.error(str(error))
-    run("git", "add", *sorted(allowed_paths), "Config/Version.xcconfig", "Documentation/ReleaseNotes.json")
+    crest_version = release_note_catalog.Version.from_version_file(
+        (REPO / "Config/Version.xcconfig").read_text(), "Config/Version.xcconfig")
+    note = {"id": f"chromium-upstream-{version.replace('.', '-')}-{args.base_sha[:12]}", "category": "fixed",
+            "message": f"Chromium is updated to {version} with upstream security and compatibility fixes.",
+            "platforms": ["mac"]}
+    notes_path = release_note_catalog.append_entry(REPO, crest_version, note)
+    run("git", "add", *sorted(allowed_paths), "Config/Version.xcconfig", str(notes_path.relative_to(REPO)))
     run(REPO / "Scripts/check-version.sh", "--fix-commit")
     run("git", "commit", "-s", "-m", f"Update Chromium to {version}")
     run("git", "push", "origin", f"HEAD:refs/heads/{branch}")

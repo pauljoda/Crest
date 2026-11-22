@@ -56,7 +56,7 @@ enum BrowserSidebarPreviewFixture {
     static func makeBrowser() -> BrowserStore {
         BrowserStore(
             seed: SessionState.Seed(spaces: [space]),
-            browsingMode: .privateBrowsing
+            workspaceKind: .private
         )
     }
 

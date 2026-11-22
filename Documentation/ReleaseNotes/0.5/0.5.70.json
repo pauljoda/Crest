@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-05-extension-toolbar-idle-and-popup-toggle",
+      "category": "fixed",
+      "message": "Open extension panels reliably after idle and dismiss popups when clicking their toolbar icon again"
+    },
+    {
+      "id": "2026-09-05-extension-clipboard-text-import",
+      "category": "new",
+      "message": "Let permitted extensions read clipboard text, including grade-transfer tools that use legacy paste"
+    }
+  ]
+}

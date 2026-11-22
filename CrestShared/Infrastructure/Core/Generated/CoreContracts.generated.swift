@@ -57,6 +57,9 @@ protocol CloudTransportIntent: Intent {}
 /// The members of `Intent` that derive from the core's `DataDeletionIntent`.
 protocol DataDeletionIntent: Intent {}
 
+/// The members of `Intent` that derive from the core's `DevicePreferenceIntent`.
+protocol DevicePreferenceIntent: Intent {}
+
 /// The members of `Intent` that derive from the core's `DownloadIntent`.
 protocol DownloadIntent: Intent {}
 
@@ -135,6 +138,7 @@ enum Change: Equatable, Sendable {
     case dataDeleted(DataDeleted)
     case downloadApprovalAsked(DownloadApprovalAsked)
     case downloadDestinationAsked(DownloadDestinationAsked)
+    case downloadPreferencesChanged(DownloadPreferencesChanged)
     case downloadStarted(DownloadStarted)
     case downloadUpdated(DownloadUpdated)
     case downloadsRemoved(DownloadsRemoved)
@@ -152,12 +156,14 @@ enum Change: Equatable, Sendable {
     case offeredWindowAdopted(OfferedWindowAdopted)
     case pageChanged(PageChanged)
     case pageOpened(PageOpened)
+    case pagePreferencesChanged(PagePreferencesChanged)
     case pageRehosted(PageRehosted)
     case pageRemoved(PageRemoved)
     case pageUnloaded(PageUnloaded)
     case permissionAsked(PermissionAsked)
     case promptSettled(PromptSettled)
     case quitWithDownloadsAsked(QuitWithDownloadsAsked)
+    case releaseNotesDue(ReleaseNotesDue)
     case saved(Saved)
     case scriptDialogAsked(ScriptDialogAsked)
     case searchCatalogChanged(SearchCatalogChanged)
@@ -194,6 +200,381 @@ enum Change: Equatable, Sendable {
     case workspaceChanged(WorkspaceChanged)
     case workspaceClosed(WorkspaceClosed)
     case workspaceOpened(WorkspaceOpened)
+
+    /// The `AgentPreferencesChanged` this change carries, or nil for another member.
+    var agentPreferencesChanged: AgentPreferencesChanged? {
+        if case .agentPreferencesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentSessionsChanged` this change carries, or nil for another member.
+    var agentSessionsChanged: AgentSessionsChanged? {
+        if case .agentSessionsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `AppPreferencesChanged` this change carries, or nil for another member.
+    var appPreferencesChanged: AppPreferencesChanged? {
+        if case .appPreferencesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `ArchiveChanged` this change carries, or nil for another member.
+    var archiveChanged: ArchiveChanged? {
+        if case .archiveChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `AuthenticationAsked` this change carries, or nil for another member.
+    var authenticationAsked: AuthenticationAsked? {
+        if case .authenticationAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `CloseReady` this change carries, or nil for another member.
+    var closeReady: CloseReady? {
+        if case .closeReady(let value) = self { value } else { nil }
+    }
+
+    /// The `CloudMergeBegan` this change carries, or nil for another member.
+    var cloudMergeBegan: CloudMergeBegan? {
+        if case .cloudMergeBegan(let value) = self { value } else { nil }
+    }
+
+    /// The `CloudSyncAdvanced` this change carries, or nil for another member.
+    var cloudSyncAdvanced: CloudSyncAdvanced? {
+        if case .cloudSyncAdvanced(let value) = self { value } else { nil }
+    }
+
+    /// The `CloudTransportChanged` this change carries, or nil for another member.
+    var cloudTransportChanged: CloudTransportChanged? {
+        if case .cloudTransportChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `ContentRuleListsChanged` this change carries, or nil for another member.
+    var contentRuleListsChanged: ContentRuleListsChanged? {
+        if case .contentRuleListsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `DataDeleted` this change carries, or nil for another member.
+    var dataDeleted: DataDeleted? {
+        if case .dataDeleted(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadApprovalAsked` this change carries, or nil for another member.
+    var downloadApprovalAsked: DownloadApprovalAsked? {
+        if case .downloadApprovalAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadDestinationAsked` this change carries, or nil for another member.
+    var downloadDestinationAsked: DownloadDestinationAsked? {
+        if case .downloadDestinationAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadPreferencesChanged` this change carries, or nil for another member.
+    var downloadPreferencesChanged: DownloadPreferencesChanged? {
+        if case .downloadPreferencesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadStarted` this change carries, or nil for another member.
+    var downloadStarted: DownloadStarted? {
+        if case .downloadStarted(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadUpdated` this change carries, or nil for another member.
+    var downloadUpdated: DownloadUpdated? {
+        if case .downloadUpdated(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadsRemoved` this change carries, or nil for another member.
+    var downloadsRemoved: DownloadsRemoved? {
+        if case .downloadsRemoved(let value) = self { value } else { nil }
+    }
+
+    /// The `EnginePreferencesChanged` this change carries, or nil for another member.
+    var enginePreferencesChanged: EnginePreferencesChanged? {
+        if case .enginePreferencesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `EnginesChanged` this change carries, or nil for another member.
+    var enginesChanged: EnginesChanged? {
+        if case .enginesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `ExtensionInstallAsked` this change carries, or nil for another member.
+    var extensionInstallAsked: ExtensionInstallAsked? {
+        if case .extensionInstallAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `ExtensionInstallChanged` this change carries, or nil for another member.
+    var extensionInstallChanged: ExtensionInstallChanged? {
+        if case .extensionInstallChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `FilterListsChanged` this change carries, or nil for another member.
+    var filterListsChanged: FilterListsChanged? {
+        if case .filterListsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `FoldersChanged` this change carries, or nil for another member.
+    var foldersChanged: FoldersChanged? {
+        if case .foldersChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `HistoryChanged` this change carries, or nil for another member.
+    var historyChanged: HistoryChanged? {
+        if case .historyChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `InstalledExtensionsChanged` this change carries, or nil for another member.
+    var installedExtensionsChanged: InstalledExtensionsChanged? {
+        if case .installedExtensionsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `LinkPreferencesChanged` this change carries, or nil for another member.
+    var linkPreferencesChanged: LinkPreferencesChanged? {
+        if case .linkPreferencesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `NavigationRecorded` this change carries, or nil for another member.
+    var navigationRecorded: NavigationRecorded? {
+        if case .navigationRecorded(let value) = self { value } else { nil }
+    }
+
+    /// The `OfferedPageAdopted` this change carries, or nil for another member.
+    var offeredPageAdopted: OfferedPageAdopted? {
+        if case .offeredPageAdopted(let value) = self { value } else { nil }
+    }
+
+    /// The `OfferedWindowAdopted` this change carries, or nil for another member.
+    var offeredWindowAdopted: OfferedWindowAdopted? {
+        if case .offeredWindowAdopted(let value) = self { value } else { nil }
+    }
+
+    /// The `PageChanged` this change carries, or nil for another member.
+    var pageChanged: PageChanged? {
+        if case .pageChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `PageOpened` this change carries, or nil for another member.
+    var pageOpened: PageOpened? {
+        if case .pageOpened(let value) = self { value } else { nil }
+    }
+
+    /// The `PagePreferencesChanged` this change carries, or nil for another member.
+    var pagePreferencesChanged: PagePreferencesChanged? {
+        if case .pagePreferencesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `PageRehosted` this change carries, or nil for another member.
+    var pageRehosted: PageRehosted? {
+        if case .pageRehosted(let value) = self { value } else { nil }
+    }
+
+    /// The `PageRemoved` this change carries, or nil for another member.
+    var pageRemoved: PageRemoved? {
+        if case .pageRemoved(let value) = self { value } else { nil }
+    }
+
+    /// The `PageUnloaded` this change carries, or nil for another member.
+    var pageUnloaded: PageUnloaded? {
+        if case .pageUnloaded(let value) = self { value } else { nil }
+    }
+
+    /// The `PermissionAsked` this change carries, or nil for another member.
+    var permissionAsked: PermissionAsked? {
+        if case .permissionAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `PromptSettled` this change carries, or nil for another member.
+    var promptSettled: PromptSettled? {
+        if case .promptSettled(let value) = self { value } else { nil }
+    }
+
+    /// The `QuitWithDownloadsAsked` this change carries, or nil for another member.
+    var quitWithDownloadsAsked: QuitWithDownloadsAsked? {
+        if case .quitWithDownloadsAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `ReleaseNotesDue` this change carries, or nil for another member.
+    var releaseNotesDue: ReleaseNotesDue? {
+        if case .releaseNotesDue(let value) = self { value } else { nil }
+    }
+
+    /// The `Saved` this change carries, or nil for another member.
+    var saved: Saved? {
+        if case .saved(let value) = self { value } else { nil }
+    }
+
+    /// The `ScriptDialogAsked` this change carries, or nil for another member.
+    var scriptDialogAsked: ScriptDialogAsked? {
+        if case .scriptDialogAsked(let value) = self { value } else { nil }
+    }
+
+    /// The `SearchCatalogChanged` this change carries, or nil for another member.
+    var searchCatalogChanged: SearchCatalogChanged? {
+        if case .searchCatalogChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionAdopted` this change carries, or nil for another member.
+    var sessionAdopted: SessionAdopted? {
+        if case .sessionAdopted(let value) = self { value } else { nil }
+    }
+
+    /// The `SetupCompletedChanged` this change carries, or nil for another member.
+    var setupCompletedChanged: SetupCompletedChanged? {
+        if case .setupCompletedChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SetupDraftChanged` this change carries, or nil for another member.
+    var setupDraftChanged: SetupDraftChanged? {
+        if case .setupDraftChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SetupFinished` this change carries, or nil for another member.
+    var setupFinished: SetupFinished? {
+        if case .setupFinished(let value) = self { value } else { nil }
+    }
+
+    /// The `SetupFlowChanged` this change carries, or nil for another member.
+    var setupFlowChanged: SetupFlowChanged? {
+        if case .setupFlowChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `ShortcutsChanged` this change carries, or nil for another member.
+    var shortcutsChanged: ShortcutsChanged? {
+        if case .shortcutsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SidebarChanged` this change carries, or nil for another member.
+    var sidebarChanged: SidebarChanged? {
+        if case .sidebarChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SiteContentBlockingChanged` this change carries, or nil for another member.
+    var siteContentBlockingChanged: SiteContentBlockingChanged? {
+        if case .siteContentBlockingChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SitePermissionsChanged` this change carries, or nil for another member.
+    var sitePermissionsChanged: SitePermissionsChanged? {
+        if case .sitePermissionsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceLockChanged` this change carries, or nil for another member.
+    var spaceLockChanged: SpaceLockChanged? {
+        if case .spaceLockChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceSettingsChanged` this change carries, or nil for another member.
+    var spaceSettingsChanged: SpaceSettingsChanged? {
+        if case .spaceSettingsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SpacesChanged` this change carries, or nil for another member.
+    var spacesChanged: SpacesChanged? {
+        if case .spacesChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SplitGroupsChanged` this change carries, or nil for another member.
+    var splitGroupsChanged: SplitGroupsChanged? {
+        if case .splitGroupsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `StorageFailed` this change carries, or nil for another member.
+    var storageFailed: StorageFailed? {
+        if case .storageFailed(let value) = self { value } else { nil }
+    }
+
+    /// The `SyncJournalChanged` this change carries, or nil for another member.
+    var syncJournalChanged: SyncJournalChanged? {
+        if case .syncJournalChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SyncRecordsSkipped` this change carries, or nil for another member.
+    var syncRecordsSkipped: SyncRecordsSkipped? {
+        if case .syncRecordsSkipped(let value) = self { value } else { nil }
+    }
+
+    /// The `SyncStagingFailed` this change carries, or nil for another member.
+    var syncStagingFailed: SyncStagingFailed? {
+        if case .syncStagingFailed(let value) = self { value } else { nil }
+    }
+
+    /// The `TabCopied` this change carries, or nil for another member.
+    var tabCopied: TabCopied? {
+        if case .tabCopied(let value) = self { value } else { nil }
+    }
+
+    /// The `TabFaviconAssigned` this change carries, or nil for another member.
+    var tabFaviconAssigned: TabFaviconAssigned? {
+        if case .tabFaviconAssigned(let value) = self { value } else { nil }
+    }
+
+    /// The `TabPagePutAway` this change carries, or nil for another member.
+    var tabPagePutAway: TabPagePutAway? {
+        if case .tabPagePutAway(let value) = self { value } else { nil }
+    }
+
+    /// The `TabSavedImageChanged` this change carries, or nil for another member.
+    var tabSavedImageChanged: TabSavedImageChanged? {
+        if case .tabSavedImageChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `TabsChanged` this change carries, or nil for another member.
+    var tabsChanged: TabsChanged? {
+        if case .tabsChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `TabsImported` this change carries, or nil for another member.
+    var tabsImported: TabsImported? {
+        if case .tabsImported(let value) = self { value } else { nil }
+    }
+
+    /// The `TransientPageClosed` this change carries, or nil for another member.
+    var transientPageClosed: TransientPageClosed? {
+        if case .transientPageClosed(let value) = self { value } else { nil }
+    }
+
+    /// The `TransientPagePromoted` this change carries, or nil for another member.
+    var transientPagePromoted: TransientPagePromoted? {
+        if case .transientPagePromoted(let value) = self { value } else { nil }
+    }
+
+    /// The `WebsiteDataRead` this change carries, or nil for another member.
+    var websiteDataRead: WebsiteDataRead? {
+        if case .websiteDataRead(let value) = self { value } else { nil }
+    }
+
+    /// The `WindowBroughtForward` this change carries, or nil for another member.
+    var windowBroughtForward: WindowBroughtForward? {
+        if case .windowBroughtForward(let value) = self { value } else { nil }
+    }
+
+    /// The `WindowChanged` this change carries, or nil for another member.
+    var windowChanged: WindowChanged? {
+        if case .windowChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `WindowClosed` this change carries, or nil for another member.
+    var windowClosed: WindowClosed? {
+        if case .windowClosed(let value) = self { value } else { nil }
+    }
+
+    /// The `WindowRecordsAdopted` this change carries, or nil for another member.
+    var windowRecordsAdopted: WindowRecordsAdopted? {
+        if case .windowRecordsAdopted(let value) = self { value } else { nil }
+    }
+
+    /// The `WorkspaceChanged` this change carries, or nil for another member.
+    var workspaceChanged: WorkspaceChanged? {
+        if case .workspaceChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `WorkspaceClosed` this change carries, or nil for another member.
+    var workspaceClosed: WorkspaceClosed? {
+        if case .workspaceClosed(let value) = self { value } else { nil }
+    }
+
+    /// The `WorkspaceOpened` this change carries, or nil for another member.
+    var workspaceOpened: WorkspaceOpened? {
+        if case .workspaceOpened(let value) = self { value } else { nil }
+    }
 }
 
 /// The rule that refused an intent or a query.
@@ -378,6 +759,906 @@ enum Rejection: Equatable, Error, Sendable {
     case windowNotOpen(WindowNotOpen)
     case workspaceBusy(WorkspaceBusy)
     case wrongDeletionOperation(WrongDeletionOperation)
+
+    /// The `AgentNotApproved` this rejection carries, or nil for another member.
+    var agentNotApproved: AgentNotApproved? {
+        if case .agentNotApproved(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentSessionsFull` this rejection carries, or nil for another member.
+    var agentSessionsFull: AgentSessionsFull? {
+        if case .agentSessionsFull(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentSpaceUnavailable` this rejection carries, or nil for another member.
+    var agentSpaceUnavailable: AgentSpaceUnavailable? {
+        if case .agentSpaceUnavailable(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentTabStopped` this rejection carries, or nil for another member.
+    var agentTabStopped: AgentTabStopped? {
+        if case .agentTabStopped(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentTabUnavailable` this rejection carries, or nil for another member.
+    var agentTabUnavailable: AgentTabUnavailable? {
+        if case .agentTabUnavailable(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentsFull` this rejection carries, or nil for another member.
+    var agentsFull: AgentsFull? {
+        if case .agentsFull(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentsOff` this rejection carries, or nil for another member.
+    var agentsOff: AgentsOff? {
+        if case .agentsOff(let value) = self { value } else { nil }
+    }
+
+    /// The `AgentsUnavailable` this rejection carries, or nil for another member.
+    var agentsUnavailable: AgentsUnavailable? {
+        if case .agentsUnavailable(let value) = self { value } else { nil }
+    }
+
+    /// The `AlreadyInSpace` this rejection carries, or nil for another member.
+    var alreadyInSpace: AlreadyInSpace? {
+        if case .alreadyInSpace(let value) = self { value } else { nil }
+    }
+
+    /// The `AlreadyInSplit` this rejection carries, or nil for another member.
+    var alreadyInSplit: AlreadyInSplit? {
+        if case .alreadyInSplit(let value) = self { value } else { nil }
+    }
+
+    /// The `ArchiveInvalid` this rejection carries, or nil for another member.
+    var archiveInvalid: ArchiveInvalid? {
+        if case .archiveInvalid(let value) = self { value } else { nil }
+    }
+
+    /// The `ArchiveTooLarge` this rejection carries, or nil for another member.
+    var archiveTooLarge: ArchiveTooLarge? {
+        if case .archiveTooLarge(let value) = self { value } else { nil }
+    }
+
+    /// The `AuthenticationBusy` this rejection carries, or nil for another member.
+    var authenticationBusy: AuthenticationBusy? {
+        if case .authenticationBusy(let value) = self { value } else { nil }
+    }
+
+    /// The `BookmarksHaveNoLinks` this rejection carries, or nil for another member.
+    var bookmarksHaveNoLinks: BookmarksHaveNoLinks? {
+        if case .bookmarksHaveNoLinks(let value) = self { value } else { nil }
+    }
+
+    /// The `BookmarksOverLimits` this rejection carries, or nil for another member.
+    var bookmarksOverLimits: BookmarksOverLimits? {
+        if case .bookmarksOverLimits(let value) = self { value } else { nil }
+    }
+
+    /// The `BookmarksTooLarge` this rejection carries, or nil for another member.
+    var bookmarksTooLarge: BookmarksTooLarge? {
+        if case .bookmarksTooLarge(let value) = self { value } else { nil }
+    }
+
+    /// The `BookmarksUnrecognized` this rejection carries, or nil for another member.
+    var bookmarksUnrecognized: BookmarksUnrecognized? {
+        if case .bookmarksUnrecognized(let value) = self { value } else { nil }
+    }
+
+    /// The `BorrowedProfileRequiresOwner` this rejection carries, or nil for another member.
+    var borrowedProfileRequiresOwner: BorrowedProfileRequiresOwner? {
+        if case .borrowedProfileRequiresOwner(let value) = self { value } else { nil }
+    }
+
+    /// The `BorrowedWorkspaceRequiresSpace` this rejection carries, or nil for another member.
+    var borrowedWorkspaceRequiresSpace: BorrowedWorkspaceRequiresSpace? {
+        if case .borrowedWorkspaceRequiresSpace(let value) = self { value } else { nil }
+    }
+
+    /// The `CannotBecomeGroup` this rejection carries, or nil for another member.
+    var cannotBecomeGroup: CannotBecomeGroup? {
+        if case .cannotBecomeGroup(let value) = self { value } else { nil }
+    }
+
+    /// The `CannotDeleteLastSpace` this rejection carries, or nil for another member.
+    var cannotDeleteLastSpace: CannotDeleteLastSpace? {
+        if case .cannotDeleteLastSpace(let value) = self { value } else { nil }
+    }
+
+    /// The `CannotMoveSplitAcrossSpaces` this rejection carries, or nil for another member.
+    var cannotMoveSplitAcrossSpaces: CannotMoveSplitAcrossSpaces? {
+        if case .cannotMoveSplitAcrossSpaces(let value) = self { value } else { nil }
+    }
+
+    /// The `CannotPinSplit` this rejection carries, or nil for another member.
+    var cannotPinSplit: CannotPinSplit? {
+        if case .cannotPinSplit(let value) = self { value } else { nil }
+    }
+
+    /// The `ClosePreparationUnderway` this rejection carries, or nil for another member.
+    var closePreparationUnderway: ClosePreparationUnderway? {
+        if case .closePreparationUnderway(let value) = self { value } else { nil }
+    }
+
+    /// The `ContentRuleListUnavailable` this rejection carries, or nil for another member.
+    var contentRuleListUnavailable: ContentRuleListUnavailable? {
+        if case .contentRuleListUnavailable(let value) = self { value } else { nil }
+    }
+
+    /// The `CredentialRecordLimitReached` this rejection carries, or nil for another member.
+    var credentialRecordLimitReached: CredentialRecordLimitReached? {
+        if case .credentialRecordLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `CurrentTabsOnly` this rejection carries, or nil for another member.
+    var currentTabsOnly: CurrentTabsOnly? {
+        if case .currentTabsOnly(let value) = self { value } else { nil }
+    }
+
+    /// The `CustomFilterListLimitReached` this rejection carries, or nil for another member.
+    var customFilterListLimitReached: CustomFilterListLimitReached? {
+        if case .customFilterListLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `CustomFiltersTooLarge` this rejection carries, or nil for another member.
+    var customFiltersTooLarge: CustomFiltersTooLarge? {
+        if case .customFiltersTooLarge(let value) = self { value } else { nil }
+    }
+
+    /// The `DefaultEngineAlreadyRegistered` this rejection carries, or nil for another member.
+    var defaultEngineAlreadyRegistered: DefaultEngineAlreadyRegistered? {
+        if case .defaultEngineAlreadyRegistered(let value) = self { value } else { nil }
+    }
+
+    /// The `DownloadLimitReached` this rejection carries, or nil for another member.
+    var downloadLimitReached: DownloadLimitReached? {
+        if case .downloadLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicateCredential` this rejection carries, or nil for another member.
+    var duplicateCredential: DuplicateCredential? {
+        if case .duplicateCredential(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicateDownload` this rejection carries, or nil for another member.
+    var duplicateDownload: DuplicateDownload? {
+        if case .duplicateDownload(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicateMediaSession` this rejection carries, or nil for another member.
+    var duplicateMediaSession: DuplicateMediaSession? {
+        if case .duplicateMediaSession(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicatePage` this rejection carries, or nil for another member.
+    var duplicatePage: DuplicatePage? {
+        if case .duplicatePage(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicateSearchEngineName` this rejection carries, or nil for another member.
+    var duplicateSearchEngineName: DuplicateSearchEngineName? {
+        if case .duplicateSearchEngineName(let value) = self { value } else { nil }
+    }
+
+    /// The `DuplicateSearchShortcut` this rejection carries, or nil for another member.
+    var duplicateSearchShortcut: DuplicateSearchShortcut? {
+        if case .duplicateSearchShortcut(let value) = self { value } else { nil }
+    }
+
+    /// The `ElementSelectorInvalid` this rejection carries, or nil for another member.
+    var elementSelectorInvalid: ElementSelectorInvalid? {
+        if case .elementSelectorInvalid(let value) = self { value } else { nil }
+    }
+
+    /// The `EngineAlreadyRegistered` this rejection carries, or nil for another member.
+    var engineAlreadyRegistered: EngineAlreadyRegistered? {
+        if case .engineAlreadyRegistered(let value) = self { value } else { nil }
+    }
+
+    /// The `EngineLacksCapability` this rejection carries, or nil for another member.
+    var engineLacksCapability: EngineLacksCapability? {
+        if case .engineLacksCapability(let value) = self { value } else { nil }
+    }
+
+    /// The `EngineNotRegistered` this rejection carries, or nil for another member.
+    var engineNotRegistered: EngineNotRegistered? {
+        if case .engineNotRegistered(let value) = self { value } else { nil }
+    }
+
+    /// The `ExtensionNotChangeable` this rejection carries, or nil for another member.
+    var extensionNotChangeable: ExtensionNotChangeable? {
+        if case .extensionNotChangeable(let value) = self { value } else { nil }
+    }
+
+    /// The `FileUnreadable` this rejection carries, or nil for another member.
+    var fileUnreadable: FileUnreadable? {
+        if case .fileUnreadable(let value) = self { value } else { nil }
+    }
+
+    /// The `FilterListAddressInvalid` this rejection carries, or nil for another member.
+    var filterListAddressInvalid: FilterListAddressInvalid? {
+        if case .filterListAddressInvalid(let value) = self { value } else { nil }
+    }
+
+    /// The `FolderAlreadyExists` this rejection carries, or nil for another member.
+    var folderAlreadyExists: FolderAlreadyExists? {
+        if case .folderAlreadyExists(let value) = self { value } else { nil }
+    }
+
+    /// The `FolderCycle` this rejection carries, or nil for another member.
+    var folderCycle: FolderCycle? {
+        if case .folderCycle(let value) = self { value } else { nil }
+    }
+
+    /// The `FolderDepthLimitReached` this rejection carries, or nil for another member.
+    var folderDepthLimitReached: FolderDepthLimitReached? {
+        if case .folderDepthLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `FolderLimitReached` this rejection carries, or nil for another member.
+    var folderLimitReached: FolderLimitReached? {
+        if case .folderLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `GroupHoldsOnlyTabs` this rejection carries, or nil for another member.
+    var groupHoldsOnlyTabs: GroupHoldsOnlyTabs? {
+        if case .groupHoldsOnlyTabs(let value) = self { value } else { nil }
+    }
+
+    /// The `GuideSpaceLocked` this rejection carries, or nil for another member.
+    var guideSpaceLocked: GuideSpaceLocked? {
+        if case .guideSpaceLocked(let value) = self { value } else { nil }
+    }
+
+    /// The `IncompleteSplit` this rejection carries, or nil for another member.
+    var incompleteSplit: IncompleteSplit? {
+        if case .incompleteSplit(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidAgent` this rejection carries, or nil for another member.
+    var invalidAgent: InvalidAgent? {
+        if case .invalidAgent(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidBlockedPopup` this rejection carries, or nil for another member.
+    var invalidBlockedPopup: InvalidBlockedPopup? {
+        if case .invalidBlockedPopup(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidCredentialDate` this rejection carries, or nil for another member.
+    var invalidCredentialDate: InvalidCredentialDate? {
+        if case .invalidCredentialDate(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidCredentialFile` this rejection carries, or nil for another member.
+    var invalidCredentialFile: InvalidCredentialFile? {
+        if case .invalidCredentialFile(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidCredentialOrigin` this rejection carries, or nil for another member.
+    var invalidCredentialOrigin: InvalidCredentialOrigin? {
+        if case .invalidCredentialOrigin(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidCredentialRecord` this rejection carries, or nil for another member.
+    var invalidCredentialRecord: InvalidCredentialRecord? {
+        if case .invalidCredentialRecord(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidCredentialUsername` this rejection carries, or nil for another member.
+    var invalidCredentialUsername: InvalidCredentialUsername? {
+        if case .invalidCredentialUsername(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidDownloadIdentity` this rejection carries, or nil for another member.
+    var invalidDownloadIdentity: InvalidDownloadIdentity? {
+        if case .invalidDownloadIdentity(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidDownloadProgress` this rejection carries, or nil for another member.
+    var invalidDownloadProgress: InvalidDownloadProgress? {
+        if case .invalidDownloadProgress(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidDownloadSample` this rejection carries, or nil for another member.
+    var invalidDownloadSample: InvalidDownloadSample? {
+        if case .invalidDownloadSample(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidDownloadText` this rejection carries, or nil for another member.
+    var invalidDownloadText: InvalidDownloadText? {
+        if case .invalidDownloadText(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidFolderPlacement` this rejection carries, or nil for another member.
+    var invalidFolderPlacement: InvalidFolderPlacement? {
+        if case .invalidFolderPlacement(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidFolderSymbol` this rejection carries, or nil for another member.
+    var invalidFolderSymbol: InvalidFolderSymbol? {
+        if case .invalidFolderSymbol(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidImport` this rejection carries, or nil for another member.
+    var invalidImport: InvalidImport? {
+        if case .invalidImport(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidLinkRouteEdit` this rejection carries, or nil for another member.
+    var invalidLinkRouteEdit: InvalidLinkRouteEdit? {
+        if case .invalidLinkRouteEdit(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidMediaSessionCount` this rejection carries, or nil for another member.
+    var invalidMediaSessionCount: InvalidMediaSessionCount? {
+        if case .invalidMediaSessionCount(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidName` this rejection carries, or nil for another member.
+    var invalidName: InvalidName? {
+        if case .invalidName(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidNewPrimary` this rejection carries, or nil for another member.
+    var invalidNewPrimary: InvalidNewPrimary? {
+        if case .invalidNewPrimary(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidPasswordLength` this rejection carries, or nil for another member.
+    var invalidPasswordLength: InvalidPasswordLength? {
+        if case .invalidPasswordLength(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidRetentionLifetime` this rejection carries, or nil for another member.
+    var invalidRetentionLifetime: InvalidRetentionLifetime? {
+        if case .invalidRetentionLifetime(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSearchEngine` this rejection carries, or nil for another member.
+    var invalidSearchEngine: InvalidSearchEngine? {
+        if case .invalidSearchEngine(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSearchShortcut` this rejection carries, or nil for another member.
+    var invalidSearchShortcut: InvalidSearchShortcut? {
+        if case .invalidSearchShortcut(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSession` this rejection carries, or nil for another member.
+    var invalidSession: InvalidSession? {
+        if case .invalidSession(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidShortcut` this rejection carries, or nil for another member.
+    var invalidShortcut: InvalidShortcut? {
+        if case .invalidShortcut(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSiteHost` this rejection carries, or nil for another member.
+    var invalidSiteHost: InvalidSiteHost? {
+        if case .invalidSiteHost(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSiteOrigin` this rejection carries, or nil for another member.
+    var invalidSiteOrigin: InvalidSiteOrigin? {
+        if case .invalidSiteOrigin(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSitePermissionDetail` this rejection carries, or nil for another member.
+    var invalidSitePermissionDetail: InvalidSitePermissionDetail? {
+        if case .invalidSitePermissionDetail(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSitePermissionGrant` this rejection carries, or nil for another member.
+    var invalidSitePermissionGrant: InvalidSitePermissionGrant? {
+        if case .invalidSitePermissionGrant(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSpaceOrder` this rejection carries, or nil for another member.
+    var invalidSpaceOrder: InvalidSpaceOrder? {
+        if case .invalidSpaceOrder(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSplitColumnShares` this rejection carries, or nil for another member.
+    var invalidSplitColumnShares: InvalidSplitColumnShares? {
+        if case .invalidSplitColumnShares(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSplitIcon` this rejection carries, or nil for another member.
+    var invalidSplitIcon: InvalidSplitIcon? {
+        if case .invalidSplitIcon(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSyncRecords` this rejection carries, or nil for another member.
+    var invalidSyncRecords: InvalidSyncRecords? {
+        if case .invalidSyncRecords(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidTabContent` this rejection carries, or nil for another member.
+    var invalidTabContent: InvalidTabContent? {
+        if case .invalidTabContent(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidTabIcon` this rejection carries, or nil for another member.
+    var invalidTabIcon: InvalidTabIcon? {
+        if case .invalidTabIcon(let value) = self { value } else { nil }
+    }
+
+    /// The `LanguageTooLong` this rejection carries, or nil for another member.
+    var languageTooLong: LanguageTooLong? {
+        if case .languageTooLong(let value) = self { value } else { nil }
+    }
+
+    /// The `LastStartPage` this rejection carries, or nil for another member.
+    var lastStartPage: LastStartPage? {
+        if case .lastStartPage(let value) = self { value } else { nil }
+    }
+
+    /// The `LegacyCloudStateUnreadable` this rejection carries, or nil for another member.
+    var legacyCloudStateUnreadable: LegacyCloudStateUnreadable? {
+        if case .legacyCloudStateUnreadable(let value) = self { value } else { nil }
+    }
+
+    /// The `LinkPatternTooLong` this rejection carries, or nil for another member.
+    var linkPatternTooLong: LinkPatternTooLong? {
+        if case .linkPatternTooLong(let value) = self { value } else { nil }
+    }
+
+    /// The `LinkRouteExists` this rejection carries, or nil for another member.
+    var linkRouteExists: LinkRouteExists? {
+        if case .linkRouteExists(let value) = self { value } else { nil }
+    }
+
+    /// The `LinkRoutesFull` this rejection carries, or nil for another member.
+    var linkRoutesFull: LinkRoutesFull? {
+        if case .linkRoutesFull(let value) = self { value } else { nil }
+    }
+
+    /// The `MediaSessionLimitReached` this rejection carries, or nil for another member.
+    var mediaSessionLimitReached: MediaSessionLimitReached? {
+        if case .mediaSessionLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `NoArchivedTabs` this rejection carries, or nil for another member.
+    var noArchivedTabs: NoArchivedTabs? {
+        if case .noArchivedTabs(let value) = self { value } else { nil }
+    }
+
+    /// The `NoBrowsingDataCategory` this rejection carries, or nil for another member.
+    var noBrowsingDataCategory: NoBrowsingDataCategory? {
+        if case .noBrowsingDataCategory(let value) = self { value } else { nil }
+    }
+
+    /// The `NoCurrentTabs` this rejection carries, or nil for another member.
+    var noCurrentTabs: NoCurrentTabs? {
+        if case .noCurrentTabs(let value) = self { value } else { nil }
+    }
+
+    /// The `NoIncludedSpaces` this rejection carries, or nil for another member.
+    var noIncludedSpaces: NoIncludedSpaces? {
+        if case .noIncludedSpaces(let value) = self { value } else { nil }
+    }
+
+    /// The `NoManualSetup` this rejection carries, or nil for another member.
+    var noManualSetup: NoManualSetup? {
+        if case .noManualSetup(let value) = self { value } else { nil }
+    }
+
+    /// The `NoSavedAddress` this rejection carries, or nil for another member.
+    var noSavedAddress: NoSavedAddress? {
+        if case .noSavedAddress(let value) = self { value } else { nil }
+    }
+
+    /// The `NoSetup` this rejection carries, or nil for another member.
+    var noSetup: NoSetup? {
+        if case .noSetup(let value) = self { value } else { nil }
+    }
+
+    /// The `NoSplitStep` this rejection carries, or nil for another member.
+    var noSplitStep: NoSplitStep? {
+        if case .noSplitStep(let value) = self { value } else { nil }
+    }
+
+    /// The `NoStoredSession` this rejection carries, or nil for another member.
+    var noStoredSession: NoStoredSession? {
+        if case .noStoredSession(let value) = self { value } else { nil }
+    }
+
+    /// The `NotAnArchive` this rejection carries, or nil for another member.
+    var notAnArchive: NotAnArchive? {
+        if case .notAnArchive(let value) = self { value } else { nil }
+    }
+
+    /// The `NotPrivateWorkspace` this rejection carries, or nil for another member.
+    var notPrivateWorkspace: NotPrivateWorkspace? {
+        if case .notPrivateWorkspace(let value) = self { value } else { nil }
+    }
+
+    /// The `PageNotLoadable` this rejection carries, or nil for another member.
+    var pageNotLoadable: PageNotLoadable? {
+        if case .pageNotLoadable(let value) = self { value } else { nil }
+    }
+
+    /// The `PageProfileMismatch` this rejection carries, or nil for another member.
+    var pageProfileMismatch: PageProfileMismatch? {
+        if case .pageProfileMismatch(let value) = self { value } else { nil }
+    }
+
+    /// The `PersistentWorkspaceRequired` this rejection carries, or nil for another member.
+    var persistentWorkspaceRequired: PersistentWorkspaceRequired? {
+        if case .persistentWorkspaceRequired(let value) = self { value } else { nil }
+    }
+
+    /// The `PinnedTabsDragAlone` this rejection carries, or nil for another member.
+    var pinnedTabsDragAlone: PinnedTabsDragAlone? {
+        if case .pinnedTabsDragAlone(let value) = self { value } else { nil }
+    }
+
+    /// The `PinnedTabsFull` this rejection carries, or nil for another member.
+    var pinnedTabsFull: PinnedTabsFull? {
+        if case .pinnedTabsFull(let value) = self { value } else { nil }
+    }
+
+    /// The `PinnedTabsStayPut` this rejection carries, or nil for another member.
+    var pinnedTabsStayPut: PinnedTabsStayPut? {
+        if case .pinnedTabsStayPut(let value) = self { value } else { nil }
+    }
+
+    /// The `PinsOneTabAtATime` this rejection carries, or nil for another member.
+    var pinsOneTabAtATime: PinsOneTabAtATime? {
+        if case .pinsOneTabAtATime(let value) = self { value } else { nil }
+    }
+
+    /// The `PrimaryCannotJoin` this rejection carries, or nil for another member.
+    var primaryCannotJoin: PrimaryCannotJoin? {
+        if case .primaryCannotJoin(let value) = self { value } else { nil }
+    }
+
+    /// The `PrimaryCannotSeparate` this rejection carries, or nil for another member.
+    var primaryCannotSeparate: PrimaryCannotSeparate? {
+        if case .primaryCannotSeparate(let value) = self { value } else { nil }
+    }
+
+    /// The `PrivateSpaceCannotLock` this rejection carries, or nil for another member.
+    var privateSpaceCannotLock: PrivateSpaceCannotLock? {
+        if case .privateSpaceCannotLock(let value) = self { value } else { nil }
+    }
+
+    /// The `PrivateSpaceCannotShare` this rejection carries, or nil for another member.
+    var privateSpaceCannotShare: PrivateSpaceCannotShare? {
+        if case .privateSpaceCannotShare(let value) = self { value } else { nil }
+    }
+
+    /// The `PrivateWorkspaceBoundary` this rejection carries, or nil for another member.
+    var privateWorkspaceBoundary: PrivateWorkspaceBoundary? {
+        if case .privateWorkspaceBoundary(let value) = self { value } else { nil }
+    }
+
+    /// The `ProfileInUse` this rejection carries, or nil for another member.
+    var profileInUse: ProfileInUse? {
+        if case .profileInUse(let value) = self { value } else { nil }
+    }
+
+    /// The `PromptAnswerMismatch` this rejection carries, or nil for another member.
+    var promptAnswerMismatch: PromptAnswerMismatch? {
+        if case .promptAnswerMismatch(let value) = self { value } else { nil }
+    }
+
+    /// The `RecoveryCheckpointUnusable` this rejection carries, or nil for another member.
+    var recoveryCheckpointUnusable: RecoveryCheckpointUnusable? {
+        if case .recoveryCheckpointUnusable(let value) = self { value } else { nil }
+    }
+
+    /// The `SaveFailed` this rejection carries, or nil for another member.
+    var saveFailed: SaveFailed? {
+        if case .saveFailed(let value) = self { value } else { nil }
+    }
+
+    /// The `SearchEngineLimitReached` this rejection carries, or nil for another member.
+    var searchEngineLimitReached: SearchEngineLimitReached? {
+        if case .searchEngineLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `SelectionChanged` this rejection carries, or nil for another member.
+    var selectionChanged: SelectionChanged? {
+        if case .selectionChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SelectionHoldsFolders` this rejection carries, or nil for another member.
+    var selectionHoldsFolders: SelectionHoldsFolders? {
+        if case .selectionHoldsFolders(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionEncrypted` this rejection carries, or nil for another member.
+    var sessionEncrypted: SessionEncrypted? {
+        if case .sessionEncrypted(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionHasNoTabs` this rejection carries, or nil for another member.
+    var sessionHasNoTabs: SessionHasNoTabs? {
+        if case .sessionHasNoTabs(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionOverLimits` this rejection carries, or nil for another member.
+    var sessionOverLimits: SessionOverLimits? {
+        if case .sessionOverLimits(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionTooLarge` this rejection carries, or nil for another member.
+    var sessionTooLarge: SessionTooLarge? {
+        if case .sessionTooLarge(let value) = self { value } else { nil }
+    }
+
+    /// The `SessionUnrecognized` this rejection carries, or nil for another member.
+    var sessionUnrecognized: SessionUnrecognized? {
+        if case .sessionUnrecognized(let value) = self { value } else { nil }
+    }
+
+    /// The `SetupBusy` this rejection carries, or nil for another member.
+    var setupBusy: SetupBusy? {
+        if case .setupBusy(let value) = self { value } else { nil }
+    }
+
+    /// The `ShortcutInUse` this rejection carries, or nil for another member.
+    var shortcutInUse: ShortcutInUse? {
+        if case .shortcutInUse(let value) = self { value } else { nil }
+    }
+
+    /// The `SitePermissionLimitReached` this rejection carries, or nil for another member.
+    var sitePermissionLimitReached: SitePermissionLimitReached? {
+        if case .sitePermissionLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceAlreadyExists` this rejection carries, or nil for another member.
+    var spaceAlreadyExists: SpaceAlreadyExists? {
+        if case .spaceAlreadyExists(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceBeingDeleted` this rejection carries, or nil for another member.
+    var spaceBeingDeleted: SpaceBeingDeleted? {
+        if case .spaceBeingDeleted(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceDataNotErased` this rejection carries, or nil for another member.
+    var spaceDataNotErased: SpaceDataNotErased? {
+        if case .spaceDataNotErased(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceDeletionUnderway` this rejection carries, or nil for another member.
+    var spaceDeletionUnderway: SpaceDeletionUnderway? {
+        if case .spaceDeletionUnderway(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceIsPrivate` this rejection carries, or nil for another member.
+    var spaceIsPrivate: SpaceIsPrivate? {
+        if case .spaceIsPrivate(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceLimitReached` this rejection carries, or nil for another member.
+    var spaceLimitReached: SpaceLimitReached? {
+        if case .spaceLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceLocked` this rejection carries, or nil for another member.
+    var spaceLocked: SpaceLocked? {
+        if case .spaceLocked(let value) = self { value } else { nil }
+    }
+
+    /// The `SpaceProfileChanged` this rejection carries, or nil for another member.
+    var spaceProfileChanged: SpaceProfileChanged? {
+        if case .spaceProfileChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SplitBoundary` this rejection carries, or nil for another member.
+    var splitBoundary: SplitBoundary? {
+        if case .splitBoundary(let value) = self { value } else { nil }
+    }
+
+    /// The `SplitLimitReached` this rejection carries, or nil for another member.
+    var splitLimitReached: SplitLimitReached? {
+        if case .splitLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `SplitNeedsTwoTabs` this rejection carries, or nil for another member.
+    var splitNeedsTwoTabs: SplitNeedsTwoTabs? {
+        if case .splitNeedsTwoTabs(let value) = self { value } else { nil }
+    }
+
+    /// The `StagedLinkElsewhere` this rejection carries, or nil for another member.
+    var stagedLinkElsewhere: StagedLinkElsewhere? {
+        if case .stagedLinkElsewhere(let value) = self { value } else { nil }
+    }
+
+    /// The `StaleCredentialComparison` this rejection carries, or nil for another member.
+    var staleCredentialComparison: StaleCredentialComparison? {
+        if case .staleCredentialComparison(let value) = self { value } else { nil }
+    }
+
+    /// The `StaleUnlockRequest` this rejection carries, or nil for another member.
+    var staleUnlockRequest: StaleUnlockRequest? {
+        if case .staleUnlockRequest(let value) = self { value } else { nil }
+    }
+
+    /// The `StartPageNotCopied` this rejection carries, or nil for another member.
+    var startPageNotCopied: StartPageNotCopied? {
+        if case .startPageNotCopied(let value) = self { value } else { nil }
+    }
+
+    /// The `StorageFromNewerApp` this rejection carries, or nil for another member.
+    var storageFromNewerApp: StorageFromNewerApp? {
+        if case .storageFromNewerApp(let value) = self { value } else { nil }
+    }
+
+    /// The `StorageRestoreInterrupted` this rejection carries, or nil for another member.
+    var storageRestoreInterrupted: StorageRestoreInterrupted? {
+        if case .storageRestoreInterrupted(let value) = self { value } else { nil }
+    }
+
+    /// The `StorageUnreadable` this rejection carries, or nil for another member.
+    var storageUnreadable: StorageUnreadable? {
+        if case .storageUnreadable(let value) = self { value } else { nil }
+    }
+
+    /// The `StoredSessionClosed` this rejection carries, or nil for another member.
+    var storedSessionClosed: StoredSessionClosed? {
+        if case .storedSessionClosed(let value) = self { value } else { nil }
+    }
+
+    /// The `SyncStagingRefused` this rejection carries, or nil for another member.
+    var syncStagingRefused: SyncStagingRefused? {
+        if case .syncStagingRefused(let value) = self { value } else { nil }
+    }
+
+    /// The `TabAlreadyExists` this rejection carries, or nil for another member.
+    var tabAlreadyExists: TabAlreadyExists? {
+        if case .tabAlreadyExists(let value) = self { value } else { nil }
+    }
+
+    /// The `TabAlreadyHasPage` this rejection carries, or nil for another member.
+    var tabAlreadyHasPage: TabAlreadyHasPage? {
+        if case .tabAlreadyHasPage(let value) = self { value } else { nil }
+    }
+
+    /// The `TabLimitReached` this rejection carries, or nil for another member.
+    var tabLimitReached: TabLimitReached? {
+        if case .tabLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `TransientAlreadyCompleted` this rejection carries, or nil for another member.
+    var transientAlreadyCompleted: TransientAlreadyCompleted? {
+        if case .transientAlreadyCompleted(let value) = self { value } else { nil }
+    }
+
+    /// The `TranslationRuleLimitReached` this rejection carries, or nil for another member.
+    var translationRuleLimitReached: TranslationRuleLimitReached? {
+        if case .translationRuleLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownAgentSession` this rejection carries, or nil for another member.
+    var unknownAgentSession: UnknownAgentSession? {
+        if case .unknownAgentSession(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownArchivedTab` this rejection carries, or nil for another member.
+    var unknownArchivedTab: UnknownArchivedTab? {
+        if case .unknownArchivedTab(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownCloudMerge` this rejection carries, or nil for another member.
+    var unknownCloudMerge: UnknownCloudMerge? {
+        if case .unknownCloudMerge(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownExtension` this rejection carries, or nil for another member.
+    var unknownExtension: UnknownExtension? {
+        if case .unknownExtension(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownFolder` this rejection carries, or nil for another member.
+    var unknownFolder: UnknownFolder? {
+        if case .unknownFolder(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownLinkRoute` this rejection carries, or nil for another member.
+    var unknownLinkRoute: UnknownLinkRoute? {
+        if case .unknownLinkRoute(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownPage` this rejection carries, or nil for another member.
+    var unknownPage: UnknownPage? {
+        if case .unknownPage(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownPrompt` this rejection carries, or nil for another member.
+    var unknownPrompt: UnknownPrompt? {
+        if case .unknownPrompt(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownSearchEngine` this rejection carries, or nil for another member.
+    var unknownSearchEngine: UnknownSearchEngine? {
+        if case .unknownSearchEngine(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownSearchOption` this rejection carries, or nil for another member.
+    var unknownSearchOption: UnknownSearchOption? {
+        if case .unknownSearchOption(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownSpace` this rejection carries, or nil for another member.
+    var unknownSpace: UnknownSpace? {
+        if case .unknownSpace(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownSplitGroup` this rejection carries, or nil for another member.
+    var unknownSplitGroup: UnknownSplitGroup? {
+        if case .unknownSplitGroup(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownTab` this rejection carries, or nil for another member.
+    var unknownTab: UnknownTab? {
+        if case .unknownTab(let value) = self { value } else { nil }
+    }
+
+    /// The `UnknownWorkspace` this rejection carries, or nil for another member.
+    var unknownWorkspace: UnknownWorkspace? {
+        if case .unknownWorkspace(let value) = self { value } else { nil }
+    }
+
+    /// The `UnpreparedImport` this rejection carries, or nil for another member.
+    var unpreparedImport: UnpreparedImport? {
+        if case .unpreparedImport(let value) = self { value } else { nil }
+    }
+
+    /// The `UnregisteredEngine` this rejection carries, or nil for another member.
+    var unregisteredEngine: UnregisteredEngine? {
+        if case .unregisteredEngine(let value) = self { value } else { nil }
+    }
+
+    /// The `UnrelatedWorkspaces` this rejection carries, or nil for another member.
+    var unrelatedWorkspaces: UnrelatedWorkspaces? {
+        if case .unrelatedWorkspaces(let value) = self { value } else { nil }
+    }
+
+    /// The `UnsavedWorkspace` this rejection carries, or nil for another member.
+    var unsavedWorkspace: UnsavedWorkspace? {
+        if case .unsavedWorkspace(let value) = self { value } else { nil }
+    }
+
+    /// The `UnsuitableDefaultSearch` this rejection carries, or nil for another member.
+    var unsuitableDefaultSearch: UnsuitableDefaultSearch? {
+        if case .unsuitableDefaultSearch(let value) = self { value } else { nil }
+    }
+
+    /// The `UnsupportedAddress` this rejection carries, or nil for another member.
+    var unsupportedAddress: UnsupportedAddress? {
+        if case .unsupportedAddress(let value) = self { value } else { nil }
+    }
+
+    /// The `UnsupportedArchiveVersion` this rejection carries, or nil for another member.
+    var unsupportedArchiveVersion: UnsupportedArchiveVersion? {
+        if case .unsupportedArchiveVersion(let value) = self { value } else { nil }
+    }
+
+    /// The `WebPagesOnly` this rejection carries, or nil for another member.
+    var webPagesOnly: WebPagesOnly? {
+        if case .webPagesOnly(let value) = self { value } else { nil }
+    }
+
+    /// The `WindowNotOpen` this rejection carries, or nil for another member.
+    var windowNotOpen: WindowNotOpen? {
+        if case .windowNotOpen(let value) = self { value } else { nil }
+    }
+
+    /// The `WorkspaceBusy` this rejection carries, or nil for another member.
+    var workspaceBusy: WorkspaceBusy? {
+        if case .workspaceBusy(let value) = self { value } else { nil }
+    }
+
+    /// The `WrongDeletionOperation` this rejection carries, or nil for another member.
+    var wrongDeletionOperation: WrongDeletionOperation? {
+        if case .wrongDeletionOperation(let value) = self { value } else { nil }
+    }
 
     var message: LocalizedStringResource? {
         switch self {
@@ -597,6 +1878,7 @@ extension Change {
         case .dataDeleted(let change): change.apply(to: state)
         case .downloadApprovalAsked(let change): change.apply(to: state)
         case .downloadDestinationAsked(let change): change.apply(to: state)
+        case .downloadPreferencesChanged(let change): change.apply(to: state)
         case .downloadStarted(let change): change.apply(to: state)
         case .downloadUpdated(let change): change.apply(to: state)
         case .downloadsRemoved(let change): change.apply(to: state)
@@ -614,12 +1896,14 @@ extension Change {
         case .offeredWindowAdopted(let change): change.apply(to: state)
         case .pageChanged(let change): change.apply(to: state)
         case .pageOpened(let change): change.apply(to: state)
+        case .pagePreferencesChanged(let change): change.apply(to: state)
         case .pageRehosted(let change): change.apply(to: state)
         case .pageRemoved(let change): change.apply(to: state)
         case .pageUnloaded(let change): change.apply(to: state)
         case .permissionAsked(let change): change.apply(to: state)
         case .promptSettled(let change): change.apply(to: state)
         case .quitWithDownloadsAsked(let change): change.apply(to: state)
+        case .releaseNotesDue(let change): change.apply(to: state)
         case .saved(let change): change.apply(to: state)
         case .scriptDialogAsked(let change): change.apply(to: state)
         case .searchCatalogChanged(let change): change.apply(to: state)
@@ -676,6 +1960,7 @@ extension Change {
         case .dataDeleted(let change): change.apply(to: core, in: &batch)
         case .downloadApprovalAsked(let change): change.apply(to: core, in: &batch)
         case .downloadDestinationAsked(let change): change.apply(to: core, in: &batch)
+        case .downloadPreferencesChanged(let change): change.apply(to: core, in: &batch)
         case .downloadStarted(let change): change.apply(to: core, in: &batch)
         case .downloadUpdated(let change): change.apply(to: core, in: &batch)
         case .downloadsRemoved(let change): change.apply(to: core, in: &batch)
@@ -693,12 +1978,14 @@ extension Change {
         case .offeredWindowAdopted(let change): change.apply(to: core, in: &batch)
         case .pageChanged(let change): change.apply(to: core, in: &batch)
         case .pageOpened(let change): change.apply(to: core, in: &batch)
+        case .pagePreferencesChanged(let change): change.apply(to: core, in: &batch)
         case .pageRehosted(let change): change.apply(to: core, in: &batch)
         case .pageRemoved(let change): change.apply(to: core, in: &batch)
         case .pageUnloaded(let change): change.apply(to: core, in: &batch)
         case .permissionAsked(let change): change.apply(to: core, in: &batch)
         case .promptSettled(let change): change.apply(to: core, in: &batch)
         case .quitWithDownloadsAsked(let change): change.apply(to: core, in: &batch)
+        case .releaseNotesDue(let change): change.apply(to: core, in: &batch)
         case .saved(let change): change.apply(to: core, in: &batch)
         case .scriptDialogAsked(let change): change.apply(to: core, in: &batch)
         case .searchCatalogChanged(let change): change.apply(to: core, in: &batch)
@@ -755,6 +2042,7 @@ extension Change {
         case .dataDeleted(let change): change.note(in: &receipts)
         case .downloadApprovalAsked(let change): change.note(in: &receipts)
         case .downloadDestinationAsked(let change): change.note(in: &receipts)
+        case .downloadPreferencesChanged(let change): change.note(in: &receipts)
         case .downloadStarted(let change): change.note(in: &receipts)
         case .downloadUpdated(let change): change.note(in: &receipts)
         case .downloadsRemoved(let change): change.note(in: &receipts)
@@ -772,12 +2060,14 @@ extension Change {
         case .offeredWindowAdopted(let change): change.note(in: &receipts)
         case .pageChanged(let change): change.note(in: &receipts)
         case .pageOpened(let change): change.note(in: &receipts)
+        case .pagePreferencesChanged(let change): change.note(in: &receipts)
         case .pageRehosted(let change): change.note(in: &receipts)
         case .pageRemoved(let change): change.note(in: &receipts)
         case .pageUnloaded(let change): change.note(in: &receipts)
         case .permissionAsked(let change): change.note(in: &receipts)
         case .promptSettled(let change): change.note(in: &receipts)
         case .quitWithDownloadsAsked(let change): change.note(in: &receipts)
+        case .releaseNotesDue(let change): change.note(in: &receipts)
         case .saved(let change): change.note(in: &receipts)
         case .scriptDialogAsked(let change): change.note(in: &receipts)
         case .searchCatalogChanged(let change): change.note(in: &receipts)
@@ -870,6 +2160,14 @@ struct AddressCompletion: Equatable, Sendable {
     let typed: String
     let suffix: String
     let accepted: String
+}
+
+struct AdoptDevicePreferences: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let defaultPageZoom: Double?
+    let backgroundPageActivity: String?
+    let allowsHighFrameRate: Bool?
+    let syncsWithICloud: Bool?
+    let downloads: [SpaceDownloadPreferences]
 }
 
 struct AdoptLegacySession: Intent, Equatable, Sendable {
@@ -1341,10 +2639,6 @@ struct AutomaticDownloadVerdict: Equatable, Sendable {
     let hasAllowedAutomaticDownload: Bool
 }
 
-struct AwaitDownloadApproval: Intent, DownloadIntent, Equatable, Sendable {
-    let downloadID: UUID
-}
-
 struct BeforeUnloadAnswered: EngineEvent, Equatable, Sendable {
     let pageID: UUID
     let proceeds: Bool
@@ -1385,10 +2679,6 @@ struct BeginUnlockingSpace: Intent, SpaceAccessIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let requestID: UUID
-}
-
-struct BlockAutomaticDownload: Intent, DownloadIntent, Equatable, Sendable {
-    let downloadID: UUID
 }
 
 struct BlockElement: Intent, Equatable, Sendable {
@@ -1501,7 +2791,7 @@ struct CanReturnToSavedAddress: Query, Equatable, Sendable {
 struct CanSend: Query, Sendable {
     typealias Answer = SendPermission
 
-    let intent: any Intent
+    let intent: any SessionIntent
 }
 
 struct CanTearOff: Query, Equatable, Sendable {
@@ -1568,6 +2858,7 @@ struct CapacityLimits: Equatable, Sendable {
     let tabsPerSpace: Int
     let syncRecords: Int
     let credentialFileBytes: Int
+    let filterListBytes: Int
 }
 
 struct CaptureDecision: Query, Equatable, Sendable {
@@ -1642,10 +2933,6 @@ struct ChooseQuickWindowArchivePolicy: Intent, LinkIntent, Equatable, Sendable {
     let policy: QuickWindowArchivePolicy
 }
 
-struct ChooseSetupLook: Intent, SetupFlowIntent, Equatable, Sendable {
-    let look: SetupLook
-}
-
 struct ChooseShareSource: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
@@ -1700,6 +2987,15 @@ struct ClearHistory: Intent, SessionIntent, Equatable, Sendable {
 }
 
 struct ClearPaletteChoices: Intent, PaletteIntent, Equatable, Sendable {
+}
+
+struct ClearedTabs: Query, Equatable, Sendable {
+    typealias Answer = RemovedTabs
+
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let keepsShownTab: Bool
 }
 
 struct ClickPage: PageRequest, Equatable, Sendable {
@@ -1828,11 +3124,6 @@ struct CloudStepFailed: Intent, CloudSyncControlIntent, Equatable, Sendable {
     let observedCloudRecords: Int?
 }
 
-struct CloudSync: Query, Equatable, Sendable {
-    typealias Answer = CloudSyncStatus
-
-}
-
 struct CloudSyncAdvanced: CoreChange, Equatable, Sendable {
     let status: CloudSyncStatus
     let steps: [CloudSyncStep]
@@ -1925,7 +3216,6 @@ struct ColorPalette: Equatable, Sendable {
 }
 
 struct ConfigureCloudSync: Intent, CloudSyncControlIntent, Equatable, Sendable {
-    let isEnabled: Bool
     let canReachCloud: Bool
 }
 
@@ -2030,6 +3320,20 @@ struct CreateSpace: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
 }
 
+struct CredentialAccess: Query, Equatable, Sendable {
+    typealias Answer = CredentialAccessAnswer
+
+    let workspaceID: UUID
+    let spaceID: UUID
+    let use: CredentialUse
+    let origin: CredentialOrigin?
+}
+
+struct CredentialAccessAnswer: Equatable, Sendable {
+    let refusal: CredentialRefusal?
+    let vaults: [UUID]
+}
+
 struct CredentialCapture: Query, Equatable, Sendable {
     typealias Answer = CredentialCaptureDecision
 
@@ -2128,7 +3432,7 @@ struct CredentialImportPreview: Query, Equatable, Sendable {
 }
 
 struct CredentialOrigin: Equatable, Sendable {
-    static let maximumHostLength: Int = 1024
+    static let maximumFillCandidates: Int = 1024
 
     var scheme: String
     var host: String
@@ -2147,6 +3451,10 @@ struct CredentialPreferences: Equatable, Sendable {
 }
 
 struct CredentialRecord: Equatable, Sendable, Identifiable {
+    static let maximumRecords: Int = 64
+    static let revealLifetime: Double = 30
+    static let clipboardLifetime: Double = 60
+
     var id: UUID
     var username: String?
     var updatedAt: Double
@@ -2360,6 +3668,10 @@ struct DetachedSession: Query, Equatable, Sendable {
     let seed: SessionState.Seed
 }
 
+struct DevelopmentAddressVerdict: Equatable, Sendable {
+    let isLocal: Bool
+}
+
 struct DiscardStagedLink: Intent, PageIntent, Equatable, Sendable {
     let sourcePageID: UUID
     let stagedLinkID: UUID
@@ -2436,25 +3748,17 @@ struct DownloadExtension: Equatable, Sendable {
     let extensionID: String
 }
 
+struct DownloadFolder: Equatable, Sendable {
+    var name: String
+    var token: Data
+}
+
 struct DownloadLimitReached: Equatable, Sendable {
     let limit: Int
 }
 
-struct DownloadProgress: Query, Equatable, Sendable {
-    typealias Answer = DownloadProgressReading
-
-    let estimator: DownloadTransferEstimator?
-    let completedUnitCount: Int64
-    let totalUnitCount: Int64
-    let fractionCompleted: Double
-    let isPaused: Bool
-    let uptime: Double
-}
-
-struct DownloadProgressReading: Equatable, Sendable {
-    let estimator: DownloadTransferEstimator
-    let telemetry: DownloadTelemetry
-    let progress: Double
+struct DownloadPreferencesChanged: CoreChange, Equatable, Sendable {
+    let spaces: [SpaceDownloadPreferences]
 }
 
 struct DownloadRisk: Query, Equatable, Sendable {
@@ -2521,28 +3825,6 @@ struct DownloadTelemetry: Equatable, Sendable {
     var bytesPerSecond: Double?
     var estimatedTimeRemaining: Double?
     var isPaused: Bool
-}
-
-struct DownloadTransferEstimator: Equatable, Sendable {
-    static let minimumRateInterval: Double = 0.15
-    static let smoothingWeight: Double = 0.25
-    static let minimumUsefulEstimate: Double = 0.5
-    static let maximumUsefulEstimate: Double = 604800
-    static let initial = DownloadTransferEstimator(
-        publishedBytes: 0,
-        knownTotalBytes: nil,
-        totalIsUnreliable: false,
-        measurementBytes: nil,
-        measurementUptime: nil,
-        smoothedBytesPerSecond: nil
-    )
-
-    var publishedBytes: Int64
-    var knownTotalBytes: Int64?
-    var totalIsUnreliable: Bool
-    var measurementBytes: Int64?
-    var measurementUptime: Double?
-    var smoothedBytesPerSecond: Double?
 }
 
 struct DownloadUpdated: CoreChange, Equatable, Sendable {
@@ -3229,6 +4511,14 @@ struct FolderCycle: Equatable, Sendable {
     let folderID: UUID
 }
 
+struct FolderDeletionTabs: Query, Equatable, Sendable {
+    typealias Answer = RemovedTabs
+
+    let workspaceID: UUID
+    let spaceID: UUID
+    let folderID: UUID
+}
+
 struct FolderDepthLimitReached: Equatable, Sendable {
     let limit: Int
 }
@@ -3240,6 +4530,8 @@ struct FolderLimitReached: Equatable, Sendable {
 struct FolderState: Equatable, Sendable, Identifiable {
     static let maximumDepth: Int = 16
     static let defaultSymbol: String = "folder"
+    static let untitledTitle: String = "Untitled Folder"
+    static let maximumTitleLength: Int = 500
     static let defaultColor = BrandColor(red: 0.43, green: 0.48, blue: 0.54, alpha: 1)
 
     let id: UUID
@@ -3499,6 +4791,7 @@ struct ImportPasswordRoutes: Equatable, Sendable {
 struct ImportPasswordSource: Equatable, Sendable {
     var profileName: String
     var host: String
+    var isSecure: Bool
 }
 
 struct ImportPasswordStore: Equatable, Sendable, Identifiable {
@@ -4002,14 +5295,6 @@ struct LinkHovered: Equatable, Sendable {
     let url: String?
 }
 
-struct LinkNavigation: Query, Equatable, Sendable {
-    typealias Answer = LinkNavigationAnswer
-
-    let pageID: UUID
-    let url: String?
-    let gesture: LinkGesture
-}
-
 struct LinkNavigationAnswer: Equatable, Sendable {
     let decision: LinkNavigationDecision
 }
@@ -4083,6 +5368,13 @@ struct LoadPage: Equatable, Sendable {
     let pageID: UUID
     let url: String
     let entryID: UUID?
+}
+
+struct LocalDevelopmentAddress: Query, Equatable, Sendable {
+    typealias Answer = DevelopmentAddressVerdict
+
+    let scheme: String?
+    let host: String?
 }
 
 struct LocalDocumentFacts: Equatable, Sendable {
@@ -4426,6 +5718,10 @@ struct NoteAgentActivity: Intent, AgentIntent, Equatable, Sendable {
     let subject: String
 }
 
+struct NoteLaunchRelease: Intent, WindowIntent, Equatable, Sendable {
+    let version: String
+}
+
 struct NotificationDisplayCheck: Query, Equatable, Sendable {
     typealias Answer = NotificationDisplayVerdict
 
@@ -4533,13 +5829,14 @@ struct OpenInspector: PageRequest, Equatable, Sendable {
 }
 
 struct OpenLinkInSplit: Intent, SessionIntent, Equatable, Sendable {
+    static let probeAddress: String = "about:blank"
+
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
     let tabID: UUID
     let targetTabID: UUID
     let address: String
-    let title: String
 }
 
 struct OpenPage: Intent, PageIntent, Equatable, Sendable {
@@ -4878,6 +6175,21 @@ struct PagePoint: Equatable, Sendable {
     var y: Double
 }
 
+struct PagePreferences: Equatable, Sendable {
+    static let standardZoom: Double = 1
+    static let minimumZoom: Double = 0.25
+    static let maximumZoom: Double = 5
+    static let `default` = PagePreferences(defaultZoom: 1, backgroundActivity: BackgroundPageActivity.suspend, allowsHighFrameRate: false)
+
+    let defaultZoom: Double
+    let backgroundActivity: BackgroundPageActivity
+    let allowsHighFrameRate: Bool
+}
+
+struct PagePreferencesChanged: CoreChange, Equatable, Sendable {
+    let preferences: PagePreferences
+}
+
 struct PagePresented: Equatable, Sendable {
     let presentation: PagePresentation
 }
@@ -5043,8 +6355,25 @@ struct PaletteGroup: Equatable, Sendable {
     let rows: [PaletteRow]
 }
 
+struct PaletteLimiting: Query, Equatable, Sendable {
+    typealias Answer = PalettePreferences
+
+    let preferences: PalettePreferences
+    let source: PaletteSource
+    let limit: Int
+}
+
+struct PaletteOffering: Query, Equatable, Sendable {
+    typealias Answer = PalettePreferences
+
+    let preferences: PalettePreferences
+    let source: PaletteSource
+    let isEnabled: Bool
+}
+
 struct PalettePreferences: Equatable, Sendable {
     static let maximumLimit: Int = 50
+    static let offeredLimits = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
     static let `default` = PalettePreferences(
         layout: PaletteLayout.sections,
         sources: [
@@ -5135,6 +6464,20 @@ struct PaletteRow: Equatable, Sendable {
             httpFallback: httpFallback
         )
     }
+}
+
+struct PaletteSectionMove: Query, Equatable, Sendable {
+    typealias Answer = PalettePreferences
+
+    let preferences: PalettePreferences
+    let source: PaletteSource
+    let index: Int
+}
+
+struct PaletteSectionOrder: Query, Equatable, Sendable {
+    typealias Answer = PalettePreferences
+
+    let preferences: PalettePreferences
 }
 
 struct PaletteSettingsPage: Equatable, Sendable {
@@ -5558,6 +6901,10 @@ struct RejectOfferedPage: Equatable, Sendable {
     let offerID: UUID
 }
 
+struct ReleaseNotesDue: CoreChange, Equatable, Sendable {
+    let version: String
+}
+
 struct ReleasePage: Intent, PageIntent, Equatable, Sendable {
     let pageID: UUID
     let keepsState: Bool
@@ -5617,6 +6964,10 @@ struct RemoveSearchProvider: Intent, SearchCatalogIntent, Equatable, Sendable, I
 
 struct RemoveSetupSpace: Intent, SetupDraftIntent, Equatable, Sendable {
     let spaceID: UUID
+}
+
+struct RemovedTabs: Equatable, Sendable {
+    let tabIDs: [UUID]
 }
 
 struct RenameFolder: Intent, SessionIntent, Equatable, Sendable {
@@ -5741,12 +7092,6 @@ struct RestoreInteractionState: PageRequest, Equatable, Sendable {
     let expectedURL: String
 }
 
-struct RestoreLook: Query, Equatable, Sendable {
-    typealias Answer = RestoredLook
-
-    let text: String
-}
-
 struct RestoreSearchCatalog: Intent, SearchCatalogIntent, Equatable, Sendable {
     let language: String?
     let region: String?
@@ -5757,10 +7102,6 @@ struct RestoreTabHistory: Intent, PageIntent, Equatable, Sendable {
     let spaceID: UUID
     let tabID: UUID
     let archive: Data
-}
-
-struct RestoredLook: Equatable, Sendable {
-    let look: SpaceBranding?
 }
 
 struct ResumeDownload: Intent, DownloadIntent, Equatable, Sendable {
@@ -5903,6 +7244,8 @@ struct SearchCatalogChanged: CoreChange, Equatable, Sendable {
     let providers: [SearchProvider]
     let `default`: SearchProvider
     let privateDefault: SearchProvider
+    let enabled: [SearchProvider]
+    let defaultChoices: [SearchProvider]
 }
 
 struct SearchEngineLimitReached: Equatable, Sendable {
@@ -6152,6 +7495,10 @@ struct SetAppPreferences: Intent, SessionIntent, Equatable, Sendable {
     let preferences: AppPreferences
 }
 
+struct SetBackgroundPageActivity: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let activity: BackgroundPageActivity
+}
+
 struct SetBrowsingPreferences: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -6181,6 +7528,10 @@ struct SetCustomFilterList: Intent, Equatable, Sendable, Identifiable {
 
 struct SetCustomFilters: Intent, Equatable, Sendable {
     let text: String
+}
+
+struct SetDefaultPageZoom: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let zoom: Double
 }
 
 struct SetDefaultSearch: Intent, SearchCatalogIntent, Equatable, Sendable {
@@ -6222,6 +7573,10 @@ struct SetFolderSymbol: Intent, SessionIntent, Equatable, Sendable {
     let spaceID: UUID
     let folderID: UUID
     let symbol: String
+}
+
+struct SetHighFrameRate: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let allowed: Bool
 }
 
 struct SetLinkBehavior: Intent, LinkIntent, Equatable, Sendable {
@@ -6283,6 +7638,10 @@ struct SetSpaceBranding: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
     let branding: SpaceBranding
+}
+
+struct SetSpaceDownloads: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let preferences: SpaceDownloadPreferences
 }
 
 struct SetSpaceIdentity: Intent, SessionIntent, Equatable, Sendable {
@@ -6444,6 +7803,7 @@ struct SetupReviewSpace: Equatable, Sendable {
     let placements: [TabPlacementChoice]
     let includesPasswords: Bool
     let passwordCount: Int
+    let insecurePasswordCount: Int
     let extensions: [ImportExtension]
     let includedExtensionIDs: [String]
     let joinsGroupOf: UUID?
@@ -6824,6 +8184,7 @@ struct SpaceCrest: Equatable, Sendable {
 
 struct SpaceCustomization: Equatable, Sendable {
     static let untitledName: String = "Untitled Space"
+    static let maximumNameLength: Int = 200
 
     var name: String
     var symbol: String
@@ -6871,6 +8232,12 @@ struct SpaceDeletionUnderway: Equatable, Sendable {
     var message: LocalizedStringResource {
         LocalizedStringResource("Crest will quit once the Space is deleted.")
     }
+}
+
+struct SpaceDownloadPreferences: Equatable, Sendable {
+    var spaceID: UUID
+    var asksWhereToSave: Bool
+    var folder: DownloadFolder?
 }
 
 struct SpaceIsPrivate: Equatable, Sendable {
@@ -7059,7 +8426,8 @@ struct SplitDropTarget: Equatable, Sendable {
 }
 
 struct SplitGroupState: Equatable, Sendable, Identifiable {
-    static let minimumShownMembers: Int = 2
+    static let minimumMembers: Int = 2
+    static let maximumMembers: Int = 4
 
     let id: UUID
     let customTitle: String?
@@ -7135,7 +8503,7 @@ struct SplitNeedsTwoTabs: Equatable, Sendable {
     let limit: Int
 
     var message: LocalizedStringResource {
-        LocalizedStringResource("Split View needs 2 to \(limit) tabs. Select fewer tabs or use a smaller split.")
+        LocalizedStringResource("Split View needs 2 to \(limit) tabs. Select at least 2 tabs to make a split.")
     }
 }
 
@@ -7246,19 +8614,9 @@ struct StoreInstallRequested: Equatable, Sendable {
     let extensionID: String
 }
 
-struct StoreLook: Query, Equatable, Sendable {
-    typealias Answer = StoredLook
-
-    let look: SpaceBranding
-}
-
 struct StoreRemovalRequested: Equatable, Sendable {
     let pageID: UUID
     let extensionID: String
-}
-
-struct StoredLook: Equatable, Sendable {
-    let text: String
 }
 
 struct StoredSessionClosed: Equatable, Sendable {
@@ -7528,6 +8886,9 @@ struct TabsImported: CoreChange, Equatable, Sendable {
     let tabs: [ImportedTab]
 }
 
+struct TakeReleaseNotes: Intent, WindowIntent, Equatable, Sendable {
+}
+
 struct TearOffPermission: Equatable, Sendable {
     let allowed: Bool
     let reason: TearOffRefusal?
@@ -7569,13 +8930,17 @@ struct TransientPagePromoted: CoreChange, Equatable, Sendable {
 struct TranslationChoice: Query, Equatable, Sendable {
     typealias Answer = TranslationDecision
 
+    static let fallbackPreferredLanguage: String = "en"
+
     let rules: [TranslationRule]
     let sourceLanguage: String
+    let preferredLanguage: String?
 }
 
 struct TranslationDecision: Equatable, Sendable {
     let rule: TranslationRule?
     let target: String?
+    let offers: Bool
 }
 
 struct TranslationRule: Equatable, Sendable {
@@ -8119,12 +9484,6 @@ struct PageMixedContent: OptionSet, Sendable {
     static let form = PageMixedContent(rawValue: 4)
 }
 
-enum PageResourceKind: Int, CaseIterable, Sendable {
-    case frame = 0
-    case image = 1
-    case object = 2
-}
-
 enum PageScriptWorld: Int, CaseIterable, Sendable {
     case agent = 0
     case page = 1
@@ -8189,31 +9548,12 @@ enum SpaceAccessPolicy: Int, CaseIterable, Sendable {
     case deviceOwnerAuthentication = 1
 }
 
-enum StorageFailure: Int, CaseIterable, Sendable {
-    case diskFull = 0
-    case readOnly = 1
-    case busy = 2
-    case damaged = 3
-    case unavailable = 4
-}
-
 enum SystemPasswordWriteThroughAvailability: Int, CaseIterable, Sendable {
     case available = 0
     case unsupportedPlatform = 1
     case isolatedLaunch = 2
     case systemVersionRequired = 3
     case managedBrowserCapabilityRequired = 4
-}
-
-enum SystemTint: Int, CaseIterable, Sendable {
-    case red = 0
-    case orange = 1
-    case purple = 2
-    case blue = 3
-    case indigo = 4
-    case teal = 5
-    case pink = 6
-    case green = 7
 }
 
 enum TabSavedImageChange: Int, CaseIterable, Sendable {
@@ -8441,7 +9781,7 @@ struct ArchiveReason: Hashable, Sendable {
     var filterGroup: ArchiveFilterGroup { facts.filterGroup }
     var title: LocalizedStringResource { facts.title }
     var symbol: String { facts.symbol }
-    var tint: SystemTint { facts.tint }
+    var tone: StatusTone? { facts.tone }
     var isExplicitDeletion: Bool { facts.isExplicitDeletion }
     var isCleanup: Bool { facts.isCleanup }
     var isReceived: Bool { facts.isReceived }
@@ -8455,7 +9795,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup,
         title: LocalizedStringResource,
         symbol: String,
-        tint: SystemTint,
+        tone: StatusTone?,
         isExplicitDeletion: Bool,
         isCleanup: Bool,
         isReceived: Bool
@@ -8468,7 +9808,7 @@ struct ArchiveReason: Hashable, Sendable {
             filterGroup: filterGroup,
             title: title,
             symbol: symbol,
-            tint: tint,
+            tone: tone,
             isExplicitDeletion: isExplicitDeletion,
             isCleanup: isCleanup,
             isReceived: isReceived
@@ -8483,7 +9823,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.automatic,
         title: LocalizedStringResource("Automatically cleaned"),
         symbol: "archivebox.fill",
-        tint: .orange,
+        tone: StatusTone.info,
         isExplicitDeletion: false,
         isCleanup: true,
         isReceived: false
@@ -8496,7 +9836,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.closed,
         title: LocalizedStringResource("Closed"),
         symbol: "xmark.circle.fill",
-        tint: .red,
+        tone: nil,
         isExplicitDeletion: false,
         isCleanup: false,
         isReceived: false
@@ -8509,7 +9849,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.closed,
         title: LocalizedStringResource("Deleted"),
         symbol: "trash.fill",
-        tint: .red,
+        tone: StatusTone.danger,
         isExplicitDeletion: true,
         isCleanup: false,
         isReceived: false
@@ -8522,7 +9862,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.synced,
         title: LocalizedStringResource("Deleted on another device"),
         symbol: "trash.fill",
-        tint: .red,
+        tone: StatusTone.danger,
         isExplicitDeletion: true,
         isCleanup: false,
         isReceived: true
@@ -8535,7 +9875,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.quickWindow,
         title: LocalizedStringResource("Quick Window"),
         symbol: "timer",
-        tint: .purple,
+        tone: nil,
         isExplicitDeletion: false,
         isCleanup: false,
         isReceived: false
@@ -8548,7 +9888,7 @@ struct ArchiveReason: Hashable, Sendable {
         filterGroup: ArchiveFilterGroup.synced,
         title: LocalizedStringResource("Synced from another device"),
         symbol: "icloud.and.arrow.down.fill",
-        tint: .blue,
+        tone: StatusTone.info,
         isExplicitDeletion: false,
         isCleanup: false,
         isReceived: true
@@ -8575,7 +9915,7 @@ struct ArchiveReason: Hashable, Sendable {
         let filterGroup: ArchiveFilterGroup
         let title: LocalizedStringResource
         let symbol: String
-        let tint: SystemTint
+        let tone: StatusTone?
         let isExplicitDeletion: Bool
         let isCleanup: Bool
         let isReceived: Bool
@@ -8587,7 +9927,7 @@ struct ArchiveReason: Hashable, Sendable {
             filterGroup: ArchiveFilterGroup,
             title: LocalizedStringResource,
             symbol: String,
-            tint: SystemTint,
+            tone: StatusTone?,
             isExplicitDeletion: Bool,
             isCleanup: Bool,
             isReceived: Bool
@@ -8598,7 +9938,7 @@ struct ArchiveReason: Hashable, Sendable {
             self.filterGroup = filterGroup
             self.title = title
             self.symbol = symbol
-            self.tint = tint
+            self.tone = tone
             self.isExplicitDeletion = isExplicitDeletion
             self.isCleanup = isCleanup
             self.isReceived = isReceived
@@ -8689,6 +10029,43 @@ struct AutomaticDownloadAction: Hashable, Sendable {
 
         init(kind: Kinds, name: String) {
             self.kind = kind
+            self.name = name
+        }
+    }
+}
+
+/// The members of the core's `BackgroundPageActivity`. A member's wire tag is its index in `all`.
+struct BackgroundPageActivity: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let suspend = BackgroundPageActivity(tag: 0, name: "suspend")
+    static let throttle = BackgroundPageActivity(tag: 1, name: "throttle")
+
+    static let all: [BackgroundPageActivity] = [suspend, throttle]
+
+    static func named(_ name: String?) -> BackgroundPageActivity? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: BackgroundPageActivity, rhs: BackgroundPageActivity) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
             self.name = name
         }
     }
@@ -9570,48 +10947,6 @@ struct BuiltInSearchProvider: Hashable, Sendable {
     }
 }
 
-/// The members of the core's `CapabilityStatus`. A member's wire tag is its index in `all`.
-struct CapabilityStatus: Hashable, Sendable {
-    let tag: Int
-    var name: String { facts.name }
-    var isAvailable: Bool { facts.isAvailable }
-    private let facts: Facts
-
-    private init(tag: Int, name: String, isAvailable: Bool) {
-        self.tag = tag
-        facts = Facts(name: name, isAvailable: isAvailable)
-    }
-
-    static let supported = CapabilityStatus(tag: 0, name: "supported", isAvailable: true)
-    static let partial = CapabilityStatus(tag: 1, name: "partial", isAvailable: false)
-    static let unavailable = CapabilityStatus(tag: 2, name: "unavailable", isAvailable: false)
-    static let unverified = CapabilityStatus(tag: 3, name: "unverified", isAvailable: false)
-
-    static let all: [CapabilityStatus] = [supported, partial, unavailable, unverified]
-
-    static func named(_ name: String?) -> CapabilityStatus? {
-        all.first { $0.name == name }
-    }
-
-    static func == (lhs: CapabilityStatus, rhs: CapabilityStatus) -> Bool {
-        lhs.tag == rhs.tag
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(tag)
-    }
-
-    private final class Facts: Sendable {
-        let name: String
-        let isAvailable: Bool
-
-        init(name: String, isAvailable: Bool) {
-            self.name = name
-            self.isAvailable = isAvailable
-        }
-    }
-}
-
 /// The members of the core's `CloudAccountState`. A member's wire tag is its index in `all`.
 struct CloudAccountState: Hashable, Sendable {
     let tag: Int
@@ -9720,7 +11055,7 @@ struct CloudSyncPhase: Hashable, Sendable {
     var isRetryable: Bool { facts.isRetryable }
     var title: LocalizedStringResource { facts.title }
     var symbol: String { facts.symbol }
-    var tint: SystemTint? { facts.tint }
+    var tone: StatusTone? { facts.tone }
     var keepsCloudOutOfReach: Bool { facts.keepsCloudOutOfReach }
     private let facts: Facts
 
@@ -9730,7 +11065,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: Bool,
         title: LocalizedStringResource,
         symbol: String,
-        tint: SystemTint?,
+        tone: StatusTone?,
         keepsCloudOutOfReach: Bool
     ) {
         self.tag = tag
@@ -9739,7 +11074,7 @@ struct CloudSyncPhase: Hashable, Sendable {
             isRetryable: isRetryable,
             title: title,
             symbol: symbol,
-            tint: tint,
+            tone: tone,
             keepsCloudOutOfReach: keepsCloudOutOfReach
         )
     }
@@ -9750,7 +11085,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Off"),
         symbol: "icloud.slash",
-        tint: nil,
+        tone: nil,
         keepsCloudOutOfReach: false
     )
     static let checking = CloudSyncPhase(
@@ -9759,7 +11094,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Checking iCloud"),
         symbol: "arrow.triangle.2.circlepath.icloud",
-        tint: .blue,
+        tone: StatusTone.info,
         keepsCloudOutOfReach: true
     )
     static let ready = CloudSyncPhase(
@@ -9768,7 +11103,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Up to date"),
         symbol: "checkmark.icloud.fill",
-        tint: .green,
+        tone: StatusTone.success,
         keepsCloudOutOfReach: false
     )
     static let syncing = CloudSyncPhase(
@@ -9777,7 +11112,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Syncing"),
         symbol: "arrow.triangle.2.circlepath.icloud",
-        tint: .blue,
+        tone: StatusTone.info,
         keepsCloudOutOfReach: false
     )
     static let needsReconciliation = CloudSyncPhase(
@@ -9786,7 +11121,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Choose which copy to keep"),
         symbol: "exclamationmark.icloud.fill",
-        tint: .orange,
+        tone: StatusTone.warning,
         keepsCloudOutOfReach: false
     )
     static let waitingForAccount = CloudSyncPhase(
@@ -9795,7 +11130,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: true,
         title: LocalizedStringResource("Waiting for iCloud"),
         symbol: "person.crop.circle.badge.exclamationmark",
-        tint: .orange,
+        tone: StatusTone.warning,
         keepsCloudOutOfReach: true
     )
     static let failed = CloudSyncPhase(
@@ -9804,7 +11139,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: true,
         title: LocalizedStringResource("Needs attention"),
         symbol: "xmark.icloud.fill",
-        tint: .red,
+        tone: StatusTone.danger,
         keepsCloudOutOfReach: true
     )
     static let waitingToUpload = CloudSyncPhase(
@@ -9813,7 +11148,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         isRetryable: false,
         title: LocalizedStringResource("Waiting to upload"),
         symbol: "icloud.and.arrow.up",
-        tint: .blue,
+        tone: StatusTone.info,
         keepsCloudOutOfReach: false
     )
 
@@ -9845,7 +11180,7 @@ struct CloudSyncPhase: Hashable, Sendable {
         let isRetryable: Bool
         let title: LocalizedStringResource
         let symbol: String
-        let tint: SystemTint?
+        let tone: StatusTone?
         let keepsCloudOutOfReach: Bool
 
         init(
@@ -9853,14 +11188,14 @@ struct CloudSyncPhase: Hashable, Sendable {
             isRetryable: Bool,
             title: LocalizedStringResource,
             symbol: String,
-            tint: SystemTint?,
+            tone: StatusTone?,
             keepsCloudOutOfReach: Bool
         ) {
             self.name = name
             self.isRetryable = isRetryable
             self.title = title
             self.symbol = symbol
-            self.tint = tint
+            self.tone = tone
             self.keepsCloudOutOfReach = keepsCloudOutOfReach
         }
     }
@@ -10547,6 +11882,44 @@ struct CredentialImportEffect: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `CredentialRefusal`. A member's wire tag is its index in `all`.
+struct CredentialRefusal: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let privateBrowsing = CredentialRefusal(tag: 0, name: "privateBrowsing")
+    static let managerOff = CredentialRefusal(tag: 1, name: "managerOff")
+    static let insecureOrigin = CredentialRefusal(tag: 2, name: "insecureOrigin")
+
+    static let all: [CredentialRefusal] = [privateBrowsing, managerOff, insecureOrigin]
+
+    static func named(_ name: String?) -> CredentialRefusal? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CredentialRefusal, rhs: CredentialRefusal) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
+}
+
 /// The members of the core's `CredentialRowCaution`. A member's wire tag is its index in `all`.
 struct CredentialRowCaution: Hashable, Sendable {
     let tag: Int
@@ -10639,6 +12012,50 @@ struct CredentialRowFlaw: Hashable, Sendable {
         init(name: String, message: LocalizedStringResource) {
             self.name = name
             self.message = message
+        }
+    }
+}
+
+/// The members of the core's `CredentialUse`. A member's wire tag is its index in `all`.
+struct CredentialUse: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var needsManager: Bool { facts.needsManager }
+    var refusedInPrivate: Bool { facts.refusedInPrivate }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, needsManager: Bool, refusedInPrivate: Bool) {
+        self.tag = tag
+        facts = Facts(name: name, needsManager: needsManager, refusedInPrivate: refusedInPrivate)
+    }
+
+    static let read = CredentialUse(tag: 0, name: "read", needsManager: false, refusedInPrivate: false)
+    static let fill = CredentialUse(tag: 1, name: "fill", needsManager: true, refusedInPrivate: false)
+    static let save = CredentialUse(tag: 2, name: "save", needsManager: true, refusedInPrivate: true)
+
+    static let all: [CredentialUse] = [read, fill, save]
+
+    static func named(_ name: String?) -> CredentialUse? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CredentialUse, rhs: CredentialUse) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let needsManager: Bool
+        let refusedInPrivate: Bool
+
+        init(name: String, needsManager: Bool, refusedInPrivate: Bool) {
+            self.name = name
+            self.needsManager = needsManager
+            self.refusedInPrivate = refusedInPrivate
         }
     }
 }
@@ -10852,7 +12269,7 @@ struct CrestBackplate: Hashable, Sendable {
 }
 
 /// The members of the core's `CrestChargeKind`. A member's wire tag is its index in `all`.
-/// Core-only behavior, not emitted: `normalize`.
+/// Core-only behavior, not emitted: `normalize`, `read`, `write`.
 struct CrestChargeKind: Hashable, Sendable {
     enum Kinds: Sendable {
         case heraldic
@@ -15574,24 +16991,37 @@ struct NativeView: Hashable, Sendable {
     var name: String { facts.name }
     var title: LocalizedStringResource { facts.title }
     var symbol: String { facts.symbol }
+    var placement: TabPlacement { facts.placement }
+    var opensOnce: Bool { facts.opensOnce }
     private let facts: Facts
 
-    private init(tag: Int, name: String, title: LocalizedStringResource, symbol: String) {
+    private init(
+        tag: Int,
+        name: String,
+        title: LocalizedStringResource,
+        symbol: String,
+        placement: TabPlacement,
+        opensOnce: Bool
+    ) {
         self.tag = tag
-        facts = Facts(name: name, title: title, symbol: symbol)
+        facts = Facts(name: name, title: title, symbol: symbol, placement: placement, opensOnce: opensOnce)
     }
 
     static let settings = NativeView(
         tag: 0,
         name: "settings",
         title: LocalizedStringResource("Settings"),
-        symbol: "gearshape.fill"
+        symbol: "gearshape.fill",
+        placement: TabPlacement.current,
+        opensOnce: true
     )
     static let gettingStarted = NativeView(
         tag: 1,
         name: "getting-started",
         title: LocalizedStringResource("Getting Started"),
-        symbol: "book.closed.fill"
+        symbol: "book.closed.fill",
+        placement: TabPlacement.saved,
+        opensOnce: true
     )
 
     static let all: [NativeView] = [settings, gettingStarted]
@@ -15612,11 +17042,15 @@ struct NativeView: Hashable, Sendable {
         let name: String
         let title: LocalizedStringResource
         let symbol: String
+        let placement: TabPlacement
+        let opensOnce: Bool
 
-        init(name: String, title: LocalizedStringResource, symbol: String) {
+        init(name: String, title: LocalizedStringResource, symbol: String, placement: TabPlacement, opensOnce: Bool) {
             self.name = name
             self.title = title
             self.symbol = symbol
+            self.placement = placement
+            self.opensOnce = opensOnce
         }
     }
 }
@@ -16130,6 +17564,44 @@ struct PagePresentation: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `PageResourceKind`. A member's wire tag is its index in `all`.
+struct PageResourceKind: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let frame = PageResourceKind(tag: 0, name: "frame")
+    static let image = PageResourceKind(tag: 1, name: "image")
+    static let object = PageResourceKind(tag: 2, name: "object")
+
+    static let all: [PageResourceKind] = [frame, image, object]
+
+    static func named(_ name: String?) -> PageResourceKind? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PageResourceKind, rhs: PageResourceKind) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
+}
+
 /// The members of the core's `PageSecurity`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `applies`.
 struct PageSecurity: Hashable, Sendable {
@@ -16553,7 +18025,7 @@ struct PaletteRowKind: Hashable, Sendable {
     static let tab = PaletteRowKind(
         tag: 3,
         name: "tab",
-        symbol: "globe",
+        symbol: "rectangle.stack.fill",
         action: LocalizedStringResource("Switch to Tab"),
         label: LocalizedStringResource("Open Tab"),
         isPrimary: false,
@@ -16573,7 +18045,7 @@ struct PaletteRowKind: Hashable, Sendable {
     static let savedTab = PaletteRowKind(
         tag: 5,
         name: "savedTab",
-        symbol: "bookmark",
+        symbol: "bookmark.fill",
         action: LocalizedStringResource("Switch to Tab"),
         label: LocalizedStringResource("Saved"),
         isPrimary: false,
@@ -16765,7 +18237,7 @@ struct PaletteScope: Hashable, Sendable {
         name: "saved",
         keyword: "@saved",
         title: LocalizedStringResource("Pinned & Saved"),
-        symbol: "pin",
+        symbol: "pin.fill",
         source: PaletteSource.saved
     )
     static let history = PaletteScope(
@@ -16975,6 +18447,7 @@ struct PaletteSource: Hashable, Sendable {
     var isEnabledByDefault: Bool { facts.isEnabledByDefault }
     var restingSection: PaletteSection? { facts.restingSection }
     var defaultLimit: Int { facts.defaultLimit }
+    var isArranged: Bool { facts.isArranged }
     private let facts: Facts
 
     private init(
@@ -16986,7 +18459,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: Bool,
         isEnabledByDefault: Bool,
         restingSection: PaletteSection?,
-        defaultLimit: Int
+        defaultLimit: Int,
+        isArranged: Bool
     ) {
         self.tag = tag
         facts = Facts(
@@ -16997,7 +18471,8 @@ struct PaletteSource: Hashable, Sendable {
             isSection: isSection,
             isEnabledByDefault: isEnabledByDefault,
             restingSection: restingSection,
-            defaultLimit: defaultLimit
+            defaultLimit: defaultLimit,
+            isArranged: isArranged
         )
     }
 
@@ -17010,7 +18485,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: PaletteSection.recentTabs,
-        defaultLimit: 5
+        defaultLimit: 5,
+        isArranged: true
     )
     static let openTabs = PaletteSource(
         tag: 1,
@@ -17021,7 +18497,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 8
+        defaultLimit: 8,
+        isArranged: true
     )
     static let saved = PaletteSource(
         tag: 2,
@@ -17032,7 +18509,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 5
+        defaultLimit: 5,
+        isArranged: true
     )
     static let history = PaletteSource(
         tag: 3,
@@ -17043,7 +18521,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 6
+        defaultLimit: 6,
+        isArranged: true
     )
     static let actions = PaletteSource(
         tag: 4,
@@ -17054,7 +18533,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: PaletteSection.actions,
-        defaultLimit: 3
+        defaultLimit: 3,
+        isArranged: true
     )
     static let spaces = PaletteSource(
         tag: 5,
@@ -17065,7 +18545,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 2
+        defaultLimit: 2,
+        isArranged: true
     )
     static let archivedTabs = PaletteSource(
         tag: 6,
@@ -17076,7 +18557,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: false,
         restingSection: nil,
-        defaultLimit: 3
+        defaultLimit: 3,
+        isArranged: true
     )
     static let suggestions = PaletteSource(
         tag: 7,
@@ -17087,7 +18569,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: true,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 3
+        defaultLimit: 3,
+        isArranged: false
     )
     static let settingsPages = PaletteSource(
         tag: 8,
@@ -17098,7 +18581,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: false,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 3
+        defaultLimit: 3,
+        isArranged: false
     )
     static let scopes = PaletteSource(
         tag: 9,
@@ -17109,7 +18593,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: false,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 2
+        defaultLimit: 2,
+        isArranged: false
     )
     static let calculator = PaletteSource(
         tag: 10,
@@ -17120,7 +18605,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: false,
         isEnabledByDefault: true,
         restingSection: nil,
-        defaultLimit: 1
+        defaultLimit: 1,
+        isArranged: false
     )
     static let pasteAndGo = PaletteSource(
         tag: 11,
@@ -17131,7 +18617,8 @@ struct PaletteSource: Hashable, Sendable {
         isSection: false,
         isEnabledByDefault: false,
         restingSection: nil,
-        defaultLimit: 2
+        defaultLimit: 2,
+        isArranged: false
     )
 
     static let all: [PaletteSource] = [
@@ -17170,6 +18657,7 @@ struct PaletteSource: Hashable, Sendable {
         let isEnabledByDefault: Bool
         let restingSection: PaletteSection?
         let defaultLimit: Int
+        let isArranged: Bool
 
         init(
             name: String,
@@ -17179,7 +18667,8 @@ struct PaletteSource: Hashable, Sendable {
             isSection: Bool,
             isEnabledByDefault: Bool,
             restingSection: PaletteSection?,
-            defaultLimit: Int
+            defaultLimit: Int,
+            isArranged: Bool
         ) {
             self.name = name
             self.title = title
@@ -17189,6 +18678,7 @@ struct PaletteSource: Hashable, Sendable {
             self.isEnabledByDefault = isEnabledByDefault
             self.restingSection = restingSection
             self.defaultLimit = defaultLimit
+            self.isArranged = isArranged
         }
     }
 }
@@ -18920,76 +20410,33 @@ struct SetupFailureReason: Hashable, Sendable {
 /// The members of the core's `SetupLook`. A member's wire tag is its index in `all`.
 /// Core-only behavior, not emitted: `newSpaceLook`.
 struct SetupLook: Hashable, Sendable {
-    enum Kinds: Sendable {
-        case heraldic
-        case modern
-        case simple
-    }
-
     let tag: Int
-    var kind: Kinds { facts.kind }
     var name: String { facts.name }
     var title: LocalizedStringResource { facts.title }
     var themeMode: SpaceThemeMode { facts.themeMode }
     var iconStyle: SpaceIconStyle { facts.iconStyle }
-    var gradientAngle: Double? { facts.gradientAngle }
-    var tint: Double? { facts.tint }
     private let facts: Facts
 
     private init(
         tag: Int,
-        kind: Kinds,
         name: String,
         title: LocalizedStringResource,
         themeMode: SpaceThemeMode,
-        iconStyle: SpaceIconStyle,
-        gradientAngle: Double?,
-        tint: Double?
+        iconStyle: SpaceIconStyle
     ) {
         self.tag = tag
-        facts = Facts(
-            kind: kind,
-            name: name,
-            title: title,
-            themeMode: themeMode,
-            iconStyle: iconStyle,
-            gradientAngle: gradientAngle,
-            tint: tint
-        )
+        facts = Facts(name: name, title: title, themeMode: themeMode, iconStyle: iconStyle)
     }
 
     static let heraldic = SetupLook(
         tag: 0,
-        kind: .heraldic,
         name: "heraldic",
         title: LocalizedStringResource("Heraldic (Full)"),
         themeMode: SpaceThemeMode.banner,
-        iconStyle: SpaceIconStyle.layeredCrest,
-        gradientAngle: nil,
-        tint: nil
-    )
-    static let modern = SetupLook(
-        tag: 1,
-        kind: .modern,
-        name: "modern",
-        title: LocalizedStringResource("Modern"),
-        themeMode: SpaceThemeMode.gradient,
-        iconStyle: SpaceIconStyle.simpleSymbol,
-        gradientAngle: 90,
-        tint: nil
-    )
-    static let simple = SetupLook(
-        tag: 2,
-        kind: .simple,
-        name: "simple",
-        title: LocalizedStringResource("Simple"),
-        themeMode: SpaceThemeMode.gradient,
-        iconStyle: SpaceIconStyle.simpleSymbol,
-        gradientAngle: 0,
-        tint: 1
+        iconStyle: SpaceIconStyle.layeredCrest
     )
 
-    static let all: [SetupLook] = [heraldic, modern, simple]
+    static let all: [SetupLook] = [heraldic]
 
     static func named(_ name: String?) -> SetupLook? {
         all.first { $0.name == name }
@@ -19004,30 +20451,16 @@ struct SetupLook: Hashable, Sendable {
     }
 
     private final class Facts: Sendable {
-        let kind: Kinds
         let name: String
         let title: LocalizedStringResource
         let themeMode: SpaceThemeMode
         let iconStyle: SpaceIconStyle
-        let gradientAngle: Double?
-        let tint: Double?
 
-        init(
-            kind: Kinds,
-            name: String,
-            title: LocalizedStringResource,
-            themeMode: SpaceThemeMode,
-            iconStyle: SpaceIconStyle,
-            gradientAngle: Double?,
-            tint: Double?
-        ) {
-            self.kind = kind
+        init(name: String, title: LocalizedStringResource, themeMode: SpaceThemeMode, iconStyle: SpaceIconStyle) {
             self.name = name
             self.title = title
             self.themeMode = themeMode
             self.iconStyle = iconStyle
-            self.gradientAngle = gradientAngle
-            self.tint = tint
         }
     }
 }
@@ -22403,6 +23836,7 @@ struct SitePermission: Hashable, Sendable {
     var isEngineEnforced: Bool { facts.isEngineEnforced }
     var isAskedBySystem: Bool { facts.isAskedBySystem }
     var components: [SitePermission] { facts.components }
+    var platforms: [DevicePlatform] { facts.platforms }
     private let facts: Facts
 
     private init(
@@ -22416,7 +23850,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: Bool,
         isEngineEnforced: Bool,
         isAskedBySystem: Bool,
-        components: [SitePermission]
+        components: [SitePermission],
+        platforms: [DevicePlatform]
     ) {
         self.tag = tag
         facts = Facts(
@@ -22429,7 +23864,8 @@ struct SitePermission: Hashable, Sendable {
             isMedia: isMedia,
             isEngineEnforced: isEngineEnforced,
             isAskedBySystem: isAskedBySystem,
-            components: components
+            components: components,
+            platforms: platforms
         )
     }
 
@@ -22444,7 +23880,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: true,
         isEngineEnforced: true,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let microphone = SitePermission(
         tag: 1,
@@ -22457,7 +23894,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: true,
         isEngineEnforced: true,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let cameraAndMicrophone = SitePermission(
         tag: 2,
@@ -22470,7 +23908,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: true,
         isEngineEnforced: false,
         isAskedBySystem: false,
-        components: [SitePermission.camera, SitePermission.microphone]
+        components: [SitePermission.camera, SitePermission.microphone],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let location = SitePermission(
         tag: 3,
@@ -22483,7 +23922,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: false,
         isEngineEnforced: true,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let notifications = SitePermission(
         tag: 4,
@@ -22496,7 +23936,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: false,
         isEngineEnforced: true,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let popups = SitePermission(
         tag: 5,
@@ -22509,7 +23950,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: false,
         isEngineEnforced: false,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let automaticDownloads = SitePermission(
         tag: 6,
@@ -22522,7 +23964,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: false,
         isEngineEnforced: false,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let externalApplications = SitePermission(
         tag: 7,
@@ -22535,7 +23978,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: false,
         isEngineEnforced: false,
         isAskedBySystem: false,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile]
     )
     static let screenSharing = SitePermission(
         tag: 8,
@@ -22548,7 +23992,8 @@ struct SitePermission: Hashable, Sendable {
         isMedia: false,
         isEngineEnforced: false,
         isAskedBySystem: true,
-        components: []
+        components: [],
+        platforms: [DevicePlatform.desktop]
     )
 
     static let all: [SitePermission] = [
@@ -22586,6 +24031,7 @@ struct SitePermission: Hashable, Sendable {
         let isEngineEnforced: Bool
         let isAskedBySystem: Bool
         let components: [SitePermission]
+        let platforms: [DevicePlatform]
 
         init(
             name: String,
@@ -22597,7 +24043,8 @@ struct SitePermission: Hashable, Sendable {
             isMedia: Bool,
             isEngineEnforced: Bool,
             isAskedBySystem: Bool,
-            components: [SitePermission]
+            components: [SitePermission],
+            platforms: [DevicePlatform]
         ) {
             self.name = name
             self.title = title
@@ -22609,6 +24056,7 @@ struct SitePermission: Hashable, Sendable {
             self.isEngineEnforced = isEngineEnforced
             self.isAskedBySystem = isAskedBySystem
             self.components = components
+            self.platforms = platforms
         }
     }
 }
@@ -22763,28 +24211,19 @@ struct SitePermissionDecision: Hashable, Sendable {
 struct SpaceAccent: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
-    var tint: SystemTint { facts.tint }
     var legacyColors: [BrandColor] { facts.legacyColors }
     var house: SpaceBranding { facts.house }
     var swatch: BrandColor { facts.swatch }
     private let facts: Facts
 
-    private init(
-        tag: Int,
-        name: String,
-        tint: SystemTint,
-        legacyColors: [BrandColor],
-        house: SpaceBranding,
-        swatch: BrandColor
-    ) {
+    private init(tag: Int, name: String, legacyColors: [BrandColor], house: SpaceBranding, swatch: BrandColor) {
         self.tag = tag
-        facts = Facts(name: name, tint: tint, legacyColors: legacyColors, house: house, swatch: swatch)
+        facts = Facts(name: name, legacyColors: legacyColors, house: house, swatch: swatch)
     }
 
     static let indigo = SpaceAccent(
         tag: 0,
         name: "indigo",
-        tint: .indigo,
         legacyColors: [
             BrandColor(red: 0.08, green: 0.15, blue: 0.23, alpha: 1),
             BrandColor(red: 0.22, green: 0.42, blue: 0.64, alpha: 1),
@@ -22865,7 +24304,6 @@ struct SpaceAccent: Hashable, Sendable {
     static let orange = SpaceAccent(
         tag: 1,
         name: "orange",
-        tint: .orange,
         legacyColors: [
             BrandColor(red: 0.85, green: 0.27, blue: 0.2, alpha: 1),
             BrandColor(red: 0.88, green: 0.67, blue: 0.25, alpha: 1),
@@ -22946,7 +24384,6 @@ struct SpaceAccent: Hashable, Sendable {
     static let teal = SpaceAccent(
         tag: 2,
         name: "teal",
-        tint: .teal,
         legacyColors: [
             BrandColor(red: 0.12, green: 0.49, blue: 0.52, alpha: 1),
             BrandColor(red: 0.22, green: 0.42, blue: 0.64, alpha: 1),
@@ -23022,7 +24459,6 @@ struct SpaceAccent: Hashable, Sendable {
     static let rose = SpaceAccent(
         tag: 3,
         name: "rose",
-        tint: .pink,
         legacyColors: [
             BrandColor(red: 0.72, green: 0.25, blue: 0.42, alpha: 1),
             BrandColor(red: 0.29, green: 0.25, blue: 0.58, alpha: 1),
@@ -23117,14 +24553,12 @@ struct SpaceAccent: Hashable, Sendable {
 
     private final class Facts: Sendable {
         let name: String
-        let tint: SystemTint
         let legacyColors: [BrandColor]
         let house: SpaceBranding
         let swatch: BrandColor
 
-        init(name: String, tint: SystemTint, legacyColors: [BrandColor], house: SpaceBranding, swatch: BrandColor) {
+        init(name: String, legacyColors: [BrandColor], house: SpaceBranding, swatch: BrandColor) {
             self.name = name
-            self.tint = tint
             self.legacyColors = legacyColors
             self.house = house
             self.swatch = swatch
@@ -24866,6 +26300,108 @@ struct StartupBehavior: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `StatusTone`. A member's wire tag is its index in `all`.
+struct StatusTone: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let success = StatusTone(tag: 0, name: "success")
+    static let warning = StatusTone(tag: 1, name: "warning")
+    static let danger = StatusTone(tag: 2, name: "danger")
+    static let info = StatusTone(tag: 3, name: "info")
+
+    static let all: [StatusTone] = [success, warning, danger, info]
+
+    static func named(_ name: String?) -> StatusTone? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: StatusTone, rhs: StatusTone) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
+}
+
+/// The members of the core's `StorageFailure`. A member's wire tag is its index in `all`.
+struct StorageFailure: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var message: LocalizedStringResource { facts.message }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, message: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, message: message)
+    }
+
+    static let diskFull = StorageFailure(
+        tag: 0,
+        name: "disk_full",
+        message: LocalizedStringResource("Crest couldn’t save your session because the disk is full.")
+    )
+    static let readOnly = StorageFailure(
+        tag: 1,
+        name: "read_only",
+        message: LocalizedStringResource("Crest couldn’t save your session because its folder can’t be written to.")
+    )
+    static let busy = StorageFailure(
+        tag: 2,
+        name: "busy",
+        message: LocalizedStringResource("Crest couldn’t save your session because another app is using its file.")
+    )
+    static let damaged = StorageFailure(
+        tag: 3,
+        name: "damaged",
+        message: LocalizedStringResource("Crest couldn’t save your session because its file is damaged.")
+    )
+    static let unavailable = StorageFailure(
+        tag: 4,
+        name: "unavailable",
+        message: LocalizedStringResource("Crest couldn’t save your session.")
+    )
+
+    static let all: [StorageFailure] = [diskFull, readOnly, busy, damaged, unavailable]
+
+    static func named(_ name: String?) -> StorageFailure? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: StorageFailure, rhs: StorageFailure) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let message: LocalizedStringResource
+
+        init(name: String, message: LocalizedStringResource) {
+            self.name = name
+            self.message = message
+        }
+    }
+}
+
 /// The members of the core's `SyncDeletionReason`. A member's wire tag is its index in `all`.
 struct SyncDeletionReason: Hashable, Sendable {
     let tag: Int
@@ -26143,21 +27679,141 @@ struct TransientPresentation: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `UrlScheme`. A member's wire tag is its index in `all`.
+struct UrlScheme: Hashable, Sendable {
+    static let maximumSchemeLength = 256
+
+    let tag: Int
+    var name: String { facts.name }
+    var disposition: ExternalSchemeDisposition { facts.disposition }
+    var appInitiatedDisposition: ExternalSchemeDisposition { facts.appInitiatedDisposition }
+    private let facts: Facts
+
+    private init(
+        tag: Int,
+        name: String,
+        disposition: ExternalSchemeDisposition,
+        appInitiatedDisposition: ExternalSchemeDisposition
+    ) {
+        self.tag = tag
+        facts = Facts(name: name, disposition: disposition, appInitiatedDisposition: appInitiatedDisposition)
+    }
+
+    static let http = UrlScheme(
+        tag: 0,
+        name: "http",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let https = UrlScheme(
+        tag: 1,
+        name: "https",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let about = UrlScheme(
+        tag: 2,
+        name: "about",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let blob = UrlScheme(
+        tag: 3,
+        name: "blob",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let chromeExtension = UrlScheme(
+        tag: 4,
+        name: "chrome-extension",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let crestExtension = UrlScheme(
+        tag: 5,
+        name: "crest-extension",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let data = UrlScheme(
+        tag: 6,
+        name: "data",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let webKitExtension = UrlScheme(
+        tag: 7,
+        name: "webkit-extension",
+        disposition: ExternalSchemeDisposition.engine,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+    static let javaScript = UrlScheme(
+        tag: 8,
+        name: "javascript",
+        disposition: ExternalSchemeDisposition.blocked,
+        appInitiatedDisposition: ExternalSchemeDisposition.blocked
+    )
+    static let file = UrlScheme(
+        tag: 9,
+        name: "file",
+        disposition: ExternalSchemeDisposition.blocked,
+        appInitiatedDisposition: ExternalSchemeDisposition.engine
+    )
+
+    static let all: [UrlScheme] = [
+        http,
+        https,
+        about,
+        blob,
+        chromeExtension,
+        crestExtension,
+        data,
+        webKitExtension,
+        javaScript,
+        file
+    ]
+
+    static func named(_ name: String?) -> UrlScheme? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: UrlScheme, rhs: UrlScheme) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let disposition: ExternalSchemeDisposition
+        let appInitiatedDisposition: ExternalSchemeDisposition
+
+        init(name: String, disposition: ExternalSchemeDisposition, appInitiatedDisposition: ExternalSchemeDisposition) {
+            self.name = name
+            self.disposition = disposition
+            self.appInitiatedDisposition = appInitiatedDisposition
+        }
+    }
+}
+
 /// The members of the core's `WebScheme`. A member's wire tag is its index in `all`.
 struct WebScheme: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
     var defaultPort: Int { facts.defaultPort }
     var isSecure: Bool { facts.isSecure }
+    var prefix: String { facts.prefix }
     private let facts: Facts
 
-    private init(tag: Int, name: String, defaultPort: Int, isSecure: Bool) {
+    private init(tag: Int, name: String, defaultPort: Int, isSecure: Bool, prefix: String) {
         self.tag = tag
-        facts = Facts(name: name, defaultPort: defaultPort, isSecure: isSecure)
+        facts = Facts(name: name, defaultPort: defaultPort, isSecure: isSecure, prefix: prefix)
     }
 
-    static let http = WebScheme(tag: 0, name: "http", defaultPort: 80, isSecure: false)
-    static let https = WebScheme(tag: 1, name: "https", defaultPort: 443, isSecure: true)
+    static let http = WebScheme(tag: 0, name: "http", defaultPort: 80, isSecure: false, prefix: "http://")
+    static let https = WebScheme(tag: 1, name: "https", defaultPort: 443, isSecure: true, prefix: "https://")
 
     static let all: [WebScheme] = [http, https]
 
@@ -26177,11 +27833,13 @@ struct WebScheme: Hashable, Sendable {
         let name: String
         let defaultPort: Int
         let isSecure: Bool
+        let prefix: String
 
-        init(name: String, defaultPort: Int, isSecure: Bool) {
+        init(name: String, defaultPort: Int, isSecure: Bool, prefix: String) {
             self.name = name
             self.defaultPort = defaultPort
             self.isSecure = isSecure
+            self.prefix = prefix
         }
     }
 }

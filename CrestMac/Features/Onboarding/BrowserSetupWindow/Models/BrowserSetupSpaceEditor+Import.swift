@@ -12,7 +12,7 @@ extension BrowserSetupSpaceEditor {
             self = editor
             return
         }
-        guard let review = flow.reviewSpaces.first(where: { $0.id == spaceID && $0.destination.spaceID == nil })
+        guard let review = flow.reviewSpaces.first(where: { $0.id == spaceID && $0.destinationSpaceID == nil })
         else { return nil }
         func customization() -> SpaceCustomization {
             flow.reviewSpaces.first { $0.id == spaceID }?.customization ?? review.customization

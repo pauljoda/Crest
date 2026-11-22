@@ -81,6 +81,13 @@ extension MobileBrowserRootModel {
         hasPreparedBrowser = true
         // Pages opened while the rules compiled were built without them.
         await pages.reconcileContentBlocking()
+        // After an update, the first window opens the release's notes in
+        // place of the launch's new tab, in the Space that tab would open in.
+        if let releasePage = await BrowserReleasePage.dueAtLaunch(in: browser) {
+            if startupBehavior.opensNewTab { _ = showDefaultSpaceForNewTab() }
+            openURL(releasePage.url)
+            return false
+        }
         if startupBehavior.opensNewTab {
             return showDefaultSpaceForNewTab()
         }
@@ -269,7 +276,7 @@ extension MobileBrowserRootModel {
     }
 
     func switchSpace(
-        _ direction: BrowserSpaceSwipeDirection,
+        _ direction: AdjacentDirection,
         reduceMotion: Bool
     ) {
         withAnimation(accessibleAnimation(CrestMotion.navigation, reduceMotion)) {

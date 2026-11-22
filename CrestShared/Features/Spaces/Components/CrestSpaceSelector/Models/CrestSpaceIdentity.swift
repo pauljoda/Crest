@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The identity a space-picking control needs: who the Space is, what it is called
-/// right now, and which colour it owns.
+/// right now, and which colour it owns: its Accent, unless the caller tints it.
 ///
 /// It carries the Space's whole identity because the crest is rendered from its
 /// branding — flattening it to an id and a name would mean re-deriving the crest at
@@ -14,7 +14,7 @@ struct CrestSpaceIdentity: Identifiable, Equatable {
 
     var id: UUID { space.id }
     var name: String { displayName ?? space.name }
-    var tint: Color { tintOverride ?? space.accent.tint.color }
+    var tint: Color { tintOverride ?? space.branding.primaryColor.color }
 
     @MainActor
     init(space: some BrowserSpaceIdentifying, displayName: String? = nil, tint: Color? = nil) {

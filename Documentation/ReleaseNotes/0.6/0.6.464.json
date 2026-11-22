@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "extension-popup-close-no-crash",
+      "category": "fixed",
+      "message": "Crest no longer quits when an extension closes its popup window, as Bitwarden does after you turn on unlock with biometrics."
+    },
+    {
+      "id": "extension-popups-open-as-tabs",
+      "category": "improved",
+      "message": "Extension popups, such as a password manager's settings popout, open as a tab in your current window instead of a new window."
+    }
+  ]
+}

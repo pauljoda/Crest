@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "background-link-opening-notice",
+      "category": "improved",
+      "message": "Opening a link in a background tab now shows a brief confirmation at the top of the window."
+    }
+  ]
+}

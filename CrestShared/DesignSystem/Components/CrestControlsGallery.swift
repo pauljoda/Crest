@@ -18,7 +18,8 @@
         @State private var chipSelection: UUID? = SessionState.Seed.preview.spaces.first?.id
         @State private var menuSelection: UUID? = SessionState.Seed.preview.spaces.first?.id
         @State private var address = "example.com"
-        @State private var name = ""
+        @State private var query = ""
+        @FocusState private var isAddressFocused: Bool
 
         private var spaces: [CrestSpaceIdentity] {
             CrestSpaceIdentity.list(SpaceModel.previewSpaces)
@@ -97,11 +98,13 @@
         private var fields: some View {
             section("Fields") {
                 TextField("example.com", text: $address)
-                    .crestTextField()
-                TextField("Space name", text: $name)
-                    .crestTextField()
+                    .textFieldStyle(.plain)
+                    .focused($isAddressFocused)
+                    .crestFieldSurface(isFocused: isAddressFocused)
+                CrestSearchField("Search Spaces", text: $query)
                 TextField("Disabled", text: .constant(""))
-                    .crestTextField()
+                    .textFieldStyle(.plain)
+                    .crestFieldSurface(isFocused: false)
                     .disabled(true)
             }
         }

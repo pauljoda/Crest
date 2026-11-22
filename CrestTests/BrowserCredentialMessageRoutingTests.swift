@@ -149,20 +149,6 @@ final class BrowserCredentialMessageRoutingTests: XCTestCase {
         return try XCTUnwrap(pool.activePage)
     }
 
-    private func waitUntil(
-        timeout: Duration = .seconds(8),
-        condition: @escaping @MainActor () -> Bool
-    ) async throws {
-        let clock = ContinuousClock()
-        let deadline = clock.now.advanced(by: timeout)
-        while !condition() {
-            guard clock.now < deadline else {
-                XCTFail("Timed out waiting for the browser state to change.")
-                return
-            }
-            try await Task.sleep(for: .milliseconds(25))
-        }
-    }
 }
 
 /// Reports when a bare web view standing in for an adopted popup has finished

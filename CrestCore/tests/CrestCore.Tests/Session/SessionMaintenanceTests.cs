@@ -4,6 +4,8 @@ using CrestCore.Application;
 using CrestCore.Contracts;
 using CrestCore.Domain;
 
+using CrestCore.Tests.Session;
+
 using Xunit;
 
 namespace CrestCore.Tests;
@@ -20,14 +22,14 @@ public sealed partial class BrowserContractsTests {
         var source = SavedSession().Document["session"]!.AsObject();
         source["spaces"]!.AsArray().Add(source["spaces"]![0]!.DeepClone());
         var before = Bytes(source);
-        var output = NativeSessionMaintenance.Repair(source, 800000000);
+        var output = StoredSessionMaintenance.Repair(source, 800000000);
         var result = output["session"]!;
         Assert.Equal(before, Bytes(source));
         Assert.NotEqual(result["spaces"]![0]!["id"]!.ToJsonString(), result["spaces"]![1]!["id"]!.ToJsonString());
         Assert.NotEqual(result["spaces"]![0]!["profile"]!["id"]!.ToJsonString(), result["spaces"]![1]!["profile"]!["id"]!.ToJsonString());
         Assert.NotEqual(result["spaces"]![0]!["tabs"]![0]!["id"]!.ToJsonString(), result["spaces"]![1]!["tabs"]![0]!["id"]!.ToJsonString());
         Assert.Equal(1, output["assets"]!.AsArray().Last()!["spaceIndex"]!.GetValue<int>());
-        Assert.True(JsonNode.DeepEquals(result, NativeSessionMaintenance.Repair(result.AsObject(), 800000001)["session"]));
+        Assert.True(JsonNode.DeepEquals(result, StoredSessionMaintenance.Repair(result.AsObject(), 800000001)["session"]));
     }
 
     [Fact]
@@ -67,7 +69,7 @@ public sealed partial class BrowserContractsTests {
         var kept = result["spaces"]!.AsArray().Single(s => JsonNode.DeepEquals(s!["id"], session["spaces"]![0]!["id"]));
         Assert.True(JsonNode.DeepEquals(session["spaces"]![0], kept));
         Assert.False(JsonNode.DeepEquals(result["selectedSpaceID"], kept!["id"]));
-        var repaired = NativeSessionMaintenance.Repair(result.AsObject(), 800000000.0)["session"]!;
+        var repaired = StoredSessionMaintenance.Repair(result.AsObject(), 800000000.0)["session"]!;
         Assert.True(JsonNode.DeepEquals(result["spaceDeletions"], repaired["spaceDeletions"]));
         var tombstone = new JsonObject {
             ["id"] = new JsonObject { ["kind"] = "space", ["value"] = fixture.Space.ToString("D") },

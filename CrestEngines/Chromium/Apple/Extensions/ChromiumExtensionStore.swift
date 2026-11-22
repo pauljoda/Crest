@@ -26,6 +26,12 @@ final class ChromiumExtensionStore {
     /// redraws the Space's rows on the main thread that also carries the
     /// page's scroll input.
     private static let refreshInterval = Duration.milliseconds(250)
+    /// How often an import looks again for the Spaces setup holds back, and
+    /// how many looks a Space that never appears gets: half a minute.
+    private static let importedSpaceInterval = Duration.milliseconds(500)
+    private static let importedSpaceLooks = 60
+    /// How often an install's caller looks again at how the install stands.
+    private static let installCheckInterval = Duration.milliseconds(250)
 
     // MARK: - Types
 
@@ -253,7 +259,7 @@ final class ChromiumExtensionStore {
                 sourceWindow: fallback)
         guard let host = ChromiumComposition.engineHost,
             let source = anchor.presentationSource(fallbackWindow: fallback),
-            let windowID = source.view.window?.identifier.flatMap({ UUID(uuidString: $0.rawValue) }),
+            let windowID = (source.view.window as? BrowserMacWindow)?.windowID,
             host.runExtension(
                 action.id, profile: space.profileID, window: windowID,
                 anchorView: source.view, anchorRect: source.rect)
@@ -289,7 +295,7 @@ final class ChromiumExtensionStore {
         DispatchQueue.main.async { [weak self, weak window] in
             MainActor.assumeIsolated {
                 guard let self, let window, let host = ChromiumComposition.engineHost,
-                    let windowID = window.identifier.flatMap({ UUID(uuidString: $0.rawValue) })
+                    let windowID = (window as? BrowserMacWindow)?.windowID
                 else { return }
                 switch self.popupCycle(for: space, page: page).step(showing: host.extensionPopup(inWindow: windowID)) {
                 case nil:
@@ -596,9 +602,9 @@ final class ChromiumExtensionStore {
     /// that never appears.
     private func importedSpaces(_ spaceIDs: [UUID]) async -> [UUID] {
         var missing = 0
-        while !Task.isCancelled, spaceIDs.contains(where: { space($0) == nil }), missing < 60 {
+        while !Task.isCancelled, spaceIDs.contains(where: { space($0) == nil }), missing < Self.importedSpaceLooks {
             missing += 1
-            try? await Task.sleep(for: .milliseconds(500))
+            try? await Task.sleep(for: Self.importedSpaceInterval)
         }
         return spaceIDs.filter { space($0) != nil }
     }
@@ -606,7 +612,7 @@ final class ChromiumExtensionStore {
     private func ending(of installID: UUID) async -> ExtensionInstallState? {
         while !Task.isCancelled {
             if let state = core?.state.extensionInstalls[installID], state.stage.hasEnded { return state }
-            try? await Task.sleep(for: .milliseconds(250))
+            try? await Task.sleep(for: Self.installCheckInterval)
         }
         return nil
     }

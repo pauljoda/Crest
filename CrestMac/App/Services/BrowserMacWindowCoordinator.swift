@@ -6,6 +6,10 @@ import Observation
 @Observable
 @MainActor
 final class BrowserMacWindowCoordinator {
+    /// How long a tab torn off into a new window waits for that window before
+    /// the transfer is called off.
+    private static let pendingTransferLifetime: Duration = .seconds(10)
+
     private struct PendingTransfer {
         let sourceWindowID: UUID
         let item: BrowserTabDragItem
@@ -177,7 +181,7 @@ final class BrowserMacWindowCoordinator {
         }
         pendingTransfers[request.id] = PendingTransfer(sourceWindowID: sourceID, item: item)
         transferExpirations[request.id] = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(10))
+            try? await Task.sleep(for: Self.pendingTransferLifetime)
             guard !Task.isCancelled else { return }
             self?.cancelPendingTransfer(to: request.id)
         }

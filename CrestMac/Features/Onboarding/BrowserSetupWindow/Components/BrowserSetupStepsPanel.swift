@@ -47,12 +47,12 @@ struct BrowserSetupStepsPanel: View {
             if closes {
                 Button("Cancel", action: close)
                     .buttonStyle(.crestSecondary)
-                    .accessibilityIdentifier("setup-cancel")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.cancel)
             } else if welcome.opensCrest {
                 Button("Start Browsing", action: openCrest)
                     .buttonStyle(.crestSecondary)
                     .help("Start Crest with your Spaces from iCloud, without setting it up")
-                    .accessibilityIdentifier("setup-open-crest")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.openCrest)
             }
         } forward: {
             HStack(spacing: CrestSpacing.medium) {
@@ -125,7 +125,7 @@ struct BrowserSetupStepsPanel: View {
         HStack(spacing: CrestSpacing.medium) {
             Button("Back", systemImage: "chevron.left", action: goBack)
                 .buttonStyle(.crestSecondary)
-                .accessibilityIdentifier("setup-back")
+                .accessibilityIdentifier(BrowserSetupAccessibilityID.back)
             if flow.isCommittingImport || flow.isCompletingSetup {
                 ProgressView().controlSize(.small)
             }
@@ -144,14 +144,14 @@ struct BrowserSetupStepsPanel: View {
         if let current = path.last {
             if current.stepPage != nil {
                 Button("Done", action: goBack)
-                    .accessibilityIdentifier("setup-done")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.done)
             } else if let next = walk.page(after: current) {
                 Button("Continue") { go(to: next, replacing: true) }
-                    .accessibilityIdentifier("setup-continue")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.continue)
             } else {
                 Button("Start Browsing", action: startBrowsing)
                     .disabled(flow.isReading)
-                    .accessibilityIdentifier("setup-start-browsing")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.startBrowsing)
             }
         } else {
             Button("Continue") {
@@ -159,13 +159,17 @@ struct BrowserSetupStepsPanel: View {
                 go(to: .bring)
             }
             .disabled(isCheckingCloud)
-            .accessibilityIdentifier("setup-continue")
+            .accessibilityIdentifier(BrowserSetupAccessibilityID.continue)
         }
     }
 
     /// Whether the welcome waits on iCloud and offers no way past it yet.
-    private var isCheckingCloud: Bool {
-        path.isEmpty && welcome.waitsOnCloud && !welcome.offersSetupWithoutCloud
+    private var isCheckingCloud: Bool { moves.isCheckingCloud(path) }
+
+    /// How the steps move, as on every platform.
+    private var moves: BrowserSetupStepMoves {
+        BrowserSetupStepMoves(
+            walk: walk, welcome: welcome, firstSpaceID: firstSpaceID, setUpWithoutCloud: setUpWithoutCloud)
     }
 
     /// The order of the steps: Bring Tabs, then the Spaces another browser
@@ -182,9 +186,8 @@ struct BrowserSetupStepsPanel: View {
     // MARK: - Mutators
 
     private func go(to destination: BrowserSetupDestination, replacing: Bool = false) {
-        isGoingBack = false
-        if replacing { path = [destination] } else { path.append(destination) }
-        if destination == .yourSpace, let firstSpaceID { shownSpaceID = firstSpaceID }
+        moves.go(
+            to: destination, replacing: replacing, path: &path, isGoingBack: &isGoingBack, shownSpaceID: &shownSpaceID)
     }
 
     /// What the welcome's chips open, once nothing holds the way in.
@@ -193,27 +196,12 @@ struct BrowserSetupStepsPanel: View {
         return { step in openStep(step) }
     }
 
-    /// Opens `step` from its chip, sliding back or on as the step lies, and
-    /// leaving the welcome's wait on iCloud as Continue does.
     private func openStep(_ step: BrowserSetupStep) {
-        guard let page = walk.page(opening: step), path.first != page || path.count > 1 else { return }
-        if path.isEmpty, welcome.waitsOnCloud { setUpWithoutCloud() }
-        isGoingBack = walk.goesBack(to: step, from: path.first)
-        path = [page]
-        if page == .yourSpace, let firstSpaceID { shownSpaceID = firstSpaceID }
+        moves.open(step, path: &path, isGoingBack: &isGoingBack, shownSpaceID: &shownSpaceID)
     }
 
-    /// Up from a page deeper in a step, else to the step before, or from
-    /// the first step to the welcome.
     private func goBack() {
-        isGoingBack = true
-        if path.count > 1 {
-            path.removeLast()
-        } else if let current = path.last, let before = walk.page(before: current) {
-            path = [before]
-        } else {
-            path = []
-        }
+        moves.back(path: &path, isGoingBack: &isGoingBack)
     }
 }
 

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "balanced-quick-window-space-padding",
+      "category": "improved",
+      "message": "Quick Window Space indicators now use balanced padding."
+    }
+  ]
+}

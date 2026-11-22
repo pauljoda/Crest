@@ -38,43 +38,27 @@ struct BrowserUtilityFanDestinationButton: View {
             select(surface)
         } label: {
             Image(systemName: symbol)
-                .foregroundStyle(.primary)
                 .symbolVariant(selectedSurface == surface ? .fill : .none)
                 .symbolEffect(
                     .bounce,
                     value: reduceMotion ? 0 : newDownloadCount
                 )
-                .frame(
-                    width: BrowserUtilitySwitcherLayout.buttonSize,
-                    height: BrowserUtilitySwitcherLayout.buttonSize
-                )
-                .contentShape(.circle)
         }
         .labelStyle(.iconOnly)
-        .buttonBorderShape(.circle)
     }
 
-    @ViewBuilder
+    /// Each destination stands on the device's material, as the pins do, and
+    /// the one shown lies on paper, as the sidebar's selected tab does.
     private var styledButton: some View {
-        #if os(macOS)
-            if selectedSurface == surface {
-                destinationButton
-                    .buttonStyle(.glassProminent)
-                    .tint(badgeColor)
-            } else {
-                destinationButton
-                    .buttonStyle(GlassButtonStyle(.regular))
-            }
-        #else
-            destinationButton
-                .buttonStyle(
-                    GlassButtonStyle(
-                        selectedSurface == surface
-                            ? .regular.tint(badgeColor)
-                            : .regular
-                    )
-                )
-        #endif
+        destinationButton
+            .buttonStyle(
+                CrestChromeButtonStyle(
+                    controlSize: CGSize(
+                        width: BrowserUtilitySwitcherLayout.buttonSize,
+                        height: BrowserUtilitySwitcherLayout.buttonSize),
+                    cornerRadius: BrowserUtilitySwitcherLayout.buttonSize / 2, restsOnMaterial: true,
+                    isSelected: selectedSurface == surface, selectsOnPaper: true)
+            )
     }
 
     private var symbol: String {

@@ -126,7 +126,7 @@ final class BrowserContentBlockingTests: XCTestCase {
         let browser = BrowserStore.hostingPages(
             SessionState.Seed(spaces: [space]), showing: space.id, tabs: [space.id: backgroundTab.id],
             core: .hostingPages(contentRuleLists: provider))
-        let pool = BrowserPagePool(browser: browser, browsingMode: .privateBrowsing)
+        let pool = BrowserPagePool(browser: browser, workspaceKind: .private)
         defer {
             for tabID in pool.retainedTabIDs {
                 pool.unloadPage(for: tabID)

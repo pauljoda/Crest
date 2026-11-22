@@ -17,8 +17,6 @@ public sealed partial class BrowserTabCollection {
     #region Variables
 
     public const int MaximumTabs = 5000;
-    /// The most characters a Space or folder name holds.
-    public const int MaximumNameLength = 200;
     private readonly List<BrowserTab> tabs = [];
     private readonly List<FolderState> folders = [];
     private readonly List<SplitGroupState> splitGroups = [];

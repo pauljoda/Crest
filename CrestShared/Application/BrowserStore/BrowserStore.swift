@@ -28,7 +28,7 @@ final class BrowserStore {
     /// not finish, or a Space deletion whose cleanup needs another attempt.
     /// A rule refusing an intent is never one.
     var localSyncErrorDescription: String?
-    let browsingMode: BrowserBrowsingMode
+    let workspaceKind: WorkspaceKind
     let tabMultiSelection = BrowserTabMultiSelection()
     let family: BrowserStoreFamily
     /// The process's core, which every window of every browsing mode shares.
@@ -75,7 +75,7 @@ final class BrowserStore {
         return windowModel.shownTabID(in: spaceID)
     }
 
-    var isPrivateBrowsing: Bool { browsingMode.isPrivate }
+    var isPrivateBrowsing: Bool { workspaceKind.isPrivate }
     var isTemporaryWorkspace: Bool { temporarySourceAssignment != nil }
     var temporarySourceAssignment: BrowserSpaceRuntimeAssignment? { family.temporarySourceAssignment }
 
@@ -91,9 +91,9 @@ final class BrowserStore {
     /// Shows the Space before or after this window's, wrapping, among the
     /// Spaces it may show, and answers it; nil when the core showed no other.
     @discardableResult
-    func selectAdjacentSpace(_ direction: BrowserSpaceSwipeDirection) -> UUID? {
+    func selectAdjacentSpace(_ direction: AdjacentDirection) -> UUID? {
         let shown = selectedSpaceID
-        guard sendWindowIntent(ShowAdjacentSpace(windowID: windowID, direction: direction.core)),
+        guard sendWindowIntent(ShowAdjacentSpace(windowID: windowID, direction: direction)),
             selectedSpaceID != shown
         else { return nil }
         spaceStep = BrowserSpaceStep(origin: shown, destination: selectedSpaceID, direction: direction)
@@ -217,15 +217,15 @@ final class BrowserStore {
         showing spaceID: UUID? = nil,
         tabs: [UUID: UUID] = [:],
         credentialVault: any CredentialVault = InMemoryCredentialVault(),
-        browsingMode: BrowserBrowsingMode = .standard,
+        workspaceKind: WorkspaceKind = .persistent,
         linkPreferences: BrowserLinkPreferenceStore? = nil,
         core: CrestCore = CrestCore()
     ) {
         self.init(
             opening: BrowserWindowOpening(showingSpaceID: spaceID, showingTabs: tabs, restoresTabs: spaceID == nil),
             credentialVault: credentialVault,
-            browsingMode: browsingMode,
-            family: BrowserStoreFamily(seed: seed, images: images, browsingMode: browsingMode, core: core),
+            workspaceKind: workspaceKind,
+            family: BrowserStoreFamily(seed: seed, images: images, workspaceKind: workspaceKind, core: core),
             linkPreferences: linkPreferences,
             core: core
         )
@@ -236,7 +236,7 @@ final class BrowserStore {
     init(
         opening: BrowserWindowOpening = BrowserWindowOpening(),
         credentialVault: any CredentialVault,
-        browsingMode: BrowserBrowsingMode,
+        workspaceKind: WorkspaceKind,
         family: BrowserStoreFamily,
         linkPreferences: BrowserLinkPreferenceStore? = nil,
         core: CrestCore
@@ -245,7 +245,7 @@ final class BrowserStore {
         self.linkPreferences = linkPreferences ?? BrowserLinkPreferenceStore(core: core)
         self.core = core
         self.credentialVault = credentialVault
-        self.browsingMode = browsingMode
+        self.workspaceKind = workspaceKind
         self.family = family
         localSyncErrorDescription = nil
         lastWindow = WindowState(
@@ -314,7 +314,7 @@ extension BrowserStore {
         let store = BrowserStore(
             opening: opening,
             credentialVault: credentialVault,
-            browsingMode: browsingMode,
+            workspaceKind: workspaceKind,
             family: family,
             linkPreferences: linkPreferences,
             core: core

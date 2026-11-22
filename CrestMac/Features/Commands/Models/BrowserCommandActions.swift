@@ -36,7 +36,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     /// presentation owns.
     func paletteRegistry(
         shortcuts: BrowserShortcutStore?,
-        openSettings: @escaping (String) -> Void = { _ in }
+        openSettings: @escaping (BrowserSettingsDestination) -> Void = { _ in }
     ) -> BrowserCommandPaletteCommandRegistry {
         BrowserCommandPaletteCommandRegistry(
             commands: Self.paletteCommands.filter(isListedInPalette),
@@ -71,9 +71,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
 
     /// Copies `text` and says so.
     func copy(_ text: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
-        chrome.showNotice(.copied)
+        chrome.copy(text)
     }
 
     /// Runs `command` when the window and its page allow it, putting an open
@@ -644,7 +642,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         selectAdjacentSpace(.next)
     }
 
-    func selectAdjacentSpace(_ direction: BrowserSpaceSwipeDirection) {
+    func selectAdjacentSpace(_ direction: AdjacentDirection) {
         guard browser.selectAdjacentSpace(direction) != nil else { return }
         pages.selectSpace(in: browser)
     }

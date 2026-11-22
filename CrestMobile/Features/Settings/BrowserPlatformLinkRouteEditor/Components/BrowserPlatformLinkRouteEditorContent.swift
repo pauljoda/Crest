@@ -29,7 +29,7 @@ struct BrowserPlatformLinkRouteEditorContent: View {
             .frame(
                 minHeight: CrestLayout.minimumHitTarget
             )
-            .accessibilityIdentifier("route-enabled-\(identifierSuffix)")
+            .accessibilityIdentifier(BrowserMobileAccessibilityID.LinkRoute.enabled(route.id))
 
             Button {
                 presentsMatchChoices = true
@@ -38,7 +38,7 @@ struct BrowserPlatformLinkRouteEditorContent: View {
             }
             .buttonStyle(.plain)
             .accessibilityValue(Text(route.match.title))
-            .accessibilityIdentifier("route-match-\(identifierSuffix)")
+            .accessibilityIdentifier(BrowserMobileAccessibilityID.LinkRoute.match(route.id))
             .confirmationDialog(
                 "Match",
                 isPresented: $presentsMatchChoices,
@@ -68,7 +68,7 @@ struct BrowserPlatformLinkRouteEditorContent: View {
             .frame(
                 minHeight: CrestLayout.minimumHitTarget
             )
-            .accessibilityIdentifier("route-pattern-\(identifierSuffix)")
+            .accessibilityIdentifier(BrowserMobileAccessibilityID.LinkRoute.pattern(route.id))
 
             Button {
                 presentsDestinationChoices = true
@@ -77,7 +77,7 @@ struct BrowserPlatformLinkRouteEditorContent: View {
             }
             .buttonStyle(.plain)
             .accessibilityValue(destinationName)
-            .accessibilityIdentifier("route-destination-\(identifierSuffix)")
+            .accessibilityIdentifier(BrowserMobileAccessibilityID.LinkRoute.destination(route.id))
             .confirmationDialog(
                 "Open in",
                 isPresented: $presentsDestinationChoices,
@@ -95,12 +95,12 @@ struct BrowserPlatformLinkRouteEditorContent: View {
                 Button("Move Up", systemImage: "chevron.up", action: moveUp)
                     .disabled(!canMoveUp)
                     .accessibilityIdentifier(
-                        "route-move-up-\(identifierSuffix)"
+                        BrowserMobileAccessibilityID.LinkRoute.moveUp(route.id)
                     )
                 Button("Move Down", systemImage: "chevron.down", action: moveDown)
                     .disabled(!canMoveDown)
                     .accessibilityIdentifier(
-                        "route-move-down-\(identifierSuffix)"
+                        BrowserMobileAccessibilityID.LinkRoute.moveDown(route.id)
                     )
                 Spacer()
                 Button(
@@ -110,17 +110,13 @@ struct BrowserPlatformLinkRouteEditorContent: View {
                     action: delete
                 )
                 .buttonStyle(.crestIcon(tint: CrestColor.danger))
-                .accessibilityIdentifier("route-delete-\(identifierSuffix)")
+                .accessibilityIdentifier(BrowserMobileAccessibilityID.LinkRoute.delete(route.id))
             }
             .labelStyle(.iconOnly)
             .buttonStyle(.crestIcon())
         }
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("link-route-\(identifierSuffix)")
-    }
-
-    private var identifierSuffix: String {
-        route.id.uuidString.lowercased()
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.LinkRoute.row(route.id))
     }
 
     private var destinationName: String {

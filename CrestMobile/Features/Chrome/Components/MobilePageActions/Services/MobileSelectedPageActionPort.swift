@@ -1,7 +1,7 @@
 import Foundation
 
 @MainActor
-struct MobileSelectedPageActionPort: MobilePageActions {
+struct MobileSelectedPageActionPort {
     private let browser: BrowserStore
     private let pages: MobileBrowserPageStore
     private let spaceAccess: BrowserSpaceAccessController

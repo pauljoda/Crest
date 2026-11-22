@@ -106,15 +106,11 @@ targetTemplates:
     type: framework
     platform: macOS
     sources:
-      - path: Documentation/ReleaseNotes.json
-        buildPhase: resources
       # The WebKit composition (its entry point and the shell's WebKit host),
       # engine selection and engine-contributed views; the Chromium sources
       # supply their own.
       - path: CrestShared
         excludes:
-          - Resources/CrestIcon/Sources
-          - Resources/CrestIcon/Validation
           - Infrastructure/Engines/BrowserEngineRegistration+Composition.swift
           - Features/Settings/Components/BrowserEngineExtensionSettingsPane.swift
           - Features/Settings/Components/BrowserEngineRegistration+FeatureFlags.swift
@@ -191,12 +187,7 @@ targets:
     type: application
     platform: macOS
     sources:
-      - path: Documentation/ReleaseNotes.json
-        buildPhase: resources
       - path: CrestShared
-        excludes:
-          - Resources/CrestIcon/Sources
-          - Resources/CrestIcon/Validation
       - path: CrestMac
       - path: CrestAgents
     dependencies:
@@ -256,57 +247,12 @@ targets:
           - "$(CREST_CORE_LIBRARY_DIR)/CrestCore.Native.dylib"
         outputFiles:
           - "$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/CrestCore.Native.dylib"
-  CrestNativeCoreTests:
-    type: bundle.unit-test
-    platform: macOS
-    sources:
-      - path: CrestTests
-        includes:
-          - BrowserTabStateArchiveTests.swift
-          - BrowserDataRetentionTests.swift
-          - BrowserWebHostViewTests.swift
-          - BrowserPageNavigationMarkerTests.swift
-          - BrowserShortcutTests.swift
-          - BrowserDurableTabCloseTests.swift
-          - BrowserWebsiteDataStoreTests.swift
-          - BrowserPagePoolTests.swift
-          - BrowserCurrentTabFolderTests.swift
-          - BrowserStoreTests.swift
-          - BrowserStoreWorkspaceTests.swift
-          - BrowserCloudRecordCodecTests.swift
-          - BrowserCloudSyncStateTests.swift
-          - BrowserLaunchEnvironmentTests.swift
-          - BrowserCoreSessionAuthorityTests.swift
-          - Support/CrestCore+ProfileErasure.swift
-          - Support/BrowserPage+WebKitTestAccess.swift
-          - Support/BrowserPagePool+Presenting.swift
-          - Support/BrowserInstalledRelease.swift
-          - Support/BrowserPrivacyHTTPServer.swift
-          - Support/BrowserStore+Unlocking.swift
-          - Support/BrowserStoredSessionHarness.swift
-          - Support/StoredSyncJournal.swift
-    dependencies:
-      - target: CrestNativeCore
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest.native-core.tests
-        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited)"
-        SWIFT_INCLUDE_PATHS: "$(PROJECT_DIR)/CrestContracts/include"
-        GENERATE_INFOPLIST_FILE: YES
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/CrestNativeCore.app/Contents/MacOS/CrestNativeCore"
-        BUNDLE_LOADER: "$(TEST_HOST)"
-        SWIFT_EMIT_LOC_STRINGS: NO
   Crest:
     templates: [PortableCoreMac]
     type: application
     platform: macOS
     sources:
-      - path: Documentation/ReleaseNotes.json
-        buildPhase: resources
       - path: CrestShared
-        excludes:
-          - Resources/CrestIcon/Sources
-          - Resources/CrestIcon/Validation
       - path: CrestMac
       - path: CrestAgents
     dependencies:
@@ -408,12 +354,7 @@ targets:
     # committed schemes instead of emitting CrestMobile.app.
     productName: CrestNativeCore
     sources:
-      - path: Documentation/ReleaseNotes.json
-        buildPhase: resources
       - path: CrestShared
-        excludes:
-          - Resources/CrestIcon/Sources
-          - Resources/CrestIcon/Validation
       - path: CrestMobile
     dependencies:
       - sdk: AuthenticationServices.framework
@@ -465,12 +406,7 @@ targets:
     # committed schemes instead of emitting CrestMobile.app.
     productName: Crest
     sources:
-      - path: Documentation/ReleaseNotes.json
-        buildPhase: resources
       - path: CrestShared
-        excludes:
-          - Resources/CrestIcon/Sources
-          - Resources/CrestIcon/Validation
       - path: CrestMobile
     dependencies:
       - target: CrestShareExtension
@@ -548,9 +484,6 @@ schemes:
         CrestNativeCore: all
     run:
       customLLDBInit: "$(SRCROOT)/Config/Crest.lldbinit"
-    test:
-      targets:
-        - CrestNativeCoreTests
   CrestMobile:
     build:
       targets:
@@ -579,13 +512,3 @@ schemes:
       config: Release
     archive:
       config: Release
-  CrestKeychainIntegration:
-    build:
-      targets:
-        Crest: all
-        CrestTests: [test]
-    test:
-      environmentVariables:
-        CREST_RUN_KEYCHAIN_INTEGRATION: "1"
-      targets:
-        - CrestTests

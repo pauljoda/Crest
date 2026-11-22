@@ -9,7 +9,7 @@ struct BrowserNavigationFailureHeadline: View {
     var body: some View {
         VStack(alignment: alignment, spacing: CrestSpacing.medium) {
             Text(presentation.title)
-                .font(.largeTitle.bold())
+                .font(CrestTypography.display(BrowserNavigationFailureMetrics.titleSize, relativeTo: .largeTitle))
                 .foregroundStyle(.primary)
                 .multilineTextAlignment(textAlignment)
 

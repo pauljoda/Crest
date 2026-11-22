@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "downloads-follow-page-site-choice",
+      "category": "fixed",
+      "message": "Downloads follow the Automatic Downloads choice of the site you’re on, including files it serves from another address, such as GitHub release files. A blocked download’s message no longer appears twice."
+    }
+  ]
+}

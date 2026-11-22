@@ -1,8 +1,8 @@
 import UIKit
 
 /// Which way a swipe in from a page's edge steps through its history: in from
-/// the leading edge goes back, in from the trailing edge goes forward, as in
-/// Safari. Each step goes through the core's history, as the toolbar's do.
+/// the leading edge goes back, in from the trailing edge goes forward. Each
+/// step goes through the core's history, as the toolbar's do.
 @MainActor
 struct MobileHistorySwipeDirection {
     // MARK: - Static Variables

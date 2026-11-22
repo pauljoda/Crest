@@ -397,44 +397,46 @@ final class BrowserSidebarWidgetDeckScrollObserverView: NSView {
     }
 }
 
-#Preview("Browser Sidebar — Tabs") {
-    @Previewable @State var address = "https://developer.apple.com"
-    @Previewable @State var isAddressEditing = false
-    @Previewable @Namespace var commandSurfaceNamespace
-    @Previewable @Namespace var tabPromotionNamespace
-    let browser = BrowserSidebarPreviewFixture.makeBrowser()
-    let pages = BrowserSidebarPreviewFixture.makePages(for: browser)
-    let spaceAccess = BrowserSidebarPreviewFixture.makeSpaceAccess()
-    BrowserSidebar(
-        browser: browser,
-        pageAccess: BrowserSidebarPageAccess(pages: pages, browser: browser, spaceAccess: spaceAccess),
-        spaceAccess: spaceAccess,
-        capabilities: BrowserInteractionCapabilities(),
-        utilityCoordinator: BrowserSidebarUtilityCoordinator(
+#if DEBUG
+    #Preview("Browser Sidebar — Tabs") {
+        @Previewable @State var address = "https://developer.apple.com"
+        @Previewable @State var isAddressEditing = false
+        @Previewable @Namespace var commandSurfaceNamespace
+        @Previewable @Namespace var tabPromotionNamespace
+        let browser = BrowserSidebarPreviewFixture.makeBrowser()
+        let pages = BrowserSidebarPreviewFixture.makePages(for: browser)
+        let spaceAccess = BrowserSidebarPreviewFixture.makeSpaceAccess()
+        BrowserSidebar(
             browser: browser,
-            pages: pages,
-            spaceAccess: spaceAccess
-        ),
-        utilityPresentation:
-            BrowserSidebarPreviewFixture.makeUtilityPresentation(),
-        chromeActions: BrowserSidebarPreviewFixture.makeChromeActions()
-    ) { context in
-        BrowserSidebarLoadedContent(
-            context: context,
-            pages: pages,
-            address: $address,
-            isAddressEditing: $isAddressEditing,
-            addressFocusRequest: 0,
-            activateAddress: { isAddressEditing = true },
-            submitAddress: {},
-            openNewTab: {},
-            sidebarToggleAction: .hide,
-            toggleSidebar: {},
-            commandSurfaceNamespace: commandSurfaceNamespace,
-            commandPaletteHandoff: .neither,
-            tabPromotionNamespace: tabPromotionNamespace
-        )
+            pageAccess: BrowserSidebarPageAccess(pages: pages, browser: browser, spaceAccess: spaceAccess),
+            spaceAccess: spaceAccess,
+            capabilities: BrowserInteractionCapabilities(),
+            utilityCoordinator: BrowserSidebarUtilityCoordinator(
+                browser: browser,
+                pages: pages,
+                spaceAccess: spaceAccess
+            ),
+            utilityPresentation:
+                BrowserSidebarPreviewFixture.makeUtilityPresentation(),
+            chromeActions: BrowserSidebarPreviewFixture.makeChromeActions()
+        ) { context in
+            BrowserSidebarLoadedContent(
+                context: context,
+                pages: pages,
+                address: $address,
+                isAddressEditing: $isAddressEditing,
+                addressFocusRequest: 0,
+                activateAddress: { isAddressEditing = true },
+                submitAddress: {},
+                openNewTab: {},
+                sidebarToggleAction: .hide,
+                toggleSidebar: {},
+                commandSurfaceNamespace: commandSurfaceNamespace,
+                commandPaletteHandoff: .neither,
+                tabPromotionNamespace: tabPromotionNamespace
+            )
+        }
+        .environment(BrowserSidebarInteractionState.connected(to: browser))
+        .frame(width: BrowserChromeLayout.sidebarIdealWidth, height: 680)
     }
-    .environment(BrowserSidebarInteractionState.connected(to: browser))
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth, height: 680)
-}
+#endif

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "popup-trigger-placed",
+      "category": "internal",
+      "message": "The popup trigger the navigation coordinators read lives beside them instead of in the WebKit adapter."
+    }
+  ]
+}

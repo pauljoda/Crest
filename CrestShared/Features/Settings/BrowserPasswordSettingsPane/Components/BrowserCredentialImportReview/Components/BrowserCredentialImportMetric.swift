@@ -1,5 +1,7 @@
 import SwiftUI
 
+/// One of the review's totals, as a settings row: what it counts, and the
+/// count beside its status glyph.
 struct BrowserCredentialImportMetric: View {
     let title: LocalizedStringKey
     let value: Int
@@ -7,43 +9,28 @@ struct BrowserCredentialImportMetric: View {
     let color: Color
 
     var body: some View {
-        HStack(spacing: CrestSpacing.medium) {
-            Image(systemName: systemImage)
-                .font(.title3)
-                .foregroundStyle(color)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: CrestSpacing.extraExtraSmall) {
+        CrestSettingRow(title) {
+            Label {
                 Text("\(value)")
-                    .font(.title2.weight(.semibold))
                     .monospacedDigit()
-                Text(title)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            } icon: {
+                Image(systemName: systemImage)
+                    .foregroundStyle(color)
             }
-            Spacer(minLength: 0)
         }
-        .padding(CrestSpacing.medium)
-        .frame(
-            minWidth: BrowserCredentialImportReviewMetrics.metricMinimumWidth,
-            maxWidth: .infinity,
-            minHeight: BrowserCredentialImportReviewMetrics.metricMinimumHeight
-        )
-        .background(
-            Color.primary.opacity(BrowserCredentialImportReviewMetrics.cardFillOpacity),
-            in: RoundedRectangle(cornerRadius: CrestRadius.control)
-        )
         .accessibilityElement(children: .combine)
     }
 }
 
 #if DEBUG
     #Preview("Import totals") {
-        HStack {
+        Form {
             BrowserCredentialImportMetric(
-                title: "Accounts", value: 24, systemImage: "person.crop.circle", color: .indigo)
+                title: "Accounts", value: 24, systemImage: "person.crop.circle", color: CrestColor.success)
             BrowserCredentialImportMetric(
-                title: "Warnings", value: 2, systemImage: "exclamationmark.triangle", color: .orange)
-        }.padding()
+                title: "Warnings", value: 2, systemImage: "exclamationmark.triangle", color: CrestColor.warning)
+        }
+        .crestSettingsForm()
+        .frame(width: 420, height: 200)
     }
 #endif

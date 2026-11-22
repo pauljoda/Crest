@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "tab-titles-follow-late-page-titles",
+      "category": "fixed",
+      "message": "Tabs take the title a page gives itself after it finishes loading. A link you open in the background with Command-click, or a page that shows “Loading…” first, no longer stays named by its address or placeholder."
+    },
+    {
+      "id": "chromium-untitled-pages-keep-titles",
+      "category": "fixed",
+      "message": "Pages in Chromium that have no title of their own show the site’s name, as WebKit pages do, instead of their full address. A Chromium tab that reloads in the background keeps its title.",
+      "platforms": ["mac"]
+    }
+  ]
+}

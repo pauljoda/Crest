@@ -19,32 +19,21 @@ struct BrowserCredentialImportReviewView: View {
                     let space = browser.spaceModel(matching: review.destination)
                 {
                     VStack(spacing: 0) {
-                        ScrollView {
-                            LazyVStack(
-                                alignment: .leading,
-                                spacing: CrestSpacing.extraExtraLarge
-                            ) {
-                                BrowserCredentialImportDestinationCard(
-                                    space: space.identity,
-                                    format: review.plan.format
-                                )
-                                BrowserCredentialImportSummaryView(review: review)
+                        Form {
+                            BrowserCredentialImportDestinationCard(
+                                space: space.identity,
+                                format: review.plan.format
+                            )
+                            BrowserCredentialImportSummaryView(review: review)
 
-                                if !review.groups.isEmpty {
-                                    VStack(alignment: .leading, spacing: CrestSpacing.medium) {
-                                        BrowserCredentialImportReviewSectionHeader(
-                                            title: "Accounts",
-                                            detail:
-                                                "Review every valid account. Choose which password to keep, or skip any account."
-                                        )
-
-                                        BrowserCredentialSearchField(
-                                            title: "Search imported passwords",
-                                            text: $searchText,
-                                            accessibilityIdentifier:
-                                                "imported-password-search"
-                                        )
-                                    }
+                            if !review.groups.isEmpty {
+                                CrestSettingsGroup(
+                                    "Accounts",
+                                    footnote:
+                                        "Review every valid account. Choose which password to keep, or skip any account."
+                                ) {
+                                    CrestSearchField("Search imported passwords", text: $searchText)
+                                        .accessibilityIdentifier("imported-password-search")
 
                                     let matchingGroups = review.groups(matching: searchText)
                                     if matchingGroups.isEmpty {
@@ -75,28 +64,21 @@ struct BrowserCredentialImportReviewView: View {
                                         }
                                     }
                                 }
-
-                                if !review.plan.warnings.isEmpty {
-                                    BrowserCredentialImportWarningRows(
-                                        warnings: review.plan.warnings
-                                    )
-                                }
-
-                                if !review.plan.rejections.isEmpty {
-                                    BrowserCredentialImportRejectedRows(
-                                        rejections: review.plan.rejections
-                                    )
-                                }
-
-                                Label(
-                                    "Passwords remain encrypted in this Space’s Keychain and never appear in logs, notifications, or diagnostics.",
-                                    systemImage: "lock.shield.fill"
-                                )
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
                             }
-                            .padding(CrestSpacing.extraExtraLarge)
+
+                            if !review.plan.warnings.isEmpty {
+                                BrowserCredentialImportWarningRows(
+                                    warnings: review.plan.warnings
+                                )
+                            }
+
+                            if !review.plan.rejections.isEmpty {
+                                BrowserCredentialImportRejectedRows(
+                                    rejections: review.plan.rejections
+                                )
+                            }
                         }
+                        .crestSettingsForm()
 
                         Divider()
                         importFooter(review: review, space: space)
@@ -161,7 +143,7 @@ struct BrowserCredentialImportReviewView: View {
         }
         .padding(.horizontal, CrestSpacing.extraExtraLarge)
         .padding(.vertical, CrestSpacing.large)
-        .background(.bar)
+        .background { CrestSurfaceLayer(shape: Rectangle()) }
     }
 
     private func importSummary(_ review: BrowserCredentialImportReview) -> String {

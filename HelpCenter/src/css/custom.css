@@ -2,20 +2,11 @@
    hairlines, rounded heavy headings, and Crest blue for actions only. */
 
 @font-face {
-  font-family: "Nunito";
+  font-family: "Allo";
   font-style: normal;
   font-display: swap;
-  font-weight: 200 1000;
-  src: url("./fonts/nunito-latin.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: "Nunito";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 200 1000;
-  src: url("./fonts/nunito-latin-ext.woff2") format("woff2");
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  font-weight: 100 900;
+  src: url("./fonts/allo-variable.woff2") format("woff2");
 }
 
 :root {
@@ -35,7 +26,10 @@
   --crest-divider: #EFE7D4;
   --crest-text-2: #3D4559;
   --crest-text-3: #6B6150;
-  --crest-display: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, sans-serif;
+  /* Allo, variable in weight and roundness: headings at its roundest, body
+     text at its friendly default. */
+  --crest-display: "Allo", ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  --crest-display-roundness: "ROND" 100;
 
   --ifm-color-primary: #2B6CC4;
   --ifm-color-primary-dark: #2761B0;
@@ -48,7 +42,7 @@
   --ifm-background-surface-color: var(--crest-paper);
   --ifm-navbar-background-color: rgba(251, 245, 230, .92);
   --ifm-footer-background-color: var(--crest-field);
-  --ifm-font-family-base: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+  --ifm-font-family-base: "Allo", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
   --ifm-heading-font-family: var(--crest-display);
   --ifm-heading-font-weight: 800;
   --ifm-heading-color: var(--crest-ink);
@@ -106,6 +100,7 @@ summary:focus-visible {
 
 .navbar__title {
   font-family: var(--crest-display);
+  font-variation-settings: var(--crest-display-roundness);
   font-size: 1.35rem;
   font-weight: 900;
   letter-spacing: -.01em;
@@ -132,6 +127,7 @@ summary:focus-visible {
   color: #fff;
   background: var(--crest-blue);
   font-family: var(--crest-display);
+  font-variation-settings: var(--crest-display-roundness);
   font-weight: 800;
 }
 
@@ -183,7 +179,7 @@ summary:focus-visible {
   margin-bottom: 1.25rem;
   font-size: clamp(2.8rem, 5.6vw, 4.75rem);
   line-height: .94;
-  letter-spacing: -.035em;
+  letter-spacing: -.015em;
 }
 
 .theme-doc-markdown h2 {
@@ -192,7 +188,7 @@ summary:focus-visible {
   border-top: 1px solid var(--crest-hairline);
   font-size: clamp(1.9rem, 3vw, 2.6rem);
   line-height: 1.02;
-  letter-spacing: -.03em;
+  letter-spacing: -.012em;
 }
 
 .theme-doc-markdown h3 {
@@ -222,6 +218,7 @@ summary:focus-visible {
 .theme-doc-markdown ol > li::marker {
   color: var(--crest-gold);
   font-family: var(--crest-display);
+  font-variation-settings: var(--crest-display-roundness);
   font-weight: 900;
 }
 
@@ -252,6 +249,7 @@ summary:focus-visible {
   color: var(--crest-gold);
   background: transparent;
   font-family: var(--crest-display);
+  font-variation-settings: var(--crest-display-roundness);
   font-size: .78rem;
   font-weight: 800;
   letter-spacing: .14em;
@@ -284,6 +282,7 @@ summary:focus-visible {
 .alert__heading {
   color: var(--crest-ink);
   font-family: var(--crest-display);
+  font-variation-settings: var(--crest-display-roundness);
   font-weight: 900;
   text-transform: none;
 }
@@ -318,6 +317,7 @@ summary:focus-visible {
 .pagination-nav__label {
   color: var(--crest-ink);
   font-family: var(--crest-display);
+  font-variation-settings: var(--crest-display-roundness);
   font-weight: 900;
 }
 
@@ -340,10 +340,11 @@ summary:focus-visible {
   display: block;
   margin-bottom: 1rem;
   font-family: var(--crest-display);
+  font-variation-settings: var(--crest-display-roundness);
   font-size: clamp(1.9rem, 4vw, 2.75rem);
   font-weight: 900;
   line-height: 1;
-  letter-spacing: -.03em;
+  letter-spacing: -.012em;
 }
 
 .help-search-field {
@@ -391,6 +392,7 @@ summary:focus-visible {
   margin: .75rem 0 0;
   color: rgba(251, 245, 230, .6);
   font-family: var(--crest-display);
+  font-variation-settings: var(--crest-display-roundness);
   font-size: .78rem;
   font-weight: 800;
   letter-spacing: .14em;
@@ -420,6 +422,7 @@ summary:focus-visible {
 .help-search-results strong {
   color: var(--crest-cream);
   font-family: var(--crest-display);
+  font-variation-settings: var(--crest-display-roundness);
   font-weight: 800;
 }
 
@@ -475,6 +478,7 @@ summary:focus-visible {
   max-width: 24rem;
   margin-top: 1.75rem;
   font-family: var(--crest-display);
+  font-variation-settings: var(--crest-display-roundness);
   font-size: clamp(1.3rem, 2.4vw, 1.6rem);
   font-weight: 900;
   line-height: 1.08;
@@ -496,6 +500,7 @@ summary:focus-visible {
   border-radius: 12px;
   color: var(--crest-ink);
   font-family: var(--crest-display);
+  font-variation-settings: var(--crest-display-roundness);
   font-size: .78rem;
   font-weight: 800;
   letter-spacing: .14em;
@@ -574,6 +579,7 @@ summary:focus-visible {
     margin-bottom: .2rem;
     color: var(--crest-gold);
     font-family: var(--crest-display);
+    font-variation-settings: var(--crest-display-roundness);
     font-size: .72rem;
     font-weight: 800;
     letter-spacing: .14em;
@@ -615,6 +621,7 @@ summary:focus-visible {
 .footer__title {
   color: var(--crest-gold);
   font-family: var(--crest-display);
+  font-variation-settings: var(--crest-display-roundness);
   font-size: .8rem;
   font-weight: 800;
   letter-spacing: .14em;
@@ -686,4 +693,8 @@ summary:focus-visible {
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-variation-settings: var(--crest-display-roundness);
 }

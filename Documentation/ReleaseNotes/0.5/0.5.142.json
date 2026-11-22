@@ -1,0 +1,24 @@
+{
+  "entries": [
+    {
+      "id": "tab-owned-peeks",
+      "category": "improved",
+      "message": "Keep Peeks with their tabs while opening new tabs, switching Spaces, and browsing inside the Peek"
+    },
+    {
+      "id": "space-transition-address-colors",
+      "category": "improved",
+      "message": "Blend address bar colors with the background when switching Spaces"
+    },
+    {
+      "id": "onboarding-preview-startup-crash",
+      "category": "fixed",
+      "message": "Prevent a crash when displaying sidebar previews during setup"
+    },
+    {
+      "id": "simulator-cloudkit-startup-guard",
+      "category": "internal",
+      "message": "Check simulator CloudKit entitlements before starting sync to avoid startup crashes"
+    }
+  ]
+}

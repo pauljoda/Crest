@@ -88,7 +88,7 @@ struct BrowserSetupBringPage: View {
                 }
                 .contentShape(.rect)
             }
-            .buttonStyle(.browserSetupRow)
+            .buttonStyle(.crestFormRow)
             .disabled(flow.isImportSelectionLocked && !isReady)
         }
     }

@@ -95,8 +95,7 @@ final class BrowserMacApplication {
             // Naming the review's isolation under a test run would open the
             // review app's own session, credentials and website data stores.
             if !BrowserLaunchEnvironment.current.isXCTestRuntime {
-                setenv("CREST_ISOLATED_SESSION", "1", 1)
-                setenv("CREST_ISOLATED_PERSISTENCE_ID", reviewPersistenceID, 0)
+                BrowserLaunchEnvironment.applyReviewBuildDefaults(persistenceID: reviewPersistenceID)
             }
         #endif
         let launchEnvironment = BrowserLaunchEnvironment.current
@@ -104,9 +103,6 @@ final class BrowserMacApplication {
         let usesEphemeralProfileStorage =
             launchEnvironment.usesEphemeralProfileStorage
         BrowserMacWebTextAssistancePreference.configure()
-        BrowserWebKitFeatureFlagStore.configureForLaunch(
-            usesIsolatedLaunch: usesIsolatedLaunch
-        )
         let utilityDefaults: UserDefaults? = usesIsolatedLaunch ? nil : .standard
         presentsInstalledApplicationUI =
             launchEnvironment.presentsInstalledApplicationUI
@@ -128,6 +124,12 @@ final class BrowserMacApplication {
         // window's store reads them.
         let legacyDevice = BrowserLegacyDeviceDefaults.read(for: launchEnvironment)
         BrowserLinkPreferenceStore.adopt(legacyDevice.linkPreferences, into: core)
+        // The page and download preferences come next, since every page reads
+        // them.
+        _ = try? core.send(legacyDevice.preferences)
+        BrowserDefaultPageZoomStore.configure(core: core)
+        BrowserWebKitFeatureFlagStore.configureForLaunch(usesIsolatedLaunch: usesIsolatedLaunch, core: core)
+        BrowserPlatformDownloadPreferences.configure(core: core)
         let browser = try BrowserStore.production(core: core, launchEnvironment: launchEnvironment)
         // The search catalog carries the engines the Spaces chose before the
         // device kept one, so it restores once the stored session is open.
@@ -238,7 +240,7 @@ final class BrowserMacApplication {
         )
         let privatePages = BrowserPagePool(
             browser: privateBrowser,
-            browsingMode: .privateBrowsing,
+            workspaceKind: .private,
             permissionCenter: permissionCenter,
             passkeyAccess: passkeyAccess,
             openModifiedLink: { url, spaceID, selecting in
@@ -257,6 +259,7 @@ final class BrowserMacApplication {
         // The device store keeps whether setup was completed here, carried
         // once from what an older release kept in its defaults.
         _ = try? core.send(AdoptSetupCompletion(completed: legacyDevice.setupCompleted))
+        BrowserReleasePage.noteLaunch(in: core, environment: launchEnvironment)
         let onboardingProgress = BrowserOnboardingProgressStore(
             core: core, environment: launchEnvironment.coreEnvironment,
             forcesSetup: launchEnvironment.forcesMacOnboardingSetup)
@@ -339,6 +342,18 @@ final class BrowserMacApplication {
         }
     }
 
+    /// Opens the release page of the update the card presents, on the channel
+    /// it came from, as a new tab in the Space the window of `browser` shows.
+    private func updateReleasePage(
+        owner: AnyObject, browser: BrowserStore, pages: BrowserPagePool
+    ) -> BrowserSoftwareUpdateReleasePageAction {
+        BrowserSoftwareUpdateReleasePageAction(owner: owner) { [softwareUpdates] version in
+            let page = BrowserReleasePage(version: version, channel: softwareUpdates.channel.releaseChannel)
+            guard browser.openNewTab(url: page.url) != nil else { return }
+            pages.select()
+        }
+    }
+
     /// What the browser window `model` shows.
     func browserWindowContent(_ model: BrowserMacWindowModel) -> some View {
         BrowserMacWindowScene(
@@ -362,7 +377,10 @@ final class BrowserMacApplication {
         .environment(\.browserSidebarWidgetRuntime, sidebarWidgets)
         .environment(\.browserSiteControlAnchor, siteControlAnchor)
         .environment(\.filterListUpdater, filterLists)
-        .modifier(BrowserSoftwareUpdateDetailsPresentation())
+        .environment(
+            \.browserSoftwareUpdateReleasePage,
+            updateReleasePage(owner: model, browser: model.browser, pages: model.pages)
+        )
     }
 
     var privateWindowContent: some View {
@@ -394,7 +412,10 @@ final class BrowserMacApplication {
         )
         .environment(\.browserSiteControlAnchor, siteControlAnchor)
         .environment(\.filterListUpdater, filterLists)
-        .modifier(BrowserSoftwareUpdateDetailsPresentation())
+        .environment(
+            \.browserSoftwareUpdateReleasePage,
+            updateReleasePage(owner: privateBrowser, browser: privateBrowser, pages: privatePages)
+        )
         .background(
             BrowserMacWindowAttachment(
                 attach: { window in

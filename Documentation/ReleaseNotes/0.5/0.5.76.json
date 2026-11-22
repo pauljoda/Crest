@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-06-pointer-download-start-feedback",
+      "category": "improved",
+      "message": "See downloads begin at your cursor and fly into Archive, with clear bottom-left feedback when the sidebar is hidden"
+    }
+  ]
+}

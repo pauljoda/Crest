@@ -29,6 +29,6 @@ extension BrowserHostedNotificationMessage {
     /// Whether `identifier`, a request's or a notification's, is one the
     /// bridge accepts.
     static func isValid(_ identifier: String) -> Bool {
-        !identifier.isEmpty && identifier.utf8.count <= 128
+        BrowserContentMessage.isValidIdentity(identifier)
     }
 }

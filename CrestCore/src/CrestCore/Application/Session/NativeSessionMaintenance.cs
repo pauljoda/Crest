@@ -19,14 +19,6 @@ public static class NativeSessionMaintenance {
 
     #region Actions - Session maintenance
 
-    /// The repaired session and positional asset references: `{"session", "assets"}`.
-    public static JsonObject Repair(JsonObject source, double now, JsonObject? emptySpace = null, IIdSource? ids = null) {
-        if (!double.IsFinite(now)) throw new ArgumentOutOfRangeException(nameof(now), now, "A time is a finite number of seconds.");
-        var repaired = Repair(StoredSessionCodec.DecodeSession(source), StoredSessionCodec.Date(now),
-            emptySpace is null ? null : StoredSessionCodec.DecodeSpace(emptySpace), ids ?? new SystemIdSource(), out var origins);
-        return Answer(repaired, origins);
-    }
-
     /// A repaired session with the positional references to the native assets
     /// each of its tabs keeps: `{"session", "assets"}`.
     internal static JsonObject Answer(SessionState repaired, IReadOnlyList<TabOrigin> origins) => new() {
@@ -56,7 +48,7 @@ public static class NativeSessionMaintenance {
     /// in the repaired session, since each group gathers where its primary is.
     internal static SessionState Repair(SessionState source, DateTimeOffset now, SpaceState? emptySpace, IIdSource ids,
         out IReadOnlyList<TabOrigin> origins, out IReadOnlyList<int> places) {
-        var pending = source.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
+        var pending = source.DeletingSpaceIds;
         var spaces = source.Spaces.ToList();
         if (spaces.Count == 0 || spaces.All(space => pending.Contains(space.Id))) spaces.Add(SessionRepair.Empty(emptySpace, ids, now));
         var repair = new SessionRepair(ids, now);
@@ -101,7 +93,7 @@ public static class NativeSessionMaintenance {
     /// Removes history and archive records older than each Space keeps them;
     /// a Space that is being deleted keeps everything.
     internal static SessionState Retain(SessionState session, DateTimeOffset at, out bool removed) {
-        var pending = session.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
+        var pending = session.DeletingSpaceIds;
         bool changed = false;
         IReadOnlyList<SpaceState> spaces = [.. session.Spaces.Select(space => {
             if (pending.Contains(space.Id)) return space;

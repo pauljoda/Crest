@@ -1,8 +1,8 @@
 namespace CrestCore.Contracts;
 
-/// A tab group's color as Chrome names it, which an extension reads and sets
-/// through `chrome.tabGroups`, and the color the folder that shows a group
-/// takes. The tab groups releases before folders stored spell a color as its
+/// A tab group's color as the extensions API names it, which an extension
+/// reads and sets through `chrome.tabGroups`, and the color the folder that
+/// shows a group takes. The tab groups releases before folders stored spell a color as its
 /// `Name`, so a name never changes. A color travels as its index in `All`, in
 /// the order of Chromium's own color identities, so `All` is append-only.
 public sealed class TabGroupColor {

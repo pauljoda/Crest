@@ -8,7 +8,6 @@ public sealed partial class BrowserTabCollection {
     #region Variables
 
     private const int MaximumFolderSymbolBytes = 128;
-    private const string UntitledFolderName = "Untitled Folder";
 
     #endregion
 
@@ -122,7 +121,7 @@ public sealed partial class BrowserTabCollection {
     internal void NormalizeSplits(DateTimeOffset now) {
         RepairSplitMembership();
         foreach (var group in tabs.Where(t => t.SplitGroupId is not null).GroupBy(t => t.SplitGroupId))
-            if (group.Count() < 2) foreach (var tab in group) { tab.SetSplit(null); tab.MarkPosition(now); }
+            if (group.Count() < SplitGroupState.MinimumMembers) foreach (var tab in group) { tab.SetSplit(null); tab.MarkPosition(now); }
     }
 
     /// Files `tabId`, a tab just opened from `origin`, at the end of the folder
@@ -232,11 +231,12 @@ public sealed partial class BrowserTabCollection {
         return [.. tabs.Where(tab => tab.FolderId is { } folder && subtree.Contains(folder)).Select(tab => tab.Id)];
     }
 
-    /// A folder's name: its trimmed title, or "Untitled Folder" for a blank one.
+    /// A folder's name: its trimmed title, or `FolderState.UntitledTitle` for a
+    /// blank one.
     private static string FolderName(string name) {
         var trimmed = name.Trim();
-        if (trimmed.Length > BrowserTabCollection.MaximumNameLength) throw new Rejected(new InvalidName(BrowserTabCollection.MaximumNameLength));
-        return trimmed.Length == 0 ? UntitledFolderName : trimmed;
+        if (trimmed.Length > FolderState.MaximumTitleLength) throw new Rejected(new InvalidName(FolderState.MaximumTitleLength));
+        return trimmed.Length == 0 ? FolderState.UntitledTitle : trimmed;
     }
 
     #endregion

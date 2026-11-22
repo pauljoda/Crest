@@ -12,7 +12,11 @@ public sealed record SiteOrigin(string Scheme, string Host, int Port) {
     #region Static Variables
 
     public const int MaximumSchemeLength = 64;
+    /// The longest host an origin or address Crest takes may have.
     public const int MaximumHostLength = 1_024;
+    /// The longest host a DNS name allows, which a site's data and a
+    /// download's source are kept under.
+    internal const int MaximumDnsHostLength = 253;
 
     #endregion
 

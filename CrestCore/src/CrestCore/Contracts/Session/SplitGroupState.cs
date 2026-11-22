@@ -21,10 +21,13 @@ public sealed record SplitGroupState(
     DateTimeOffset? CollapseModifiedAt = null) {
     #region Static Variables
 
-    /// The fewest tabs of one split a sidebar or a window shows as a split. A shorter
-    /// run keeps its membership, so a staggered sync can bring the rest, and shows as
-    /// plain tabs until it does.
-    public const int MinimumShownMembers = 2;
+    /// The fewest tabs a split holds, and the fewest of one split a sidebar or
+    /// a window shows as a split. A shorter run keeps its membership, so a
+    /// staggered sync can bring the rest, and shows as plain tabs until it does.
+    public const int MinimumMembers = 2;
+
+    /// The most tabs a split holds.
+    public const int MaximumMembers = 4;
 
     #endregion
 

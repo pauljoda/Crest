@@ -1,13 +1,8 @@
 import SwiftUI
 
-/// How a preview card grows out of its row: from a point at the card's edge
-/// beside the row, it scales up to its full size.
+/// How a preview card grows out of its row: held still at the card's edge
+/// beside the row, it grows from Crest's entrance scale to its full size.
 struct BrowserTabPreviewGrowth: GeometryEffect {
-    // MARK: - Static Variables
-
-    /// How large the card starts, as a share of its full size.
-    private static let startingScale: CGFloat = 0.2
-
     // MARK: - Variables
 
     /// How far grown the card is, from 0 (its starting size) to 1 (its full
@@ -27,7 +22,7 @@ struct BrowserTabPreviewGrowth: GeometryEffect {
 
     func effectValue(size: CGSize) -> ProjectionTransform {
         guard progress < 1 else { return ProjectionTransform() }
-        let scale = Self.startingScale + (1 - Self.startingScale) * max(progress, 0)
+        let scale = CrestMotion.entranceScale + (1 - CrestMotion.entranceScale) * max(progress, 0)
         let point = CGPoint(x: origin.width + anchor.x, y: origin.height + anchor.y)
         return ProjectionTransform(
             CGAffineTransform(translationX: -point.x, y: -point.y)

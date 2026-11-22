@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "space-switch-keeps-sliding",
+      "category": "fixed",
+      "message": "Switching Spaces again before the slide finishes keeps sliding toward the next Space instead of jumping to it."
+    },
+    {
+      "id": "window-controls-follow-sidebar-side",
+      "category": "fixed",
+      "message": "When the sidebar moves to the other side of the window, the window buttons travel with it instead of arriving first."
+    },
+    {
+      "id": "smoother-live-resize",
+      "category": "improved",
+      "message": "Resizing the window, a split or the sidebar is smoother."
+    }
+  ]
+}

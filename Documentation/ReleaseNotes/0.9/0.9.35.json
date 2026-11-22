@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "folder-preview-readable-text",
+      "category": "fixed",
+      "message": "The tab list a folder shows when you rest the pointer on it or hold it keeps its text readable with Material color set to Light or Dark."
+    }
+  ]
+}

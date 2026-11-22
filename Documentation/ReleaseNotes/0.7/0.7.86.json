@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-10-12-floating-surface-material",
+      "category": "improved",
+      "message": "Site Controls, Peek, notices and other floating panels use the same material as the sidebar."
+    }
+  ]
+}

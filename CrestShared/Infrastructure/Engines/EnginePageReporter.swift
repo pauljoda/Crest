@@ -44,7 +44,7 @@ final class EnginePageReporter {
     private static var changedThisTurn: [EnginePageReporter] = []
 
     /// Times reading and reporting a page's history, for Instruments.
-    private static let historySignposter = OSSignposter(subsystem: "com.pauldavis.crest", category: "PageHistory")
+    private static let historySignposter = DiagnosticLog.pageHistory.signposter
 
     // MARK: - Variables
 

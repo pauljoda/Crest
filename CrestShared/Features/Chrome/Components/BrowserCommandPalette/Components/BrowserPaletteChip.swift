@@ -1,13 +1,15 @@
 import SwiftUI
 
-/// A scope's chip: its symbol and name on glass in the window's accent.
+/// A scope's chip: its symbol and name in Crest blue.
 struct BrowserPaletteScopeChip: View {
     let scope: PaletteScope
     var showsCloseControl = false
     var isInteractive = false
 
     var body: some View {
-        BrowserPaletteChip(color: .accentColor, showsCloseControl: showsCloseControl, isInteractive: isInteractive) {
+        BrowserPaletteChip(
+            color: CrestBrandTheme.accent, showsCloseControl: showsCloseControl, isInteractive: isInteractive
+        ) {
             Image(systemName: scope.symbol)
                 .font(.caption.weight(.semibold))
             Text(scope.title)
@@ -17,11 +19,12 @@ struct BrowserPaletteScopeChip: View {
     }
 }
 
-/// The capsule a palette chip draws its contents in: Liquid Glass tinted with
-/// `color`, which fills it, under contents in white or black, whichever the
-/// text tone a Space's colors use reads better over `color`. A chip a person
-/// can click is `isInteractive`, so the glass answers the pointer and
-/// presses.
+/// The capsule a palette chip draws its contents in: a layer of the palette's
+/// material filled with `color`, under contents in white or black, whichever
+/// the text tone a Space's colors use reads better over `color`. A chip a
+/// person can click is `isInteractive`, so it answers the pointer, and is the
+/// label of a button in the `browserPaletteChip` style, which answers a
+/// press.
 struct BrowserPaletteChip<Content: View>: View {
     let color: Color
     let showsCloseControl: Bool
@@ -29,6 +32,7 @@ struct BrowserPaletteChip<Content: View>: View {
     @ViewBuilder let content: Content
 
     @Environment(\.colorScheme) private var colorScheme
+    @State private var isHovering = false
 
     var body: some View {
         HStack(spacing: CrestSpacing.extraSmall) {
@@ -41,6 +45,10 @@ struct BrowserPaletteChip<Content: View>: View {
         .foregroundStyle(color.perceptualForeground(in: colorScheme))
         .padding(.horizontal, CrestSpacing.small)
         .padding(.vertical, CrestSpacing.extraSmall)
-        .glassEffect(.regular.tint(color).interactive(isInteractive), in: .capsule)
+        .background {
+            CrestSurfaceLayer(
+                shape: Capsule(), tint: color, hoverTint: isInteractive && isHovering ? CrestColor.hover : nil)
+        }
+        .onHover { isHovering = $0 }
     }
 }

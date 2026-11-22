@@ -38,10 +38,7 @@ struct BrowserRootUtilityFanControl: View {
                 y: proxy.size.height / 2
             ),
             selectedSurface: model.chrome.utilityPresentation.surface,
-            badgeColor: model.browser.shownSpace.flatMap {
-                $0.settings.look.colors.first?.color
-            }
-                ?? .accentColor,
+            badgeColor: model.browser.shownSpace?.settings.look.primaryColor.color ?? CrestBrandTheme.accent,
             downloads: model.selectedUtilityDownloads,
             newDownloadCount: model.newUtilityDownloads.count,
             select: model.chrome.presentUtility

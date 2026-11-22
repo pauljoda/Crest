@@ -22,7 +22,7 @@ struct MobileBrowserCompactSettingsLayout: View {
                         NavigationLink(value: destination) {
                             MobileSettingsDestinationRow(destination: destination)
                         }
-                        .accessibilityIdentifier("settings-\(destination.name)")
+                        .accessibilityIdentifier(BrowserMobileAccessibilityID.settingsDestination(destination))
                     }
                 }
             }
@@ -46,7 +46,7 @@ struct MobileBrowserCompactSettingsLayout: View {
     }
 
     private var filteredDestinations: [BrowserSettingsDestination] {
-        MobileSettingsDestinationFilter.destinations(
+        BrowserSettingsDestination.visible(
             matching: searchText,
             locale: locale,
             in: browser.core.state

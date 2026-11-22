@@ -234,11 +234,8 @@ struct BrowserPasswordSettingsPane: View {
                 if layout.showsSavedPasswords {
                     Section {
                         if !credentials.descriptors.isEmpty || !searchText.isEmpty {
-                            BrowserCredentialSearchField(
-                                title: "Search saved passwords",
-                                text: $searchText,
-                                accessibilityIdentifier: "saved-password-search"
-                            )
+                            CrestSearchField("Search saved passwords", text: $searchText)
+                                .accessibilityIdentifier("saved-password-search")
                         }
                         passwordManagerActions
                         savedPasswords

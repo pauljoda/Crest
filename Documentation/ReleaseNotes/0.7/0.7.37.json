@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "page-commands-follow-peek",
+      "category": "fixed",
+      "message": "While a Peek is open, Copy Link, Share, Find, Zoom, Reload, Back, Forward, Print, Export as PDF and Save Web Archive act on the page in the Peek instead of the tab behind it, and Close Tab closes the Peek."
+    }
+  ]
+}

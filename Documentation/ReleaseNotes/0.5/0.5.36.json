@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-03-extension-runtime-contexts",
+      "category": "improved",
+      "message": "Improve compatibility with extensions that use Chrome's runtime, badge and network-rule constants"
+    }
+  ]
+}

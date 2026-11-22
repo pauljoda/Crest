@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-01-scroll-safe-sidebar-dragging",
+      "category": "fixed",
+      "message": "Keep tab and folder dragging accurate while scrolling long sidebar lists"
+    }
+  ]
+}

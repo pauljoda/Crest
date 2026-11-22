@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "selected-text-search-in-crest",
+      "category": "fixed",
+      "message": "Search selected text in a new Crest tab using the current Space’s search engine"
+    }
+  ]
+}

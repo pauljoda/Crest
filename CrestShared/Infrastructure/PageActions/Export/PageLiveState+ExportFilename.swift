@@ -1,6 +1,11 @@
 import Foundation
 
 extension PageLiveState {
+    // MARK: - Static Variables
+
+    /// The longest name, before its extension, an exported page is saved as.
+    private static let maximumExportNameLength = 120
+
     // MARK: - Actions - Export
 
     /// The name a save panel proposes for this document exported with
@@ -28,7 +33,7 @@ extension PageLiveState {
         if candidate.lowercased().hasSuffix(suffix) {
             candidate.removeLast(suffix.count)
         }
-        candidate = String(candidate.prefix(120))
+        candidate = String(candidate.prefix(Self.maximumExportNameLength))
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return "\(candidate.isEmpty ? "Web Page" : candidate).\(pathExtension)"
     }

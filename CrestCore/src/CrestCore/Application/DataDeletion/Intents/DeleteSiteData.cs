@@ -16,7 +16,7 @@ public sealed record DeleteSiteData(Guid RequestId, Guid ProfileId, bool Ephemer
     /// can be cleared by.
     internal override void Apply(DataDeletions deletions, ChangeFeed changes, Action<Engine, EngineCommand> issue) {
         var hosts = Hosts.Select(host => host.Trim().ToLowerInvariant()).Distinct().ToArray();
-        if (hosts.Length == 0 || hosts.Any(host => host.Length is 0 or > DataDeletions.MaximumHostLength))
+        if (hosts.Length == 0 || hosts.Any(host => host.Length is 0 or > SiteOrigin.MaximumDnsHostLength))
             throw new Rejected(new InvalidSiteHost());
         var categories = BrowsingDataCategory.All.Where(category => category.ClearsBySite && Categories.Contains(category)).ToArray();
         if (categories.Length == 0) throw new Rejected(new NoBrowsingDataCategory());

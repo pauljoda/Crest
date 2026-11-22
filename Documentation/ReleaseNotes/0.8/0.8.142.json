@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "chromium-shift-click-peek",
+      "category": "fixed",
+      "message": "With Shift chosen in Settings > Links > Open Peek with, Shift-click now opens links in Peek on the Chromium engine instead of a new tab.",
+      "platforms": ["mac"]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "tests-slimmed-to-behaviour",
+      "category": "internal",
+      "message": "Tests that copied their implementation or pinned layout and copy are gone, the test helpers are shared, and an unrun native-core test target is removed."
+    }
+  ]
+}

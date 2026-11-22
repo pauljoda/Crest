@@ -10,7 +10,7 @@ internal static class ImportJson {
     #region Static Variables
 
     /// How deep another browser's JSON may nest.
-    private static readonly JsonDocumentOptions Document = new() { MaxDepth = 512 };
+    private static readonly JsonDocumentOptions Document = JsonDepth.Foreign.Options;
 
     #endregion
 
