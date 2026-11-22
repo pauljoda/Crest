@@ -106,7 +106,7 @@ final class BrowserMacDockTile {
     private func redraw() {
         let live = state?.downloads.filter(\.phase.isLive) ?? []
         let systemRendered = BrowserMacAppIconAssets.usesSystemAppearance
-        let progress = systemRendered ? nil : Self.progress(of: live)
+        let progress = systemRendered ? nil : live.notificationProgress
         let next = Face(
             drawsIcon: !systemRendered && (hasPaletteIcon || progress != nil),
             badge: live.isEmpty ? nil : live.count.formatted(), progress: progress)
@@ -119,17 +119,5 @@ final class BrowserMacDockTile {
         tile.contentView = next.drawsIcon ? view : nil
         tile.badgeLabel = next.badge
         tile.display()
-    }
-
-    /// How far the transferring downloads among `live` are together, to the
-    /// nearest hundredth, or nil while none transfers or one does not know
-    /// its size yet.
-    private static func progress(of live: [DownloadState]) -> Double? {
-        let transferring = live.filter(\.phase.isTransferring).map(\.telemetry)
-        let sizes = transferring.compactMap(\.totalBytes)
-        let total = sizes.reduce(0, +)
-        guard !transferring.isEmpty, sizes.count == transferring.count, total > 0 else { return nil }
-        let received = transferring.map(\.bytesReceived).reduce(0, +)
-        return (Double(received) / Double(total) * 100).rounded() / 100
     }
 }

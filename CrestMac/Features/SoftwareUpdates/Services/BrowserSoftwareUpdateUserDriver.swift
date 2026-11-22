@@ -5,20 +5,17 @@ struct BrowserSoftwareUpdateMetadata: Equatable, Sendable {
     let title: String
     let version: String?
     let build: String
-    let releaseNotes: String?
     let informationURL: URL?
 
     init(
         title: String,
         version: String?,
         build: String,
-        releaseNotes: String?,
         informationURL: URL?
     ) {
         self.title = title
         self.version = version
         self.build = build
-        self.releaseNotes = releaseNotes
         self.informationURL = informationURL
     }
 
@@ -28,7 +25,6 @@ struct BrowserSoftwareUpdateMetadata: Equatable, Sendable {
             ?? "Crest \(appcastItem.displayVersionString)"
         version = appcastItem.displayVersionString
         build = appcastItem.versionString
-        releaseNotes = appcastItem.itemDescription
         informationURL = appcastItem.infoURL
     }
 }
@@ -50,7 +46,6 @@ final class BrowserAutomaticSoftwareUpdatePresenter {
                 title: update.title,
                 version: update.version,
                 build: update.build,
-                releaseNotes: update.releaseNotes,
                 informationURL: update.informationURL
             )
         else { return }
@@ -74,7 +69,6 @@ final class BrowserAutomaticSoftwareUpdatePresenter {
             title: update.title,
             version: update.version,
             build: update.build,
-            releaseNotes: update.releaseNotes,
             informationURL: update.informationURL,
             installAndRelaunch: installAndRelaunch
         )
@@ -168,7 +162,6 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
                 ?? "Crest \(appcastItem.displayVersionString)",
             version: appcastItem.displayVersionString,
             build: appcastItem.versionString,
-            releaseNotes: appcastItem.itemDescription,
             informationURL: appcastItem.infoURL,
             isInformationOnly: appcastItem.isInformationOnlyUpdate,
             allowsOfferRefresh: state.stage == .notDownloaded,
@@ -179,22 +172,11 @@ final class BrowserSoftwareUpdateUserDriver: NSObject, SPUUserDriver,
         updateWasFound?()
     }
 
-    func showUpdateReleaseNotes(with downloadData: SPUDownloadData) {
-        guard let releaseNotes = String(data: downloadData.data, encoding: .utf8)
-        else {
-            model.presentReleaseNotesFailure(
-                "Release notes were downloaded in an unsupported text encoding."
-            )
-            return
-        }
-        model.setReleaseNotes(releaseNotes)
-    }
+    /// What's New opens the release's page on the site, so the notes Sparkle
+    /// downloads are not shown.
+    func showUpdateReleaseNotes(with downloadData: SPUDownloadData) {}
 
-    func showUpdateReleaseNotesFailedToDownloadWithError(_ error: any Error) {
-        model.presentReleaseNotesFailure(
-            "Release notes could not be loaded: \(error.localizedDescription)"
-        )
-    }
+    func showUpdateReleaseNotesFailedToDownloadWithError(_ error: any Error) {}
 
     func showUpdateNotFoundWithError(
         _ error: any Error,

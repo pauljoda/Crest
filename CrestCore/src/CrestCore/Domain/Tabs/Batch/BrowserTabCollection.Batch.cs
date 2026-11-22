@@ -15,8 +15,7 @@ public sealed partial class BrowserTabCollection {
         RequireSelectedTabs(selection);
         if (selection.Members.FirstOrDefault(tab => tab.Placement.IsDurable) is { } durable)
             throw new Rejected(new CurrentTabsOnly(durable.Id));
-        return DismissTabs(selection.MemberIds, shown, fallback, now, deleting: false, ensureSelection: false,
-            resetArchivePlacement: false);
+        return DismissTabs(selection.MemberIds, shown, fallback, now, ArchiveReason.Closed, ensureSelection: false);
     }
 
     /// Deletes the selected tabs into the archive as open tabs, and answers the
@@ -42,7 +41,7 @@ public sealed partial class BrowserTabCollection {
         foreach (var group in SelectedGroups(selection)) {
             Guid[] copied = [.. selection.Members.Where(tab => tab.SplitGroupId == group)
                 .Select(tab => copies.Single(pair => pair.Source == tab.Id).Copy)];
-            if (copied.Length < 2) continue;
+            if (copied.Length < SplitGroupState.MinimumMembers) continue;
             var copiedGroup = ids.Next();
             foreach (var tab in copied.Skip(1)) JoinSplitInPlace(tab, copied[0], null, copiedGroup, now);
             CopySplitMetadata(group, copiedGroup, now);
@@ -68,8 +67,8 @@ public sealed partial class BrowserTabCollection {
         if (Tab(targetId).Content.IsStartPage) throw new Rejected(new WebPagesOnly(targetId));
         var existing = SplitMembers(targetId).Select(tab => tab.Id).ToHashSet();
         int size = existing.Union(selection.MemberIds).Count();
-        if (size < 2) throw new Rejected(new SplitNeedsTwoTabs(MaximumSplitMembers));
-        if (size > MaximumSplitMembers) throw new Rejected(new SplitLimitReached(MaximumSplitMembers));
+        if (size < SplitGroupState.MinimumMembers) throw new Rejected(new SplitNeedsTwoTabs(SplitGroupState.MaximumMembers));
+        if (size > SplitGroupState.MaximumMembers) throw new Rejected(new SplitLimitReached(SplitGroupState.MaximumMembers));
         List<(Guid Source, Guid Copy)> copies = [];
         List<(Guid Source, Guid Copy)> groupCopies = [];
         var insertion = index;
@@ -172,17 +171,19 @@ public sealed partial class BrowserTabCollection {
 
     /// Makes a folder named `title` in `color` at the top level of
     /// `placement`'s section, with an identity from `ids`, and moves the
-    /// selection into it: a selected folder moves in whole.
+    /// selection into it: a selected folder moves in whole. A group holds
+    /// tabs alone, so making one refuses a selection holding folders.
     public Guid FolderSelected(ResolvedSelection selection, TabPlacement placement, string title, BrandColor color, IIdSource ids,
-        DateTimeOffset now) {
+        DateTimeOffset now, bool isGroup = false) {
         RequireWholeSplits(selection);
+        if (isGroup) RequireSelectedTabs(selection);
         if (selection.HoldsFolders) {
             var made = MakeFolder(placement, title, color, ids);
             FileRoots(selection, placement, made, null, null, leavesSplits: false, now);
             return made;
         }
         OrderSelected(selection.MemberIds);
-        var folder = MakeFolder(placement, title, color, ids);
+        var folder = MakeFolder(placement, title, color, ids, isGroup);
         FileTabs(selection.MemberIds, placement, folder, now);
         return folder;
     }
@@ -193,7 +194,7 @@ public sealed partial class BrowserTabCollection {
     /// the tab is saved or pinned, in a folder or a split, a Start Page, or
     /// selected.
     public Guid FolderSelectedAround(ResolvedSelection selection, Guid tabId, string title, BrandColor color, IIdSource ids,
-        DateTimeOffset now) {
+        DateTimeOffset now, bool isGroup = false) {
         RequireSelectedTabs(selection);
         if (selection.Holds(tabId)) throw new Rejected(new InvalidFolderPlacement());
         var target = Tab(tabId);
@@ -201,7 +202,7 @@ public sealed partial class BrowserTabCollection {
             throw new Rejected(new InvalidFolderPlacement());
         Guid[] wrapped = [target.Id, .. selection.MemberIds];
         OrderSelected(wrapped);
-        var folder = MakeFolder(TabPlacement.Current, title, color, ids);
+        var folder = MakeFolder(TabPlacement.Current, title, color, ids, isGroup);
         FileTabs(wrapped, TabPlacement.Current, folder, now);
         return folder;
     }
@@ -250,10 +251,10 @@ public sealed partial class BrowserTabCollection {
         }
     }
 
-    /// A new folder at the top level of `placement`'s section.
-    private Guid MakeFolder(TabPlacement placement, string title, BrandColor color, IIdSource ids) {
+    /// A new folder, or group, at the top level of `placement`'s section.
+    private Guid MakeFolder(TabPlacement placement, string title, BrandColor color, IIdSource ids, bool isGroup = false) {
         var folder = ids.Next();
-        AddFolder(folder, title, placement);
+        AddFolder(folder, title, placement, isGroup: isGroup);
         SetFolderColor(folder, color);
         return folder;
     }

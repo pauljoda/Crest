@@ -6,7 +6,8 @@ namespace CrestCore.Domain;
 
 /// What deciding the palette's best match reads for typed text: the query,
 /// the address the field completes, the row the person picked before for the
-/// same text, every row ranked, and whether the field may complete now.
+/// same text, every row ranked, and whether the field may complete now, which
+/// it never may for text that names no address.
 internal sealed record PaletteLeading(PaletteQuery Query, AddressMatch? Completion, PaletteDestination? Habit,
     IReadOnlyList<PaletteCandidate> Ranked, bool Completes);
 
@@ -16,9 +17,10 @@ internal sealed record PaletteLeading(PaletteQuery Query, AddressMatch? Completi
 /// it. The rules are asked in order and the first that names a row leads:
 /// a calculation, the address the field completes, what the person picked at
 /// least twice for this text, then a strongly used place whose title or
-/// address starts with the text. While the field may not complete, as after
-/// the person deleted a completion, only a calculation leads, so Return runs
-/// what they typed.
+/// address starts with the text. While the field may not complete, as for
+/// text that names no address or after the person deleted a completion, only
+/// a calculation leads, so Return runs what they typed: its search, or the
+/// address it names.
 internal sealed class PaletteLeadRule {
     #region Static Variables
 

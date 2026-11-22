@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "tab-switch-cpu-and-energy",
+      "category": "improved",
+      "message": "Switching tabs on Mac uses a fraction of the CPU and energy it did. The window no longer redraws or animates everything on each switch, and tab use and page visits now sync in batches in the background."
+    },
+    {
+      "id": "tab-switch-without-blank-frames",
+      "category": "fixed",
+      "message": "Switching tabs on Mac no longer flashes a blank page in between, and a tab loading for the first time keeps a plain page background instead of flashing the Space's colors."
+    }
+  ]
+}

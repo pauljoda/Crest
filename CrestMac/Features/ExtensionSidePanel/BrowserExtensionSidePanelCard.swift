@@ -3,8 +3,16 @@ import SwiftUI
 /// The extension side panel as a card in the page row: a compact header the
 /// core owns, and the engine's panel view below it.
 struct BrowserExtensionSidePanelCard: View {
+    // MARK: - Static Variables
+
+    static let closeDiameter: CGFloat = 24
+
+    // MARK: - Variables
+
     let host: BrowserExtensionSidePanelHost
     let panel: BrowserExtensionSidePanelHost.Panel
+
+    // MARK: - Actions - Drawing
 
     var body: some View {
         VStack(spacing: 0) {
@@ -17,10 +25,9 @@ struct BrowserExtensionSidePanelCard: View {
                 Text(verbatim: panel.title).font(.callout).lineLimit(1)
                 Spacer(minLength: 4)
                 Button(action: host.close) {
-                    Image(systemName: "xmark").font(.system(size: 11, weight: .semibold))
-                        .frame(width: 24, height: 24).contentShape(.circle)
+                    Image(systemName: "xmark").font(CrestTypography.metadata.weight(.semibold))
                 }
-                .buttonStyle(BrowserExtensionSidePanelCloseButtonStyle())
+                .buttonStyle(CrestChromeButtonStyle.circle(diameter: BrowserExtensionSidePanelCard.closeDiameter))
                 .accessibilityLabel("Close Side Panel")
                 .help("Close Side Panel")
             }
@@ -51,15 +58,5 @@ private struct BrowserExtensionSidePanelSurface: NSViewRepresentable {
 
     static func dismantleNSView(_ host: BrowserWebHostView, coordinator: Void) {
         host.detach()
-    }
-}
-
-private struct BrowserExtensionSidePanelCloseButtonStyle: ButtonStyle {
-    @State private var isHovering = false
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .background(.primary.opacity(configuration.isPressed ? 0.14 : isHovering ? 0.08 : 0), in: Circle())
-            .onHover { isHovering = $0 }
     }
 }

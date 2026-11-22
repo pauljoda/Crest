@@ -105,4 +105,9 @@ if ! "$check_script"; then
   exit 1
 fi
 
+requested_parts=("${(@s:.:)requested_version}")
+notes_path="Documentation/ReleaseNotes/${requested_parts[1]}.${requested_parts[2]}/${requested_version}.json"
 print "Updated Crest $update_kind from $current_version to $requested_version."
+if [[ ! -f "$repository_root/$notes_path" ]]; then
+  print "Write this change's release notes in $notes_path."
+fi

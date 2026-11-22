@@ -34,8 +34,10 @@ struct BrowserSidebarPageAccess {
     /// a Space returning to its locked state needs.
     let deactivatePagePresentation: @MainActor () -> Void
 
-    /// Releases one tab's resident page, if the Space and profile still own it.
-    let unloadPage: @MainActor (UUID, BrowserSpaceRuntimeAssignment) -> Void
+    /// Releases the tabs' resident pages, if the Space and profile still own
+    /// them. Saved and pinned tabs close together, their pages asked once
+    /// whether they may go.
+    let unloadPages: @MainActor ([UUID], BrowserSpaceRuntimeAssignment) -> Void
 
     /// Asks a resident page for a fresh favicon. Returns `nil` when the tab has
     /// no page, has moved, or the page cannot produce one.
@@ -102,15 +104,18 @@ extension BrowserSidebarPageAccess {
             residencyRevision: { pages.residencyRevision &+ pages.nativeTabs.residencyRevision },
             selectPages: selectPages ?? { pages.select(at: .now) },
             deactivatePagePresentation: { pages.deactivatePagePresentation() },
-            unloadPage: { tabID, assignment in
-                guard let tab = browser.spaceModel(matching: assignment)?.shownTab(tabID)
-                else { return }
-                if !tab.placement.isDurable {
-                    pages.unloadPage(for: tabID, matching: assignment)
-                } else if BrowserDurableTabCloseAction(browser: browser, spaceAccess: spaceAccess).perform(
+            unloadPages: { tabIDs, assignment in
+                guard let space = browser.spaceModel(matching: assignment) else { return }
+                let tabs = tabIDs.compactMap { space.shownTab($0) }
+                for tab in tabs where !tab.placement.isDurable {
+                    pages.unloadPage(for: tab.id, matching: assignment)
+                }
+                let durable = tabs.filter(\.placement.isDurable).map {
                     BrowserTabRuntimeAssignment(
-                        tabID: tabID, spaceID: assignment.spaceID, profileID: assignment.profileID
-                    ))
+                        tabID: $0.id, spaceID: assignment.spaceID, profileID: assignment.profileID)
+                }
+                if !durable.isEmpty,
+                    BrowserDurableTabCloseAction(browser: browser, spaceAccess: spaceAccess).perform(durable)
                 {
                     pages.select(at: .now)
                 }

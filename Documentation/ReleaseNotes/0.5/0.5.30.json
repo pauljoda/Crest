@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-03-quiet-webpage-keyboard-controls",
+      "category": "fixed",
+      "message": "Use webpage keyboard controls without unnecessary alert sounds on macOS",
+      "platforms": ["mac"]
+    }
+  ]
+}

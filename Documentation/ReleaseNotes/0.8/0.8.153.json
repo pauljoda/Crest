@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "mac-peek-size",
+      "category": "new",
+      "message": "On Mac, Peek size in Links settings lets Peek open smaller, down to about the size it used to be, and Test Peek beneath it opens a sample to try the size.",
+      "platforms": ["mac"]
+    }
+  ]
+}

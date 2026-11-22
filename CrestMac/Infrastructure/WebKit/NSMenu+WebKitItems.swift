@@ -22,10 +22,11 @@ extension NSMenu {
         }
     }
 
-    /// Names WebKit's open-link item for where Crest actually opens it,
-    /// keeping its action and shortcut.
-    func relabelWebKitLinkDestination() {
-        items.first { $0.identifier == .webKitOpenLinkInNewWindow }?.title =
-            String(localized: "Open Link in This Space")
+    /// WebKit's open-link-in-a-new-window item, named for where Crest opens
+    /// it, a new tab of the page's Space, keeping its action and shortcut.
+    func webKitOpenLinkInNewTabItem() -> NSMenuItem? {
+        guard let item = items.first(where: { $0.identifier == .webKitOpenLinkInNewWindow }) else { return nil }
+        item.title = String(localized: "Open Link in New Tab")
+        return item
     }
 }

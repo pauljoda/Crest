@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "retina-tab-icons",
+      "category": "fixed",
+      "message": "Site icons in tabs and pinned tabs on Mac are now sharp on Retina displays instead of blurry."
+    }
+  ]
+}

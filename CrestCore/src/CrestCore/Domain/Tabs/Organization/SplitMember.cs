@@ -27,7 +27,7 @@ public readonly record struct SplitMember(Guid? Group, TabPlacement Placement, G
                 run = group; placement = tab.Placement; folder = tab.Folder; length = 1;
             } else {
                 if (tab.Placement != placement || tab.Folder != folder) { retired.Add(group); run = null; length = 0; continue; }
-                if (length >= BrowserTabCollection.MaximumSplitMembers) continue;
+                if (length >= SplitGroupState.MaximumMembers) continue;
                 length++;
             }
             result[index] = group;

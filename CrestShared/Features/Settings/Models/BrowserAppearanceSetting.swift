@@ -1,8 +1,8 @@
 import Foundation
 
-/// A row of Settings that a customization style can leave out of its page:
-/// for Advanced at the end of Appearance, or, on a page without Advanced, off
-/// the page.
+/// A row of Settings › Appearance: one of the choices that change how Crest
+/// reads and behaves, which the page shows, or the fine tuning of fills,
+/// borders and highlights, which waits in More Customization at its end.
 enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     case windowBorder
     case material
@@ -27,6 +27,10 @@ enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     case pinsFillRow
     case colorBorders
     case selectedTabOutline
+    /// Drawing the selected tab on white paper or on the material.
+    case selectedTabStyle
+    case selectedTabOpacity
+    case selectedPinTint
     case websitePinColors
     case dimUnloadedTabs
     case pinnedFill
@@ -38,6 +42,7 @@ enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     case addressBorder
     case addressEditingOutline
     case commandPaletteMotion
+    case commandPaletteAccent
     case addressDisplay
     case copyURLButton
     case superCopy
@@ -46,9 +51,27 @@ enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     case folderHighlights
     case folderTabCounts
     case folderBorders
+    case groupTintTitle
+    case groupHighlights
+    case groupTabCounts
+    case groupBorders
     case appIcon
     case tabHoverPreview
     case folderHoverPreview
-    /// Whether an unloaded saved tab stays as it is, in Settings › Tabs.
-    case unloadedSavedTabs
+
+    // MARK: - Static Variables
+
+    /// The rows the page shows; More Customization holds the rest.
+    static let onPage: Set<BrowserAppearanceSetting> = [
+        .sidebarOnRight, .appearanceMode, .followSpaceAccent, .spacePageMotion, .sidebarRevealDelay,
+        .sidebarSlideDuration, .fullScreenSidebarReveal, .defaultPageZoom, .cornerRadius, .tabScale, .sidebarSpacing,
+        .pinLayout, .websitePinColors, .dimUnloadedTabs, .tabStatus, .addressDisplay, .commandPaletteAccent,
+        .copyURLButton, .superCopy,
+        .folderIconOnly, .folderTabCounts, .groupTabCounts, .appIcon, .tabHoverPreview, .folderHoverPreview,
+    ]
+
+    // MARK: - Variables
+
+    /// Whether the page shows the row, rather than More Customization.
+    var isOnPage: Bool { Self.onPage.contains(self) }
 }

@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "mobile-glyph-buttons-settings-rows",
+      "category": "improved",
+      "message": "On iPad, the sidebar's bottom controls and the Settings list highlight under the pointer and when pressed, the page showing in Settings is marked like Crest's selected tab, and the floating glass buttons dim the same way when unavailable.",
+      "platforms": ["ios"]
+    }
+  ]
+}

@@ -19,6 +19,8 @@ public sealed partial class BrowserContractsTests {
     private static readonly Guid CodecSpace = Guid.Parse("00000000-0000-4000-8000-00000000A001");
     private static readonly Guid CodecTab = Guid.Parse("00000000-0000-4000-8000-00000000A003");
 
+    public static TheoryData<string> HouseNames { get; } = [.. SpaceHouse.All.Select(house => house.Name)];
+
     #endregion
 
     #region Actions - Tests
@@ -111,17 +113,29 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(2, branding["colors"]!.AsArray().Count);
     }
 
-    /// A crest that gives each of its six layers a color of its own keeps all
-    /// six, and every layer keeps pointing at its own, through normalization,
-    /// both sync forms and the stored session.
+    /// The fullest look a Space can wear keeps everything through
+    /// normalization, both sync forms and the stored session: a crest that
+    /// gives each of its six layers a color of its own, a radial gradient, the
+    /// gradients an icon's color, the palette colors and the crest's own
+    /// palette colors run on into, each in its slot. A gradient kind this
+    /// build can't name reads as linear.
     [Fact]
-    public void ACrestWithAColorForEachLayerKeepsAllSixWhereverItTravels() {
+    public void TheFullestLookKeepsEverythingWhereverItTravels() {
         var (_, _, value) = CodecValue("space");
+        BrandGradient Run(double red, SpaceGradientKind? kind) => new(new([new(red, 0.4, 0.6), new(0.1, 0.2, red)]), kind, Angle: 450);
         var house = SpaceAccent.Indigo.House;
-        var colors = Enumerable.Range(0, 6).Select(index => new BrandColor(index / 10.0, 0.5, 1 - index / 10.0)).ToArray();
-        var look = house with {
+        var crestColors = Enumerable.Range(0, 6).Select(index => new BrandColor(index / 10.0, 0.5, 1 - index / 10.0)).ToArray();
+        var look = SpaceBranding.Normalized(house with {
+            ThemeMode = SpaceThemeMode.Gradient,
+            GradientKind = SpaceGradientKind.Radial,
+            Colors = new([new(0.2, 0.3, 0.4), new(0.5, 0.6, 0.7), new(0.8, 0.1, 0.3)]),
+            SymbolColor = new(0.9, 0.8, 0.1),
+            SymbolGradient = Run(0.3, SpaceGradientKind.Angular),
+            ColorGradients = new([Run(0.5, SpaceGradientKind.Linear), BrandGradient.Plain, Run(0.7, SpaceGradientKind.Radial), Run(0.9, null)]),
             Crest = house.Crest with {
-                Palette = new ColorPalette(colors),
+                Palette = new ColorPalette(crestColors),
+                PaletteGradients = new([BrandGradient.Plain, Run(0.4, SpaceGradientKind.Radial), BrandGradient.Plain,
+                    Run(0.6, null), Run(0.8, SpaceGradientKind.Angular)]),
                 BackplateColorIndex = 0,
                 SecondaryFieldColorIndex = 1,
                 OrdinaryColorIndex = 2,
@@ -129,22 +143,21 @@ public sealed partial class BrowserContractsTests {
                 TrimColorIndex = 4,
                 EdgeColorIndex = 5
             }
-        };
+        });
 
-        var kept = SpaceBranding.Normalized(look);
-        value["branding"] = StoredSessionCodec.Encode(kept);
+        value["branding"] = StoredSessionCodec.Encode(look);
         var cloud = SyncRecordBody.Read(CodecBody("space", value), isTombstone: false, SyncPayloadForm.Journal)
             .Write(SyncPayloadForm.Cloud);
         var synced = Assert.IsType<SpacePayload>(
             SyncRecordBody.Read(Bytes(cloud), isTombstone: false, SyncPayloadForm.Cloud).Payload).Branding;
 
-        Assert.Equal(colors, kept.Crest.Palette!.Colors);
-        Assert.Equal([0, 1, 2, 3, 4, 5], new[] {
-            kept.Crest.BackplateColorIndex, kept.Crest.SecondaryFieldColorIndex, kept.Crest.OrdinaryColorIndex,
-            kept.Crest.SymbolColorIndex, kept.Crest.TrimColorIndex, kept.Crest.EdgeColorIndex
-        });
-        Assert.Equal(kept, synced);
-        Assert.Equal(kept, StoredSessionCodec.DecodeBranding(StoredSessionCodec.Encode(kept)).InTodaysUnits());
+        Assert.Equal(crestColors, look.Crest.Palette!.Colors);
+        Assert.Equal(look, synced);
+        Assert.Equal(look, StoredSessionCodec.DecodeBranding(StoredSessionCodec.Encode(look)).InTodaysUnits());
+
+        var unknown = StoredSessionCodec.Encode(look);
+        unknown["gradientKind"] = "spiral";
+        Assert.Null(SpaceBranding.Normalized(StoredSessionCodec.DecodeBranding(unknown)).GradientKind);
     }
 
     /// Members a newer build writes that this one does not know survive both

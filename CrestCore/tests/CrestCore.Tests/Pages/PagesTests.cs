@@ -383,4 +383,101 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal([new TransientPageClosed(popup, workspace)], app.Drain());
         Assert.Equal(delivered, binding.Commands.Count);
     }
+
+    [Fact]
+    public void GoingBackFromTheFirstPageOfATabAnotherTabOpenedClosesItAndShowsTheTabThatOpenedIt() {
+        var session = TwoSpaceSession();
+        var (space, profile) = (SpaceId(session["spaces"]![0]!), ProfileId(session["spaces"]![0]!));
+        var (app, engine, binding, workspace, window) = PageHost(session);
+        using var disposal = app;
+        var (openerTab, opener) = LiveTab(app, engine, workspace, window, space);
+        var (ownTab, own) = LiveTab(app, engine, workspace, window, space, "https://own.example/");
+        app.Drain();
+        Page Hosted(Guid page) => app.Pages.Hosted(page)!;
+        bool IsOpen(Guid tab) => CurrentTabs(app, workspace, space).Any(held => held.Id == tab);
+
+        // A tab the person opened has nothing to go back to.
+        Assert.False(Hosted(own).Live.CanGoBack);
+        app.Send(new StepHistory(own, -1));
+        Assert.True(IsOpen(ownTab));
+
+        // A tab the opener's page opened, and one a link followed from it
+        // opened, close back to their opener, not to the tab the window
+        // showed before them, once their document agrees to go.
+        app.Report(engine, new PageOffered(Guid.NewGuid(), profile, opener, window, SpaceId: null, "https://offered.example/", Foreground: false));
+        var offered = Assert.Single(app.Drain().OfType<OfferedPageAdopted>());
+        app.Report(engine, new PageCreated(offered.PageId));
+        var (followedTab, followed) = (Guid.NewGuid(), Guid.NewGuid());
+        app.Send(new OpenTab(workspace, window, space, followedTab, new TabContent("https://followed.example/", View: null, Title: null),
+            TabPlacement.Current, openerTab, Shows: false));
+        app.Send(new OpenPage(followed, workspace, space, followedTab, window, OpenerPageId: opener));
+        app.Report(engine, new PageCreated(followed));
+        foreach (var (tab, page) in new[] { (offered.TabId, offered.PageId), (followedTab, followed) }) {
+            app.Send(new ShowTab(window, space, ownTab));
+            app.Send(new ShowTab(window, space, tab));
+            app.Drain();
+            Assert.True(Hosted(page).Live.CanGoBack);
+            app.Send(new StepHistory(page, -1));
+            Assert.Equal(new CheckBeforeUnload(page), binding.Commands[^1]);
+            app.Report(engine, new BeforeUnloadAnswered(page, Proceeds: false));
+            app.Drain();
+            Assert.True(IsOpen(tab));
+            app.Send(new StepHistory(page, -1));
+            app.Report(engine, new BeforeUnloadAnswered(page, Proceeds: true));
+            var closed = app.Drain();
+            Assert.False(IsOpen(tab));
+            Assert.Equal(openerTab, ShownTab(closed, window, space));
+        }
+
+        // Unloaded and opened again, such a tab still closes back to its opener.
+        app.Report(engine, new PageOffered(Guid.NewGuid(), profile, opener, window, SpaceId: null, "https://unloaded.example/", Foreground: true));
+        var unloaded = Assert.Single(app.Drain().OfType<OfferedPageAdopted>());
+        app.Report(engine, new PageCreated(unloaded.PageId));
+        app.Report(engine, new PageHistoryReported(unloaded.PageId, [new PageHistoryEntry(Guid.NewGuid(), "https://unloaded.example/", "")], 0));
+        app.Send(new ReleasePage(unloaded.PageId, KeepsState: true));
+        var reopened = Guid.NewGuid();
+        app.Send(new OpenPage(reopened, workspace, space, unloaded.TabId, window));
+        Assert.True(Hosted(reopened).Live.CanGoBack);
+
+        // Pinned while unloaded, it opens again without its opener.
+        app.Report(engine, new PageHistoryReported(reopened, [new PageHistoryEntry(Guid.NewGuid(), "https://unloaded.example/", "")], 0));
+        app.Send(new ReleasePage(reopened, KeepsState: true));
+        app.Send(new TogglePin(workspace, space, unloaded.TabId));
+        var pinnedAgain = Guid.NewGuid();
+        app.Send(new OpenPage(pinnedAgain, workspace, space, unloaded.TabId, window));
+        Assert.False(Hosted(pinnedAgain).Live.CanGoBack);
+
+        // Pinned while its document is deciding, it stays, as a pinned tab.
+        app.Report(engine, new PageOffered(Guid.NewGuid(), profile, opener, window, SpaceId: null, "https://deciding.example/", Foreground: true));
+        var deciding = Assert.Single(app.Drain().OfType<OfferedPageAdopted>());
+        app.Report(engine, new PageCreated(deciding.PageId));
+        app.Send(new StepHistory(deciding.PageId, -1));
+        app.Send(new TogglePin(workspace, space, deciding.TabId));
+        app.Report(engine, new BeforeUnloadAnswered(deciding.PageId, Proceeds: true));
+        Assert.DoesNotContain(app.Drain().OfType<WindowChanged>(),
+            change => change.Window.ShownTabs.Any(shown => shown.SpaceId == space && shown.TabId == openerTab));
+        Assert.Contains(app.Workspace(workspace).Current.Spaces.Single(held => held.Id == space).Tabs,
+            tab => tab.Id == deciding.TabId && tab.Placement == TabPlacement.Pinned);
+
+        // One that gains a page to go back to while deciding stays too.
+        app.Report(engine, new PageOffered(Guid.NewGuid(), profile, opener, window, SpaceId: null, "https://gaining.example/", Foreground: true));
+        var gaining = Assert.Single(app.Drain().OfType<OfferedPageAdopted>());
+        app.Report(engine, new PageCreated(gaining.PageId));
+        app.Send(new StepHistory(gaining.PageId, -1));
+        app.Report(engine, new PageHistoryReported(gaining.PageId,
+            [new PageHistoryEntry(Guid.NewGuid(), "https://gaining.example/", ""), new PageHistoryEntry(Guid.NewGuid(), "https://gaining.example/#more", "")], 1));
+        app.Report(engine, new BeforeUnloadAnswered(gaining.PageId, Proceeds: true));
+        app.Drain();
+        Assert.True(IsOpen(gaining.TabId));
+
+        // Pinned, it keeps its own close, and going back does nothing.
+        app.Report(engine, new PageOffered(Guid.NewGuid(), profile, opener, window, SpaceId: null, "https://pinned.example/", Foreground: true));
+        var pinned = Assert.Single(app.Drain().OfType<OfferedPageAdopted>());
+        app.Report(engine, new PageCreated(pinned.PageId));
+        app.Send(new TogglePin(workspace, space, pinned.TabId));
+        Assert.False(Hosted(pinned.PageId).Live.CanGoBack);
+        app.Send(new StepHistory(pinned.PageId, -1));
+        Assert.Contains(app.Workspace(workspace).Current.Spaces.Single(held => held.Id == space).Tabs,
+            tab => tab.Id == pinned.TabId && tab.Placement == TabPlacement.Pinned);
+    }
 }

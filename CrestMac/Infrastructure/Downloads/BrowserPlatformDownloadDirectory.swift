@@ -17,8 +17,8 @@ enum BrowserPlatformDownloadDirectory {
             let panel = NSSavePanel()
             panel.canCreateDirectories = true
             panel.nameFieldStringValue = safeFilename
-            panel.title = "Save Download"
-            panel.prompt = "Save"
+            panel.title = String(localized: "Save Download")
+            panel.prompt = String(localized: "Save")
             let response = await withCheckedContinuation { continuation in
                 panel.begin { continuation.resume(returning: $0) }
             }
@@ -62,68 +62,54 @@ enum BrowserPlatformDownloadDirectory {
     }
 }
 
+/// Where each Space's downloads go on this Mac, which the core's device store
+/// keeps: asked for each time, or a folder the person chose, kept as its
+/// security-scoped bookmark, or the Downloads folder.
 @MainActor
 final class BrowserPlatformDownloadPreferences {
-    static let shared = BrowserPlatformDownloadPreferences()
-
-    private struct VolatileRecord {
-        var asksWhereToSave = false
-        var bookmark: Data?
-        var displayName: String?
+    /// The preferences Settings and downloads share: over the launch's core
+    /// once the launch configures them, and before that over a memory-only
+    /// core of their own, made on first use, as previews and tests use.
+    static var shared: BrowserPlatformDownloadPreferences {
+        if let configured { return configured }
+        let preferences = BrowserPlatformDownloadPreferences(core: CrestCore())
+        configured = preferences
+        return preferences
     }
 
-    private static let keyPrefix = "browser.download.space."
-    private let defaults: UserDefaults?
-    private var volatileRecords: [UUID: VolatileRecord] = [:]
+    /// The preferences `shared` answers, once there are some.
+    private static var configured: BrowserPlatformDownloadPreferences?
 
-    init(defaults: UserDefaults? = nil) {
-        if let defaults {
-            self.defaults = defaults
-        } else if BrowserLaunchEnvironment.current.requiresIsolation {
-            self.defaults = nil
-        } else {
-            self.defaults = .standard
-        }
+    private let core: CrestCore
+
+    init(core: CrestCore) {
+        self.core = core
+    }
+
+    /// Has Settings and downloads share preferences over `core`, the
+    /// launch's.
+    static func configure(core: CrestCore) {
+        configured = BrowserPlatformDownloadPreferences(core: core)
     }
 
     func asksWhereToSave(for spaceID: UUID) -> Bool {
-        guard let defaults else {
-            return volatileRecords[spaceID]?.asksWhereToSave ?? false
-        }
-        return defaults.bool(forKey: key("asksWhere", for: spaceID))
+        preferences(for: spaceID).asksWhereToSave
     }
 
     func setAsksWhereToSave(_ enabled: Bool, for spaceID: UUID) {
-        guard let defaults else {
-            var record = volatileRecords[spaceID] ?? VolatileRecord()
-            record.asksWhereToSave = enabled
-            volatileRecords[spaceID] = record
-            return
-        }
-        defaults.set(enabled, forKey: key("asksWhere", for: spaceID))
+        var preferences = preferences(for: spaceID)
+        preferences.asksWhereToSave = enabled
+        keep(preferences)
     }
 
     func directoryDisplayName(for spaceID: UUID) -> String? {
-        guard let defaults else {
-            return volatileRecords[spaceID]?.displayName
-        }
-        return defaults.string(forKey: key("directoryName", for: spaceID))
+        preferences(for: spaceID).folder?.name
     }
 
-    func setDirectoryMetadata(
-        bookmark: Data,
-        displayName: String,
-        for spaceID: UUID
-    ) {
-        guard let defaults else {
-            var record = volatileRecords[spaceID] ?? VolatileRecord()
-            record.bookmark = bookmark
-            record.displayName = displayName
-            volatileRecords[spaceID] = record
-            return
-        }
-        defaults.set(bookmark, forKey: key("directoryBookmark", for: spaceID))
-        defaults.set(displayName, forKey: key("directoryName", for: spaceID))
+    func setDirectoryMetadata(bookmark: Data, displayName: String, for spaceID: UUID) {
+        var preferences = preferences(for: spaceID)
+        preferences.folder = DownloadFolder(name: displayName, token: bookmark)
+        keep(preferences)
     }
 
     func rememberDirectory(_ url: URL, for spaceID: UUID) throws {
@@ -140,15 +126,7 @@ final class BrowserPlatformDownloadPreferences {
     }
 
     func directoryURL(for spaceID: UUID) -> URL? {
-        let bookmark: Data?
-        if let defaults {
-            bookmark = defaults.data(
-                forKey: key("directoryBookmark", for: spaceID)
-            )
-        } else {
-            bookmark = volatileRecords[spaceID]?.bookmark
-        }
-        guard let bookmark else { return nil }
+        guard let bookmark = preferences(for: spaceID).folder?.token else { return nil }
         do {
             var isStale = false
             let url = try URL(
@@ -178,21 +156,20 @@ final class BrowserPlatformDownloadPreferences {
     }
 
     func clearDirectory(for spaceID: UUID) {
-        guard let defaults else {
-            var record = volatileRecords[spaceID] ?? VolatileRecord()
-            record.bookmark = nil
-            record.displayName = nil
-            volatileRecords[spaceID] = record
-            return
-        }
-        defaults.removeObject(forKey: key("directoryBookmark", for: spaceID))
-        defaults.removeObject(forKey: key("directoryName", for: spaceID))
+        var preferences = preferences(for: spaceID)
+        preferences.folder = nil
+        keep(preferences)
     }
 
-    private func key(_ suffix: String, for spaceID: UUID) -> String {
-        Self.keyPrefix
-            + spaceID.uuidString.lowercased()
-            + "."
-            + suffix
+    // MARK: - Actions - Core
+
+    /// Where the Space `spaceID`'s downloads go, as the core keeps it.
+    private func preferences(for spaceID: UUID) -> SpaceDownloadPreferences {
+        core.state.downloadPreferences.first { $0.spaceID == spaceID }
+            ?? SpaceDownloadPreferences(spaceID: spaceID, asksWhereToSave: false, folder: nil)
+    }
+
+    private func keep(_ preferences: SpaceDownloadPreferences) {
+        _ = try? core.send(SetSpaceDownloads(preferences: preferences))
     }
 }

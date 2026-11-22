@@ -3,8 +3,9 @@ import Foundation
 /// The text tone a palette reads best under, measured with APCA, the
 /// perceptual contrast method WCAG 3 takes up: each color as the sidebar
 /// draws it, at the look's strength over the window's own background and
-/// beneath the readability fade, and the tone whose weakest contrast across
-/// the palette is the strongest.
+/// beneath the readability fade, which darkens the colors under light text
+/// and lightens them under dark text, and the tone whose weakest contrast
+/// across the palette is the strongest.
 extension ColorPalette {
     // MARK: - Static Variables
 
@@ -28,22 +29,34 @@ extension ColorPalette {
         system: BrowserSpaceForegroundTone
     ) -> BrowserSpaceForegroundTone {
         let window = system == .light ? Self.darkWindowLevel : Self.lightWindowLevel
-        let overlay = Swift.min(readabilityFade * 0.55, 0.7)
-        let backgrounds = map { color in
-            Self.screenLuminance(
-                red: Self.rendered(color.red, over: window, strength: strength, overlay: overlay),
-                green: Self.rendered(color.green, over: window, strength: strength, overlay: overlay),
-                blue: Self.rendered(color.blue, over: window, strength: strength, overlay: overlay))
+        let overlay = Self.fadeOverlay(readabilityFade)
+        let backgrounds = { (toward: Double) in
+            map { color in
+                Self.screenLuminance(
+                    red: Self.rendered(color.red, over: window, strength: strength, overlay: overlay, toward: toward),
+                    green: Self.rendered(
+                        color.green, over: window, strength: strength, overlay: overlay, toward: toward),
+                    blue: Self.rendered(color.blue, over: window, strength: strength, overlay: overlay, toward: toward))
+            }
         }
-        let light = backgrounds.map { Self.lightnessContrast(text: Self.lightTextLuminance, over: $0) }.min() ?? 0
-        let dark = backgrounds.map { Self.lightnessContrast(text: Self.darkTextLuminance, over: $0) }.min() ?? 0
+        let light = backgrounds(0).map { Self.lightnessContrast(text: Self.lightTextLuminance, over: $0) }.min() ?? 0
+        let dark = backgrounds(1).map { Self.lightnessContrast(text: Self.darkTextLuminance, over: $0) }.min() ?? 0
         return light >= dark ? .light : .dark
     }
 
+    /// How strongly the readability fade of `readabilityFade` lies over the
+    /// sidebar's colors.
+    static func fadeOverlay(_ readabilityFade: Double) -> Double {
+        Swift.min(readabilityFade * 0.55, 0.7)
+    }
+
     /// A color channel as the sidebar draws it: at `strength` over the
-    /// window's `base`, then darkened by the readability fade's `overlay`.
-    private static func rendered(_ channel: Double, over base: Double, strength: Double, overlay: Double) -> Double {
-        (channel * strength + base * (1 - strength)) * (1 - overlay)
+    /// window's `base`, then faded by the readability fade's `overlay`
+    /// toward `toward`, black under light text and white under dark.
+    private static func rendered(
+        _ channel: Double, over base: Double, strength: Double, overlay: Double, toward: Double
+    ) -> Double {
+        (channel * strength + base * (1 - strength)) * (1 - overlay) + toward * overlay
     }
 
     /// APCA's screen luminance of a color, with its soft clamp near black.

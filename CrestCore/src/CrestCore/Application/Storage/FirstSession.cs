@@ -13,7 +13,7 @@ internal sealed record FirstSession(SessionState Session, NativeSyncJournal? Jou
     IReadOnlyList<TabFavicon> Favicons, bool RequestsCloudRecovery) {
     #region Variables
 
-    private static readonly JsonDocumentOptions DocumentOptions = new() { MaxDepth = 64 };
+    private static readonly JsonDocumentOptions DocumentOptions = JsonDepth.Session.Options;
 
     #endregion
 

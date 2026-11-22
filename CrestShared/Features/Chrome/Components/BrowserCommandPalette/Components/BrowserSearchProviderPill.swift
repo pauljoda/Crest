@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A search provider's chip: its icon on a neutral plate and its name, on
-/// glass in its brand color, which the palette's glow repeats.
+/// its brand color, which the palette's glow repeats.
 struct BrowserSearchProviderPill: View {
     let provider: SearchProvider
     var showsCloseControl = false

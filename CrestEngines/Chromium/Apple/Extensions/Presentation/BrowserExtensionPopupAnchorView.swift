@@ -1,8 +1,11 @@
 import AppKit
 
 @MainActor
-final class BrowserExtensionPopupAnchorView: NSView {
+final class BrowserExtensionPopupAnchorView: NSView, BrowserExtensionAnchorStandingView {
     var popupAnchorDidChange: ((BrowserExtensionPopupAnchor) -> Void)?
+    /// How strongly the control behind this view stands for its extension
+    /// action, which decides between copies of it in one window.
+    var standing = BrowserExtensionAnchorStanding.window
     /// The control this view stands for in the keyboard-anchor registry.
     var site: BrowserExtensionToolbarAnchorRegistry.Site? {
         didSet {

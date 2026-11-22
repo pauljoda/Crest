@@ -1,10 +1,9 @@
 import SwiftUI
 
-/// The bar a page shows while the person picks something on it to block, as
-/// Safari's Hide Distracting Items does: what they picked, on a row of its own
-/// so it never truncates, and below it the controls that choose the element
-/// around it or inside it, cancel, and block it. It floats over the page in
-/// Liquid Glass, as the find bar does.
+/// The bar a page shows while the person picks something on it to block: what
+/// they picked, on a row of its own so it never truncates, and below it the
+/// controls that choose the element around it or inside it, cancel, and block
+/// it. It floats over the page on Crest's flyout surface.
 struct BrowserElementPickerBar: View {
     // MARK: - Types
 
@@ -24,7 +23,7 @@ struct BrowserElementPickerBar: View {
         }
         .padding(CrestSpacing.large)
         .frame(maxWidth: Metrics.maximumWidth)
-        .glassEffect(.regular, in: .rect(cornerRadius: CrestRadius.panel))
+        .crestFloatingFlyoutStyle(in: .rect(cornerRadius: CrestRadius.panel))
         .onKeyPress(.escape) {
             picker.cancel()
             return .handled
@@ -62,24 +61,26 @@ struct BrowserElementPickerBar: View {
                 "Choose the Element Around It", systemImage: "arrow.up.left.and.arrow.down.right", action: picker.widen
             )
             .labelStyle(.iconOnly)
+            .buttonStyle(.crestIcon())
             .help("Choose the Element Around It")
             .disabled(!picker.canWiden)
             Button(
                 "Choose the Element Inside", systemImage: "arrow.down.right.and.arrow.up.left", action: picker.narrow
             )
             .labelStyle(.iconOnly)
+            .buttonStyle(.crestIcon())
             .help("Choose the Element Inside")
             .disabled(!picker.canNarrow)
             Spacer(minLength: CrestSpacing.small)
             Button("Cancel", role: .cancel, action: picker.cancel)
+                .buttonStyle(.crestSecondary)
+            // Crest blue, the accent the page's outline takes, on every
+            // platform.
             Button("Block", action: picker.block)
-                .buttonStyle(.glassProminent)
-                // The accent the page's outline takes, on every platform.
-                .tint(CrestBrandTheme.accent)
+                .buttonStyle(.crestPrimary)
                 .keyboardShortcut(.defaultAction)
                 .disabled(picker.selector == nil)
         }
-        .buttonStyle(.glass)
     }
 
     private var hint: LocalizedStringKey {

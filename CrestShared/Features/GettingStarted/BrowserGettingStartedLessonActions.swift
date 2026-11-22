@@ -11,7 +11,7 @@ struct BrowserGettingStartedPinAction: View {
         Button("Pin Gmail", systemImage: "pin.fill") {
             if let mail = practice.tabID(.mail) { practice.browser.pinTab(mail) }
         }
-        .buttonStyle(.crestPrimary(tint: CrestBrandPalette.butter))
+        .buttonStyle(.crestPrimary)
     }
 }
 
@@ -25,7 +25,7 @@ struct BrowserGettingStartedSaveAction: View {
         Button(title, systemImage: systemImage) {
             if let trail = practice.tabID(.trail) { practice.browser.saveTab(trail) }
         }
-        .buttonStyle(.crestPrimary(tint: CrestBrandPalette.butter))
+        .buttonStyle(.crestPrimary)
     }
 }
 
@@ -50,14 +50,15 @@ struct BrowserGettingStartedClearHint: View {
     }
 }
 
-/// Archives the practice Space's open tabs, as its ••• menu does.
+/// Archives the practice Space's open tabs but the shown one, as Clear on its
+/// line does.
 struct BrowserGettingStartedCleanUpAction: View {
     let practice: BrowserGettingStartedPractice
 
     var body: some View {
-        Button("Clean Up Current Tabs", systemImage: "sparkles") {
-            _ = practice.tabActions.clearCurrentTabs()
+        Button(ShortcutCommand.clearOtherTabs) {
+            _ = practice.tabActions.clearCurrentTabs(keepingShownTab: true)
         }
-        .buttonStyle(.crestPrimary(tint: CrestBrandPalette.butter))
+        .buttonStyle(.crestPrimary)
     }
 }

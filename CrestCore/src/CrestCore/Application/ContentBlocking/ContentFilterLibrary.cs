@@ -5,8 +5,8 @@ using Microsoft.Win32.SafeHandles;
 
 namespace CrestCore.Application;
 
-/// Crest's content filter library, `crest_content_filter`: Brave's adblock
-/// engine behind the C interface in
+/// Crest's content filter library, `crest_content_filter`: the open-source
+/// `adblock` engine behind the C interface in
 /// `CrestCore/native/ContentFilter/include/crest_content_filter.h`. Native AOT
 /// links the prebuilt static library its lock names (`DirectPInvoke` in the
 /// native project); a JIT host loads the dynamic library its build puts beside

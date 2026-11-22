@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "chromium-screen-sharing-without-click",
+      "category": "fixed",
+      "message": "Screen sharing works in Slack huddles and in Slack's call test on pages that run in Chromium. As in Chrome, a site can ask to share your screen without a click of its own, and macOS still asks what to share.",
+      "platforms": ["mac"]
+    }
+  ]
+}

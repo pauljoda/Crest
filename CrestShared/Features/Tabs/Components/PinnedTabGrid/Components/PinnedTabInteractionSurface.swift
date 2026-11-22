@@ -55,7 +55,7 @@ struct PinnedTabInteractionSurface: ViewModifier {
     }
 
     private var selectionAccent: Color {
-        (appearance.color ?? (presentation?.branding ?? branding)?.primaryColor ?? .indigo).color
+        (appearance.color ?? (presentation?.branding ?? branding)?.primaryColor ?? SpaceBranding.fallbackColor).color
     }
 
     private var appearance: BrowserTabAppearance { BrowserDeviceAppearanceStore.shared.tabs }

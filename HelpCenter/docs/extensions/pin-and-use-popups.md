@@ -33,7 +33,7 @@ If the extension has a settings page, choose **Extension Settings…** from its 
 
 ## Use side panels
 
-Extensions with a Chrome side panel open it as a card beside the page. Choose **Open Side Panel** from the action's menu, select the icon if the extension opens its panel that way, or let the extension open it itself. The panel belongs to the page it opened beside. Crest does not keep side panels after you quit.
+Extensions with a side panel open it as a card beside the page. Choose **Open Side Panel** from the action's menu, select the icon if the extension opens its panel that way, or let the extension open it itself. The panel belongs to the page it opened beside. Crest does not keep side panels after you quit.
 
 :::note Space-local placement
 Pinning is independent per device, and per Space except within a [Sub-Space](../spaces/sub-spaces.md) group, whose Spaces share one strip. A Work strip can hold work tools while Personal or another Mac uses a different set.

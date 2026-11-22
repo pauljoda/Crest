@@ -27,6 +27,9 @@ public sealed class WebScheme {
     /// context and its credentials may be captured and offered.
     public bool IsSecure { get; }
 
+    /// What an address of the scheme starts with, as `https://`.
+    public string Prefix => Name + "://";
+
     #endregion
 
     #region Constructors
@@ -45,6 +48,13 @@ public sealed class WebScheme {
 
     /// The scheme `scheme` spells in any letter case, as a URL may.
     public static WebScheme? Spelled(string? scheme) => Named(scheme?.ToLowerInvariant());
+
+    #endregion
+
+    #region Actions - Addresses
+
+    /// The address of `rest`, an authority and what follows it, in this scheme.
+    public string Address(string rest) => Prefix + rest;
 
     #endregion
 }

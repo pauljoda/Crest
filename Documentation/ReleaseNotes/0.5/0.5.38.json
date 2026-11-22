@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-03-extension-debugger-api",
+      "category": "new",
+      "message": "Let extensions you approve inspect and control pages in a Space, with a visible Stop control"
+    }
+  ]
+}

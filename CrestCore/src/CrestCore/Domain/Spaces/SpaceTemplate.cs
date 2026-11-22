@@ -61,7 +61,7 @@ public sealed class SpaceTemplate {
         tabs: (tabIds, now) => [.. PracticeTab.All.Select(tab => tab.Opened(tabIds(), now))]);
 
     /// The one Space a first launch starts with when nothing is carried to it:
-    /// Personal, wearing the Winter house look, with one Start Page tab. No
+    /// Personal, wearing Crest's own house look, with one Start Page tab. No
     /// new Space comes from it.
     public static readonly SpaceTemplate FirstInstall = new(isPrivate: false, name: _ => "Personal", symbol: "person.fill",
         accent: _ => SpaceAccent.Indigo, look: accent => accent.House, browsing: OrdinaryBrowsing, credentials: SavesPasswords,

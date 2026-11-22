@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "app-icon-paper-tile",
+      "category": "improved",
+      "message": "The default app icon sits on a warm paper tile in light mode, so its butter banner stands out instead of fading into a near-white background."
+    }
+  ]
+}

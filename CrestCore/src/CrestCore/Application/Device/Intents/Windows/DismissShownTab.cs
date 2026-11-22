@@ -20,7 +20,7 @@ public sealed record DismissShownTab(Guid WindowId, Guid SpaceId, Guid TabId) : 
             if (window.Tab(space.Id) != TabId) return;
             fallback = window.DismissalFallback(space.Id, TabId, space.Tabs.Select(tab => tab.Id).ToHashSet());
         }
-        if (fallback is { } tabId && authority.Touch(space.Id, tabId, DateTimeOffset.UtcNow) is { } touched)
+        if (fallback is { } tabId && authority.Touch(space.Id, tabId, turn.Now) is { } touched)
             Device.Publish(SessionChanges.Publish(window.WorkspaceId, touched.Previous, touched.Next), turn.Changes);
         var session = authority.Current;
         lock (device.Gate)

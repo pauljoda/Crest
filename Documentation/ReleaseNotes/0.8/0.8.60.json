@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "space-icon-size-setting",
+      "category": "new",
+      "message": "The Space icons at the bottom of the sidebar shrink so more Spaces fit without scrolling. To keep one size instead, turn off Fit Space icons to sidebar in Appearance settings and choose it with the slider."
+    }
+  ]
+}

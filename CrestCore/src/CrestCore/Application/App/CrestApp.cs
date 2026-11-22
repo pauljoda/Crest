@@ -154,10 +154,11 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
     /// published. Afterwards each engine tab group follows the folder that
     /// shows it, the pages windows show are stamped, and one shown
     /// again or of a Space this process may not show ends its Picture in
-    /// Picture; closed tabs let go of what they kept, what a page that went
-    /// had asked no longer waits, and an extension install whose Space went
-    /// out of reach ends. The engine commands the turn caused are delivered
-    /// once the lock is released.
+    /// Picture; closed tabs let go of what they kept, a saved or pinned tab's
+    /// page forgets the tab that opened it, what a page that went had asked
+    /// no longer waits, and an extension install whose Space went out of
+    /// reach ends. The engine commands the turn caused are delivered once the
+    /// lock is released.
     internal IReadOnlyList<Change> Turn(Action<ChangeFeed> apply) {
         IReadOnlyList<Change> published;
         storedSync?.RequireNoTransactionHeldHere();
@@ -167,10 +168,11 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
             // What the folders that show the engines' tab groups hold now.
             pages.ReconcileGroups(Issue);
             // Which pages windows show now, ending the Picture in Picture of
-            // one shown again or of a locked Space, and what closed tabs no
-            // longer keep.
+            // one shown again or of a locked Space, what closed tabs no longer
+            // keep, and the openers of tabs saved or pinned since.
             pages.Stamp(clock.Now, Issue);
             pages.PruneRestoreStates();
+            pages.PruneOpeners(changes);
             // What a page that went had asked no longer waits.
             prompts.Prune(changes);
             closePreparations.Prune(changes, Issue);
@@ -226,13 +228,16 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
     #region Actions - Lifetime
 
     /// Stages and saves any accepted revision still pending and closes the
-    /// session file. The stored session accepts no edits afterwards, and no
-    /// engine binding hears from the core again.
+    /// session file, then waits for the filter lists' conversions under way,
+    /// so none is left running and nothing writes in the storage directory
+    /// once this returns. The stored session accepts no edits afterwards, and
+    /// no engine binding hears from the core again.
     public void Dispose() {
         lock (gate) engines.Clear();
         storedSync?.Stop();
         storedSession?.Close();
         storage?.Dispose();
+        filters.Stop();
     }
 
     #endregion

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-04-extension-tab-identity-root-urls",
+      "category": "fixed",
+      "message": "Keep extension side panels, tab groups and debugging working on tabs at a site's root address"
+    }
+  ]
+}

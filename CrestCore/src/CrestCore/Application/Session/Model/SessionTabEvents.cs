@@ -20,6 +20,16 @@ internal sealed record SessionFaviconUpdate(Guid TabId, bool Adopts, Guid? PageI
     #endregion
 }
 
+/// What becomes of the image kept for the page at a tab's saved address,
+/// whose favicon address is `FaviconUrl`; see `TabSavedImageChanged`.
+internal sealed record SessionSavedImage(Guid TabId, TabSavedImageChange Change, string? FaviconUrl) {
+    #region Actions - Publishing
+
+    public TabSavedImageChanged Changed(Guid workspaceId) => new(workspaceId, TabId, Change, FaviconUrl);
+
+    #endregion
+}
+
 /// A Quick Window's or Peek's page became a tab, which takes the live page
 /// when `AdoptsPage`.
 internal sealed record SessionTransientPromotion(Guid PageId, Guid TabId, bool AdoptsPage) {
@@ -41,12 +51,13 @@ internal sealed record SessionPagePutAway(Guid WindowId, Guid SpaceId, Guid TabI
 }
 
 /// The tabs a command copied, the image it assigned, the transient page it
-/// kept as a tab, the tabs an import placed from its Spaces and the page a
-/// saved or pinned tab put away, which comparing the sessions before and
-/// after it cannot tell.
+/// kept as a tab, the tabs an import placed from its Spaces, the pages saved
+/// or pinned tabs put away and what became of the images kept for tabs'
+/// saved pages, which comparing the sessions before and after it cannot
+/// tell.
 internal sealed record SessionTabEvents(IReadOnlyList<SessionTabCopy> Copies, SessionFaviconUpdate? Favicon,
     SessionTransientPromotion? Promotion = null, IReadOnlyList<ImportedTab>? Imported = null,
-    SessionPagePutAway? PutAway = null) {
+    IReadOnlyList<SessionPagePutAway>? PutAways = null, IReadOnlyList<SessionSavedImage>? SavedImages = null) {
     #region Static Variables
 
     public static SessionTabEvents None { get; } = new([], null);
@@ -55,13 +66,15 @@ internal sealed record SessionTabEvents(IReadOnlyList<SessionTabCopy> Copies, Se
 
     #region Actions - Publishing
 
-    /// The changes that tell a reader of `workspaceId` what happened.
+    /// The changes that tell a reader of `workspaceId` what happened. A saved
+    /// page's image is kept before the tab wears another.
     public IEnumerable<Change> Changes(Guid workspaceId) =>
         Copies.Select(copy => (Change)copy.Copied(workspaceId))
+            .Concat((SavedImages ?? []).Select(saved => saved.Changed(workspaceId)))
             .Concat(Favicon is { } favicon ? [favicon.Assigned(workspaceId)] : [])
             .Concat(Promotion is { } promotion ? [promotion.Promoted(workspaceId)] : [])
             .Concat(Imported is { Count: > 0 } imported ? [new TabsImported(workspaceId, imported)] : [])
-            .Concat(PutAway is { } putAway ? [putAway.PutAway(workspaceId)] : []);
+            .Concat((PutAways ?? []).Select(putAway => putAway.PutAway(workspaceId)));
 
     #endregion
 }

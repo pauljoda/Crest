@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "mcp-native-browser-tools",
+      "category": "improved",
+      "message": "Connected tools can search history, use search providers, and open windows in allowed Spaces, and delete an address from a Space’s history once you agree, while private tabs remain inaccessible."
+    }
+  ]
+}

@@ -31,8 +31,9 @@ struct BrowserSpacePageSurface: NSViewRepresentable {
             lockedSpaceIDs: model.lockedSpaceIDs,
             shownPins: shownPins,
             layoutDirection: context.environment.layoutDirection,
-            presentation: animatesSpacePages && !context.environment.accessibilityReduceMotion
-                ? context.environment.spacePagerPresentation : nil
+            presentation: context.environment.spacePagerPresentation,
+            slides: SpacePageMotionPreference.slides(
+                animatesPages: animatesSpacePages, reduceMotion: context.environment.accessibilityReduceMotion)
         ) { space, isSelected in
             SpacePageRoot(
                 content: BrowserRootPageSurface(

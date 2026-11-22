@@ -38,6 +38,21 @@ esac
 [ "${CI_XCODE_SCHEME:-}" = "$expected_scheme" ] \
     || fail "${CI_PRODUCT_PLATFORM} archives must use the ${expected_scheme} scheme."
 
+repository_path="${CI_PRIMARY_REPOSITORY_PATH:-}"
+[ -n "$repository_path" ] \
+    || fail "CI_PRIMARY_REPOSITORY_PATH is unavailable."
+project="$repository_path/project.yml"
+[ -f "$project" ] || fail "project.yml is missing from the primary repository."
+
+# The project's own Xcode pin is the oldest Xcode that builds it.
+required_xcode="$(sed -n 's/^  xcodeVersion: "\([0-9][0-9.]*\)"$/\1/p' "$project")"
+required_major="${required_xcode%%.*}"
+case "$required_major" in
+    ''|*[!0-9]*)
+        fail "project.yml names no Xcode version."
+        ;;
+esac
+
 xcode_version="$(xcodebuild -version | awk 'NR == 1 { print $2 }')"
 xcode_build="$(xcodebuild -version | awk 'NR == 2 { print $3 }')"
 xcode_major="${xcode_version%%.*}"
@@ -46,8 +61,8 @@ case "$xcode_major" in
         fail "Unable to determine the Xcode major version from '$xcode_version'."
         ;;
 esac
-[ "$xcode_major" -ge 26 ] \
-    || fail "Crest requires Xcode 26 or newer; Xcode Cloud selected $xcode_version."
+[ "$xcode_major" -ge "$required_major" ] \
+    || fail "Crest requires Xcode $required_major or newer; Xcode Cloud selected $xcode_version."
 case "$xcode_build" in
     27A266a)
         # Apple accepts Xcode 27 RC for App Store and TestFlight submissions.
@@ -59,16 +74,17 @@ case "$xcode_build" in
         ;;
 esac
 
-repository_path="${CI_PRIMARY_REPOSITORY_PATH:-}"
-[ -n "$repository_path" ] \
-    || fail "CI_PRIMARY_REPOSITORY_PATH is unavailable."
-
 repository_url="$(git -C "$repository_path" remote get-url origin 2>/dev/null || true)"
+# Crest moved from pauljoda to the crest-browser organization. Xcode Cloud
+# reports the old address until its repository connection is changed, so both
+# are accepted until then.
 case "$repository_url" in
+    http://github.com/crest-browser/Crest.git|https://github.com/crest-browser/Crest.git|git@github.com:crest-browser/Crest.git|http://*@github.com/crest-browser/Crest.git|https://*@github.com/crest-browser/Crest.git)
+        ;;
     http://github.com/pauljoda/Crest.git|https://github.com/pauljoda/Crest.git|git@github.com:pauljoda/Crest.git|http://*@github.com/pauljoda/Crest.git|https://*@github.com/pauljoda/Crest.git)
         ;;
     *)
-        fail "The Crest workflow must use https://github.com/pauljoda/Crest.git as its primary repository; received '${repository_url:-unset}'."
+        fail "The Crest workflow must use https://github.com/crest-browser/Crest.git as its primary repository; received '${repository_url:-unset}'."
         ;;
 esac
 
@@ -79,17 +95,8 @@ checked_out_commit="$(git -C "$repository_path" rev-parse HEAD)"
 [ "$checked_out_commit" = "$cloud_commit" ] \
     || fail "Xcode Cloud reports commit $cloud_commit but checked out $checked_out_commit."
 
-project="$repository_path/project.yml"
 scheme="$repository_path/Crest.xcodeproj/xcshareddata/xcschemes/${expected_scheme}.xcscheme"
-[ -f "$project" ] || fail "project.yml is missing from the primary repository."
 [ -f "$scheme" ] || fail "The shared ${expected_scheme} archive scheme is missing."
-
-grep -q 'xcodeVersion: "27.0"' "$project" \
-    || fail "project.yml must remain pinned to the Xcode 27 project format."
-grep -q 'iOS: "26.1"' "$project" \
-    || fail "The iOS deployment target must remain 26.1."
-grep -q 'macOS: "26.1"' "$project" \
-    || fail "The macOS deployment target must remain 26.1."
 
 CREST_VERSION_REPOSITORY_ROOT="$repository_path" \
     "$repository_path/Scripts/check-version.sh" --static

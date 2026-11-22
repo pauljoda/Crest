@@ -1,7 +1,9 @@
 import WebKit
 
 @MainActor
-final class BrowserContentRuleListCompilerAdapter: BrowserContentRuleListCompiling {
+final class BrowserContentRuleListCompilerAdapter {
+    /// The compiled lists `identifiers` name, in order: each one `store`
+    /// already holds, or compiled from the source `source` answers for it.
     func compile(
         identifiers: [String],
         source: (String) throws -> String,

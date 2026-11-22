@@ -36,11 +36,7 @@ struct BrowserDeveloperToolbarButton: View {
         Button(action: action) {
             Image(systemName: systemImage)
                 .font(.system(size: 13, weight: .semibold))
-                .frame(
-                    width: BrowserDeveloperToolbarMetrics.buttonSize,
-                    height: BrowserDeveloperToolbarMetrics.buttonSize
-                )
-                .contentShape(.rect)
+                .foregroundStyle(isActive ? .primary : .secondary)
         }
         .buttonStyle(BrowserDeveloperToolbarButtonStyle(isActive: isActive))
         .accessibilityLabel(Text(label))
@@ -57,25 +53,27 @@ struct BrowserDeveloperToolbarDivider: View {
     }
 }
 
+/// The bar's buttons: the design system's chrome surface, which shows a
+/// tool that is on as selected, with the bar's own press motion.
 private struct BrowserDeveloperToolbarButtonStyle: ButtonStyle {
     let isActive: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .foregroundStyle(isActive ? .primary : .secondary)
-            .background(
-                isActive || configuration.isPressed
-                    ? Color.primary.opacity(0.12)
-                    : .clear,
-                in: .rect(cornerRadius: 7, style: .continuous)
-            )
-            .scaleEffect(configuration.isPressed ? 0.94 : 1)
-            .animation(
-                CrestMotion.developerPress.unlessReducingMotion(reduceMotion),
-                value: configuration.isPressed
-            )
+        CrestChromeButtonStyle(
+            controlSize: CGSize(
+                width: BrowserDeveloperToolbarMetrics.buttonSize,
+                height: BrowserDeveloperToolbarMetrics.buttonSize
+            ),
+            isSelected: isActive
+        )
+        .makeBody(configuration: configuration)
+        .scaleEffect(configuration.isPressed ? 0.94 : 1)
+        .animation(
+            CrestMotion.developerPress.unlessReducingMotion(reduceMotion),
+            value: configuration.isPressed
+        )
     }
 }
 

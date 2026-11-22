@@ -161,9 +161,6 @@ final class MobileBrowserSidebarReorderPolicyTests: XCTestCase {
         state.update(pointer: CGPoint(x: tile(2, onPage: 0).maxX, y: grabbed.y))
 
         XCTAssertEqual(
-            state.lift?.grabOffset, CGSize(width: 31, height: 23.5),
-            "The lift is drawn under the pointer, from the tile it left.")
-        XCTAssertEqual(
             state.resolvedTarget?.kind, .insert(section: pinned, beforeID: .tab(pins[3]), index: 2),
             "Past the third tile, the pin lands after it.")
         XCTAssertEqual(

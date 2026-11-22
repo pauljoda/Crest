@@ -15,9 +15,6 @@ public sealed partial class BrowserContractsTests {
     private static readonly ScriptDialogQuestion Confirmation =
         new(JavaScriptDialogKind.Confirm, "Leave?", "", "https://example.com/");
 
-    private static PermissionQuestion LocationRequest =>
-        new(SitePermission.Location, new SiteOrigin("https", "maps.example", 443), new SiteOrigin("https", "maps.example", 443));
-
     [Fact]
     public void ScreenSharingGoesOnToTheSystemsPickerUnlessBlockedAndIsNeverAllowedAhead() {
         var (app, engine, binding, page, _, _, space, _) = LivePage();

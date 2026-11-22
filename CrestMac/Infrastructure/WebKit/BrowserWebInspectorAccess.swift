@@ -11,6 +11,9 @@ enum BrowserWebInspectorAccess {
     // than Swift API. Resolve it dynamically so an unavailable selector is
     // a disabled action instead of a launch-time linkage failure.
     private static let inspectorSelector = NSSelectorFromString("_inspector")
+    /// How often a request to the inspector's page tries again while that
+    /// page is still loading its interface.
+    private static let inspectorReadyInterval: Duration = .milliseconds(100)
     private static let showSelector = NSSelectorFromString("show")
     private static let showConsoleSelector = NSSelectorFromString("showConsole")
     private static let showResourcesSelector = NSSelectorFromString("showResources")
@@ -161,7 +164,7 @@ enum BrowserWebInspectorAccess {
                     """
                 )
                 if result as? Bool == true { return }
-                try? await Task.sleep(for: .milliseconds(100))
+                try? await Task.sleep(for: inspectorReadyInterval)
             }
         }
     }

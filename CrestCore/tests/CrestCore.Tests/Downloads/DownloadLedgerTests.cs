@@ -1,3 +1,4 @@
+using CrestCore.Application;
 using CrestCore.Contracts;
 using CrestCore.Domain;
 
@@ -7,10 +8,8 @@ namespace CrestCore.Tests;
 
 public sealed class DownloadLedgerTests {
     private static readonly Guid Work = Guid.NewGuid(), Personal = Guid.NewGuid();
-    private static readonly DateTimeOffset Epoch = new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset Epoch = StoredSessionCodec.ReferenceEpoch;
     private static readonly TimeSpan Day = TimeSpan.FromDays(1);
-
-    private static DateTimeOffset At(double seconds) => Epoch.AddSeconds(seconds);
 
     private static Guid Begin(DownloadLedger ledger, Guid profile, string filename = "file.pdf", DateTimeOffset? createdAt = null,
         bool acknowledged = false) => ledger.Begin(Guid.NewGuid(), profile, filename, createdAt ?? Epoch, acknowledged).Id;

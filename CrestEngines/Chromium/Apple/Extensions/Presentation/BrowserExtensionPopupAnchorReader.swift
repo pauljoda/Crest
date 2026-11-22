@@ -17,6 +17,7 @@ struct BrowserExtensionPopupAnchorReader: NSViewRepresentable {
     func makeNSView(context: Context) -> BrowserExtensionPopupAnchorView {
         let view = BrowserExtensionPopupAnchorView()
         view.popupAnchorDidChange = { popupAnchor = $0 }
+        view.standing = context.environment.browserExtensionAnchorStanding
         view.site = site
         return view
     }
@@ -26,6 +27,7 @@ struct BrowserExtensionPopupAnchorReader: NSViewRepresentable {
         context: Context
     ) {
         nsView.popupAnchorDidChange = { popupAnchor = $0 }
+        nsView.standing = context.environment.browserExtensionAnchorStanding
         nsView.site = site
     }
 

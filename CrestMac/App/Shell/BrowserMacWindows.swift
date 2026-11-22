@@ -67,7 +67,9 @@ final class BrowserMacWindows {
     // MARK: - Variables
 
     private unowned let application: BrowserMacApplication
-    private unowned let engineHost: any BrowserMacEngineHost
+    /// The engine that owns the process, which the commands only it can run
+    /// ask.
+    unowned let engineHost: any BrowserMacEngineHost
 
     /// The engine and version the build runs pages in, where it names one,
     /// as About Crest credits it.
@@ -92,39 +94,31 @@ final class BrowserMacWindows {
     /// The model of the key window, when it is a browser window over the
     /// person's own Spaces.
     var activeWindowModel: BrowserMacWindowModel? {
-        guard let key = controller(showing: NSApp.keyWindow), key.kind.hasWindowModel else { return nil }
-        return application.windowCoordinator.existingModel(for: key.windowID)
+        windowModel(showing: NSApp.keyWindow)
     }
 
     /// The stores of the key window, when it is a browser or the private window.
     var activeContext: BrowserMacWindowContext? {
-        if controller(showing: NSApp.keyWindow)?.kind == .private {
-            return BrowserMacWindowContext(
-                browser: application.privateBrowser, pages: application.privatePages,
-                chrome: application.privateChrome, windowID: application.privatePages.windowID)
-        }
-        return activeWindowModel.map(Self.context(of:))
+        context(showing: NSApp.keyWindow)
     }
 
     /// The menu bar's commands as they run in the key browser window.
     var activeActions: BrowserCommandActions? {
-        guard let context = activeContext else { return nil }
-        return BrowserCommandActions(
-            browser: context.browser, pages: context.pages, chrome: context.chrome, windows: self,
-            spaceAccess: application.spaceAccess, targetWindowID: context.windowID)
+        actions(showing: NSApp.keyWindow)
     }
 
     /// The page commands as they run in the key Quick Window, on the page it
     /// shows; nil while no Quick Window with a page is key.
     var activeQuickWindowActions: BrowserCommandActions? {
-        guard let key = controller(showing: NSApp.keyWindow), key.kind == .quick,
-            let quickWindow = quickWindows[key.windowID], let pages = quickWindow.model.pages,
-            let page = quickWindow.model.page
-        else { return nil }
-        return BrowserCommandActions(
-            browser: quickWindow.model.browser, pages: pages, chrome: quickWindow.chrome, windows: self,
-            spaceAccess: application.spaceAccess, targetWindowID: quickWindow.request.value.targetWindowID,
-            quickWindowPage: page)
+        quickWindowActions(showing: NSApp.keyWindow)
+    }
+
+    /// The page commands as they run in the shell window the key window hangs
+    /// from, as an extension's popup hangs from the window it opened in: the
+    /// popup's own keys reach Crest from inside it.
+    var keyChildParentPageActions: BrowserCommandActions? {
+        guard let parent = NSApp.keyWindow?.parent else { return nil }
+        return quickWindowActions(showing: parent) ?? actions(showing: parent)
     }
 
     /// Whether the key window is a Quick Window.
@@ -214,6 +208,44 @@ final class BrowserMacWindows {
         return controllers.first { $0.window === window }
     }
 
+    /// The model of `window`, when it is a browser window over the person's
+    /// own Spaces.
+    private func windowModel(showing window: NSWindow?) -> BrowserMacWindowModel? {
+        guard let controller = controller(showing: window), controller.kind.hasWindowModel else { return nil }
+        return application.windowCoordinator.existingModel(for: controller.windowID)
+    }
+
+    /// The stores of `window`, when it is a browser or the private window.
+    private func context(showing window: NSWindow?) -> BrowserMacWindowContext? {
+        if controller(showing: window)?.kind == .private {
+            return BrowserMacWindowContext(
+                browser: application.privateBrowser, pages: application.privatePages,
+                chrome: application.privateChrome, windowID: application.privatePages.windowID)
+        }
+        return windowModel(showing: window).map(Self.context(of:))
+    }
+
+    /// The menu bar's commands as they run in `window`, a browser window.
+    private func actions(showing window: NSWindow?) -> BrowserCommandActions? {
+        guard let context = context(showing: window) else { return nil }
+        return BrowserCommandActions(
+            browser: context.browser, pages: context.pages, chrome: context.chrome, windows: self,
+            spaceAccess: application.spaceAccess, targetWindowID: context.windowID)
+    }
+
+    /// The page commands as they run in `window`, a Quick Window, on the page
+    /// it shows.
+    private func quickWindowActions(showing window: NSWindow?) -> BrowserCommandActions? {
+        guard let controller = controller(showing: window), controller.kind == .quick,
+            let quickWindow = quickWindows[controller.windowID], let pages = quickWindow.model.pages,
+            let page = quickWindow.model.page
+        else { return nil }
+        return BrowserCommandActions(
+            browser: quickWindow.model.browser, pages: pages, chrome: quickWindow.chrome, windows: self,
+            spaceAccess: application.spaceAccess, targetWindowID: quickWindow.request.value.targetWindowID,
+            quickWindowPage: page)
+    }
+
     private func controller(_ kind: BrowserMacWindowKind, id: UUID? = nil) -> BrowserMacWindowController? {
         controllers.first { $0.kind == kind && (id == nil || $0.windowID == id) }
     }
@@ -256,15 +288,21 @@ final class BrowserMacWindows {
     /// After a launch that ended while it reopened its pages, the person first
     /// chooses whether to reopen them; if not, every window opens on the Start
     /// Page, and its tabs wait in the sidebar.
-    private func open(_ plan: LaunchWindowPlan, activation: BrowserMacWindowActivation = .key) {
+    private func open(
+        _ plan: LaunchWindowPlan, activation: BrowserMacWindowActivation = .key,
+        placing place: ((BrowserMacWindow) -> Void)? = nil, onStartupChoice: Bool = true
+    ) {
         heldLaunch = nil
-        application.startupWindowID = plan.startupWindowID
+        // A launch setup held back opens on the tabs setup left, such as the
+        // guide, rather than the startup choice.
+        application.startupWindowID = onStartupChoice ? plan.startupWindowID : nil
         if plan.quitWhileReopening, !Self.reopensPagesAfterQuit() {
             application.startPageWindowIDs = Set(plan.windowIDs)
         }
         beginReopeningPages()
         for id in plan.windowIDs {
-            open(.reopening(id), activation: id == plan.startupWindowID ? activation : .background)
+            let isStartup = id == plan.startupWindowID
+            open(.reopening(id), activation: isStartup ? activation : .background, placing: isStartup ? place : nil)
         }
         application.startPageWindowIDs = []
     }
@@ -297,7 +335,10 @@ final class BrowserMacWindows {
 
     /// Opens the browser window `request` names, or brings forward the one
     /// open under its identity, as `activation` says.
-    func open(_ request: BrowserMacWindowRequest, activation: BrowserMacWindowActivation) {
+    func open(
+        _ request: BrowserMacWindowRequest, activation: BrowserMacWindowActivation,
+        placing place: ((BrowserMacWindow) -> Void)? = nil
+    ) {
         let kind = BrowserMacWindowKind.browsing(request)
         if let existing = controllers.first(where: { $0.kind.hasWindowModel && $0.windowID == request.id }) {
             existing.present(activation)
@@ -306,7 +347,7 @@ final class BrowserMacWindows {
         guard let model = application.windowCoordinator.model(for: request) else { return }
         show(
             kind, id: request.id, closeGate: model.closeGate,
-            cascadingFrom: NSApp.keyWindow.flatMap { browserWindowID(of: $0) == nil ? nil : $0 },
+            cascadingFrom: NSApp.keyWindow.flatMap { browserWindowID(of: $0) == nil ? nil : $0 }, placing: place,
             activation: activation, content: { _ in application.browserWindowContent(model) },
             closed: { [weak self] controller in
                 self?.forget(controller)
@@ -525,39 +566,61 @@ final class BrowserMacWindows {
                     cloudSync: application.cloudSync, progress: application.onboardingProgress,
                     spaceAccess: application.spaceAccess, extensionInstaller: engineHost.importedExtensionInstaller,
                     closeWindow: { [weak window] in window?.close() },
-                    openBrowser: { [weak self] in self?.openBrowser(after: source?.id) })
+                    openBrowser: { [weak self, weak window] handingOver in
+                        self?.handOff(from: window, after: source?.id, handingOver: handingOver)
+                    })
             },
             closed: { [weak self] controller in self?.forget(controller) })
     }
 
-    /// Setup finished: the window it was opened from comes forward, or the
-    /// launch it held back opens, or else a new browser window.
-    private func openBrowser(after sourceWindowID: UUID?) {
+    /// Setup finished and hands over to Crest: the window it was opened from
+    /// comes forward, or the launch it held back opens, or else a new browser
+    /// window. A window that opens takes over `setup`'s frame, on the tab
+    /// setup left it on rather than the startup choice: the guide. Crest
+    /// comes in behind setup and draws there first; once the guide is on
+    /// screen in it, `handingOver` moves setup's preview into the window's
+    /// place as setup fades away over it and closes, so the preview becomes
+    /// the window without a flash or a page arriving late.
+    private func handOff(from setup: NSWindow?, after sourceWindowID: UUID?, handingOver: @escaping () -> Void) {
+        let guides = BrowserGettingStartedView.presentations
+        let place: ((BrowserMacWindow) -> Void)? = setup.map { setup in { $0.setFrame(setup.frame, display: false) } }
         if let sourceWindowID,
             let source = controllers.first(where: { $0.kind.hasWindowModel && $0.windowID == sourceWindowID })
         {
-            source.present(.key)
+            source.present(.background)
         } else if let heldLaunch {
-            open(heldLaunch)
+            open(heldLaunch, activation: .background, placing: place, onStartupChoice: false)
         } else {
-            open(.normal(sourceWindowID: nil), activation: .key)
+            open(.normal(sourceWindowID: nil), activation: .background, placing: place)
+        }
+        guard let setup else {
+            handingOver()
+            return
+        }
+        // Behind setup whichever window is key, so Crest draws out of sight.
+        frontmostBrowserWindow()?.order(.below, relativeTo: setup.windowNumber)
+        Task { @MainActor [weak self] in
+            let clock = ContinuousClock()
+            let deadline = clock.now + BrowserMacWindowsMetrics.handOffGuideWait
+            while BrowserGettingStartedView.presentations == guides, clock.now < deadline {
+                try? await Task.sleep(for: BrowserMacWindowsMetrics.handOffPoll)
+            }
+            try? await Task.sleep(for: BrowserMacWindowsMetrics.handOffDraw)
+            handingOver()
+            await NSAnimationContext.runAnimationGroup { context in
+                context.duration = BrowserMacWindowsMetrics.handOffFade
+                setup.animator().alphaValue = 0
+            }
+            setup.close()
+            self?.frontmostBrowserWindow()?.makeKeyAndOrderFront(nil)
         }
     }
 
-    // MARK: - Actions - Update details
-
-    /// The release notes for the update the sidebar card presents. One window,
-    /// brought forward when asked again, and never restored at launch.
-    func openSoftwareUpdateDetails() {
-        guard !bringForwardOpenWindow(of: .updateDetails) else { return }
-        show(
-            .updateDetails,
-            content: { window in
-                BrowserSoftwareUpdateDetailsView(
-                    model: application.softwareUpdates.model, closeWindow: { [weak window] in window?.close() }
-                ).tint(CrestBrandTheme.accent)
-            },
-            closed: { [weak self] controller in self?.forget(controller) })
+    /// The browser window in front of the others, if any is open.
+    private func frontmostBrowserWindow() -> NSWindow? {
+        NSApp.orderedWindows.first { window in
+            window.isVisible && controllers.contains { $0.kind.hasWindowModel && $0.window === window }
+        }
     }
 
     // MARK: - Actions - Presenting
@@ -587,4 +650,15 @@ final class BrowserMacWindows {
     private func forget(_ controller: BrowserMacWindowController) {
         controllers.removeAll { $0 === controller }
     }
+}
+
+enum BrowserMacWindowsMetrics {
+    /// How long setup waits at most for the guide to come on screen behind
+    /// it, how often it looks, the frames the guide takes to draw once it is
+    /// there, and how long setup takes to fade away over it.
+    static let handOffGuideWait = Duration.milliseconds(1500)
+    static let handOffPoll = Duration.milliseconds(30)
+    static let handOffDraw = Duration.milliseconds(80)
+    /// Setup fading into Crest as its preview moves into the window's place.
+    static let handOffFade = CrestMotion.onboardingHandOverTransition
 }

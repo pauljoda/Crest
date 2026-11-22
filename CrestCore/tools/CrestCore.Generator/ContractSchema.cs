@@ -25,9 +25,9 @@ internal sealed class ContractRoot {
 
     public static readonly ContractRoot Intent = new(typeof(Intent), travelsToCore: true,
         swiftDocumentation: "A request to change the core's state, sent with `CrestCore.send`.");
-    public static readonly ContractRoot Change = new(typeof(Change), travelsToCore: false,
+    public static readonly ContractRoot Change = new(typeof(Change), travelsToCore: false, takenByType: true,
         swiftDocumentation: "Everything an intent can change. `CoreState.apply` keeps the read model current.");
-    public static readonly ContractRoot Rejection = new(typeof(Rejection), travelsToCore: false,
+    public static readonly ContractRoot Rejection = new(typeof(Rejection), travelsToCore: false, takenByType: true,
         swiftDocumentation: "The rule that refused an intent or a query.", swiftConformances: "Error, Sendable");
     public static readonly ContractRoot Query = new(typeof(Query<>), travelsToCore: true,
         swiftDocumentation: "A question the core answers without changing state, asked with `CrestCore.query`.");
@@ -78,12 +78,17 @@ internal sealed class ContractRoot {
     /// What the Swift enum of a root the core writes conforms to.
     public string SwiftConformances { get; }
 
+    /// Callers take a message of this root through the Swift enum's accessor
+    /// for its member, as `change.pageOpened`, rather than by picking out its
+    /// case.
+    public bool TakenByType { get; }
+
     #endregion
 
     #region Constructors
 
     private ContractRoot(Type type, bool travelsToCore, string swiftDocumentation, bool isEngine = false,
-        bool reachesCore = true, bool? platformSends = null, string swiftConformances = "Sendable") {
+        bool reachesCore = true, bool? platformSends = null, string swiftConformances = "Sendable", bool takenByType = false) {
         Type = type;
         Name = type.IsGenericTypeDefinition ? type.Name[..type.Name.IndexOf('`', StringComparison.Ordinal)] : type.Name;
         TravelsToCore = travelsToCore;
@@ -92,6 +97,7 @@ internal sealed class ContractRoot {
         IsEngine = isEngine;
         SwiftDocumentation = swiftDocumentation;
         SwiftConformances = swiftConformances;
+        TakenByType = takenByType;
     }
 
     #endregion

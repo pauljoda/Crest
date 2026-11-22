@@ -179,7 +179,7 @@
         /// a panel instead of a popup. The card belongs to the page's own
         /// window's page row.
         static func routeSidePanel(_ requested: SidePanelRequested) {
-            guard let shell, !shell.isQuitting, let page = chromiumEngine?.page(requested.pageID.uuidString),
+            guard let shell, !shell.isQuitting, let page = chromiumEngine?.page(requested.pageID),
                 let window = page.surface.window
             else { return }
             guard let windowID = shell.windows?.pageRowWindowID(of: window),

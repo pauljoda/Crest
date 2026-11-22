@@ -10,6 +10,14 @@ public sealed record TabContent(string? Address, NativeView? View, string? Title
 
 #endregion
 
+#region Answers
+
+/// The tabs an action would remove from a Space, whose pages are asked
+/// whether they may go before it is sent.
+public sealed record RemovedTabs(IReadOnlyList<Guid> TabIds);
+
+#endregion
+
 #region Rejections
 
 /// The tab is in a split, and the section it would move to holds no splits,

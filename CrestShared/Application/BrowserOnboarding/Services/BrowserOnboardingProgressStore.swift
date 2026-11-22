@@ -21,11 +21,6 @@ final class BrowserOnboardingProgressStore {
     /// whether the gate holds asks again.
     private var finishes = 0
 
-    /// Whether the device has completed setup, as far as this launch asks.
-    var hasCompletedSetup: Bool {
-        !forcesSetup && core.state.setupCompleted == true
-    }
-
     /// Whether setup holds this launch's windows back, as the core answers.
     var isLaunchGateActive: Bool {
         // The answer follows what these say; reading them asks again when they change.

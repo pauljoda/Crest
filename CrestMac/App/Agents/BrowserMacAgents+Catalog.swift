@@ -82,8 +82,7 @@ extension BrowserMacAgents {
                 let text = (entry.url + " " + entry.title).lowercased()
                 guard terms.allSatisfy({ text.contains($0) }) else { return nil }
                 // Browser and extension pages are outside the agent's reach, even if persisted as history.
-                guard let url = URL(string: entry.url), let scheme = url.scheme?.lowercased(),
-                    scheme == "http" || scheme == "https", let host = url.host?.lowercased()
+                guard let url = URL(string: entry.url), url.webScheme != nil, let host = url.host?.lowercased()
                 else { return nil }
                 if let domain, !domain.isEmpty {
                     guard host == domain || host.hasSuffix("." + domain) else { return nil }

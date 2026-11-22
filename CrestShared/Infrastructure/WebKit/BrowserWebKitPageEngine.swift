@@ -158,6 +158,24 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
             scheduleCloseTimeout()
         }
 
+        /// Closes WebKit's page once its owner has let it go, so nothing loads,
+        /// commits or plays in it again, whoever still holds the web view. A page
+        /// left open keeps running its scripts, and WebKit commits a navigation
+        /// to another site in a new process; a web view whose last release lands
+        /// during that commit crashes WebKit. WebKit empties the page's history
+        /// as it closes, and the core reads that history as the page ends, so the
+        /// close waits for the next turn. It holds the web view until the close
+        /// returns, so the last release always comes after it.
+        func retire() {
+            let webView = webView
+            Task { @MainActor in
+                let selector = NSSelectorFromString("_close")
+                guard webView.responds(to: selector) else { return }
+                typealias Close = @convention(c) (AnyObject, Selector) -> Void
+                unsafeBitCast(webView.method(for: selector), to: Close.self)(webView, selector)
+            }
+        }
+
         /// The person is deciding; a prompt has no time limit.
         func beforeUnloadPanelWillAppear() { closeTimeout?.cancel() }
 

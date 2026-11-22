@@ -173,8 +173,9 @@ public sealed partial class NativeSessionAuthority {
         IncomingSyncRecords records, bool replacing, DateTimeOffset now, IIdSource ids) {
         if (!replacing) records.RequireSameSpaces(journal);
         var emptySpace = SpaceTemplate.Ordinary.Make(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid, number: 1, now);
-        var removals = (superseded?.Removals ?? SyncRemovals.None).Reasons(SyncDeletionReason.Superseded);
-        var result = NativeSyncSessionTransition.Prepare(journal, basis, records.Batch(), replacing, now, emptySpace, Access, ids, removals);
+        var superseding = superseded?.Removals ?? SyncRemovals.None;
+        var result = NativeSyncSessionTransition.Prepare(journal, basis, records.Batch(), replacing, now, emptySpace, Access, ids,
+            superseding.Reasons(SyncDeletionReason.Superseded), superseding.Emptied);
         _ = result.Journal.Read();
         return new(result.Journal, result.Session, new(Copies(basis, result.Session, result.Origins), Favicon: null));
     }

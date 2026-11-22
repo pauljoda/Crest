@@ -31,15 +31,22 @@ public sealed partial class NativeSessionAuthority {
     private static string PageTitle(Uri address, string? title) =>
         !string.IsNullOrEmpty(title) ? title : address.Host.Length > 0 ? address.Host : address.OriginalString;
 
+    /// Where among the open tabs a new tab the person opens goes.
+    internal NewTabPosition PositionForNewTabs(SessionState basis) => Preferences(basis).NewTabPosition;
+
+    /// Whether a new tab the person opens from a tab in a folder opens at the
+    /// end of that folder, rather than among the open tabs.
+    internal bool NewTabsJoinFolder(SessionState basis) => Preferences(basis).NewTabsJoinFolder;
+
     #endregion
 
     #region Actions - Closing
 
-    /// Where a saved or pinned tab's page returns when it is put away. The
-    /// app's preferences live in the persistent session, which every other
-    /// workspace follows.
-    internal SavedTabClosePolicy ClosePolicy(SessionState basis) =>
-        (basis.AppPreferences ?? device?.PersistentPreferences() ?? AppPreferences.Default).SavedTabClose;
+    /// Where a tab in `placement`'s section returns when closing puts its page
+    /// away, as the app's preferences choose for that section; null for a
+    /// section whose tabs closing archives.
+    internal SavedTabClosePolicy? ClosePolicy(SessionState basis, TabPlacement placement) =>
+        placement.ClosePolicy(Preferences(basis));
 
     #endregion
 }

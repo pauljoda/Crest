@@ -7,7 +7,7 @@ import XCTest
 final class BrowserOnboardingFlowTests: XCTestCase {
     /// Setup reads no browser's data until the person asks: opening it lists
     /// the browsers by their apps, and going on with one reads that one alone.
-    func testSetupReadsOnlyTheBrowserThePersonGoesOnWith() async {
+    func testSetupReadsOnlyTheBrowserThePersonGoesOnWith() async throws {
         let discovery = RecordingSourceDiscovery(read: [source(.chrome), source(.arc)])
         let flow = makeFlow(
             sourceDiscovery: discovery,
@@ -20,7 +20,7 @@ final class BrowserOnboardingFlowTests: XCTestCase {
 
         flow.toggleImportSelection(.chrome)
         flow.continueImportQueue()
-        await waitUntil { flow.step == .review }
+        try await waitUntil { flow.step == .review }
         XCTAssertEqual(discovery.readApplications, [.chrome])
     }
 
@@ -85,19 +85,6 @@ final class BrowserOnboardingFlowTests: XCTestCase {
             imported: BrowserStore(seed: SessionState.Seed(spaces: spaces)).snapshot.spaces,
             passwordCandidates: []
         )
-    }
-
-    private func waitUntil(
-        timeout: Duration = .seconds(2),
-        predicate: @MainActor () -> Bool
-    ) async {
-        let clock = ContinuousClock()
-        let deadline = clock.now.advanced(by: timeout)
-        while clock.now < deadline {
-            if predicate() { return }
-            await Task.yield()
-        }
-        XCTFail("Timed out waiting for onboarding flow state")
     }
 
 }

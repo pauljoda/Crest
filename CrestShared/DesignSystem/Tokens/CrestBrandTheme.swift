@@ -8,36 +8,52 @@ import SwiftUI
 /// Crest-authored chrome can adopt the brand without hardcoding an appearance.
 ///
 /// Dark variants keep the light hue and lift luminance only as far as legibility
-/// demands: paper and ink simply trade places, and coral is lifted (hue held at
-/// roughly 8°, saturation held near 0.84) so it stays readable on ink without
-/// reading as a different colour. Every pair below clears WCAG AA for text
-/// (4.5:1) or non-text (3:1) in both schemes.
+/// demands: cream and ink trade places, paper's surface becomes slate, and
+/// Crest blue is lifted so it stays readable on ink without reading as a
+/// different colour. Every pair below clears WCAG AA for text (4.5:1) or
+/// non-text (3:1) in both schemes.
 enum CrestBrandTheme {
     // MARK: - Static Variables
 
     // Component pairs
 
-    /// Coral, lifted for dark: same hue family as `CrestBrandPalette.coral`, with
-    /// enough luminance to sit on ink.
-    static let accentLightComponents = CrestBrandPalette.coralComponents
-    static let accentDarkComponents = CrestColorComponents(red: 241, green: 117, blue: 98)
+    /// Crest blue, the color of anything a person can press or select, lifted
+    /// for dark: the same hue with enough luminance to sit on ink.
+    static let accentLightComponents = CrestBrandPalette.crestBlueComponents
+    static let accentDarkComponents = CrestColorComponents(red: 79, green: 142, blue: 224)
 
     /// The accent when it is *text* rather than a tint.
     ///
     /// `accent` is scoped to the 3:1 non-text minimum, which is all a fill, a stroke,
     /// or a glyph needs. A text-only control — `CrestButtonStyle`'s `.tertiary` and
-    /// `.destructive` roles — is text, and has to clear 4.5:1 against both `canvas`
-    /// and `surface`. Coral cannot do that in light, so this role holds it at the same
-    /// hue (roughly 8°) and saturation family while trading value for legibility:
-    /// darker on paper, lifted on ink.
-    static let accentTextLightComponents = CrestColorComponents(red: 178, green: 64, blue: 47)
-    static let accentTextDarkComponents = CrestColorComponents(red: 250, green: 120, blue: 101)
+    /// `.destructive` roles, or a selected palette row's action — is text, and has to
+    /// clear 4.5:1 against `canvas`, `surface` and a selected row's accent wash. In
+    /// light that takes Crest blue a shade deeper (about 5.3:1 on the wash); on ink it
+    /// is lifted further than the tint.
+    static let accentTextLightComponents = CrestColorComponents(red: 34, green: 92, blue: 172)
+    static let accentTextDarkComponents = CrestColorComponents(red: 122, green: 170, blue: 235)
 
-    static let canvasLightComponents = CrestBrandPalette.paperComponents
+    /// The fill of the one action that leads on, under white text: Crest blue
+    /// in both schemes, which holds that text at about 5.2:1 and still clears
+    /// 3:1 against ink. The lifted `accent` would leave white text short of
+    /// 4.5:1 on ink.
+    static let actionComponents = CrestBrandPalette.crestBlueComponents
+
+    static let canvasLightComponents = CrestBrandPalette.creamComponents
     static let canvasDarkComponents = CrestBrandPalette.inkComponents
 
-    static let surfaceLightComponents = CrestBrandPalette.parchmentComponents
-    static let surfaceDarkComponents = CrestBrandPalette.inkSoftComponents
+    static let surfaceLightComponents = CrestBrandPalette.paperComponents
+    static let surfaceDarkComponents = CrestBrandPalette.slateComponents
+
+    /// Small caps labels: gold on cream (4.6:1), butter on ink.
+    static let labelLightComponents = CrestBrandPalette.goldComponents
+    static let labelDarkComponents = CrestBrandPalette.butterComponents
+
+    /// The ground under a control's choices, such as a segmented picker's
+    /// track: parchment on cream, a wash of paper on ink.
+    static let trackLightComponents = CrestBrandPalette.parchmentComponents
+    static let trackDarkComponents = CrestBrandPalette.paperComponents
+    static let trackDarkOpacity = 0.08
 
     static let textDisplayLightComponents = CrestBrandPalette.inkComponents
     static let textDisplayDarkComponents = CrestBrandPalette.paperComponents
@@ -47,11 +63,11 @@ enum CrestBrandTheme {
     static let textSecondaryLightOpacity = 0.7
     static let textSecondaryDarkOpacity = 0.6
 
-    static let lineLightComponents = CrestBrandPalette.inkComponents
+    static let lineLightComponents = CrestBrandPalette.hairlineComponents
     static let lineDarkComponents = CrestBrandPalette.paperComponents
-    /// Matches `CrestBrandPalette.line`; the dark hairline is lifted because paper
-    /// on ink loses definition faster than ink on paper.
-    static let lineLightOpacity = 0.18
+    /// The warm hairline on cream; the dark hairline is paper at a fifth,
+    /// because paper on ink loses definition faster than ink on paper.
+    static let lineLightOpacity = 1.0
     static let lineDarkOpacity = 0.22
 
     /// A wash of display ink, faint enough to sit under text without taking
@@ -63,6 +79,8 @@ enum CrestBrandTheme {
 
     /// Brand accent for interactive emphasis and tint.
     static let accent = dynamic(light: accentLightComponents, dark: accentDarkComponents)
+    /// The fill of a primary action. See `actionComponents`.
+    static let action = dynamic(light: actionComponents, dark: actionComponents)
     /// Brand accent for text-weight controls. See `accentTextLightComponents`.
     static let accentText = dynamic(
         light: accentTextLightComponents,
@@ -72,6 +90,13 @@ enum CrestBrandTheme {
     static let canvas = dynamic(light: canvasLightComponents, dark: canvasDarkComponents)
     /// A raised card or panel on the canvas.
     static let surface = dynamic(light: surfaceLightComponents, dark: surfaceDarkComponents)
+    /// A flyout floating over a page or the window: paper in the light,
+    /// charcoal in the dark, opaque so nothing behind it shows through.
+    static let flyout = dynamic(light: surfaceLightComponents, dark: CrestBrandPalette.charcoalComponents)
+    /// A page in Crest's neutrals rather than its blues: the cream canvas in
+    /// the light, and in the dark the warm near-black under charcoal panels,
+    /// so the page and the flyouts over it read in black and white.
+    static let neutralCanvas = dynamic(light: canvasLightComponents, dark: CrestBrandPalette.cinderComponents)
     /// Display and body text on `canvas` or `surface`.
     static let textDisplay = dynamic(
         light: textDisplayLightComponents,
@@ -84,6 +109,11 @@ enum CrestBrandTheme {
         dark: textDisplayDarkComponents,
         darkOpacity: textSecondaryDarkOpacity
     )
+    /// Small caps labels over a section or a group.
+    static let label = dynamic(light: labelLightComponents, dark: labelDarkComponents)
+    /// The ground under a control's choices.
+    static let track = dynamic(
+        light: trackLightComponents, lightOpacity: 1, dark: trackDarkComponents, darkOpacity: trackDarkOpacity)
     /// Hairline separators and control borders.
     static let line = dynamic(
         light: lineLightComponents,

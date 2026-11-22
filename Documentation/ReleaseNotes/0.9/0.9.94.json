@@ -1,0 +1,26 @@
+{
+  "entries": [
+    {
+      "id": "closed-folder-shows-loaded-tabs",
+      "category": "improved",
+      "message": "A closed folder shows only its loaded tabs: closing or unloading one of them takes it out of the closed folder right away. It stays in the folder and shows when you open it."
+    },
+    {
+      "id": "folder-header-close-all",
+      "category": "improved",
+      "message": "A folder's header has a − that closes everything in it, then closes the folder. In a saved folder it unloads the loaded tabs, which stay saved; in a group or a folder of open tabs it closes them, and Reopen Closed Tab brings them back."
+    },
+    {
+      "id": "recent-tabs-across-sub-spaces",
+      "category": "improved",
+      "message": "On Mac, the recent tabs switcher also lists the loaded tabs of the other Spaces in a Space's Sub-Space group, with each tab's Space shown on its preview; choosing one switches to its Space.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "top-address-field-click-select",
+      "category": "fixed",
+      "message": "On Mac, with the address bar on top, clicking in the address field places the cursor and dragging selects text, in the window's bar and in each Split View page's bar, instead of moving the window.",
+      "platforms": ["mac"]
+    }
+  ]
+}

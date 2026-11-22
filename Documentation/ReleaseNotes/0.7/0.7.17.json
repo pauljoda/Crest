@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "mobile-launch-crash",
+      "category": "fixed",
+      "message": "Crest on iPhone and iPad opens again instead of closing as soon as it starts.",
+      "platforms": ["ios"]
+    }
+  ]
+}

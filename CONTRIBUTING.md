@@ -61,9 +61,14 @@ for the enforced contracts and current exact exemptions.
 **Build Crest** runs on pull requests and pushes to `main`, and can also be
 dispatched manually. It checks source, core tests and analyzers, architecture,
 scripts, Swift formatting, native contracts, macOS and iOS builds, and the Help
-Center. Release publication calls the same workflow for the exact source SHA
-and waits for it to pass. Run the relevant local validation before opening a
-pull request; builds do not replace native app acceptance checks.
+Center. The macOS and iOS builds run once per change: a draft pull request
+waits until it is marked ready for review, and the push to `main` that merges
+a pull request runs only the checks, since the branch was already built. A
+direct push to `main` builds everything. Release publication calls the same
+workflow's checks for the exact source SHA and waits for them to pass, then
+builds the Mac product while signing it. Run the relevant local validation
+before opening a pull request; builds do not replace native app acceptance
+checks.
 
 Run `Scripts/audit-licenses.py` whenever a package, website dependency, copied
 source file, font, or other third-party asset changes. New runtime dependencies
@@ -126,21 +131,24 @@ Changing the major or minor release line is a separate release decision. Use
 been explicitly approved. Xcode Cloud continues to own distributed integer
 build numbers while the repository keeps build `1` as its local fallback.
 
-Every user-visible or architecture-significant work commit adds a new entry to
-`Documentation/ReleaseNotes.json`. The stable lowercase kebab-case ID is the
-entry's identity across rebases and history rewrites; never reuse, reorder, or
-delete one, and append new entries at the end. Choose `new`, `improved`, or
+Every user-visible or architecture-significant work commit adds its release
+notes to the file for the version it moves to,
+`Documentation/ReleaseNotes/<major>.<minor>/<version>.json`, which
+`Scripts/set-version.sh` names after the bump. Each entry has a unique lowercase
+kebab-case `id`, a `category` and a `message`. Choose `new`, `improved`, or
 `fixed` for public notes and write the message as a concise user-facing outcome.
 Use `internal` to record architecture, release, or tooling work that should not
-appear to users. The fix-commit check requires the new staged entry alongside
-the patch bump.
+appear to users. Add `"platforms": ["mac"]` or `"platforms": ["ios"]` when a
+change reaches only that platform. An entry never changes once it is on `main`.
+The fix-commit check requires the new staged entries, in that version's file,
+alongside the patch bump.
 
 Keep commits focused and use a Conventional Commit subject such as
 `refactor(settings): adopt native split navigation`. Commit subjects remain
-useful development history, but rolling release copy comes from the explicit
-catalog. `CHANGELOG.md` remains the curated stable-release history. Release
-commits freeze its `Unreleased` section under an ISO date and receive an
-annotated `vX.Y.Z` tag. Do not invent historical release tags.
+useful development history, but release copy comes from the release notes. The
+release commit of a Stable version adds that version's curated write-up as
+`release` in its file, and receives an annotated `vX.Y.Z` tag; an App Store
+release receives an `ios-vX.Y.Z` tag. Do not invent historical release tags.
 
 ## Developer Certificate of Origin
 

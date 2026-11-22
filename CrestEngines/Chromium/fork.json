@@ -5,7 +5,5 @@
     "channel": "Stable",
     "platform": "Mac"
   },
-  "integrationBranch": "main",
-  "automaticChannel": "development",
-  "automaticMajorUpdates": false
+  "integrationBranch": "main"
 }

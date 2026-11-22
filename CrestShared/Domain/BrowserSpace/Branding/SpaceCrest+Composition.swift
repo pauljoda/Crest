@@ -5,9 +5,6 @@ import Foundation
 extension SpaceCrest {
     // MARK: - Static Variables
 
-    /// The most colors a crest's own palette holds, as the core enforces it.
-    static var maximumPaletteCount: Int { CapacityLimits.current.crestPalette }
-
     // MARK: - Variables
 
     /// The figure this crest draws: a custom charge when one was chosen, else
@@ -16,15 +13,12 @@ extension SpaceCrest {
         charge ?? .heraldic(symbol)
     }
 
-    /// Whether the crest draws with its own tinctures rather than the Space's.
-    var usesOwnPalette: Bool { palette != nil }
-
     // MARK: - Actions - Colors
 
     /// The colors this crest's layer indices point into.
     func layerColors(spaceColors: ColorPalette) -> ColorPalette {
         if let palette, !palette.isEmpty { return palette }
-        return spaceColors.isEmpty ? [.indigo] : spaceColors
+        return spaceColors.isEmpty ? [SpaceBranding.fallbackColor] : spaceColors
     }
 }
 
@@ -32,6 +26,4 @@ extension CrestMeasure {
     /// The range the renderer draws the measure in.
     var range: ClosedRange<Double> { minimum...maximum }
 
-    /// The range of a count, in whole pieces.
-    var countRange: ClosedRange<Int> { Int(minimum)...Int(maximum) }
 }

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-08-30-webextension-compatibility-layer",
+      "category": "improved",
+      "message": "Improve sign-in, popups, page integration, relaunch behavior, and browser API compatibility for Chrome and Firefox extensions"
+    }
+  ]
+}

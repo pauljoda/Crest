@@ -21,7 +21,7 @@ enum BrowserSetupFinish {
         do {
             return completed(try browser.family.commit(finishing, from: browser), in: browser)
         } catch let rejection {
-            guard case .guideSpaceLocked(let locked) = rejection, let space = browser.spaceModel(locked.spaceID)
+            guard let locked = rejection.guideSpaceLocked, let space = browser.spaceModel(locked.spaceID)
             else { return BrowserSetupRefused(message: rejection.explanation) }
             guard await spaceAccess.unlock(space), !Task.isCancelled else { return BrowserSetupCancelled() }
             do {
@@ -34,10 +34,7 @@ enum BrowserSetupFinish {
 
     /// Opens the guide where the core's finish names it.
     private static func completed(_ changes: [Change], in browser: BrowserStore) -> any BrowserSetupFinishResult {
-        let finished = changes.lazy.compactMap { change -> SetupFinished? in
-            if case .setupFinished(let finished) = change { return finished }
-            return nil
-        }.first
+        let finished = changes.compactMap(\.setupFinished).first
         guard let spaceID = finished?.guideSpaceID, let space = browser.spaceModel(spaceID) else {
             return BrowserSetupCompleted(guide: nil)
         }

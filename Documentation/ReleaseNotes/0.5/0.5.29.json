@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-03-sidebar-empty-space-new-tab",
+      "category": "new",
+      "message": "Double-click or double-tap empty sidebar space to open a new tab"
+    },
+    {
+      "id": "2026-09-03-command-palette-content-centering",
+      "category": "fixed",
+      "message": "Keep the command palette centered over page content as the sidebar and search results change"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "floating-sidebar-previews",
+      "category": "fixed",
+      "message": "On Mac, a sidebar tab's preview no longer pops up when the hidden sidebar slides out under the pointer, and it goes away with the sidebar instead of staying on the page.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "sidebar-reveal-overshoot",
+      "category": "fixed",
+      "message": "On Mac, the hidden sidebar also comes out when the pointer overshoots the window's edge, as it easily does when the window doesn't touch the edge of the screen.",
+      "platforms": ["mac"]
+    }
+  ]
+}

@@ -12,8 +12,11 @@ namespace CrestCore.Contracts;
 public sealed record Navigate(Guid PageId, string Input) : PageIntent {
     #region Actions - Pages
 
-    internal override void Apply(Pages pages, PageTurn turn) =>
-        Load(pages, turn, PageId, (provider, showsInternalPages) => AddressResolution.Loading(Input, provider, showsInternalPages));
+    internal override void Apply(Pages pages, PageTurn turn) {
+        AddressResolution? typed = null;
+        Load(pages, turn, PageId, (provider, showsInternalPages) => (typed = AddressResolution.Typed(Input, provider, showsInternalPages)).Url);
+        if (typed is not null) pages.Hosted(PageId)?.FallBackToHttp(typed);
+    }
 
     /// Loads into page `pageId` the address `resolve` makes for what its Space
     /// searches with and whether its engine shows internal pages. A

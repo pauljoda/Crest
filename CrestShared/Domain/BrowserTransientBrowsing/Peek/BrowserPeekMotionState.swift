@@ -11,12 +11,25 @@ struct BrowserPeekMotionState: Equatable, Sendable {
     var scaleVelocity: Double = 0
     var releasedAt: Date?
     var returnsToSource = false
+    /// Whether the card starts where it rests, at its own size, rather than at
+    /// `location`, as a card closing back into its link does.
+    var startsAtRest = false
 
     /// Clicks settle from the link without pull velocity or an activation threshold.
     static func opening(from source: BrowserPeekSourcePresentation?) -> Self {
         let source = BrowserPeekSourcePresentation.resolved(source)
         let origin = CGPoint(x: source.normalizedTouchX, y: source.normalizedTouchY)
         return Self(origin: origin, location: origin, scale: initialScale, releasedAt: Date())
+    }
+
+    /// A card closing from where it rests back into the link it grew out of,
+    /// on the spring it opened with, fading as it goes.
+    static func closing(from source: BrowserPeekSourcePresentation?) -> Self {
+        let source = BrowserPeekSourcePresentation.resolved(source)
+        let origin = CGPoint(x: source.normalizedTouchX, y: source.normalizedTouchY)
+        return Self(
+            origin: origin, location: origin, scale: 1, releasedAt: Date(), returnsToSource: true,
+            startsAtRest: true)
     }
 }
 

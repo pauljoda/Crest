@@ -109,7 +109,7 @@ internal static class SwiftEmitter {
             if (record.IsNormalizedOnConstruction) conformances.Add("Hashable");
             else if (equatable.Contains(record.Type)) conformances.Add("Equatable");
             conformances.Add("Sendable");
-            if (record.Fields.Any(field => field.Name == "Id")) conformances.Add("Identifiable");
+            if (record.IsIdentified) conformances.Add("Identifiable");
             code.Append('\n').Append($"struct {record.Name}: {string.Join(", ", conformances)} {{\n");
             if (isSent && owner.Root.HasAnswer)
                 code.Append($"    typealias Answer = {TypeName(owner.Member.Answer!)}\n\n");
@@ -356,6 +356,15 @@ internal static class SwiftEmitter {
         code.Append('\n').Append($"/// {root.SwiftDocumentation}\n");
         code.Append($"enum {root.Name}: {(isEquatable ? "Equatable, " : "")}{root.SwiftConformances} {{\n");
         foreach (var member in members) code.Append($"    case {Naming.SwiftMember(member.Name)}({member.Name})\n");
+        if (root.TakenByType) {
+            string noun = Naming.SwiftMember(root.Name);
+            foreach (var member in members) {
+                string name = Naming.SwiftMember(member.Name);
+                code.Append('\n').Append($"    /// The `{member.Name}` this {noun} carries, or nil for another member.\n");
+                code.Append($"    var {Naming.SwiftIdentifier(name)}: {member.Name}? {{\n");
+                code.Append($"        if case .{name}(let value) = self {{ value }} else {{ nil }}\n    }}\n");
+            }
+        }
         foreach (string name in members.SelectMany(member => member.Record.Texts).Select(text => text.Name).Distinct().Order(StringComparer.Ordinal)) {
             string property = Naming.SwiftIdentifier(Naming.SwiftMember(name));
             var carriers = members.Where(member => member.Record.Texts.Any(text => text.Name == name)).ToList();
@@ -398,7 +407,7 @@ internal static class SwiftEmitter {
     /// Every record marked `[HoldsSecrets]`, and every record that holds one
     /// through a field, a list, an optional, another record or a union one of
     /// whose members holds one.
-    private static HashSet<Type> SecretRecords(ContractSchema schema) {
+    internal static HashSet<Type> SecretRecords(ContractSchema schema) {
         var secrets = schema.Records.Where(record => record.HoldsSecrets).Select(record => record.Type).ToHashSet();
         bool changed = true;
         while (changed) {

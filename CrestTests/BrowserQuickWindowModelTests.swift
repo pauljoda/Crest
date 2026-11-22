@@ -66,19 +66,19 @@ final class BrowserQuickWindowModelTests: XCTestCase {
     private func makeContext(
         startsEmpty: Bool = false,
         supportsLivePagePromotion: Bool = false,
-        browsingMode: BrowserBrowsingMode = .privateBrowsing
+        workspaceKind: WorkspaceKind = .private
     ) throws -> QuickWindowTestContext {
         let source = makeSpace(name: "Source")
         let destination = makeSpace(name: "Destination")
         let browser = BrowserStore(
             seed: SessionState.Seed(spaces: [source, destination]),
             credentialVault: InMemoryCredentialVault(),
-            browsingMode: browsingMode,
+            workspaceKind: workspaceKind,
             core: .hostingPages()
         )
         let pages = BrowserPagePool(
             browser: browser,
-            browsingMode: browsingMode,
+            workspaceKind: workspaceKind,
             usesEphemeralWebsiteDataStores: true
         )
         let assignment = BrowserSpaceRuntimeAssignment(space: source)
@@ -124,21 +124,6 @@ final class BrowserQuickWindowModelTests: XCTestCase {
             folders: [],
             tabs: [tab]
         )
-    }
-
-    private func waitUntil(
-        timeout: Duration = .seconds(3),
-        condition: @escaping @MainActor () -> Bool
-    ) async throws {
-        let clock = ContinuousClock()
-        let deadline = clock.now.advanced(by: timeout)
-        while !condition() {
-            guard clock.now < deadline else {
-                XCTFail("Timed out waiting for Quick Window state to change.")
-                return
-            }
-            try await Task.sleep(for: .milliseconds(25))
-        }
     }
 
     private struct QuickWindowTestContext {

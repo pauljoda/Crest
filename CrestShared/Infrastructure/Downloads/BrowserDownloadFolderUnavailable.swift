@@ -18,8 +18,10 @@ struct BrowserDownloadFolderUnavailable: BrowserPlatformDownloadResolution {
             center.send(
                 FailDownload(
                     downloadID: itemID, reason: .folderUnavailable,
-                    message:
-                        "The download folder is unavailable. Open Crest Settings > General > System Permissions to check folder access or choose another folder."
+                    message: String(
+                        localized:
+                            "The download folder is unavailable. Open Crest Settings > General > System Permissions to check folder access or choose another folder."
+                    )
                 ))
         #else
             center.send(FailDownload(downloadID: itemID, reason: .folderUnavailable, message: nil))

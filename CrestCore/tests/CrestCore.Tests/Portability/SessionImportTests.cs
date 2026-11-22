@@ -60,15 +60,33 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal([("Reading", null), ("Untitled Folder", "Reading")], FoldersOf(work));
 
         // Another profile's favorites are its own; a gradient keeps its colors
-        // the way Crest can draw them.
+        // the way Crest can draw them, and an older file's emoji its code point.
         var gradient = spaces[1];
-        Assert.Equal(("chevron.left.forwardslash.chevron.right", SpaceAccent.Orange), (gradient.Settings.Symbol, gradient.Settings.Accent));
+        Assert.Equal(("crest.emoji:🚀", SpaceAccent.Orange), (gradient.Settings.Symbol, gradient.Settings.Accent));
         Assert.Equal([TabPlacement.Pinned, TabPlacement.Pinned], gradient.Tabs.Select(tab => tab.Placement));
         Assert.Equal((SpaceBannerPattern.Diagonal, SpaceThemeMode.Gradient, 3),
             (gradient.Settings.Branding!.BannerPattern, gradient.Settings.Branding.ThemeMode, gradient.Settings.Branding.Colors.Colors.Count));
         Assert.Equal(("globe.americas.fill", SpaceAccent.Teal), (spaces[2].Settings.Symbol, spaces[2].Settings.Accent));
         // Each Space is on a profile of its own, so none shares a session.
         Assert.All(spaces, space => Assert.Null(space.Membership));
+    }
+
+    /// A tab the person renamed in Arc, a pinned tab or a favorite, comes in
+    /// under that name as a rename made in Crest keeps it, over its page's
+    /// title, which shows again once the name is cleared. A tab never renamed
+    /// has no name of its own.
+    [Fact]
+    public void ArcTabsKeepTheNamesThePersonGaveThem() {
+        var work = ReadSession("arc", "arc-rich", "StorableSidebar.json")[0];
+
+        Assert.Equal([
+            ("Favorite", "Mail", "Mail"),
+            ("Today", null, "Today"),
+            ("today-two.example", null, "today-two.example"),
+            ("Saved", "Read later", "Read later"),
+            ("Deep title", "Deep title", "Deep title")
+        ], work.Tabs.Select(tab => (tab.Title, tab.CustomTitle, tab.DisplayTitle)));
+        Assert.All(work.Tabs, tab => Assert.Equal(tab.CustomTitle is null ? null : ImportedAt, tab.TitleModifiedAt));
     }
 
     [Fact]

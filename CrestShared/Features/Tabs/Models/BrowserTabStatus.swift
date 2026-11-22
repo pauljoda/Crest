@@ -15,7 +15,7 @@ struct BrowserTabStatusMark: Equatable {
     /// The page plays sound someone can hear.
     static let playing = Self(
         symbol: "speaker.wave.2.fill",
-        tint: SystemTint.blue.color,
+        tint: .blue,
         title: LocalizedStringResource("Playing Audio", comment: "A tab's mark while its page plays sound."),
         actions: [.mute],
         surface: .equalizer
@@ -24,7 +24,7 @@ struct BrowserTabStatusMark: Equatable {
     /// The page still plays, with its sound muted.
     static let muted = Self(
         symbol: "speaker.slash.fill",
-        tint: SystemTint.blue.color,
+        tint: .blue,
         title: LocalizedStringResource("Muted", comment: "A tab's mark while its page plays with its sound muted."),
         actions: [.unmute]
     )
@@ -32,7 +32,7 @@ struct BrowserTabStatusMark: Equatable {
     /// Another page shows this tab.
     static let shared = Self(
         symbol: SitePermission.screenSharing.symbol,
-        tint: SystemTint.purple.color,
+        tint: .purple,
         title: LocalizedStringResource("Shared", comment: "A tab's mark while another page shares it."),
         actions: [.goToSharingTab, .stopSharing],
         surface: .outline
@@ -41,7 +41,7 @@ struct BrowserTabStatusMark: Equatable {
     /// The tab's page shows another tab.
     static let sharing = Self(
         symbol: "rectangle.on.rectangle",
-        tint: SystemTint.purple.color,
+        tint: .purple,
         title: LocalizedStringResource("Sharing a Tab", comment: "A tab's mark while its page shares another tab."),
         actions: [.goToSharedTab, .stopSharing]
     )

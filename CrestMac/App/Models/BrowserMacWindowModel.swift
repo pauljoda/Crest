@@ -39,11 +39,15 @@ final class BrowserMacWindowModel {
         pages.isPeekOpen = { [weak transientBrowsing] request in
             transientBrowsing?.presentationPhase(for: request) == .committed
         }
-        // Closes as the Peek's own Close button does.
+        // Closes as the Peek's own Close button does: back into its link,
+        // where the card removes itself once it lands, or with Reduce Motion
+        // a fade.
         pages.dismissPeek = { [weak transientBrowsing] request in
-            let animation = CrestMotion.peekDismissal.unlessReducingMotion(
-                NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
-            withAnimation(animation) { _ = transientBrowsing?.dismissPeek(request) }
+            let reducesMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            withAnimation(CrestMotion.peekDismissal.unlessReducingMotion(reducesMotion)) {
+                if !reducesMotion, transientBrowsing?.closePeekIntoSource(request) == true { return }
+                _ = transientBrowsing?.dismissPeek(request)
+            }
         }
         closeGate = BrowserWindowCloseGate(core: browser.core) { [windowID = browser.windowID] in
             PrepareToCloseWindows(requestID: UUID(), windowIDs: [windowID])

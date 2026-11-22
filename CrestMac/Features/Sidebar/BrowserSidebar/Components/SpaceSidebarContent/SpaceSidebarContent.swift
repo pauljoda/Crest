@@ -23,9 +23,13 @@ struct SpaceSidebarContent: View {
     var utilitySearchFocusRequest = 0
     var consumeUtilitySearchFocusRequest: @MainActor (Int, BrowserUtilitySurface) -> Bool = { _, _ in false }
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         VStack(spacing: 0) {
-            if utilitySurface == nil, !browser.isDeleting(space.id) {
+            // With the address bar on top, the page cards' bars carry the
+            // pinned extensions instead.
+            if utilitySurface == nil, !browser.isDeleting(space.id), !addressBarPlacement.showsBarInPageCards {
                 BrowserEngineSidebarAccessory(space: space, browser: browser, pages: pages)
                     // Above the pinned tabs, so the selected pin's glow slides under it.
                     .zIndex(1)
@@ -65,10 +69,16 @@ struct SpaceSidebarContent: View {
                 }
             }
         }
+        // The extensions move into the page cards' bars and the list moves up.
+        .animation(CrestMotion.chrome.unlessReducingMotion(reduceMotion), value: addressBarPlacement)
         .onChange(of: utilitySurface != nil) { _, isPresented in
             // The utility surface replaces every browsing input host.
             if isPresented { sidebarInteraction.cancel() }
         }
+    }
+
+    private var addressBarPlacement: BrowserAddressBarPlacement {
+        BrowserDeviceAppearanceStore.shared.addressBarPlacement
     }
 
     private func beginCreatingFolder() {

@@ -4,9 +4,8 @@ using Xunit;
 
 namespace CrestCore.Tests;
 
-/// The addresses an import keeps, read exactly as the Apple platforms' URL
-/// parser reads them, so a browser-data file either side writes reads back
-/// the same on both.
+/// The addresses an import keeps, read as the Apple platforms read them, so a
+/// browser-data file either side writes reads back the same on both.
 public sealed partial class BrowserContractsTests {
     [Theory]
     // Only http and https addresses with a host are kept.
@@ -21,17 +20,19 @@ public sealed partial class BrowserContractsTests {
     [InlineData("http://user:pass@example.com/a?b=c#d", "http://example.com/a?b=c#d")]
     [InlineData("https://a@b@c.com/", "https://c.com/")]
     [InlineData("https://example.com?x", "https://example.com?x")]
-    // A component holding what it cannot is escaped whole, `%` included; a
-    // valid one is kept as spelled.
+    // What a component cannot hold, and a `%` that starts no escape, is
+    // escaped where it stands; the escapes it spells are kept.
     [InlineData("https://example.com/a b", "https://example.com/a%20b")]
     [InlineData("https://example.com/ä", "https://example.com/%C3%A4")]
     [InlineData("https://example.com/😀", "https://example.com/%F0%9F%98%80")]
     [InlineData("https://example.com/a|b", "https://example.com/a%7Cb")]
     [InlineData("https://example.com/%41", "https://example.com/%41")]
     [InlineData("https://example.com/%zz", "https://example.com/%25zz")]
-    [InlineData("https://example.com/a%%41", "https://example.com/a%25%2541")]
+    [InlineData("https://example.com/a%%41", "https://example.com/a%25%41")]
     [InlineData("https://example.com/?a=%zz&b=ü", "https://example.com/?a=%25zz&b=%C3%BC")]
     [InlineData("https://example.com/#frag ment", "https://example.com/#frag%20ment")]
+    [InlineData("https://example.com/search.php?s={%22com%22:{%22resultType%22:[1]}}",
+        "https://example.com/search.php?s=%7B%22com%22:%7B%22resultType%22:%5B1%5D%7D%7D")]
     // A host has its escapes undone and is written in its IDNA form; one
     // holding what a host cannot hold is no address.
     [InlineData("https://bücher.de/", "https://xn--bcher-kva.de/")]

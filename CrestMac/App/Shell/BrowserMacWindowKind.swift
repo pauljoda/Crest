@@ -46,23 +46,17 @@ struct BrowserMacWindowKind: Hashable {
         minimumContentSize: CGSize(
             width: BrowserQuickWindowLayout.minimumWidth, height: BrowserQuickWindowLayout.minimumHeight),
         collectionBehavior: .moveToActiveSpace)
-    /// Crest Setup, which fills the screen it opens on. The setup content is
-    /// fully flexible above its minimum, so the window keeps the size it opens
-    /// at rather than the content's ideal one, which is that minimum.
+    /// Crest Setup: the steps beside a preview of the browser they build. The
+    /// setup content is fully flexible above its minimum, so the window keeps
+    /// the size it opens at rather than the content's ideal one, which is that
+    /// minimum.
     static let setup = BrowserMacWindowKind(
         name: "setup", title: BrowserOnboardingWindowActivation.windowTitle,
-        styleMask: [.titled, .closable, .resizable, .fullSizeContentView], hidesTitle: true,
-        hidesTitleBarSeparator: true, contentSize: CGSize(width: 1440, height: 900),
-        minimumContentSize: CGSize(width: 980, height: 660),
-        sizingOptions: [], fillsScreen: true, isSingleton: true, identifier: "onboarding")
-    /// The release notes for the update the sidebar card presents, which keep
-    /// their content's minimum size.
-    static let updateDetails = BrowserMacWindowKind(
-        name: "update-details", title: String(localized: "What's New in Crest"),
-        styleMask: [.titled, .closable, .miniaturizable, .resizable],
-        contentSize: CGSize(width: 620, height: 520), sizingOptions: [.minSize], isSingleton: true,
-        identifier: "software-update-details")
-    static let all: [BrowserMacWindowKind] = [browser, temporary, `private`, quick, setup, updateDetails]
+        styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], hidesTitle: true,
+        hidesTitleBarSeparator: true, contentSize: CGSize(width: 1360, height: 880),
+        minimumContentSize: CGSize(width: 1120, height: 720),
+        sizingOptions: [], isSingleton: true, identifier: "onboarding")
+    static let all: [BrowserMacWindowKind] = [browser, temporary, `private`, quick, setup]
 
     // MARK: - Variables
 

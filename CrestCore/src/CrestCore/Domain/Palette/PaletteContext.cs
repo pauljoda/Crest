@@ -41,6 +41,11 @@ internal sealed class PaletteContext {
     /// The Space's history by address, or null without a Space.
     public AddressIndex? History { get; }
 
+    /// The Space's tabs by the site each shows, gathered the first time a row
+    /// asks for the tabs whose icon it may wear.
+    private ILookup<string, (Guid Id, string Page)> TabsBySite => tabsBySite ??= GatherTabsBySite();
+    private ILookup<string, (Guid Id, string Page)>? tabsBySite;
+
     #endregion
 
     #region Constructors
@@ -98,6 +103,39 @@ internal sealed class PaletteContext {
     public PaletteDestination? Destination(PaletteRow row) =>
         row.Kind.Destination(row, tab => Space?.Tabs.FirstOrDefault(candidate => candidate.Id == tab) is { } found
             ? found.SavedAddress ?? found.Url : null);
+
+    #endregion
+
+    #region Actions - Icons
+
+    /// The tabs whose icon a row that opens `url` may wear, best first: the
+    /// Space's tabs showing the same page, whatever their fragment, then the
+    /// others on the same site, its host in lower case without `www.` with
+    /// its port; among each, open tabs and the pins the Space shows before
+    /// archived tabs. None for an address that names no web page.
+    public IReadOnlyList<Guid> IconTabs(string url) {
+        if (new WebAddress(url).Normalized is not { } page || Site(url) is not { } site) return [];
+        var tabs = TabsBySite[site];
+        return [.. tabs.Where(tab => tab.Page == page).Concat(tabs.Where(tab => tab.Page != page)).Select(tab => tab.Id)];
+    }
+
+    /// Every tab of the Space that shows a web page, open tabs and shown pins
+    /// first, then archived tabs, by site.
+    private ILookup<string, (Guid Id, string Page)> GatherTabsBySite() {
+        List<(string Site, Guid Id, string Page)> found = [];
+        if (Space is { } space)
+            foreach (var tab in space.Tabs.Concat(space.ArchivedTabs.Select(archived => archived.Tab)))
+                if (tab.Url is { } url && new WebAddress(url).Normalized is { } page && Site(url) is { } site) found.Add((site, tab.Id, page));
+        return found.ToLookup(entry => entry.Site, entry => (entry.Id, entry.Page));
+    }
+
+    /// The site `url` names, as rows match tabs by: its host in lower case
+    /// without `www.`, with its port when it is not the scheme's own.
+    private static string? Site(string url) {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var parsed) || parsed.Host.Length == 0) return null;
+        string host = PaletteMemory.WithoutWww(parsed.Host.ToLowerInvariant());
+        return parsed.IsDefaultPort ? host : $"{host}:{parsed.Port}";
+    }
 
     #endregion
 

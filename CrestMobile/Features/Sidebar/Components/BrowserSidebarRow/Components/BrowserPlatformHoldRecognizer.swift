@@ -41,9 +41,6 @@ private struct MobileHoldAnchor: UIViewRepresentable {
 final class MobileHoldAnchorView: UIView {
     // MARK: - Static Variables
 
-    /// How long a finger holds still before the row's card opens, as long as
-    /// the system waits before a menu.
-    private static let duration: TimeInterval = 0.5
     /// How far a finger may drift and still hold.
     private static let allowableMovement: CGFloat = 10
 
@@ -52,7 +49,7 @@ final class MobileHoldAnchorView: UIView {
     var hold: () -> Void = {}
     private lazy var recognizer: UILongPressGestureRecognizer = {
         let recognizer = UILongPressGestureRecognizer(target: self, action: #selector(held(_:)))
-        recognizer.minimumPressDuration = Self.duration
+        recognizer.minimumPressDuration = CrestMotion.longPressRecognitionDelay
         recognizer.allowableMovement = Self.allowableMovement
         recognizer.delegate = self
         return recognizer
@@ -103,6 +100,9 @@ final class MobileHoldAnchorView: UIView {
 
 extension MobileHoldAnchorView: UIGestureRecognizerDelegate {
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        // A finger's tap meets any button mask, so only a pointer's click
+        // counts as a secondary click; a tap opens or closes the row instead.
+        if gestureRecognizer === secondaryClick, touch.type != .indirectPointer { return false }
         guard let window, !isHidden, alpha > 0, bounds.contains(touch.location(in: self)) else { return false }
         // The window's subtree that draws this row: a page presented over
         // the sidebar is drawn in another, so its touches fall outside.

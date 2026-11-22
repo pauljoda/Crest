@@ -16,6 +16,9 @@ struct BrowserOnboardingWindowPreview<Page: View>: View {
     var spaceIcons: BrowserSpaceIconDisplay? = nil
     /// The look the other Spaces in the switcher wear, or nil for their own.
     var companionLook: SetupLook? = nil
+    /// Where the window shows the address: in the sidebar, or in a bar along
+    /// the top of the page card.
+    var addressBarPlacement = BrowserAddressBarPlacement.sidebar
     @ViewBuilder let page: Page
 
     @State private var favicons = FaviconAssets()
@@ -49,25 +52,51 @@ struct BrowserOnboardingWindowPreview<Page: View>: View {
         .accessibilityLabel("Preview of \(space.settings.name) in a Crest window")
     }
 
-    /// The page beside the sidebar, inset as the window insets it.
+    /// The page beside the sidebar, inset as the window insets it, moved down
+    /// below the address bar where the window shows it on top.
     private var pageCard: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: BrowserChromeLayout.pageCornerRadius, style: .continuous)
-                .fill(CrestBrandPalette.paper)
-                .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
-            page
+        let shape = RoundedRectangle(cornerRadius: BrowserChromeLayout.pageCornerRadius, style: .continuous)
+        return VStack(spacing: 0) {
+            if addressBarPlacement.showsBarInPageCards {
+                cardBar
+            }
+            ZStack {
+                Rectangle().fill(CrestBrandPalette.paper)
+                page
+            }
+            .clipShape(shape)
+            .background { shape.fill(CrestBrandPalette.paper).shadow(color: .black.opacity(0.18), radius: 6, y: 2) }
         }
         .padding(.vertical, BrowserChromeLayout.pageFrameInset)
         .padding(.trailing, BrowserChromeLayout.pageFrameInset)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    /// The window's address bar above a lone page's card: back, forward and
+    /// the field, with equal room above and below.
+    private var cardBar: some View {
+        HStack(spacing: BrowserPageBarMetrics.pageCard.spacing) {
+            Image(systemName: "chevron.left")
+            Image(systemName: "chevron.right").opacity(0.45)
+            addressField
+        }
+        .font(.system(size: BrowserChromeLayout.sidebarNavigationSymbolPointSize, weight: .medium))
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, BrowserPageBarMetrics.pageCard.leadingPadding)
+        // The page's own frame inset stands above the bar; the same room
+        // below it parts the bar from the card.
+        .padding(.bottom, BrowserChromeLayout.pageFrameInset)
+        .accessibilityHidden(true)
+    }
+
     private func sidebar(_ space: SpaceModel) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             titlebar
-            addressField
-                .padding(.horizontal, 10)
-                .padding(.top, 2)
+            if !addressBarPlacement.showsBarInPageCards {
+                addressField
+                    .padding(.horizontal, 10)
+                    .padding(.top, 2)
+            }
             PinnedTabGrid(
                 tabs: space.pinnedTabs, favicons: favicons, assignment: BrowserSpaceRuntimeAssignment(space: space),
                 select: { _ in }
@@ -105,10 +134,12 @@ struct BrowserOnboardingWindowPreview<Page: View>: View {
                 Circle().fill(.primary.opacity(0.22)).frame(width: 12, height: 12)
             }
             Spacer()
-            Image(systemName: "chevron.left")
-            Image(systemName: "chevron.right").opacity(0.45)
-            Image(systemName: "arrow.clockwise")
-                .padding(.leading, 4)
+            if !addressBarPlacement.showsBarInPageCards {
+                Image(systemName: "chevron.left")
+                Image(systemName: "chevron.right").opacity(0.45)
+                Image(systemName: "arrow.clockwise")
+                    .padding(.leading, 4)
+            }
         }
         .font(.system(size: BrowserChromeLayout.sidebarNavigationSymbolPointSize, weight: .medium))
         .foregroundStyle(.secondary)

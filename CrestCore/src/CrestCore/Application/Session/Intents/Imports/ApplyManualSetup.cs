@@ -3,7 +3,8 @@ using CrestCore.Application;
 namespace CrestCore.Contracts;
 
 /// Applies the manual setup this device holds for the workspace: each new
-/// Space of the setup joins with its identity, profile, name and look, and
+/// Space of the setup joins with its identity, profile, name and look, a new
+/// Sub-Space sharing its group's session, and
 /// each existing Space takes the name and look the setup gave it. When the
 /// setup's order was edited, the Spaces take it, followed by any Space the
 /// setup does not name. A first launch's Spaces stop being disposable. The
@@ -23,7 +24,7 @@ public sealed record ApplyManualSetup(Guid WorkspaceId, Guid WindowId) : ImportW
         var setup = workspace.Device?.ManualSetup(workspace.WorkspaceId) ?? throw new Rejected(new NoManualSetup());
         return workspace.Importing(turn.Basis, this, [.. setup.Spaces.Select(NativeWorkspaceImport.SetupSpace)], turn.Previewed, turn.Now,
             turn.Ids,
-            import => import.ApplySetup(setup));
+            import => import.ApplySetup(setup, turn.Now));
     }
 
     #endregion

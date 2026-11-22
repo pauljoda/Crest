@@ -35,7 +35,7 @@ enum BrowserPlatformDefaultBrowserSystem {
     /// Notes a link another app opened in Crest, which only the default
     /// browser receives when it is a web address.
     static func noteOpenedLink(_ url: URL) {
-        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return }
+        guard ExternalWebLink.accepts(url) else { return }
         lastAnswer = true
     }
 
@@ -47,10 +47,13 @@ enum BrowserPlatformDefaultBrowserSystem {
         if let retryDate = (error as NSError).userInfo[
             UIApplication.CategoryDefaultError.retryAvailableDateErrorKey
         ] as? Date {
-            return
-                "Apple limits default-browser checks. Try again after \(retryDate.formatted(date: .abbreviated, time: .shortened))."
+            return String(
+                localized:
+                    "Apple limits default-browser checks. Try again after \(retryDate.formatted(date: .abbreviated, time: .shortened))."
+            )
         }
-        return "Apple limits how often Crest can check this status. Review it in Default Apps Settings."
+        return String(
+            localized: "Apple limits how often Crest can check this status. Review it in Default Apps Settings.")
     }
 
     /// Whether the system declined to answer because Crest asked too recently.

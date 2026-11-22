@@ -1,11 +1,12 @@
 import SwiftUI
 
-/// The badge a tab wears for the first status its page is in: a disc of
-/// Liquid Glass tinted with the status's color, carrying the status's symbol
-/// and pressed like a button or opened like a menu. It hangs off the corner of
-/// the tab's favicon, a little larger than the engine badge it stands in for,
-/// or fills the favicon's place. The glass answers the pointer, and its hit
-/// area reaches past the disc so it stays easy to press.
+/// The badge a tab wears for the first status its page is in: a disc in the
+/// status's color, laid on the device's material as the sidebar's layers
+/// are, carrying the status's symbol and pressed like a button or opened like
+/// a menu. It hangs off the corner of the tab's favicon, a little larger than
+/// the engine badge it stands in for, or fills the favicon's place. The disc
+/// answers the pointer, and its hit area reaches past it so it stays easy to
+/// press.
 struct BrowserTabStatusBadge: View {
     // MARK: - Static Variables
 
@@ -27,6 +28,8 @@ struct BrowserTabStatusBadge: View {
     /// proportion to it.
     var diameter: CGFloat = BrowserTabStatusBadge.diameter
 
+    @State private var isHovering = false
+
     var body: some View {
         let symbol = diameter * Self.markSize / Self.diameter
         let hitTarget = diameter * Self.hitTarget / Self.diameter
@@ -39,7 +42,11 @@ struct BrowserTabStatusBadge: View {
                 .contentTransition(.symbolEffect(.replace))
                 .frame(width: symbol, height: symbol)
                 .frame(width: diameter, height: diameter)
-                .glassEffect(.regular.tint(mark.tint).interactive(), in: .circle)
+                .background {
+                    CrestSurfaceLayer(
+                        shape: Circle(), tint: mark.tint, hoverTint: isHovering ? CrestColor.hover : nil)
+                }
+                .onHover { isHovering = $0 }
                 .frame(width: hitTarget, height: hitTarget)
                 .contentShape(.circle)
         }

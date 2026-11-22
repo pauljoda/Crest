@@ -12,7 +12,7 @@ public sealed partial class NativeSessionAuthority {
         #region Variables
 
         /// Whether the lift holds only pinned tabs.
-        public bool PinsOnly => !Work.Selected.HoldsFolders && Work.Selected.Members.All(tab => tab.Placement == TabPlacement.Pinned);
+        public bool PinsOnly => !Work.Selected.HoldsFolders && Work.Selected.Members.All(tab => tab.State.IsPinned);
 
         #endregion
     }
@@ -35,8 +35,8 @@ public sealed partial class NativeSessionAuthority {
         var work = Selecting(basis, windowId, spaceId, selection);
         var alone = work.Selected.Roots is [{ IsFolder: false } root] ? work.Edited.Tab(root.Id) : null;
         var members = work.Selected.Members;
-        if (alone is null && members.Any(tab => tab.Placement == TabPlacement.Pinned)
-            && (work.Selected.HoldsFolders || members.Any(tab => tab.Placement != TabPlacement.Pinned)))
+        if (alone is null && members.Any(tab => tab.State.IsPinned)
+            && (work.Selected.HoldsFolders || members.Any(tab => !tab.State.IsPinned)))
             throw new Rejected(new PinnedTabsDragAlone());
         return new(work, alone);
     }

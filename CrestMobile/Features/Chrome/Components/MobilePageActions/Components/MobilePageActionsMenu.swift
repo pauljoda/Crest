@@ -2,7 +2,7 @@ import SwiftUI
 
 struct MobilePageActionsMenu: View {
     let browser: BrowserStore
-    let pages: any MobilePageActions
+    let pages: MobileSelectedPageActionPort
     let systemImage: String
     var downloadsAccess: MobileDownloadsMenuAccess? = nil
     var hideToolbar: (() -> Void)? = nil
@@ -51,7 +51,7 @@ struct MobilePageActionsMenu: View {
         }
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
-        .accessibilityIdentifier("page-actions-menu")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.pageActionsMenu)
         .pagePermissionHost(pages.activePage?.sitePermissionRequests)
         .crestPopover(
             item: Binding {
@@ -88,7 +88,7 @@ struct MobilePageActionsMenu: View {
             if let downloadsAccess, downloadsAccess.newItemCount > 0 {
                 BrowserUtilityNotificationBadge(
                     count: downloadsAccess.newItemCount,
-                    tint: .accentColor,
+                    tint: CrestBrandTheme.accent,
                     progress: downloadsAccess.activeProgress
                 )
                 .offset(x: 9, y: -7)

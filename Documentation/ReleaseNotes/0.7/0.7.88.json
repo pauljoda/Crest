@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-10-12-site-controls-tile-fill",
+      "category": "internal",
+      "message": "Give tiles inside material panels a fixed fill"
+    }
+  ]
+}

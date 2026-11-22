@@ -39,7 +39,7 @@ public sealed class SplitContractsTests {
         var group = Guid.NewGuid();
         var space = Space([.. Enumerable.Range(0, 4).Select(i => Tab("member" + i, TabPlacement.Saved, group)), Tab("source")]);
         var before = space.TabStates.ToArray();
-        Assert.Equal(BrowserTabCollection.MaximumSplitMembers, Assert.IsType<SplitLimitReached>(Assert.Throws<Rejected>(() =>
+        Assert.Equal(SplitGroupState.MaximumMembers, Assert.IsType<SplitLimitReached>(Assert.Throws<Rejected>(() =>
             space.JoinSplit(space.Tabs[^1].Id, space.Tabs[0].Id, null, new SystemIdSource(), Now)).Rejection).Limit);
         Assert.Equal(before, space.TabStates);
     }

@@ -1,5 +1,7 @@
 import SwiftUI
 
+/// The pages of setup's steps that `MobileSetupView` does not draw: the
+/// tour of Crest's features, and bringing tabs in on a Mac.
 struct MobileOnboardingCurrentPage: View, BrowserOnboardingPages {
     let context: MobileOnboardingPageContext
 
@@ -9,15 +11,8 @@ struct MobileOnboardingCurrentPage: View, BrowserOnboardingPages {
 
     // MARK: - Pages
 
-    func welcomePage() -> some View {
-        MobileOnboardingWelcomePage(
-            action: context.welcomeAction,
-            primaryTitle: context.welcomePrimaryTitle,
-            status: context.welcomeStatus,
-            primaryAction: context.welcomePrimaryAction,
-            setupWithoutCloudAction: context.welcomeSetupWithoutCloudAction
-        )
-    }
+    /// `MobileSetupView` draws the welcome.
+    func welcomePage() -> some View { EmptyView() }
 
     func featureSpacesPage() -> some View {
         MobileOnboardingSpacesFeaturePage(
@@ -54,26 +49,14 @@ struct MobileOnboardingCurrentPage: View, BrowserOnboardingPages {
         )
     }
 
-    func lookPage() -> some View {
-        MobileOnboardingLookPage(
-            look: context.look, choose: context.chooseLook, adoptStyle: context.adoptStyle,
-            back: context.setupSecondaryAction,
-            continueSetup: context.advance)
-    }
+    /// `MobileSetupView` draws the look.
+    func lookPage() -> some View { EmptyView() }
 
     /// Touch setup has no page for reviewing an import.
     func reviewPage() -> some View { EmptyView() }
 
-    func manualSetupPage() -> some View {
-        MobileSpaceSetupWizard(
-            setup: context.setup,
-            selectedSpaceID: context.selectedSpaceID,
-            errorMessage: context.errorMessage,
-            opensGettingStarted: context.opensGettingStarted,
-            back: context.setupSecondaryAction,
-            finish: context.finish
-        )
-    }
+    /// `MobileSetupView` draws the manual setup.
+    func manualSetupPage() -> some View { EmptyView() }
 
     /// Touch setup has no completion page.
     func completePage() -> some View { EmptyView() }

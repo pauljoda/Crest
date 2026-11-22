@@ -14,10 +14,12 @@ public sealed class TabPlacement {
 
     // Saved is made before Pinned, which overflows to it; `All` keeps the sections' order.
     public static readonly TabPlacement Saved = new(name: "saved", title: "Saved", symbol: "bookmark.fill", rank: 1, fallbackRank: 2,
-        isDurable: true, holdsFolders: true, holdsSplits: true, isCollapsible: true, capacity: null, paletteRow: PaletteRowKind.SavedTab);
+        isDurable: true, holdsFolders: true, holdsSplits: true, isCollapsible: true, capacity: null, paletteRow: PaletteRowKind.SavedTab,
+        closePolicy: preferences => preferences.SavedTabClose);
     public static readonly TabPlacement Pinned = new(name: "pinned", title: "Pinned", symbol: "pin.fill", rank: 0, fallbackRank: 1,
         isDurable: true, holdsFolders: false, holdsSplits: false, isCollapsible: false, capacity: PinnedCapacity,
-        paletteRow: PaletteRowKind.PinnedTab, overflowsTo: Saved, importedSymbol: "pin.fill", isGrid: true);
+        paletteRow: PaletteRowKind.PinnedTab, overflowsTo: Saved, importedSymbol: "pin.fill", isGrid: true,
+        closePolicy: preferences => preferences.PinnedTabClose);
     public static readonly TabPlacement Current = new(name: "current", title: "Open", symbol: "rectangle.stack.fill", rank: 2,
         fallbackRank: 0, isDurable: false, holdsFolders: true, holdsSplits: true, isCollapsible: false, capacity: null,
         paletteRow: PaletteRowKind.Tab);
@@ -76,13 +78,15 @@ public sealed class TabPlacement {
     /// The row a palette search shows a tab of the section as.
     public PaletteRowKind PaletteRow { get; }
 
+    private readonly Func<AppPreferences, SavedTabClosePolicy>? closePolicy;
+
     #endregion
 
     #region Constructors
 
     private TabPlacement(string name, string title, string symbol, int rank, int fallbackRank, bool isDurable, bool holdsFolders,
         bool holdsSplits, bool isCollapsible, int? capacity, PaletteRowKind paletteRow, TabPlacement? overflowsTo = null,
-        string? importedSymbol = null, bool isGrid = false) {
+        string? importedSymbol = null, bool isGrid = false, Func<AppPreferences, SavedTabClosePolicy>? closePolicy = null) {
         Name = name;
         Title = title;
         Symbol = symbol;
@@ -97,6 +101,7 @@ public sealed class TabPlacement {
         OverflowsTo = overflowsTo;
         ImportedSymbol = importedSymbol;
         IsGrid = isGrid;
+        this.closePolicy = closePolicy;
     }
 
     #endregion
@@ -121,6 +126,11 @@ public sealed class TabPlacement {
     /// The section the `count`th tab placed in this one in a Space goes to:
     /// this one while it holds that many, else the one it overflows to.
     public TabPlacement Fitting(int count) => Holds(count) ? this : OverflowsTo ?? this;
+
+    /// Where a tab of the section returns when closing puts its page away, as
+    /// `preferences` choose for the section, or null for a section whose tabs
+    /// closing archives.
+    internal SavedTabClosePolicy? ClosePolicy(AppPreferences preferences) => closePolicy?.Invoke(preferences);
 
     /// The index of the tab a Space falls back to, given its tabs' placements
     /// in Space order: the first tab of the section with the lowest

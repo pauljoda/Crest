@@ -10,16 +10,38 @@ namespace CrestCore.Application;
 /// Immutable sync state. Copies share records until a semantic transition
 /// replaces them; failed transitions never publish clocks, records or pending IDs.
 public sealed class NativeSyncJournal {
+    #region Types
+
+    /// The journal's own members and the record categories its preferences
+    /// name, as the stored journal spells them.
+    internal static class Key {
+        public const string SchemaVersion = "schemaVersion";
+        public const string Preferences = "preferences";
+        public const string Records = "records";
+        public const string PendingRecordIds = "pendingRecordIDs";
+        public const string SavedStructure = "savedStructure";
+        public const string CurrentTabs = "currentTabs";
+        public const string HistoryAndArchive = "historyAndArchive";
+        public const string ExtensionSettings = "extensionSettings";
+    }
+
+    #endregion
+
+    #region Static Variables
+
+    public const int MaximumBytes = MessageLimitAttribute.SessionBytes;
+    public const int MaximumRecords = 250_000;
+
+    #endregion
+
     #region Variables
 
-    public const int MaximumBytes = 64 * 1024 * 1024;
-    public const int MaximumRecords = 250_000;
     private readonly JsonObject metadata;
     private readonly Dictionary<string, JsonObject> records;
     private readonly HashSet<string> pending;
     private readonly Lazy<byte[]> encoded;
     internal IEnumerable<JsonObject> Records => records.Values;
-    internal JsonNode Preferences => metadata["preferences"]!.DeepClone();
+    internal JsonNode Preferences => metadata[Key.Preferences]!.DeepClone();
     /// How many records wait to upload.
     internal int PendingCount => pending.Count;
     /// How many records the journal holds, tombstones included.
@@ -34,17 +56,17 @@ public sealed class NativeSyncJournal {
     /// The journal `source`, a stored journal parsed once, which it takes
     /// over: nothing else may hold it.
     internal NativeSyncJournal(JsonObject source) {
-        if (SyncJson.Int(source["schemaVersion"]!) != 1) throw new BrowserRuleException(BrowserRule.VersionMismatch);
+        if (SyncJson.Int(source[Key.SchemaVersion]!) != 1) throw new BrowserRuleException(BrowserRule.VersionMismatch);
         // Every member but the records, which the journal keeps by name.
-        metadata = new JsonObject(source.Where(member => member.Key is not ("records" or "pendingRecordIDs"))
+        metadata = new JsonObject(source.Where(member => member.Key is not (Key.Records or Key.PendingRecordIds))
             .Select(member => KeyValuePair.Create(member.Key, member.Value?.DeepClone())));
-        _ = Id(metadata["deviceID"]);
-        records = RecordMap(source["records"]!.AsArray());
-        pending = source["pendingRecordIDs"]!.AsArray().Select(n => SyncJournalRecord.NameOf(n!)).ToHashSet(StringComparer.Ordinal);
+        _ = Id(metadata[SyncJournalRecord.Key.DeviceId]);
+        records = RecordMap(source[Key.Records]!.AsArray());
+        pending = source[Key.PendingRecordIds]!.AsArray().Select(n => SyncJournalRecord.NameOf(n!)).ToHashSet(StringComparer.Ordinal);
         if (!pending.IsSubsetOf(records.Keys)) throw new BrowserRuleException(BrowserRule.InvalidSyncPending);
-        ulong clock = SyncJson.ULong(metadata["logicalClock"]!);
+        ulong clock = SyncJson.ULong(metadata[SyncJournalRecord.Key.LogicalClock]!);
         foreach (var record in records.Values) clock = Math.Max(clock, new SyncJournalRecord(record).Clock);
-        metadata["logicalClock"] = clock;
+        metadata[SyncJournalRecord.Key.LogicalClock] = clock;
         encoded = new(Encode, true);
     }
 
@@ -53,17 +75,17 @@ public sealed class NativeSyncJournal {
     /// The journal of a device that has staged nothing yet: no records, the
     /// clock at zero, and every record category synced.
     public static NativeSyncJournal Fresh(Guid deviceId) => new(Encoding.UTF8.GetBytes(new JsonObject {
-        ["schemaVersion"] = 1,
-        ["deviceID"] = deviceId.ToString("D").ToUpperInvariant(),
-        ["logicalClock"] = 0,
-        ["preferences"] = new JsonObject {
-            ["savedStructure"] = true,
-            ["currentTabs"] = true,
-            ["historyAndArchive"] = true,
-            ["extensionSettings"] = true
+        [Key.SchemaVersion] = 1,
+        [SyncJournalRecord.Key.DeviceId] = deviceId.ToString("D").ToUpperInvariant(),
+        [SyncJournalRecord.Key.LogicalClock] = 0,
+        [Key.Preferences] = new JsonObject {
+            [Key.SavedStructure] = true,
+            [Key.CurrentTabs] = true,
+            [Key.HistoryAndArchive] = true,
+            [Key.ExtensionSettings] = true
         },
-        ["records"] = new JsonArray(),
-        ["pendingRecordIDs"] = new JsonArray()
+        [Key.Records] = new JsonArray(),
+        [Key.PendingRecordIds] = new JsonArray()
     }.ToJsonString()));
 
     #endregion
@@ -72,7 +94,7 @@ public sealed class NativeSyncJournal {
 
     private static JsonObject Parse(ReadOnlySpan<byte> bytes) {
         if (bytes.Length is 0 or > MaximumBytes) throw new BrowserRuleException(BrowserRule.SyncSizeLimit);
-        return JsonNode.Parse(bytes, documentOptions: new() { MaxDepth = 64 })!.AsObject();
+        return JsonNode.Parse(bytes, documentOptions: JsonDepth.Session.Options)!.AsObject();
     }
 
     private static Guid Id(JsonNode? node) => SyncJson.Identity(node);
@@ -92,9 +114,9 @@ public sealed class NativeSyncJournal {
     /// it never reissues a version it issued after the checkpoint was taken.
     /// Its records, clock and pending uploads are unchanged.
     public NativeSyncJournal Recovered(Guid deviceId) {
-        if (deviceId == Id(metadata["deviceID"])) throw new ArgumentException("A recovered journal takes a new device identity.", nameof(deviceId));
+        if (deviceId == Id(metadata[SyncJournalRecord.Key.DeviceId])) throw new ArgumentException("A recovered journal takes a new device identity.", nameof(deviceId));
         var fields = metadata.DeepClone().AsObject();
-        fields["deviceID"] = deviceId.ToString("D").ToUpperInvariant();
+        fields[SyncJournalRecord.Key.DeviceId] = deviceId.ToString("D").ToUpperInvariant();
         return new(fields, new(records, StringComparer.Ordinal), new(pending, StringComparer.Ordinal));
     }
 
@@ -106,25 +128,33 @@ public sealed class NativeSyncJournal {
     /// format that nothing else holds, under this journal's preferences.
     /// Records it no longer holds are deleted, where their absence authorizes a
     /// deletion, for the reason `removals` names for them by record name, else
-    /// for `reason`; `now` in seconds since 2001 dates the tombstones.
+    /// for `reason`, but a folder `emptied` names is marked emptied instead;
+    /// `now` in seconds since 2001 dates the tombstones and the marks.
     internal NativeSyncJournal Stage(JsonObject session, SyncDeletionReason reason, double now,
-        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null) {
+        IReadOnlyDictionary<string, SyncDeletionReason>? removals = null, IReadOnlySet<string>? emptied = null) {
         var archiveReasons = NativeSyncProjection.Items(session, StoredSessionCodec.Key.Spaces)
             .SelectMany(space => NativeSyncProjection.Items(space!, StoredSessionCodec.Key.ArchivedTabs))
             .ToDictionary(archived => Id(archived![StoredSessionCodec.Key.Tab]![StoredSessionCodec.Key.Id]),
                 archived => Known(NativeSyncProjection.ArchiveReasonName(archived!)));
         return Stage(NativeSyncProjection.Project(session, Preferences, records.Values), archiveReasons, Cleaning(session), reason, now,
-            removals);
+            removals, emptied);
     }
 
     /// The journal after staging `payloads`, everything a session holds that
     /// syncs, as `Stage(session:)` does: `archiveReasons` says why each archived
     /// tab was archived, and a record of a Space in `cleaning`, whose deletion
     /// is under way on this device, is left as it is.
+    ///
+    /// A folder an edit emptied keeps its record, marked emptied, so a device
+    /// that still holds a tab in it keeps it. Since a device leaves a group or
+    /// a marked folder out of its session while it holds nothing, absence alone
+    /// never deletes one: only an edit that removed it does.
     internal NativeSyncJournal Stage(JsonArray payloads, IReadOnlyDictionary<Guid, ArchiveReason> archiveReasons,
-        IReadOnlySet<Guid> cleaning, SyncDeletionReason reason, double now, IReadOnlyDictionary<string, SyncDeletionReason>? removals = null) {
+        IReadOnlySet<Guid> cleaning, SyncDeletionReason reason, double now, IReadOnlyDictionary<string, SyncDeletionReason>? removals = null,
+        IReadOnlySet<string>? emptied = null) {
         var draft = new Draft(this);
         var desired = draft.Desired(payloads, cleaning);
+        CarryMarks(desired, draft.Records, now);
         // Parent evidence is from the accepted journal before staging.
         var accepted = records.Values.Select(r => new SyncJournalRecord(r)).ToArray();
         var spaces = accepted.Where(r => r.KindName == SyncRecordKind.Space.Name).Select(r => r.SpaceId).ToHashSet();
@@ -146,8 +176,16 @@ public sealed class NativeSyncJournal {
             if (!type.IsPortable(value)) deletion = SyncDeletionReason.Superseded;
             else {
                 if (!spaces.Contains(record.SpaceId) || !AncestryArrived(type.ParentFolder(value), folders)) continue;
-                deletion = type.DeletionReason(value, archiveReasons.GetValueOrDefault(record.Id),
-                    desired.ContainsKey(SyncRecordKind.Space.RecordName(record.SpaceId)), removals?.GetValueOrDefault(name) ?? reason);
+                var spaceStays = desired.ContainsKey(SyncRecordKind.Space.RecordName(record.SpaceId));
+                var removal = removals?.GetValueOrDefault(name);
+                if (spaceStays && emptied?.Contains(name) == true && type.Emptied(payload, now) is { } marked) {
+                    if (NativeSyncEvaluator.Equivalent(payload, marked)) continue;
+                    draft.Records[name] = draft.Save(marked);
+                    draft.Pending.Add(name);
+                    continue;
+                }
+                if (spaceStays && removal is null && type.HidesWhenEmpty(value)) continue;
+                deletion = type.DeletionReason(value, archiveReasons.GetValueOrDefault(record.Id), spaceStays, removal ?? reason);
             }
             if (deletion is null) continue;
             draft.Records[name] = draft.Delete(json, deletion, now);
@@ -208,6 +246,47 @@ public sealed class NativeSyncJournal {
             draft.Pending.Add(name);
         }
         return draft.Finish();
+    }
+
+    /// Carries each folder's emptied and held dates from the record it
+    /// replaces into the copy `desired` writes, since the session keeps
+    /// neither. A folder that stands emptied while it holds a tab that syncs is
+    /// held again as of `now`, so it shows on every device. One this device
+    /// shows only for a tab of its own that never syncs, such as a Start Page,
+    /// stays emptied, so every other device goes on leaving it out. `held` are
+    /// the records the journal holds; `now` is in seconds since 2001.
+    private void CarryMarks(Dictionary<string, JsonObject> desired, IReadOnlyDictionary<string, JsonObject> held, double now) {
+        // Only the dates are read, so a record an earlier build stored, which
+        // the strict reader may refuse, never stops a stage.
+        static (double? Emptied, double? Held) Dates(JsonObject? record) {
+            if (record is null || new SyncJournalRecord(record).Payload is not { } payload || SyncPayloadType.Of(payload) != SyncPayloadType.Folder)
+                return (null, null);
+            var value = SyncPayload.ValueOf(payload);
+            return (NativeSyncEvaluator.Date(value, SyncPayload.Key.EmptiedAt), NativeSyncEvaluator.Date(value, SyncPayload.Key.HeldAt));
+        }
+        var dated = desired.Where(item => SyncPayloadType.Of(item.Value) == SyncPayloadType.Folder)
+            .Select(item => (Name: item.Key, Dates: Dates(held.GetValueOrDefault(item.Key))))
+            .Where(item => item.Dates is not (null, null)).ToArray();
+        if (dated.Length == 0) return;
+        var parents = desired.Values.Where(payload => SyncPayloadType.Of(payload) == SyncPayloadType.Folder).Select(SyncPayload.ValueOf)
+            .ToDictionary(value => Id(value[StoredSessionCodec.Key.Id]), value => SyncPayloadType.Folder.ParentFolder(value) is { } parent ? Id(parent) : (Guid?)null);
+        HashSet<Guid> holding = [];
+        foreach (var payload in desired.Values) {
+            var (type, value) = (SyncPayloadType.Of(payload), SyncPayload.ValueOf(payload));
+            if (type != SyncPayloadType.Tab || !type.IsPortable(value) || !type.SyncsUnder(Preferences, value)) continue;
+            for (var next = type.ParentFolder(value) is { } folder ? Id(folder) : (Guid?)null; next is { } id && holding.Add(id);
+                next = parents.GetValueOrDefault(id)) { }
+        }
+        foreach (var (name, (emptied, heldAt)) in dated) {
+            var carried = desired[name].DeepClone().AsObject();
+            var value = SyncPayload.ValueOf(carried);
+            var lastHeld = heldAt;
+            if (FolderPayload.StandsEmptied(emptied, heldAt) && holding.Contains(Id(value[StoredSessionCodec.Key.Id])))
+                lastHeld = Math.Max(now, emptied!.Value + 0.001);
+            if (emptied is { } went) value[SyncPayload.Key.EmptiedAt] = went;
+            if (lastHeld is { } kept) value[SyncPayload.Key.HeldAt] = kept;
+            desired[name] = carried;
+        }
     }
 
     /// The Spaces `session` is deleting on this device. Pending cleanup is
@@ -326,8 +405,8 @@ public sealed class NativeSyncJournal {
 
     private byte[] Encode() {
         var value = metadata.DeepClone().AsObject();
-        value["records"] = new JsonArray(records.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Value.DeepClone()).ToArray());
-        value["pendingRecordIDs"] = new JsonArray(pending.Order(StringComparer.Ordinal)
+        value[Key.Records] = new JsonArray(records.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Value.DeepClone()).ToArray());
+        value[Key.PendingRecordIds] = new JsonArray(pending.Order(StringComparer.Ordinal)
             .Select(id => records[id][SyncJournalRecord.Key.Id]!.DeepClone()).ToArray());
         var result = Encoding.UTF8.GetBytes(value.ToJsonString());
         if (result.Length > MaximumBytes) throw new BrowserRuleException(BrowserRule.SyncSizeLimit);
@@ -372,7 +451,7 @@ public sealed class NativeSyncJournal {
             fields = journal.metadata.DeepClone().AsObject();
             Records = new(journal.records, StringComparer.Ordinal);
             Pending = new(journal.pending, StringComparer.Ordinal);
-            clock = SyncJson.ULong(fields["logicalClock"]!);
+            clock = SyncJson.ULong(fields[SyncJournalRecord.Key.LogicalClock]!);
         }
 
         #endregion
@@ -432,13 +511,13 @@ public sealed class NativeSyncJournal {
         /// The journal the update made.
         public NativeSyncJournal Finish() {
             if (Records.Count > MaximumRecords) throw new BrowserRuleException(BrowserRule.SyncRecordLimit);
-            fields["logicalClock"] = clock;
+            fields[SyncJournalRecord.Key.LogicalClock] = clock;
             return new(fields, Records, Pending);
         }
 
         private JsonObject NextVersion() {
             if (clock == ulong.MaxValue) throw new BrowserRuleException(BrowserRule.SyncClockExhausted);
-            return SyncJournalRecord.VersionOf(++clock, fields["deviceID"]!);
+            return SyncJournalRecord.VersionOf(++clock, fields[SyncJournalRecord.Key.DeviceId]!);
         }
 
         #endregion

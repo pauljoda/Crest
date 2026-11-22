@@ -15,7 +15,6 @@ enum BrowserSidebarMetrics {
     // MARK: - Static Variables
 
     static let lockedSpaceBlurRadius: CGFloat = 12
-    static let addressBottomInset: CGFloat = 1
     /// The one gap down the top of a Space: address field to extension strip,
     /// strip to pinned tabs, and address field to pinned tabs when there is no
     /// strip. The selected pin's glow slides under whichever layer is above.
@@ -37,6 +36,10 @@ enum BrowserSidebarMetrics {
     /// The space a container keeps above and below itself, apart from the rows
     /// beside it.
     static let containerSpacing = CrestSpacing.extraExtraSmall
+
+    /// How far a Sub-Space's row sits in from its primary's in every list of
+    /// Spaces: past the primary's icon, as a tab sits in a folder.
+    static let subSpaceIndent: CGFloat = 28
 
     // MARK: - Actions - Sections
 

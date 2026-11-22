@@ -7,7 +7,7 @@ keywords: [engine, Chromium, WebKit, privacy, default engine, website rules, pro
 
 # Chromium and WebKit on Mac
 
-Crest for Mac includes two web engines. New pages open in Chromium unless you choose otherwise, and any website or page can use WebKit, the engine behind Safari. Crest on iPhone and iPad uses WebKit.
+Crest for Mac includes two web engines. New pages open in Chromium unless you choose otherwise, and any website or page can use WebKit, Apple's web engine. Crest on iPhone and iPad uses WebKit.
 
 Your Spaces, tabs, history, passwords and settings are the same whichever engine shows a page. Website data is not: each engine keeps its own cookies and storage for a Space, so signing in to a site in Chromium does not sign you in to it in WebKit.
 

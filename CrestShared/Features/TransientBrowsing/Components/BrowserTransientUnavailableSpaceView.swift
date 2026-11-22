@@ -46,14 +46,18 @@ struct BrowserTransientUnavailableSpaceView: View {
         _ vocabulary: BrowserTransientUnavailableSpaceVocabulary
     ) -> some View {
         ContentUnavailableView {
-            Label(vocabulary.title, systemImage: vocabulary.systemImage)
+            Label {
+                Text(vocabulary.title).font(CrestTypography.displayPage)
+            } icon: {
+                Image(systemName: vocabulary.systemImage)
+            }
         } description: {
             Text(vocabulary.description)
         } actions: {
             Button(vocabulary.dismissTitle, action: dismiss)
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.crestPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.background)
+        .background(CrestBrandTheme.canvas)
     }
 }

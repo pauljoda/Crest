@@ -8,6 +8,11 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     let dataDeleter: any BrowserSpaceDataDeleting
     let transientBrowsing: BrowserTransientBrowsingCoordinator
     let suspendsCompactPagePresentation: Bool
+    /// Whether the browser holds back its launch, opening nothing yet.
+    let holdsStartup: Bool
+    /// Whether the page the browser opens on rises over setup as setup hands
+    /// over to it.
+    let presentsPageOverSetup: Bool
     let togglePrivateBrowsing: () -> Void
     let closePrivateBrowsing: () -> Void
 
@@ -26,17 +31,19 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @State var keyboardEndFrame = CGRect.null
     /// The screen the keyboard last reported for, in its own coordinates.
     @State var keyboardScreenBounds = CGRect.null
-    @AppStorage(
-        MobileBrowserRootPreferences.allowsFloatingSidebarKey, store: BrowserChromeAppearancePreference.defaults)
-    private var allowsFloatingSidebar = false
     @Namespace var compactChromeNamespace
     @Namespace var tabPromotionNamespace
+    /// Whether a narrow window may float its sidebar over the page, as the
+    /// person chose it.
+    private var allowsFloatingSidebar: Bool { BrowserDeviceAppearanceStore.shared.allowsFloatingSidebar }
 
     init(
         model: MobileBrowserRootModel,
         dataDeleter: any BrowserSpaceDataDeleting,
         transientBrowsing: BrowserTransientBrowsingCoordinator,
         suspendsCompactPagePresentation: Bool,
+        holdsStartup: Bool = false,
+        presentsPageOverSetup: Bool = false,
         togglePrivateBrowsing: @escaping () -> Void,
         closePrivateBrowsing: @escaping () -> Void
     ) {
@@ -44,6 +51,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         self.dataDeleter = dataDeleter
         self.transientBrowsing = transientBrowsing
         self.suspendsCompactPagePresentation = suspendsCompactPagePresentation
+        self.holdsStartup = holdsStartup
+        self.presentsPageOverSetup = presentsPageOverSetup
         self.togglePrivateBrowsing = togglePrivateBrowsing
         self.closePrivateBrowsing = closePrivateBrowsing
         _storedRegularSidebarWidth = State(
@@ -110,13 +119,10 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     submitAddress: submitAddress,
                     openURL: openURL,
                     openNewTab: beginNewTab,
-                    showsCompactAddressBar:
-                        MobileCompactTabViewerLayout.showsTopAddressBar,
                     showsBottomSpaceSwitcher:
                         navigation.compactTabViewerChromeIsVisible,
                     compactPageIsFullyPresented:
                         navigation.compactPageIsFullyPresented,
-                    compactTransitionEnded: finishCompactTransition,
                     togglePrivateBrowsing: togglePrivateBrowsing,
                     closePrivateBrowsing: closePrivateBrowsing,
                     toggleSidebar: toggleCompactSidebar,
@@ -150,10 +156,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     submitAddress: submitAddress,
                     openURL: openURL,
                     openNewTab: beginNewTab,
-                    showsCompactAddressBar: false,
                     showsBottomSpaceSwitcher: true,
                     compactPageIsFullyPresented: false,
-                    compactTransitionEnded: finishCompactTransition,
                     togglePrivateBrowsing: togglePrivateBrowsing,
                     closePrivateBrowsing: closePrivateBrowsing,
                     toggleSidebar: toggleCompactSidebar,
@@ -189,6 +193,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                     notices: pages.notices,
                     showsNotices: !model.showsSettings,
                     reduceMotion: reduceMotion,
+                    risesOverSetup: presentsPageOverSetup,
                     tabPromotionNamespace: tabPromotionNamespace,
                     completePagePresentation:
                         navigation.completePagePresentation,
@@ -276,10 +281,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         submitAddress: submitAddress,
                         openURL: openURL,
                         openNewTab: beginNewTab,
-                        showsCompactAddressBar: false,
                         showsBottomSpaceSwitcher: true,
                         compactPageIsFullyPresented: false,
-                        compactTransitionEnded: finishCompactTransition,
                         togglePrivateBrowsing: togglePrivateBrowsing,
                         closePrivateBrowsing: closePrivateBrowsing,
                         toggleSidebar: toggleRegularSidebar,
@@ -341,9 +344,8 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                         isExpanded: navigation.utilityPresentation
                             .isSwitcherExpanded,
                         selectedSurface: navigation.utilityPresentation.surface,
-                        badgeColor: browser.shownSpace.flatMap {
-                            $0.settings.look.colors.first?.color
-                        } ?? .accentColor,
+                        badgeColor: browser.shownSpace?.settings.look.primaryColor.color
+                            ?? CrestBrandTheme.accent,
                         downloads: model.selectedUtilityDownloads,
                         newDownloadCount: model.newUtilityDownloads.count,
                         downloadCenter: pages.downloadCenter,
@@ -404,6 +406,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
                 model: model,
                 presentation: presentation,
                 openNewTab: beginNewTab,
+                holdsStartup: holdsStartup,
                 isAddressEditing: $isAddressEditing,
                 storedSidebarWidth: $storedRegularSidebarWidth
             )

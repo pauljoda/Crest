@@ -89,7 +89,7 @@ struct BrowserQuickWindowUnlockedContent: View {
     private var isPaletteShown: Bool { chrome?.commandPaletteMode != nil && model.spaceModel != nil }
 
     /// Which of the address field and the palette holds their shared
-    /// identity: the palette's glass grows out of the field's and shrinks
+    /// identity: the palette's surface grows out of the field's and shrinks
     /// back into it.
     private var commandPaletteHandoff: BrowserCommandPaletteHandoff {
         .resolve(

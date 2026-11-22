@@ -126,8 +126,12 @@
 	<string>Websites can request your location when you choose to share it.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>NSUserActivityTypeBrowsingWeb</string>
+	</array>
 	<key>SUFeedURL</key>
-	<string>https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast.xml</string>
+	<string>https://raw.githubusercontent.com/crest-browser/Crest/updates/appcast.xml</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUScheduledCheckInterval</key>

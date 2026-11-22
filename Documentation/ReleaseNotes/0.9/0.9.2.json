@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "private-browsing-space-never-locks",
+      "category": "fixed",
+      "message": "The Private Browsing Space no longer offers a lock, which on iPhone could lock it with no way back in until Crest was quit. The lock setting for other Spaces now names Face ID on devices that have it.",
+      "platforms": ["ios"]
+    }
+  ]
+}

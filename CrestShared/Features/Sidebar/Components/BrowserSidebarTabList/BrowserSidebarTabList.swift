@@ -32,8 +32,9 @@ struct BrowserSidebarTabList: View {
 }
 
 /// The seam between the saved run and the current one. It reads whether the
-/// current run holds anything to clear and whether the saved run keeps a band
-/// of its own, each observed apart from the rows, so a move never redraws it.
+/// current run holds anything to clear, with and without the shown tab, and
+/// whether the saved run keeps a band of its own, each observed apart from the
+/// rows.
 private struct BrowserCurrentTabsSeam: View {
     let context: BrowserSidebarListContext
     let isSavedTabsExpanded: Bool
@@ -46,9 +47,17 @@ private struct BrowserCurrentTabsSeam: View {
             hasSavedTabsEndBand: isSavedTabsExpanded
                 && (context.capabilities.reservesReorderSectionZones || !sidebar.section(.saved).holdsTabRows),
             showsClearAction: showsClearAction,
-            canClear: holdsCurrentTabs,
-            clear: { _ = context.tabActions.clearCurrentTabs() }
+            canClearOthers: holdsCurrentTabs && holdsTabsBesideShownTab,
+            canClearAll: holdsCurrentTabs,
+            clearOthers: { _ = context.tabActions.clearCurrentTabs(keepingShownTab: true) },
+            clearAll: { _ = context.tabActions.clearCurrentTabs(keepingShownTab: false) }
         )
+    }
+
+    /// Whether the current run holds a tab other than the one the window
+    /// shows and the rest of its split, which Clear keeps.
+    private var holdsTabsBesideShownTab: Bool {
+        !context.browser.clearedTabIDs(of: context.space, keepingShownTab: true).isEmpty
     }
 
     /// Whether the current section holds a tab, at its top level or in one of

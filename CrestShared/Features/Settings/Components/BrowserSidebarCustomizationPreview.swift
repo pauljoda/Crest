@@ -129,7 +129,7 @@ private final class BrowserAppearancePreviewState {
         siteAccents = Dictionary(uniqueKeysWithValues: zip(pins.map(\.id), pinSources.map(\.2)))
         browser = BrowserStore(
             seed: SessionState.Seed(spaces: [space]), showing: space.id, tabs: [space.id: notes.id],
-            browsingMode: .privateBrowsing)
+            workspaceKind: .private)
         sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
     }
 
@@ -146,7 +146,7 @@ private final class BrowserAppearancePreviewState {
     }
 
     /// The look before the sample Space reaches the read model.
-    var fallbackBranding: SpaceBranding { SpaceHouse.winter.look }
+    var fallbackBranding: SpaceBranding { SpaceHouse.crest.look }
 
     var assignment: BrowserSpaceRuntimeAssignment {
         guard let space = browser.workspaceModel?.spaces.models.first else {
@@ -175,7 +175,7 @@ private final class BrowserAppearancePreviewState {
             containsResidentPage: { _ in true }, containsResidentPageMatching: { _ in true },
             siteThemeIconAccent: siteThemeAccent, residencyRevision: { 0 }, selectPages: {},
             deactivatePagePresentation: {},
-            unloadPage: { _, _ in }, pullFavicon: { _, _ in nil }, downloadCenter: downloads)
+            unloadPages: { _, _ in }, pullFavicon: { _, _ in nil }, downloadCenter: downloads)
     }
 
     var tabActions: BrowserSidebarTabActions {

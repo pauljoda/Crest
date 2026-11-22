@@ -144,12 +144,6 @@
             return pages.request(PageIcon(pageID: pageID)).image
         }
 
-        /// The live page the engine names with `id`, for requests that arrive
-        /// with only a page identifier, such as a side panel's.
-        func page(_ id: String) -> ChromiumNativePage? {
-            UUID(uuidString: id).flatMap { hosted[$0]?.page }
-        }
-
         /// The live page the core names `pageID`, for what the Mac shell asks
         /// of it, such as its context menu's rows.
         func page(_ pageID: UUID) -> ChromiumNativePage? {

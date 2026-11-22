@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-09-embedded-tracker-navigation",
+      "category": "fixed",
+      "message": "Keep embedded tracker frames from replacing the page with an extension blocking screen"
+    }
+  ]
+}

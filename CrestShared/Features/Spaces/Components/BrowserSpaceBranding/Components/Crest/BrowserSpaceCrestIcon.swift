@@ -13,7 +13,8 @@ struct BrowserSpaceCrestIcon: View, Equatable {
 
     nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.branding.crest == rhs.branding.crest && lhs.branding.colors == rhs.branding.colors
-            && lhs.size == rhs.size && lhs.rasterizesLayers == rhs.rasterizesLayers
+            && lhs.branding.colorGradients == rhs.branding.colorGradients && lhs.size == rhs.size
+            && lhs.rasterizesLayers == rhs.rasterizesLayers
     }
 
     var body: some View {
@@ -78,6 +79,7 @@ struct BrowserSpaceCrestIcon: View, Equatable {
                 color: color(at: crest.symbolColorIndex),
                 size: size
             )
+            .modifier(BrowserSpaceCrestFigureDepth(depth: crest.depth, size: size))
         }
         .frame(width: size, height: size)
         .modifier(BrowserSpaceCrestRasterization(enabled: rasterizesLayers))
@@ -85,9 +87,10 @@ struct BrowserSpaceCrestIcon: View, Equatable {
         .accessibilityHidden(true)
     }
 
-    private func color(at index: Int) -> Color {
-        let colors = branding.crest.layerColors(spaceColors: branding.colors)
-        return colors[(0..<colors.count).contains(index) ? index : 0].color
+    /// The fill of the crest's palette entry `index`: one color, or the
+    /// gradient the Space's color there runs into.
+    private func color(at index: Int) -> AnyShapeStyle {
+        branding.crestLayerFill(index).style
     }
 }
 
@@ -104,6 +107,35 @@ struct BrowserSpaceCrestDepthModifier: ViewModifier {
             content.shadow(color: .black.opacity(0.28), radius: size * 0.04, y: size * 0.02)
         case .lifted:
             content.shadow(color: .black.opacity(0.36), radius: size * 0.1, y: size * 0.06)
+        case .figure:
+            // Only the figure lifts, which `BrowserSpaceCrestFigureDepth` casts.
+            content
         }
     }
+}
+
+/// The shadow a raised figure casts on its flat field, as paper cut and laid
+/// on it, which only that depth casts.
+struct BrowserSpaceCrestFigureDepth: ViewModifier {
+    let depth: CrestDepth
+    let size: CGFloat
+
+    func body(content: Content) -> some View {
+        if depth.kind == .figure {
+            content.shadow(
+                color: CrestBrandPalette.ink.opacity(BrowserSpaceCrestFigureDepthMetrics.opacity),
+                radius: size * BrowserSpaceCrestFigureDepthMetrics.radius,
+                y: size * BrowserSpaceCrestFigureDepthMetrics.drop)
+        } else {
+            content
+        }
+    }
+}
+
+enum BrowserSpaceCrestFigureDepthMetrics {
+    /// The kit's paper shadow under a figure, on its 64-unit grid: 1.6 down,
+    /// blurred 1.1, at a little over a third.
+    static let opacity = 0.38
+    static let radius: CGFloat = 2.2 / 64
+    static let drop: CGFloat = 1.6 / 64
 }

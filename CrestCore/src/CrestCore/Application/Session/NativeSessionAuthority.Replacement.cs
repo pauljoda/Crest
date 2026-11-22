@@ -61,7 +61,7 @@ public sealed partial class NativeSessionAuthority {
     private void SaveStaged(NativeSessionReplacement reserved, SessionState previous, SyncStaging staging) {
         NativeSyncTransaction? staged;
         try {
-            staged = StageWithSave(previous, reserved.Session, staging.Reason);
+            staged = StageWithSave(previous, reserved.Session, staging);
             if (staged is not null) reserved.BindSync(staged);
         } catch {
             reserved.Dispose();
@@ -79,11 +79,10 @@ public sealed partial class NativeSessionAuthority {
     /// The sealed journal `next`, made from `previous`, stages with its save,
     /// or null when no sync is attached or `next` is a disposable seed, which
     /// never syncs.
-    internal NativeSyncTransaction? StageWithSave(SessionState previous, SessionState next,
-        CrestCore.Contracts.SyncDeletionReason reason) {
+    internal NativeSyncTransaction? StageWithSave(SessionState previous, SessionState next, SyncStaging staging) {
         NativeSyncAuthority? target;
         lock (Gate) target = sync;
-        return target is null || next.DisposableSeedMarker is not null ? null : target.StageWithSave(previous, next, reason);
+        return target is null || next.DisposableSeedMarker is not null ? null : target.StageWithSave(previous, next, staging);
     }
 
     /// Queues the stage of an accepted state, when a sync is attached, the

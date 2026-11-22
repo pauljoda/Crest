@@ -9,7 +9,8 @@ using Xunit;
 namespace CrestCore.Tests;
 
 /// How the palette decides what leads and in what order: inline completion
-/// follows other browsers and Return opens what the field shows, a place shows
+/// follows other browsers and Return opens what the field shows, text that
+/// names no address searches first, a typed fragment survives, a place shows
 /// once as its strongest kind, picks for the same text lead and can be
 /// forgotten, a private window remembers nothing, site searches answer only
 /// to their exact shortcut and search only their site, and what the palette
@@ -28,6 +29,69 @@ public sealed partial class BrowserContractsTests {
         var answer = device.Query(Asking(window, "news"));
         Assert.Null(answer.Completion);
         Assert.DoesNotContain(answer.Groups.SelectMany(group => group.Rows), row => row.Reason == PaletteReason.Learned);
+    }
+
+    /// The address row for a site typed without a scheme falls back to http
+    /// only when the Space doesn't know the site: one it knows opens the way
+    /// it knows it, and an address typed with https:// never falls back.
+    [Fact]
+    public void OnlyAnUnknownSiteTypedWithoutASchemeOffersAnHttpFallback() {
+        var (session, space) = PaletteSession([], ("https://example.org/", "Example", 3, 2, 1));
+        using var device = new TestDevice(session);
+        var window = device.Open(space);
+        PaletteRow Address(string text) =>
+            device.Query(Asking(window, text)).Groups.SelectMany(group => group.Rows).First(row => row.Kind == PaletteRowKind.OpenAddress);
+
+        Assert.Equal(("https://example.org/", (string?)null), (Address("example.org").Address, Address("example.org").HttpFallback));
+        Assert.Equal(("https://httpforever.com", "http://httpforever.com"),
+            (Address("httpforever.com").Address, Address("httpforever.com").HttpFallback));
+        Assert.Null(Address("https://httpforever.com").HttpFallback);
+    }
+
+    /// A typed address the Space knows under another spelling opens that
+    /// spelling with the fragment the person typed, or none, never the
+    /// fragment the Space's tab or history holds, and the field never
+    /// completes one they didn't type.
+    [Fact]
+    public void AKnownAddressOpensWithTheFragmentThePersonTyped() {
+        var (session, space) = PaletteSession([OpenTab(Guid.NewGuid(), "Views", "https://app.example/#view=001")],
+            ("https://www.example.org/wiki/Page", "Page", 3, 2, 1));
+        using var device = new TestDevice(session);
+        var window = device.Open(space);
+        string? Opens(string text) =>
+            device.Query(Asking(window, text)).Groups.SelectMany(group => group.Rows).First().Address;
+
+        Assert.Equal("https://app.example/#view=002", Opens("https://app.example/#view=002"));
+        Assert.Equal("https://app.example/", Opens("https://app.example/"));
+        Assert.Equal("https://www.example.org/wiki/Page#Geography", Opens("example.org/wiki/Page#Geography"));
+        Assert.Equal("https://www.example.org/wiki/Page", Opens("example.org/wiki/Page"));
+    }
+
+    /// Return searches any text that names no address, a single word too,
+    /// however strongly a known page matches it, and the field completes
+    /// none of it; an address, a partial one the field completes and a
+    /// calculation still lead.
+    [Fact]
+    public void TextThatNamesNoAddressSearchesFirstWhileAnAddressStillOpens() {
+        var (session, space) = PaletteSession([], ("https://crest.example/notes", "Crest Browser Notes", 12, 40, 1));
+        using var device = new TestDevice(session);
+        var window = device.Open(space);
+        (PaletteRow First, AddressCompletion? Completion, IReadOnlyList<PaletteRow> Rows) Asked(string text) {
+            var answer = device.Query(Asking(window, text));
+            var rows = answer.Groups.SelectMany(group => group.Rows).ToList();
+            return (rows[0], answer.Completion, rows);
+        }
+
+        foreach (var text in new[] { "crest browser", "crest" }) {
+            var searched = Asked(text);
+            Assert.Equal((PaletteRowKind.Search, (AddressCompletion?)null), (searched.First.Kind, searched.Completion));
+            Assert.Contains(searched.Rows, row => row.Kind == PaletteRowKind.History && row.Title == "Crest Browser Notes");
+        }
+        var partial = Asked("crest.ex");
+        Assert.Equal(("crest.example", PaletteRowKind.OpenAddress), (partial.Completion?.Accepted, partial.First.Kind));
+        Assert.Equal(("http://localhost:3000", PaletteRowKind.OpenAddress), (Asked("localhost:3000").First.Address,
+            Asked("localhost:3000").First.Kind));
+        Assert.Equal(PaletteRowKind.Calculation, Asked("24 * 7").First.Kind);
     }
 
     [Fact]
@@ -59,7 +123,7 @@ public sealed partial class BrowserContractsTests {
         saved["tabs"] = new JsonArray(tabs);
         saved["folders"] = new JsonArray();
         saved.AsObject().Remove("selectedTabID");
-        double now = (DateTimeOffset.UtcNow - new DateTimeOffset(2001, 1, 1, 0, 0, 0, TimeSpan.Zero)).TotalSeconds;
+        double now = (DateTimeOffset.UtcNow - StoredSessionCodec.ReferenceEpoch).TotalSeconds;
         saved["history"] = new JsonArray([.. history.OrderBy(entry => entry.LastDaysAgo).Select(entry => (JsonNode)new JsonObject {
             ["id"] = Guid.NewGuid().ToString().ToUpperInvariant(),
             ["url"] = entry.Url,
@@ -78,6 +142,6 @@ public sealed partial class BrowserContractsTests {
         ["url"] = url,
         ["placement"] = "current",
         ["symbol"] = "globe",
-        ["lastActivatedAt"] = (DateTimeOffset.UtcNow.AddDays(-7) - new DateTimeOffset(2001, 1, 1, 0, 0, 0, TimeSpan.Zero)).TotalSeconds
+        ["lastActivatedAt"] = (DateTimeOffset.UtcNow.AddDays(-7) - StoredSessionCodec.ReferenceEpoch).TotalSeconds
     };
 }

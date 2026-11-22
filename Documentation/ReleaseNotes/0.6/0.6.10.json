@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "space-settings-name-focus",
+      "category": "fixed",
+      "message": "Rename Spaces without freezing Settings on macOS",
+      "platforms": ["mac"]
+    }
+  ]
+}

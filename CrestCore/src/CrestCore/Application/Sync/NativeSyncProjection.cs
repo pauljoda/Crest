@@ -48,7 +48,7 @@ public static class NativeSyncProjection {
     }
 
     internal static SyncPreferences Preferences(JsonNode source) => new(
-        source["savedStructure"]!.GetValue<bool>(), source["currentTabs"]!.GetValue<bool>(), source["historyAndArchive"]!.GetValue<bool>());
+        source[NativeSyncJournal.Key.SavedStructure]!.GetValue<bool>(), source[NativeSyncJournal.Key.CurrentTabs]!.GetValue<bool>(), source[NativeSyncJournal.Key.HistoryAndArchive]!.GetValue<bool>());
 
     public static JsonArray Project(JsonObject session, JsonNode preferences, IEnumerable<JsonObject> existingRecords) {
         var policy = Preferences(preferences);
@@ -169,7 +169,13 @@ public static class NativeSyncProjection {
         value[StoredSessionCodec.Key.Placement] = archived
             ? JsonValue.Create(TabPlacement.Current.Name) : source[StoredSessionCodec.Key.Placement]!.DeepClone();
         if (!archived) {
-            if (SavedUrl(source) is { } saved) value[StoredSessionCodec.Key.SavedUrl] = new SyncedAddress(saved).Spelled ?? saved;
+            if (SavedUrl(source) is { } saved) {
+                value[StoredSessionCodec.Key.SavedUrl] = new SyncedAddress(saved).Spelled ?? saved;
+                if (source[StoredSessionCodec.Key.SavedTitle] is { } savedTitle) {
+                    value[StoredSessionCodec.Key.SavedTitle] = savedTitle.DeepClone();
+                    value[StoredSessionCodec.Key.SavedTitleUrl] = value[StoredSessionCodec.Key.SavedUrl]!.DeepClone();
+                }
+            }
             // Only a placement that holds folders names one: a pinned tab never does.
             if (source[StoredSessionCodec.Key.FolderId] is { } folder && Placement(source).HoldsFolders)
                 value[StoredSessionCodec.Key.FolderId] = folder.DeepClone();
@@ -177,6 +183,7 @@ public static class NativeSyncProjection {
         }
         SyncedText.TabTitle.Fit(value);
         SyncedText.TabCustomTitle.Fit(value);
+        SyncedText.TabSavedTitle.Fit(value);
         SyncedText.TabSymbol.Fit(value);
         return value;
     }

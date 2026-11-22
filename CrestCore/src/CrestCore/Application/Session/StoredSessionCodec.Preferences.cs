@@ -116,22 +116,27 @@ internal static partial class StoredSessionCodec {
 
     /// The app-wide preferences. A value this build cannot read keeps its default,
     /// and translation rules that no longer validate read as none, which never
-    /// translates.
+    /// translates. A record from before pinned and saved tabs each had a close
+    /// choice gives both the one it stored.
     internal static AppPreferences DecodeAppPreferences(JsonNode? node) {
         var value = Object(node);
         var defaults = AppPreferences.Default;
+        var sharedClose = SavedTabClosePolicy.Named(TolerantText(value[Key.LegacySavedTabClosePolicy]));
         return new(StartupBehavior.Named(TolerantText(value[Key.StartupBehavior])) ?? defaults.Startup,
             TolerantFlag(value[Key.OffersTranslation]) ?? defaults.OffersTranslation,
             TolerantFlag(value[Key.AutomaticallyTranslates]) ?? defaults.AutomaticallyTranslates,
             TranslationRules(value[Key.TranslationRules]),
             TolerantFlag(value[Key.ChecksSpelling]) ?? defaults.ChecksSpelling,
             TolerantFlag(value[Key.AutomaticallyEntersPictureInPicture]) ?? defaults.AutomaticallyEntersPictureInPicture,
-            SavedTabClosePolicy.Named(TolerantText(value[Key.SavedTabClosePolicy])) ?? defaults.SavedTabClose,
+            SavedTabClosePolicy.Named(TolerantText(value[Key.PinnedTabsAfterClosing])) ?? sharedClose ?? defaults.PinnedTabClose,
+            SavedTabClosePolicy.Named(TolerantText(value[Key.SavedTabsAfterClosing])) ?? sharedClose ?? defaults.SavedTabClose,
             TolerantFlag(value[Key.SavedTabFaviconReturnsToSavedUrl]) ?? defaults.SavedTabFaviconReturnsToSavedUrl,
             TolerantFlag(value[Key.UnloadedSavedTabsStay]) ?? defaults.UnloadedSavedTabsStay,
             TolerantFlag(value[Key.SplitFocusFollowsMouse]) ?? defaults.SplitFocusFollowsMouse,
             TolerantFlag(value[Key.AutomaticallyShowsDeveloperToolbar]) ?? defaults.AutomaticallyShowsDeveloperToolbar,
             TolerantFlag(value[Key.ShowsRecentTabs]) ?? defaults.ShowsRecentTabs,
+            NewTabPosition.Named(TolerantText(value[Key.NewTabPosition])) ?? defaults.NewTabPosition,
+            TolerantFlag(value[Key.NewTabsJoinFolder]) ?? defaults.NewTabsJoinFolder,
             DecodePalettePreferences(value[Key.Palette]));
     }
 
@@ -146,12 +151,15 @@ internal static partial class StoredSessionCodec {
             [Key.TranslationRules] = EncodeTranslationRules(preferences.TranslationRules),
             [Key.ChecksSpelling] = preferences.ChecksSpelling,
             [Key.AutomaticallyEntersPictureInPicture] = preferences.AutomaticallyEntersPictureInPicture,
-            [Key.SavedTabClosePolicy] = preferences.SavedTabClose.Name,
+            [Key.PinnedTabsAfterClosing] = preferences.PinnedTabClose.Name,
+            [Key.SavedTabsAfterClosing] = preferences.SavedTabClose.Name,
             [Key.SavedTabFaviconReturnsToSavedUrl] = preferences.SavedTabFaviconReturnsToSavedUrl,
             [Key.UnloadedSavedTabsStay] = preferences.UnloadedSavedTabsStay,
             [Key.SplitFocusFollowsMouse] = preferences.SplitFocusFollowsMouse,
             [Key.AutomaticallyShowsDeveloperToolbar] = preferences.AutomaticallyShowsDeveloperToolbar,
-            [Key.ShowsRecentTabs] = preferences.ShowsRecentTabs
+            [Key.ShowsRecentTabs] = preferences.ShowsRecentTabs,
+            [Key.NewTabPosition] = preferences.NewTabPosition.Name,
+            [Key.NewTabsJoinFolder] = preferences.NewTabsJoinFolder
         };
         if (!preferences.Palette.Equals(PalettePreferences.Default)) value[Key.Palette] = Encode(preferences.Palette);
         return value;
@@ -214,7 +222,7 @@ internal static partial class StoredSessionCodec {
         stored[Key.TranslationRules] = RawTranslationRules(legacy.TranslationRules);
         Put(stored, Key.ChecksSpelling, legacy.ChecksSpelling);
         Put(stored, Key.AutomaticallyEntersPictureInPicture, legacy.AutomaticallyEntersPictureInPicture);
-        Put(stored, Key.SavedTabClosePolicy, legacy.SavedTabClosePolicy);
+        Put(stored, Key.LegacySavedTabClosePolicy, legacy.SavedTabClosePolicy);
         Put(stored, Key.SavedTabFaviconReturnsToSavedUrl, legacy.SavedTabFaviconReturnsToSavedUrl);
         Put(stored, Key.SplitFocusFollowsMouse, legacy.SplitFocusFollowsMouse);
         return DecodeAppPreferences(stored);
@@ -223,7 +231,7 @@ internal static partial class StoredSessionCodec {
     private static JsonNode? RawTranslationRules(string? text) {
         if (text is null) return null;
         try {
-            return JsonNode.Parse(text, documentOptions: new() { MaxDepth = 8 });
+            return JsonNode.Parse(text, documentOptions: JsonDepth.Preferences.Options);
         } catch (JsonException) {
             return null;
         }

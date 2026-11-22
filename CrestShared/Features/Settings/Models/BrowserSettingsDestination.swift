@@ -38,90 +38,91 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
 
     // MARK: - Static Variables
 
-    // Each destination wears a template tincture: the templates' main colors
-    // first, in list order, then their other colors, so neighbouring rows never
-    // share a hue on either platform and read the same in both appearances.
+    // Each destination is a tile of Crest's paper in one of its brand colors,
+    // its glyph solid, the colors taken in turn so neighbouring rows never
+    // share one on either platform.
     static let general = BrowserSettingsDestination(
         kind: .general, name: "general", title: "General", subtitle: "Browsing and startup",
         searchTerms:
             "browser startup default Space typing spelling spell check text editing Picture in Picture video developer toolbar localhost local pages translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair new tab floating sidebar",
-        symbol: "gearshape", tincture: .vigilAsh)
+        symbol: "gearshape.fill", color: CrestBrandPalette.crestBlue)
     static let tabs = BrowserSettingsDestination(
         kind: .tabs, name: "tabs", title: "Tabs", subtitle: "New, pinned and saved tabs",
         searchTerms:
             "focus switch new tabs follow move between Spaces Command-click middle-click Shift pinned saved close resume restore root URL favicon Split View focus follows mouse pointer sidebar widgets Now Playing media cards",
-        symbol: "square.on.square", tincture: .riverAzure)
+        symbol: "square.fill.on.square.fill", color: CrestBrandPalette.sky)
     static let search = BrowserSettingsDestination(
         kind: .search, name: "search", title: "Search", subtitle: "Search engine, command palette and site searches",
         searchTerms:
             "search engine Google suggestions command palette address bar results order top hit blended sections complete addresses inline autocomplete learn choices clear site searches shortcuts Tab YouTube Wikipedia scopes calculator paste and go reasons",
-        symbol: "magnifyingglass", tincture: .sunTenne)
+        symbol: "magnifyingglass", color: CrestBrandPalette.butter)
     static let lookAndFeel = BrowserSettingsDestination(
         kind: .lookAndFeel, name: "lookAndFeel", title: "Appearance", subtitle: "Window, tabs, zoom and motion",
         searchTerms:
-            "look and feel theme accent color transparency page zoom percentage sidebar left right borderless window fullscreen layout interface animation motion page cards folder highlights counts borders preview density spacing padding scale icons space size fit automatic",
-        symbol: "paintpalette", tincture: .lionGules)
+            "look and feel theme accent color transparency page zoom percentage sidebar left right borderless window fullscreen layout interface animation motion page cards folder groups highlights counts borders preview density spacing padding scale icons space size fit automatic",
+        symbol: "paintpalette.fill", color: CrestBrandPalette.coral)
     static let engines = BrowserSettingsDestination(
         kind: .engines, name: "engines", title: "Engines", subtitle: "Default engine and website rules",
         searchTerms: "Chromium WebKit hybrid default browser engine websites rules protected video DRM compatibility",
-        symbol: "cpu", tincture: .riverLapis)
+        symbol: "cpu.fill", color: CrestBrandPalette.crestBlue, platforms: [.desktop])
     static let links = BrowserSettingsDestination(
         kind: .links, name: "links", title: "Links", subtitle: "Quick Window and Peek",
         searchTerms: "external apps Quick Window Peek pinned saved routing open", symbol: "link",
-        tincture: .meadowVert)
+        color: CrestBrandPalette.sage)
     static let shortcuts = BrowserSettingsDestination(
         kind: .shortcuts, name: "shortcuts", title: "Shortcuts", subtitle: "Keyboard commands",
-        searchTerms: "keyboard keys commands rebind remap Arc hotkeys navigation tabs Spaces page", symbol: "keyboard",
-        tincture: .lionOr)
+        searchTerms: "keyboard keys commands rebind remap hotkeys navigation tabs Spaces page",
+        symbol: "keyboard.fill",
+        color: CrestBrandPalette.butter, platforms: [.desktop])
     static let spaces = BrowserSettingsDestination(
         kind: .spaces, name: "spaces", title: "Spaces", subtitle: "Profiles and appearance",
         searchTerms:
             "profile name identity icon color appearance theme search cleanup isolation reorder browsing archive independence folder intensity text color light dark automatic preview",
-        symbol: "square.grid.2x2", tincture: .stormOr)
+        symbol: "square.grid.2x2.fill", color: CrestBrandPalette.crestBlue)
     static let sync = BrowserSettingsDestination(
         kind: .sync, name: "sync", title: "Sync", subtitle: "iCloud setup and status",
         searchTerms: "iCloud CloudKit account upload download conflict status monitor diagnostics pending records",
-        symbol: "arrow.triangle.2.circlepath.icloud", tincture: .winterIce)
+        symbol: "arrow.triangle.2.circlepath.icloud.fill", color: CrestBrandPalette.sky)
     // The macOS sidebar row cannot fit "Privacy & Permissions" on one line at
     // its compact row height.
     static let privacy = BrowserSettingsDestination(
         kind: .privacy, name: "privacy", title: "Privacy & Permissions", navigationTitle: "Privacy",
         subtitle: "Site access and data",
         searchTerms: "camera microphone site access history cookies data website cache clear browsing",
-        symbol: "hand.raised", tincture: .dragonFire)
+        symbol: "hand.raised.fill", color: CrestBrandPalette.coral)
     static let adBlocking = BrowserSettingsDestination(
         kind: .adBlocking, name: "adBlocking", title: "Ad Blocking", subtitle: "Filter lists, your rules and sites",
         searchTerms:
             "ads trackers content blocking filter lists subscribe EasyList uBlock AdGuard my filters custom rules block element cookie notices strict balanced",
-        symbol: "shield.lefthalf.filled", tincture: .riverGules, requiredCapability: .contentBlocking)
+        symbol: "shield.fill", color: CrestBrandPalette.sage, requiredCapability: .contentBlocking)
     static let passwords = BrowserSettingsDestination(
         kind: .passwords, name: "passwords", title: "Passwords", subtitle: "Credentials and autofill",
-        searchTerms: "credentials autofill iCloud Keychain passkeys synchronization", symbol: "key",
-        tincture: .ironPatina)
+        searchTerms: "credentials autofill iCloud Keychain passkeys synchronization", symbol: "key.fill",
+        color: CrestBrandPalette.butter)
     static let extensions = BrowserSettingsDestination(
         kind: .extensions, name: "extensions", title: "Extensions", subtitle: "Space extensions and permissions",
         searchTerms: "extensions permissions Chromium Chrome Web Store install copies Spaces",
-        symbol: "puzzlepiece.extension", tincture: .meadowMoss,
+        symbol: "puzzlepiece.extension.fill", color: CrestBrandPalette.sky,
         requiredCapability: .extensions)
     static let featureFlags = BrowserSettingsDestination(
         kind: .featureFlags, name: "featureFlags", title: "Feature Flags", subtitle: "Engine experiments",
         searchTerms: "WebKit Chromium experimental preview testable developer stable runtime flags features",
-        symbol: "flag.2.crossed", tincture: .sunTerracotta,
-        requiredCapability: .featureFlags)
+        symbol: "flag.2.crossed.fill", color: CrestBrandPalette.coral,
+        requiredCapability: .featureFlags, platforms: [.desktop])
     static let advanced = BrowserSettingsDestination(
         kind: .advanced, name: "advanced", title: "Advanced", subtitle: "Import, export, and runtime",
         searchTerms: "import export backup portability data records", symbol: "switch.2",
-        tincture: .stormGunmetal)
+        color: CrestBrandPalette.coral)
     static let agents = BrowserSettingsDestination(
         kind: .agents, name: "agents", title: "Agents", subtitle: "Coding agents and scripts",
         searchTerms:
             "agents AI MCP model context protocol coding agents scripts automation Claude Codex Cursor command line terminal",
-        symbol: "sparkles", tincture: .meadowForest)
+        symbol: "sparkles", color: CrestBrandPalette.butter, platforms: [.desktop])
     static let about = BrowserSettingsDestination(
         kind: .about, name: "about", title: "About", subtitle: "Version, updates, and support",
         searchTerms:
             "version build updates changelog what's new feedback Reddit GitHub issues roadmap support community",
-        symbol: "info.circle", tincture: .sunDune)
+        symbol: "info.circle.fill", color: CrestBrandPalette.sky)
 
     /// Every destination, in catalog order.
     static let all: [BrowserSettingsDestination] = [
@@ -148,16 +149,18 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
 
     let symbol: String
 
-    /// The template tincture that stands for the destination: the fill of
-    /// its tile, or its glyph's tint where the glyph is not tiled.
-    let tincture: Tincture
-
-    /// The tincture's color, which fills the destination's tile.
-    var color: Color { tincture.color.color }
+    /// The brand color that fills the destination's tile.
+    let color: Color
 
     /// The engine capability the destination's whole subject depends on. An
     /// engine without it never offers the destination.
     let requiredCapability: EngineCapability?
+
+    /// The platforms whose shells host the destination: every one, or only
+    /// the Mac for a subject only the Mac has, such as the engine choice,
+    /// rebindable keyboard commands, WebKit's private feature registry and
+    /// the agents server.
+    let platforms: Set<DevicePlatform>
 
     var id: String { name }
 
@@ -166,7 +169,8 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     private init(
         kind: Kinds, name: String, title: LocalizedStringResource, navigationTitle: LocalizedStringResource? = nil,
         subtitle: LocalizedStringResource, searchTerms: LocalizedStringResource, symbol: String,
-        tincture: Tincture, requiredCapability: EngineCapability? = nil
+        color: Color, requiredCapability: EngineCapability? = nil,
+        platforms: Set<DevicePlatform> = Set(DevicePlatform.all)
     ) {
         self.kind = kind
         self.name = name
@@ -175,8 +179,9 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         self.subtitle = subtitle
         self.searchTerms = searchTerms
         self.symbol = symbol
-        self.tincture = tincture
+        self.color = color
         self.requiredCapability = requiredCapability
+        self.platforms = platforms
     }
 
     // MARK: - Actions - Platform capability
@@ -188,7 +193,24 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
     /// platform can host stays out of the other's list.
     @MainActor
     static func platformCases(in state: CoreState) -> [BrowserSettingsDestination] {
-        BrowserPlatformSettingsDestinationCatalog.cases.filter { $0.isProvided(in: state) }
+        all.filter { $0.platforms.contains(.current) && $0.isProvided(in: state) }
+    }
+
+    /// The destinations a list shows: those this platform presents and the
+    /// device offers, matching `searchText`. A match inside a page that lives
+    /// under another lists the page `parent` names for it.
+    @MainActor
+    static func visible(
+        matching searchText: String, locale: Locale, in state: CoreState,
+        parent: (BrowserSettingsDestination) -> BrowserSettingsDestination? = { _ in nil }
+    ) -> [BrowserSettingsDestination] {
+        let provided = platformCases(in: state)
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return provided }
+        let matches = provided.filter { $0.matchesSearchQuery(query, locale: locale) }
+        return provided.filter { destination in
+            matches.contains(destination) || matches.contains { parent($0) == destination }
+        }
     }
 
     /// Whether the device offers the destination's subject at all: the

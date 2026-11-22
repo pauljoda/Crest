@@ -20,10 +20,22 @@ internal sealed class DeviceAdoption {
     /// The shortcuts earlier releases saved naming a digit key by the symbol
     /// Shift types on it, which now name the digit.
     public static readonly DeviceAdoption ShiftedDigitShortcuts = new(marker: "shifted-digit-shortcuts", olderBuildsRead: false);
+    /// The zoom pages start at, which earlier releases kept in their defaults.
+    public static readonly DeviceAdoption PageZoom = new(marker: "page-zoom", olderBuildsRead: false);
+    /// What a page out of sight keeps doing, which the Mac kept in its defaults.
+    public static readonly DeviceAdoption BackgroundPageActivity = new(marker: "background-page-activity", olderBuildsRead: false);
+    /// Whether pages may draw faster than 60 frames a second, which the Mac
+    /// kept among its WebKit flags.
+    public static readonly DeviceAdoption HighFrameRate = new(marker: "high-frame-rate", olderBuildsRead: false);
+    /// Whether the device syncs with iCloud, which earlier releases kept in
+    /// their defaults.
+    public static readonly DeviceAdoption CloudSyncEnabled = new(marker: "cloud-sync-enabled", olderBuildsRead: false);
+    /// Where each Space's downloads went, which the Mac kept in its defaults.
+    public static readonly DeviceAdoption SpaceDownloads = new(marker: "space-downloads", olderBuildsRead: false);
 
     public static IReadOnlyList<DeviceAdoption> All { get; } =
         [WindowRecords, SitePermissions, Shortcuts, LinkPreferences, CloudTransport, SetupDraft, SetupCompletion, OpenWindows,
-            ShiftedDigitShortcuts];
+            ShiftedDigitShortcuts, PageZoom, BackgroundPageActivity, HighFrameRate, CloudSyncEnabled, SpaceDownloads];
 
     #endregion
 

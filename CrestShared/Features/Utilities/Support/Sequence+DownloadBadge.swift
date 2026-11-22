@@ -4,12 +4,18 @@ import SwiftUI
 extension Sequence<DownloadState> {
     // MARK: - Variables
 
-    /// The progress a downloads badge shows: the newest live download's, or
-    /// nil when none is live.
+    /// How far the transferring downloads are together, to the nearest
+    /// hundredth, or nil while none transfers or one does not know its size
+    /// yet: what every downloads badge and the Mac's Dock tile show.
     var notificationProgress: Double? {
-        filter { $0.phase.isLive }
-            .max { $0.createdAt < $1.createdAt }
-            .map(\.progress)
+        let transferring = filter(\.phase.isTransferring).map(\.telemetry)
+        let sizes = transferring.compactMap(\.totalBytes)
+        // Summed as doubles, which sizes a server declares near the integer
+        // limit cannot overflow.
+        let total = sizes.reduce(0.0) { $0 + Double($1) }
+        guard !transferring.isEmpty, sizes.count == transferring.count, total > 0 else { return nil }
+        let received = transferring.reduce(0.0) { $0 + Double($1.bytesReceived) }
+        return (received / total * 100).rounded() / 100
     }
 
     // MARK: - Actions - Badge

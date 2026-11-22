@@ -11,29 +11,6 @@ namespace CrestCore.Tests;
 /// lands, what its section refuses, what closing keeps, and which tab a window
 /// shows afterwards.
 public sealed partial class BrowserContractsTests {
-    /// A saved session whose saved tab is an open split member with a partner,
-    /// followed by an open tab of its own.
-    private static (JsonNode Session, Guid Space, Guid Member, Guid Partner, Guid Plain) SplitSession() {
-        var f = SavedSession(); var space = f.Document["session"]!["spaces"]![0]!;
-        var group = SwiftId(Guid.NewGuid()); var partner = Guid.NewGuid(); var plain = Guid.NewGuid();
-        var first = space["tabs"]![0]!.AsObject();
-        first["placement"] = "current"; first["folderID"] = null; first["savedURL"] = null; first["splitGroupID"] = group.DeepClone();
-        JsonObject Current(Guid id, JsonNode? split) => new() {
-            ["id"] = SwiftId(id),
-            ["title"] = "Page",
-            ["url"] = "https://example.org/" + id,
-            ["placement"] = "current",
-            ["symbol"] = "globe",
-            ["lastActivatedAt"] = 800000000.0,
-            ["splitGroupID"] = split
-        };
-        space["tabs"]!.AsArray().Add(Current(partner, group.DeepClone()));
-        space["tabs"]!.AsArray().Add(Current(plain, null));
-        return (f.Document["session"]!, f.Space, f.Tab, partner, plain);
-    }
-
-    private static TabContent Page(string address, string? title = null) => new(address, View: null, title);
-
     [Fact]
     public void ClosingArchivesAnOpenTabAndPutsASavedTabsPageAwayReturningTheWindowToItsPreviousTab() {
         using var device = new TestDevice(MaximalDocument());
@@ -66,6 +43,33 @@ public sealed partial class BrowserContractsTests {
         // Its split partner is left on its own, so the split and its name go.
         Assert.Null(core.Current.Spaces[0].Tabs.Single(tab => tab.Id == left).SplitGroupId);
         Assert.Empty(core.Current.Spaces[0].SplitGroups);
+    }
+
+    [Fact]
+    public void PuttingAwaySavedTabsTogetherReturnsTheWindowToATabOutsideThem() {
+        using var device = new TestDevice(MaximalDocument());
+        var core = device.Authority;
+        TestGrants.UnlockGuarded(device.Send, device.Workspace, core.Current);
+        var space = core.Current.Spaces[0];
+        Guid Id(string value) => Guid.Parse(value);
+        Guid pinned = Id("853D3F20-BB2C-45F0-98BD-CCC71C646370"), article = Id("B61250D4-3D4E-4DD6-8871-0BB326669142"),
+            start = Id("056F15C0-13CE-4ED0-B9FE-DD4A9D05A56D");
+        var window = device.Open(space.Id);
+        foreach (var tab in new[] { start, pinned, article }) device.Send(new ShowTab(window, space.Id, tab));
+
+        // Closing them one by one would show the pinned tab again once the
+        // shown article closed; together, the window goes back past both, and
+        // each page is put away.
+        var putAway = device.Send(new PutAwayTabs(device.Workspace, window, space.Id, [pinned, article]))
+            .OfType<TabPagePutAway>().Select(change => change.TabId);
+        Assert.Equal(start, device.Tab(window, space.Id));
+        Assert.Equal([pinned, article], putAway.Order());
+        Assert.All([pinned, article], id => Assert.Contains(core.Current.Spaces[0].Tabs, tab => tab.Id == id));
+
+        // The window's history forgets both, so closing the tab it went back
+        // to brings neither back.
+        device.Send(new CloseTab(device.Workspace, window, space.Id, start));
+        Assert.DoesNotContain(device.Tab(window, space.Id), new Guid?[] { pinned, article });
     }
 
 }

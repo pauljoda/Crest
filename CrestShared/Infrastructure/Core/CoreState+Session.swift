@@ -10,11 +10,16 @@ extension CoreState {
 
     /// The images the platform kept for the tabs of a workspace that opened
     /// before they were offered, as the persistent session a launch loads
-    /// does: each tab the workspace holds that wears none takes its own.
-    func adoptImages(_ images: [UUID: Data], in workspaceID: UUID) {
+    /// does: each tab the workspace holds that wears none takes its own, and
+    /// one that keeps no image for its saved page takes the one in `saved`,
+    /// which the store keeps anew for the tabs in `unkept`.
+    func adoptImages(
+        _ images: [UUID: Data], saved: [UUID: BrowserSavedFavicon] = [:], unkept: Set<UUID> = [], in workspaceID: UUID
+    ) {
         guard let workspace = workspaces[workspaceID] else { return }
         let held = Set(workspace.tabIDs)
         favicons.adopt(images) { held.contains($0) }
+        favicons.adoptSaved(saved, unkept: unkept) { held.contains($0) }
     }
 
     // MARK: - Actions - Batches

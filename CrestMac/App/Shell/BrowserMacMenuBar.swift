@@ -108,7 +108,7 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
         pasteAsPlainText.target = self
         pasteAsPlainText.keyEquivalentModifierMask = [.command, .option, .shift]
         edit.addItem(pasteAsPlainText)
-        // Chrome and Arc paste without formatting with ⇧⌘V.
+        // ⇧⌘V pastes without formatting too, the shortcut many people know for it.
         let alias = NSMenuItem(title: pasteAsPlainText.title, action: pasteAsPlainText.action, keyEquivalent: "v")
         alias.target = self
         alias.keyEquivalentModifierMask = [.command, .shift]
@@ -195,6 +195,22 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
             let shortcut = shortcuts.shortcut(for: command)
             item.keyEquivalent = shortcut.map { String($0.key.keyEquivalent.character) } ?? ""
             item.keyEquivalentModifierMask = shortcut?.modifiers.appKitModifierFlags ?? []
+        }
+        refreshAlternates()
+    }
+
+    /// Folds each Option alternate into the item before it, as Clear All Tabs
+    /// shows in place of Clear Other Tabs while Option is held. AppKit folds
+    /// an item only while its keys are the other's with Option added, so one
+    /// whose keys a person changed shows on its own.
+    private func refreshAlternates() {
+        for (command, item, _) in commandItems where command.isOptionAlternate {
+            guard let menu = item.menu, menu.index(of: item) > 0 else { continue }
+            let previous = menu.items[menu.index(of: item) - 1]
+            let modifiers = previous.keyEquivalentModifierMask
+            item.isAlternate =
+                !item.keyEquivalent.isEmpty && item.keyEquivalent == previous.keyEquivalent
+                && !modifiers.contains(.option) && item.keyEquivalentModifierMask == modifiers.union(.option)
         }
     }
 

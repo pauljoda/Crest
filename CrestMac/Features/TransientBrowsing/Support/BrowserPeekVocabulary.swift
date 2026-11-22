@@ -7,18 +7,6 @@ import SwiftUI
 /// strings stay in this target so the shared components never have to guess
 /// which name applies.
 enum BrowserPeekVocabulary {
-    static var overlay: BrowserTransientOverlayVocabulary {
-        BrowserTransientOverlayVocabulary(
-            closeAccessibilityLabel: "Close Peek",
-            closeHelp: "Close Peek (Esc or ⌘W)",
-            loadingTitle: "Opening Peek…",
-            releasedTitle: "Peek Released",
-            releasedDescription:
-                "Crest released this temporary page to reduce memory use.",
-            restoreTitle: "Reload Peek"
-        )
-    }
-
     static var initialLoadingCoverLabel: LocalizedStringKey {
         "Loading Peek"
     }

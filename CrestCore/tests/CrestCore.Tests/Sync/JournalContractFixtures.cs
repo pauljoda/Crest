@@ -3,6 +3,8 @@ using System.Text.Json.Nodes;
 using CrestCore.Application;
 using CrestCore.Contracts;
 
+using CrestCore.Tests.Session;
+
 using Xunit;
 
 namespace CrestCore.Tests;
@@ -15,7 +17,6 @@ public sealed partial class BrowserContractsTests {
     #region Static Variables
 
     /// Seconds from 1970 to 2001, the epoch the stored format counts from.
-    private const double UnixEpochInReferenceSeconds = 978_307_200;
 
     #endregion
 
@@ -71,9 +72,11 @@ public sealed partial class BrowserContractsTests {
 
         /// Stages `session` as the core writes it, `at` seconds after 1970,
         /// deleting what it no longer holds, where that authorizes a deletion,
-        /// for `reason`, an explicit deletion unless named.
-        public void Stage(JsonObject session, SyncDeletionReason? reason = null, double at = 100) =>
-            Journal = Journal.Stage(Canonical(session), reason ?? SyncDeletionReason.ExplicitDelete, At(at));
+        /// for `reason`, an explicit deletion unless named, and marking the
+        /// folders `emptied` names emptied instead.
+        public void Stage(JsonObject session, SyncDeletionReason? reason = null, double at = 100, params Guid[] emptied) =>
+            Journal = Journal.Stage(Canonical(session), reason ?? SyncDeletionReason.ExplicitDelete, At(at),
+                emptied: emptied.Select(SyncRecordKind.Folder.RecordName).ToHashSet(StringComparer.Ordinal));
 
         /// Merges `records`, in the journal's form, as they arrived from the cloud.
         public void Merge(IEnumerable<JsonObject> records) =>
@@ -106,8 +109,8 @@ public sealed partial class BrowserContractsTests {
         public JsonObject Materialize(JsonObject local) {
             var now = At(1_000_000);
             var records = NativeSyncEvaluator.Reconcile(Journal.Records).Select(record => record!.AsObject()).ToArray();
-            var session = NativeSyncMaterializer.Materialize(Canonical(local), Journal.Preferences, records, now);
-            return NativeSessionMaintenance.Repair(session, now, ids: new TestIds())["session"]!.AsObject();
+            var session = StoredSessionMaintenance.Materialize(Canonical(local), Journal.Preferences, records, now);
+            return StoredSessionMaintenance.Repair(session, now, ids: new TestIds())["session"]!.AsObject();
         }
 
         /// The record of `kind` with identity `id`, or null when the journal
@@ -184,6 +187,37 @@ public sealed partial class BrowserContractsTests {
             stored.App.Drain();
         }
 
+        /// The journal the device's file holds now.
+        public JsonObject StoredJournal => JsonNode.Parse(StoredParts(directory.File)["journal"])!.AsObject();
+
+        /// The session the device's file holds now.
+        public JsonObject StoredSession => JsonNode.Parse(StoredParts(directory.File)["core"])!.AsObject();
+
+        /// Sends `intent`, made for the device's workspace, as the person's
+        /// edit, without waiting for a stage it queues.
+        public void Send(Func<Guid, Intent> intent) {
+            stored.App.Send(intent(stored.Workspace));
+            stored.App.Drain();
+        }
+
+        /// Sends `intent`, made for the device's workspace, as the person's
+        /// edit, and stages it as a pause in editing does.
+        public void Edit(Func<Guid, Intent> intent) {
+            stored.App.Send(intent(stored.Workspace));
+            stored.App.Drain();
+            stored.Sync.Flush();
+            stored.App.Drain();
+        }
+
+        /// A window on the device's workspace showing `tab` in `space`.
+        public Guid Open(Guid space, Guid tab) {
+            var window = Guid.NewGuid();
+            stored.App.Send(new OpenWindow(window, stored.Workspace, Saved: false, CopyingWindowId: null, ShowingSpaceId: space,
+                [new ShownTab(space, tab)], RestoresTabs: true));
+            stored.App.Drain();
+            return window;
+        }
+
         /// The cloud saved every record that waits to upload, at the version
         /// the journal holds it at.
         public void MarkUploaded() {
@@ -212,7 +246,7 @@ public sealed partial class BrowserContractsTests {
     #region Actions - Names and dates
 
     /// A date `seconds` after 1970, in the stored format's seconds since 2001.
-    private static double At(double seconds) => seconds - UnixEpochInReferenceSeconds;
+    private static double At(double seconds) => seconds - StoredSessionCodec.ReferenceEpochUnixSeconds;
 
     /// The identity numbered `value`.
     private static Guid Fixed(int value) => Guid.Parse($"00000000-0000-0000-0000-{value:x12}");
@@ -412,7 +446,7 @@ public sealed partial class BrowserContractsTests {
     }
 
     /// The date a record member holds, in seconds after 1970.
-    private static double Unix(JsonNode? date) => date!.GetValue<double>() + UnixEpochInReferenceSeconds;
+    private static double Unix(JsonNode? date) => date!.GetValue<double>() + StoredSessionCodec.ReferenceEpochUnixSeconds;
 
     #endregion
 }

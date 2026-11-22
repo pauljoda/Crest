@@ -33,19 +33,20 @@ struct BrowserPeekUnlockedContent: View {
             pageStatus: pageStatus,
             spaces: model.availableSpaceModels.map(\.identity),
             selectedSpaceID: model.request.spaceID,
-            vocabulary: BrowserPeekVocabulary.overlay,
+            vocabulary: .peek,
             actions: actions
         ) {
             webContent
         }
         .modifier(taskLifecycle)
-        .allowsHitTesting(!model.isPullStaged)
+        // A card on its way back into its link takes no more clicks.
+        .allowsHitTesting(!model.isPullStaged && model.motionState?.returnsToSource != true)
         .onChange(of: model.motionState) { _, state in
             if let state { retainedMotionState = state }
         }
         .task(id: model.motionState?.releasedAt) {
             guard model.motionState?.returnsToSource == true else { return }
-            try? await Task.sleep(for: .seconds(reduceMotion ? 0 : 1.2))
+            try? await Task.sleep(for: .seconds(reduceMotion ? 0 : BrowserPeekPace.chosen.settlingDuration))
             guard !Task.isCancelled else { return }
             model.finishReturningPull()
         }
@@ -130,7 +131,15 @@ struct BrowserPeekUnlockedContent: View {
         _ = model.preparePage(isActive: scenePhase == .active)
     }
 
+    /// Closes the card back into the link it grew out of, as its opening ran
+    /// in reverse, while the scrim fades. With Reduce Motion, or where it
+    /// cannot, it fades out.
     private func dismiss() {
+        var closesIntoSource = false
+        withAnimation(dismissAnimation) {
+            closesIntoSource = !reduceMotion && model.closeIntoSource()
+        }
+        guard !closesIntoSource else { return }
         withAnimation(dismissAnimation) {
             model.dismiss()
         }

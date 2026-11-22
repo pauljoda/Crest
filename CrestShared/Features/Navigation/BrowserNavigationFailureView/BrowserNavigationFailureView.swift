@@ -4,7 +4,6 @@ struct BrowserNavigationFailureView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let failure: PageFailure
-    let branding: SpaceBranding?
     let layout: BrowserNavigationFailureLayout
     let canGoBack: Bool
     let canProceed: Bool
@@ -16,10 +15,8 @@ struct BrowserNavigationFailureView: View {
         BrowserNavigationFailureMetrics.iconSize
     @State private var showsDetails = false
 
-    private var accent: Color {
-        BrowserNavigationFailureAppearance.brandColor(for: branding)?.color
-            ?? .accentColor
-    }
+    /// Crest blue, the color of what a person can press, on every Space.
+    private var accent: Color { CrestBrandTheme.accent }
 
     private var presentation: BrowserNavigationFailurePresentation {
         BrowserNavigationFailurePresentation(failure: failure)
@@ -43,7 +40,7 @@ struct BrowserNavigationFailureView: View {
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.background)
+        .background(CrestBrandTheme.canvas)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("navigation-failure")
     }
@@ -63,7 +60,6 @@ struct BrowserNavigationFailureView: View {
 ) {
     BrowserNavigationFailureView(
         failure: BrowserNavigationFailurePreviewFixture.offline,
-        branding: BrowserNavigationFailurePreviewFixture.branding,
         layout: .compact,
         canGoBack: true,
         canProceed: false,
@@ -79,7 +75,6 @@ struct BrowserNavigationFailureView: View {
 ) {
     BrowserNavigationFailureView(
         failure: BrowserNavigationFailurePreviewFixture.certificate,
-        branding: BrowserNavigationFailurePreviewFixture.branding,
         layout: .regular,
         canGoBack: true,
         canProceed: true,

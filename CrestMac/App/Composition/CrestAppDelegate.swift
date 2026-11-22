@@ -46,6 +46,15 @@ final class CrestAppDelegate: NSObject, NSApplicationDelegate {
         _ = shell.openExternal(urls)
     }
 
+    /// A page handed off from another device, which opens as a link from
+    /// another app does.
+    func application(
+        _ application: NSApplication, continue userActivity: NSUserActivity,
+        restorationHandler: @escaping ([any NSUserActivityRestoring]) -> Void
+    ) -> Bool {
+        shell.continueBrowsing(userActivity)
+    }
+
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
         shell.dockMenu()
     }

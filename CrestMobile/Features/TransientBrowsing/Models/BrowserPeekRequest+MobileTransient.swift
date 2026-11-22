@@ -5,20 +5,10 @@ extension BrowserPeekRequest: MobileBrowserTransientRequest {
 
     var isQuickWindow: Bool { false }
     var accessibilityLabel: String { "Peek from \(sourceTitle)" }
-    var accessibilityIdentifier: String { "mobile-peek-overlay" }
+    var accessibilityIdentifier: String { BrowserMobileAccessibilityID.peekOverlay }
     var previewSystemImage: String { "eye" }
 
-    var overlayVocabulary: BrowserTransientOverlayVocabulary {
-        BrowserTransientOverlayVocabulary(
-            closeAccessibilityLabel: "Close Peek",
-            closeHelp: "Close Peek (Esc or ⌘W)",
-            loadingTitle: "Opening Peek…",
-            releasedTitle: "Peek Released",
-            releasedDescription:
-                "Crest released this temporary page to reduce memory use.",
-            restoreTitle: "Reload Page"
-        )
-    }
+    var overlayVocabulary: BrowserTransientOverlayVocabulary { .peek }
 
     // MARK: - Actions - Presentation
 

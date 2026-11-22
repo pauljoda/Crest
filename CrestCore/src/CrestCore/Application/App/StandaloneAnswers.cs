@@ -1,4 +1,5 @@
 using CrestCore.Contracts;
+using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
@@ -20,7 +21,13 @@ internal sealed record StandaloneContext(DateTimeOffset Now);
 /// origin, notification request, blocked popup or automatic download leads
 /// to, and the capacities the core enforces. A host asks them before it has
 /// an app, or from code that holds none; an app answers them the same way.
-public sealed class StandaloneAnswers : IQueryAnswers {
+public sealed class StandaloneAnswers(IClock? clock = null) : IQueryAnswers {
+    #region Variables
+
+    private readonly IClock clock = clock ?? new SystemClock();
+
+    #endregion
+
     #region Actions - Queries
 
     /// The answer to a question that reads no state, and to an address that
@@ -28,7 +35,7 @@ public sealed class StandaloneAnswers : IQueryAnswers {
     /// other question, which only an app answers.
     public TAnswer Query<TAnswer>(Query<TAnswer> query) {
         ArgumentNullException.ThrowIfNull(query);
-        return query.AnswerWithoutApp(new StandaloneContext(DateTimeOffset.UtcNow));
+        return query.AnswerWithoutApp(new StandaloneContext(clock.Now));
     }
 
     #endregion

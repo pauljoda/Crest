@@ -33,10 +33,7 @@ struct BrowserSidebarDropCommit {
             browser.tabMultiSelection.message = error.placementExplanation
             return false
         }
-        let copies: [TabCopied] = changes.compactMap {
-            guard case .tabCopied(let copied) = $0, copied.workspaceID == browser.family.workspaceID else { return nil }
-            return copied
-        }
+        let copies = changes.compactMap(\.tabCopied).filter { $0.workspaceID == browser.family.workspaceID }
         browser.prepareAcceptedCopies(copies, from: sources)
         // The window followed the lift when the core moved it to its Space.
         if let destination = drop.destination, browser.selectedSpaceID == destination.id {

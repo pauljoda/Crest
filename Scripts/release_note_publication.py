@@ -13,20 +13,20 @@ from typing import NamedTuple
 
 try:
     from release_note_catalog import (
-        CATALOG_PATH,
+        CATALOG_DIRECTORY,
         PUBLICATION_CHANNELS,
         CatalogValidationError,
         ReleaseNoteCatalog,
-        parse_catalog_document,
+        read_catalog,
         unique_json_object,
     )
 except ModuleNotFoundError:
     from Scripts.release_note_catalog import (
-        CATALOG_PATH,
+        CATALOG_DIRECTORY,
         PUBLICATION_CHANNELS,
         CatalogValidationError,
         ReleaseNoteCatalog,
-        parse_catalog_document,
+        read_catalog,
         unique_json_object,
     )
 
@@ -91,13 +91,11 @@ def effective_publication_state(
     state_contents: str | None,
     source: str = PUBLICATION_STATE_FILENAME,
 ) -> PublicationState:
-    if state_contents is not None:
-        return parse_publication_state(state_contents, source, catalog)
-    if not catalog.publication_baselines:
+    if state_contents is None:
         raise CatalogValidationError(
-            "catalog has no publicationBaselines and no publication state exists"
+            f"{source} is missing; the updates branch keeps each channel's cursor"
         )
-    return PublicationState(dict(catalog.publication_baselines))
+    return parse_publication_state(state_contents, source, catalog)
 
 
 def advance_channel(
@@ -152,7 +150,7 @@ def read_optional(path: pathlib.Path | None) -> tuple[str | None, str]:
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("marker", "advance"))
-    parser.add_argument("--catalog", type=pathlib.Path, default=pathlib.Path(CATALOG_PATH))
+    parser.add_argument("--catalog", type=pathlib.Path, default=pathlib.Path(CATALOG_DIRECTORY))
     parser.add_argument("--state", type=pathlib.Path)
     parser.add_argument("--channel", choices=PUBLICATION_CHANNELS, required=True)
     parser.add_argument("--output", type=pathlib.Path)
@@ -161,7 +159,7 @@ def parse_arguments() -> argparse.Namespace:
 
 def main() -> int:
     arguments = parse_arguments()
-    catalog = parse_catalog_document(arguments.catalog.read_text(), str(arguments.catalog))
+    catalog = read_catalog(arguments.catalog)
     state_contents, state_source = read_optional(arguments.state)
     state = effective_publication_state(catalog, state_contents, state_source)
 

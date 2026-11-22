@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "settings-space-page-every-window",
+      "category": "fixed",
+      "message": "On Mac, choosing a Space in Settings always opens that Space's page, in a second or reopened window too, instead of sometimes leaving Settings on the page it showed before.",
+      "platforms": ["mac"]
+    }
+  ]
+}

@@ -86,8 +86,8 @@ internal sealed class SyncStager {
         lock (NativeSessionAuthority.Gate) {
             if (stopped) return;
             requested++;
-            var removals = Pending.Adding(new(previous, next, edit.Reason));
-            var now = DateTimeOffset.UtcNow;
+            var removals = Pending.Adding(new(previous, next, edit.Reason, edit.Deleted, edit.Emptied));
+            var now = owner.Clock.Now;
             var waiting = queued ?? staging;
             var delay = waiting is { } earlier && earlier.Delay < edit.Urgency.Delay ? earlier.Delay : edit.Urgency.Delay;
             var since = waiting?.Since ?? now;
@@ -196,7 +196,7 @@ internal sealed class SyncStager {
             while (queued is { } next) {
                 if (stopped || next.Sequence <= expedited) return Take();
                 if (turns > next.Turn) {
-                    var wait = next.Due - DateTimeOffset.UtcNow;
+                    var wait = next.Due - owner.Clock.Now;
                     if (wait <= TimeSpan.Zero) return Take();
                     Monitor.Wait(NativeSessionAuthority.Gate, wait);
                 } else {

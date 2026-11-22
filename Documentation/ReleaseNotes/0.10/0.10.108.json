@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "whats-new-opens-release-page",
+      "category": "improved",
+      "message": "What's New in Settings › About and on the update card opens the release's notes on crestbrowser.com in a new tab."
+    },
+    {
+      "id": "release-page-after-update",
+      "category": "new",
+      "message": "After Crest updates, the first window opens the new release's notes in a new tab."
+    },
+    {
+      "id": "launched-release-in-core",
+      "category": "internal",
+      "message": "The core keeps the release each device launched last, and Crest no longer bundles its release notes or downloads them for the update card."
+    }
+  ]
+}

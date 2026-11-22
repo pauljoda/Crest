@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "inline-space-name-field",
+      "category": "improved",
+      "message": "Renaming a Space in place shows Crest's field with a focus ring, and its pencil highlights under the pointer."
+    }
+  ]
+}

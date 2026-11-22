@@ -16,9 +16,11 @@ internal abstract record PageEdit(Guid PageId, Guid SpaceId, DateTimeOffset At) 
     #region Abstract Methods
 
     /// The Space after the edit, stamped `now`, which is `At` as the session
-    /// stores it, and the image it has the page's tab wear, or null when the
-    /// tab it edits is gone.
-    public abstract (SpaceState Space, SessionFaviconUpdate? Favicon)? Apply(SpaceState space, DateTimeOffset now);
+    /// stores it, the image it has the page's tab wear and what becomes of the
+    /// image kept for the tab's saved page, or null when the tab it edits is
+    /// gone.
+    public abstract (SpaceState Space, SessionFaviconUpdate? Favicon, SessionSavedImage? SavedImage)? Apply(SpaceState space,
+        DateTimeOffset now);
 
     /// What the edit tells readers of `workspaceId` beyond the session's own
     /// changes.
@@ -63,18 +65,24 @@ internal sealed record NavigationRecord(Guid PageId, Guid SpaceId, DateTimeOffse
     PageIcon? Icon, Guid VisitId) : PageEdit(PageId, SpaceId, At) {
     #region Actions - Editing
 
-    public override (SpaceState Space, SessionFaviconUpdate? Favicon)? Apply(SpaceState space, DateTimeOffset now) {
+    public override (SpaceState Space, SessionFaviconUpdate? Favicon, SessionSavedImage? SavedImage)? Apply(SpaceState space,
+        DateTimeOffset now) {
         SessionFaviconUpdate? favicon = null;
+        SessionSavedImage? saved = null;
         if (TabId is { } tabId) {
             var index = IndexOf(space, tabId);
             if (index < 0) return null;
             var tab = BrowserTab.Restore(space.Tabs[index]);
-            tab.ObserveAppearance(Url, Title);
+            // A tab leaving its saved page keeps the image it wears for it, once
+            // that page's own icon had arrived; otherwise the one kept before stays.
+            var wearsSavedPageIcon = tab.State.WearsSavedPageIcon;
+            if (tab.ObserveAppearance(Url, Title) && wearsSavedPageIcon)
+                saved = new(tabId, TabSavedImageChange.Keep, tab.State.SavedFaviconUrl);
             // The icon belongs to the document, which now shows this address.
             if (Icon is { } icon && tab.WearPageIcon(Url, icon.Accent)) favicon = new(tabId, Adopts: true, PageId);
             space = Replacing(space, index, tab);
         }
-        return (space, favicon);
+        return (space, favicon, saved);
     }
 
     /// The history holds a visit.
@@ -93,7 +101,8 @@ internal sealed record TitleRecord(Guid PageId, Guid SpaceId, DateTimeOffset At,
     : PageEdit(PageId, SpaceId, At) {
     #region Actions - Editing
 
-    public override (SpaceState Space, SessionFaviconUpdate? Favicon)? Apply(SpaceState space, DateTimeOffset now) {
+    public override (SpaceState Space, SessionFaviconUpdate? Favicon, SessionSavedImage? SavedImage)? Apply(SpaceState space,
+        DateTimeOffset now) {
         if (TabId is { } tabId) {
             var index = IndexOf(space, tabId);
             if (index < 0) return null;
@@ -104,7 +113,7 @@ internal sealed record TitleRecord(Guid PageId, Guid SpaceId, DateTimeOffset At,
                 space = Replacing(space, index, tab);
             }
         }
-        return (space, null);
+        return (space, null, null);
     }
 
     /// The address's entry takes the title when `Visit`.
@@ -122,13 +131,14 @@ internal sealed record IconAdoption(Guid PageId, Guid SpaceId, DateTimeOffset At
     : PageEdit(PageId, SpaceId, At) {
     #region Actions - Editing
 
-    public override (SpaceState Space, SessionFaviconUpdate? Favicon)? Apply(SpaceState space, DateTimeOffset now) {
+    public override (SpaceState Space, SessionFaviconUpdate? Favicon, SessionSavedImage? SavedImage)? Apply(SpaceState space,
+        DateTimeOffset now) {
         var index = IndexOf(space, TabId);
         if (index < 0) return null;
         var tab = BrowserTab.Restore(space.Tabs[index]);
         if (tab.Url is not { } shown || !new WebAddress(shown).IsSamePage(new WebAddress(Icon.Url))
-            || !tab.WearPageIcon(Icon.Url, Icon.Accent)) return (space, null);
-        return (Replacing(space, index, tab), new(TabId, Adopts: true, PageId));
+            || !tab.WearPageIcon(Icon.Url, Icon.Accent)) return (space, null, null);
+        return (Replacing(space, index, tab), new(TabId, Adopts: true, PageId), null);
     }
 
     public override IEnumerable<Change> Announced(Guid workspaceId) => [];

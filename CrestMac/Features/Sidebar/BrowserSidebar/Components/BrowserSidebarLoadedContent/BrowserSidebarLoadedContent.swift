@@ -21,6 +21,9 @@ struct BrowserSidebarLoadedContent: View {
     let commandSurfaceNamespace: Namespace.ID
     let commandPaletteHandoff: BrowserCommandPaletteHandoff
     let tabPromotionNamespace: Namespace.ID
+    /// Whether the sidebar is docked beside the pages rather than floating
+    /// over them.
+    var isDocked = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.browserSidebarWidgetRuntime) private var widgetRuntime
@@ -43,7 +46,8 @@ struct BrowserSidebarLoadedContent: View {
                 activateAddress: activateAddress,
                 submitAddress: submitAddress,
                 commandSurfaceNamespace: commandSurfaceNamespace,
-                commandPaletteHandoff: commandPaletteHandoff
+                commandPaletteHandoff: commandPaletteHandoff,
+                isDocked: isDocked
             )
             .onGeometryChange(for: CGFloat.self) {
                 $0.size.height
@@ -105,6 +109,12 @@ struct BrowserSidebarLoadedContent: View {
                 SpaceForegroundBlend(
                     spaces: context.availableSpaces, selectedSpaceID: context.browser.selectedSpaceID))
         }
+        // The address and navigation fade out as the page cards take them, and
+        // the Space's list moves up into their place, or back down.
+        .animation(
+            CrestMotion.chrome.unlessReducingMotion(reduceMotion),
+            value: BrowserDeviceAppearanceStore.shared.addressBarPlacement
+        )
         .environment(\.spacePagerPresentation, spacePagerPresentation)
         .environment(\.spaceSidebarBands, sidebarBands)
         .accessibilityElement(children: .contain)
@@ -387,44 +397,46 @@ final class BrowserSidebarWidgetDeckScrollObserverView: NSView {
     }
 }
 
-#Preview("Browser Sidebar — Tabs") {
-    @Previewable @State var address = "https://developer.apple.com"
-    @Previewable @State var isAddressEditing = false
-    @Previewable @Namespace var commandSurfaceNamespace
-    @Previewable @Namespace var tabPromotionNamespace
-    let browser = BrowserSidebarPreviewFixture.makeBrowser()
-    let pages = BrowserSidebarPreviewFixture.makePages(for: browser)
-    let spaceAccess = BrowserSidebarPreviewFixture.makeSpaceAccess()
-    BrowserSidebar(
-        browser: browser,
-        pageAccess: BrowserSidebarPageAccess(pages: pages, browser: browser, spaceAccess: spaceAccess),
-        spaceAccess: spaceAccess,
-        capabilities: BrowserInteractionCapabilities(),
-        utilityCoordinator: BrowserSidebarUtilityCoordinator(
+#if DEBUG
+    #Preview("Browser Sidebar — Tabs") {
+        @Previewable @State var address = "https://developer.apple.com"
+        @Previewable @State var isAddressEditing = false
+        @Previewable @Namespace var commandSurfaceNamespace
+        @Previewable @Namespace var tabPromotionNamespace
+        let browser = BrowserSidebarPreviewFixture.makeBrowser()
+        let pages = BrowserSidebarPreviewFixture.makePages(for: browser)
+        let spaceAccess = BrowserSidebarPreviewFixture.makeSpaceAccess()
+        BrowserSidebar(
             browser: browser,
-            pages: pages,
-            spaceAccess: spaceAccess
-        ),
-        utilityPresentation:
-            BrowserSidebarPreviewFixture.makeUtilityPresentation(),
-        chromeActions: BrowserSidebarPreviewFixture.makeChromeActions()
-    ) { context in
-        BrowserSidebarLoadedContent(
-            context: context,
-            pages: pages,
-            address: $address,
-            isAddressEditing: $isAddressEditing,
-            addressFocusRequest: 0,
-            activateAddress: { isAddressEditing = true },
-            submitAddress: {},
-            openNewTab: {},
-            sidebarToggleAction: .hide,
-            toggleSidebar: {},
-            commandSurfaceNamespace: commandSurfaceNamespace,
-            commandPaletteHandoff: .neither,
-            tabPromotionNamespace: tabPromotionNamespace
-        )
+            pageAccess: BrowserSidebarPageAccess(pages: pages, browser: browser, spaceAccess: spaceAccess),
+            spaceAccess: spaceAccess,
+            capabilities: BrowserInteractionCapabilities(),
+            utilityCoordinator: BrowserSidebarUtilityCoordinator(
+                browser: browser,
+                pages: pages,
+                spaceAccess: spaceAccess
+            ),
+            utilityPresentation:
+                BrowserSidebarPreviewFixture.makeUtilityPresentation(),
+            chromeActions: BrowserSidebarPreviewFixture.makeChromeActions()
+        ) { context in
+            BrowserSidebarLoadedContent(
+                context: context,
+                pages: pages,
+                address: $address,
+                isAddressEditing: $isAddressEditing,
+                addressFocusRequest: 0,
+                activateAddress: { isAddressEditing = true },
+                submitAddress: {},
+                openNewTab: {},
+                sidebarToggleAction: .hide,
+                toggleSidebar: {},
+                commandSurfaceNamespace: commandSurfaceNamespace,
+                commandPaletteHandoff: .neither,
+                tabPromotionNamespace: tabPromotionNamespace
+            )
+        }
+        .environment(BrowserSidebarInteractionState.connected(to: browser))
+        .frame(width: BrowserChromeLayout.sidebarIdealWidth, height: 680)
     }
-    .environment(BrowserSidebarInteractionState.connected(to: browser))
-    .frame(width: BrowserChromeLayout.sidebarIdealWidth, height: 680)
-}
+#endif

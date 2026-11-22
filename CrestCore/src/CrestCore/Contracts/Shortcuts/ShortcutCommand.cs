@@ -38,7 +38,7 @@ public sealed class ShortcutCommand {
         ToggleSelectedTabPinned,
         DuplicateTab,
         ReopenClosedTab,
-        ClearUnpinnedTabs,
+        ClearOtherTabs,
         ArchiveTab,
         PreviousTab,
         NextTab,
@@ -81,7 +81,10 @@ public sealed class ShortcutCommand {
         ClearSiteCache,
         ToggleSelectedTabSaved,
         BlockElement,
-        ShowBlockedElements
+        ShowBlockedElements,
+        OpenNextExtension,
+        ClearAllTabs,
+        CollapseAllFolders
     }
 
     #endregion
@@ -142,12 +145,19 @@ public sealed class ShortcutCommand {
         ShortcutSection.Tabs, title: "Reopen Last Closed Tab", symbol: "arrow.uturn.backward",
         shortcuts: Everywhere(Character("t", Command | Shift)), menuTitle: "Reopen Closed Tab", paletteRest: 2,
         availableWhen: facts => facts.HasArchivedTabs, reservedFromPages: true);
-    public static readonly ShortcutCommand ClearUnpinnedTabs = new(Kinds.ClearUnpinnedTabs, name: "clearUnpinnedTabs",
-        ShortcutSection.Tabs, title: "Clear Unpinned Tabs", symbol: "sparkles",
-        shortcuts: Everywhere(Character("k", Command | Shift)), searchTerms: "clean tidy archive unpinned tabs");
+    // Clear keeps the tab the window shows. It is still stored under the name
+    // it had when it cleared every open tab, since overrides are keyed by it.
+    public static readonly ShortcutCommand ClearOtherTabs = new(Kinds.ClearOtherTabs, name: "clearUnpinnedTabs",
+        ShortcutSection.Tabs, title: "Clear Other Tabs", symbol: "sparkles",
+        shortcuts: Everywhere(Character("k", Command | Shift)), searchTerms: "clean tidy archive unpinned open tabs");
+    // The Mac gives ⌘E to opening extensions and moves archiving a modifier up.
     public static readonly ShortcutCommand ArchiveTab = new(Kinds.ArchiveTab, name: "archiveTab", ShortcutSection.Tabs,
-        title: "Archive Tab", symbol: "archivebox", shortcuts: Everywhere(Character("e", Command)),
-        availableWhen: facts => facts.ShownTab is { IsStartPage: false } shown && shown.Placement == TabPlacement.Current);
+        title: "Archive Tab", symbol: "archivebox",
+        shortcuts: [
+            new(DevicePlatform.Desktop, Character("e", Command | Shift), YieldsToOverrides: true),
+            new(DevicePlatform.Mobile, Character("e", Command), YieldsToOverrides: false)
+        ],
+        availableWhen: facts => facts.ShownTab is { IsStartPage: false } shown && !shown.Placement.IsDurable);
     public static readonly ShortcutCommand PreviousTab = new(Kinds.PreviousTab, name: "previousTab", ShortcutSection.Tabs,
         title: "Previous Tab", symbol: "chevron.up", shortcuts: Everywhere(Special(ShortcutSpecialKey.UpArrow, Command | Option)),
         searchTerms: "switch cycle tabs up down arrow", reservedFromPages: true);
@@ -249,7 +259,7 @@ public sealed class ShortcutCommand {
         ShortcutSection.Tabs, title: "Split With Next Tab", symbol: "rectangle.split.2x1",
         searchTerms: "split view cards side by side columns", availableWhen: facts => facts.HasSplitCandidate);
     // ⌃⌘←/→ is the one arrow pair left free: ⌥⌘←/→ switch Spaces and ⌥⌘↑/↓ tabs.
-    // Splitting a single card stays menu-only because Arc's ⌘⇧+ collides with
+    // Splitting a single card stays menu-only because ⌘⇧+ collides with
     // zoom and ⌘W already closes the focused card.
     public static readonly ShortcutCommand FocusNextSplitCard = new(Kinds.FocusNextSplitCard, name: "focusNextSplitCard",
         ShortcutSection.Tabs, title: "Focus Next Split Card", symbol: "rectangle.righthalf.filled",
@@ -318,18 +328,39 @@ public sealed class ShortcutCommand {
         name: "toggleSelectedTabSaved", ShortcutSection.Tabs, title: "Save or Unsave Current Tab", symbol: "bookmark",
         searchTerms: "saved tabs keep bookmark unsave current", menuTitle: "Save or Unsave Tab",
         availableWhen: facts => facts.ShownTab is { IsStartPage: false }, whenPageUsesKeys: ShortcutPreference.UseBoth);
+    // Each press opens the next extension's popup, the pinned ones from left to
+    // right and then the others, and the press after the last closes it. It
+    // came after people could customize, so it yields to keys someone chose.
+    public static readonly ShortcutCommand OpenNextExtension = new(Kinds.OpenNextExtension, name: "openNextExtension",
+        ShortcutSection.Page, title: "Open Next Extension", symbol: "puzzlepiece.extension",
+        shortcuts: [new(DevicePlatform.Desktop, Character("e", Command), YieldsToOverrides: true)],
+        searchTerms: "extensions popup menu cycle pinned toolbar", requiredCapability: EngineCapability.Extensions,
+        availableWhen: ShowingSpace);
+    // Clear with Option: it archives the shown tab too. It came after people
+    // could customize, so it yields to keys someone already chose.
+    public static readonly ShortcutCommand ClearAllTabs = new(Kinds.ClearAllTabs, name: "clearAllTabs", ShortcutSection.Tabs,
+        title: "Clear All Tabs", symbol: "sparkles",
+        shortcuts: [.. DevicePlatform.All.Select(platform =>
+            new ShortcutDefault(platform, Character("k", Command | Shift | Option), YieldsToOverrides: true))],
+        searchTerms: "clean tidy archive unpinned open tabs every current", optionAlternate: true);
+    // Closes every open folder of the shown Space, however deep. It came after
+    // people could customize, so it waits for the keys a person chooses.
+    public static readonly ShortcutCommand CollapseAllFolders = new(Kinds.CollapseAllFolders, name: "collapseAllFolders",
+        ShortcutSection.View, title: "Collapse All Folders", symbol: "rectangle.compress.vertical",
+        searchTerms: "close fold folders sidebar tidy", availableWhen: facts => facts.HasOpenFolder);
 
     public static IReadOnlyList<ShortcutCommand> All { get; } = [
         NewWindow, NewBlankWindow, NewTab, NewQuickWindow, NewPrivateWindow, CloseTabOrWindow, CloseWindow, OpenLocation, Back,
         Forward, ReloadPage, StopLoading, ReloadFromOrigin, ToggleSelectedTabPinned, DuplicateTab, ReopenClosedTab,
-        ClearUnpinnedTabs, ArchiveTab, PreviousTab, NextTab, MostRecentTab, SelectTab1, SelectTab2, SelectTab3, SelectTab4,
+        ClearOtherTabs, ArchiveTab, PreviousTab, NextTab, MostRecentTab, SelectTab1, SelectTab2, SelectTab3, SelectTab4,
         SelectTab5, SelectTab6, SelectTab7, SelectTab8, SelectTab9, PreviousSpace, NextSpace, SelectSpace1, SelectSpace2,
         SelectSpace3, SelectSpace4, SelectSpace5, SelectSpace6, SelectSpace7, SelectSpace8, SelectSpace9, ToggleReaderMode,
         ToggleContentBlocking, BlockElement, ShowBlockedElements, FindInPage, ZoomIn, ZoomOut, ActualSize, CopyPageLink, CopyPageLinkAsMarkdown, SharePage,
         ExportPDF, SaveWebArchive, PrintPage, ToggleSidebar, ShowHistory, ShowArchive, ShowDownloads, ShowWebInspector,
         SplitWithNextTab, FocusNextSplitCard, FocusPreviousSplitCard, RemoveTabFromSplit, SeparateSplitTabs,
         MoveSplitCardLeft, MoveSplitCardRight, ToggleDeveloperToolbar, ToggleTranslationToolbar, OpenFile, FindNext,
-        FindPrevious, CapturePage, MostRecentTabBackward, ClearSiteCookies, ClearSiteCache, ToggleSelectedTabSaved
+        FindPrevious, CapturePage, MostRecentTabBackward, ClearSiteCookies, ClearSiteCache, ToggleSelectedTabSaved,
+        OpenNextExtension, ClearAllTabs, CollapseAllFolders
     ];
 
     public Kinds Kind { get; }
@@ -382,6 +413,11 @@ public sealed class ShortcutCommand {
     /// themselves.
     public bool OffersInPalette { get; }
 
+    /// Whether a menu that folds alternates shows the command in place of the
+    /// one before it in its group while Option is held. Its keys are that
+    /// command's with Option added, unless a person chose others.
+    public bool IsOptionAlternate { get; }
+
     /// Whether the command always runs before a page with focus sees its keys,
     /// whatever a person prefers. Opening, closing and switching tabs and
     /// windows stay the browser's, as in other browsers, so no page can keep a
@@ -408,7 +444,7 @@ public sealed class ShortcutCommand {
         IReadOnlyList<ShortcutDefault>? shortcuts = null, string? searchTerms = null, string? menuTitle = null,
         EngineCapability? requiredCapability = null, NumberedSelectionTarget? selects = null, int? number = null, int? paletteRest = null,
         bool offersInPalette = true, Func<WindowCommandFacts, bool>? availableWhen = null, bool reservedFromPages = false,
-        ShortcutPreference? whenPageUsesKeys = null) {
+        ShortcutPreference? whenPageUsesKeys = null, bool optionAlternate = false) {
         Kind = kind;
         Name = name;
         Section = section;
@@ -422,6 +458,7 @@ public sealed class ShortcutCommand {
         DefaultShortcuts = shortcuts ?? [];
         PaletteRest = paletteRest;
         OffersInPalette = offersInPalette;
+        IsOptionAlternate = optionAlternate;
         IsReservedFromPages = reservedFromPages;
         DefaultPreference = reservedFromPages ? ShortcutPreference.PreferCrest : whenPageUsesKeys ?? ShortcutPreference.PreferWebsite;
         this.availableWhen = availableWhen ?? (_ => true);

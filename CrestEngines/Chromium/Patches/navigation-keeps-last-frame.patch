@@ -1,0 +1,141 @@
+# Crest: a navigation that swaps renderer views keeps the old page on screen
+# until the new one draws. Crest hosts each page's view without a parent
+# ui::Layer, so every RenderWidgetHostViewMac draws with its own compositor.
+# The commit hides the old view, which destroyed its compositor and last
+# frame, before the new view took that frame as its fallback, so the page
+# showed nothing, then a bare background, before the new document painted.
+# The hidden view now keeps its compositor until the task ends, and the view
+# that replaces it draws with that compositor.
+
+--- a/content/browser/renderer_host/browser_compositor_view_mac.h
++++ b/content/browser/renderer_host/browser_compositor_view_mac.h
+@@ -6,6 +6,7 @@
+ #define CONTENT_BROWSER_RENDERER_HOST_BROWSER_COMPOSITOR_VIEW_MAC_H_
+ 
+ #include <memory>
++#include <optional>
+ 
+ #include "base/memory/raw_ptr.h"
+ #include "base/time/time.h"
+@@ -187,6 +188,21 @@
+   raw_ptr<ui::AcceleratedWidgetMacNSView> accelerated_widget_mac_ns_view_ =
+       nullptr;
+   std::unique_ptr<ui::RecyclableCompositorMac> recyclable_compositor_;
++  // Crest: a navigation that swaps views hides the old view before the new
++  // one is shown. The old view keeps its compositor, which still shows the
++  // old page, with that frame until the task ends, and the new view draws
++  // with it, so no blank frame comes between the two pages.
++  struct HandedCompositor {
++    std::unique_ptr<ui::RecyclableCompositorMac> compositor;
++    gfx::CALayerParams last_frame;
++  };
++  std::optional<HandedCompositor> retired_compositor_;
++  std::optional<HandedCompositor> adopted_compositor_;
++  // The last frame of the adopted compositor this view draws with. Its frames
++  // go on in the same layer context, which the GPU process doesn't report
++  // again, so its widget has no frame of its own until the context changes.
++  std::optional<gfx::CALayerParams> continued_frame_;
++  void ReleaseUnusedCompositors();
+ 
+   std::unique_ptr<DelegatedFrameHost> delegated_frame_host_;
+   std::unique_ptr<ui::LayerSurface> root_layer_;
+--- a/content/browser/renderer_host/browser_compositor_view_mac.mm
++++ b/content/browser/renderer_host/browser_compositor_view_mac.mm
+@@ -12,7 +12,9 @@
+ 
+ #include "base/command_line.h"
+ #include "base/containers/circular_deque.h"
++#include "base/functional/bind.h"
+ #include "base/no_destructor.h"
++#include "base/task/single_thread_task_runner.h"
+ #include "base/trace_event/trace_event.h"
+ #include "components/viz/common/features.h"
+ #include "components/viz/common/surfaces/local_surface_id.h"
+@@ -95,9 +97,15 @@
+ }
+ 
+ const gfx::CALayerParams* BrowserCompositorMac::GetLastCALayerParams() const {
+-  if (!recyclable_compositor_)
+-    return nullptr;
+-  return recyclable_compositor_->widget()->GetCALayerParams();
++  if (!recyclable_compositor_) {
++    return retired_compositor_ ? &retired_compositor_->last_frame : nullptr;
++  }
++  const gfx::CALayerParams* params =
++      recyclable_compositor_->widget()->GetCALayerParams();
++  if (!params && continued_frame_) {
++    return &continued_frame_.value();
++  }
++  return params;
+ }
+ 
+ viz::FrameSinkId BrowserCompositorMac::GetRootFrameSinkId() {
+@@ -249,8 +257,25 @@
+     root_layer_->parent()->Remove(root_layer_.get());
+   }
+   if (state_ == HasOwnCompositor) {
++    // Crest: a view that hides keeps its compositor, suspended on its last
++    // frame, for the view that replaces it in this task.
++    const gfx::CALayerParams* last_frame = GetLastCALayerParams();
++    std::optional<gfx::CALayerParams> kept_frame;
++    if (new_state == HasNoCompositor && last_frame) {
++      kept_frame = last_frame->CloneWithoutFence();
++      recyclable_compositor_->Suspend();
++    }
++    continued_frame_.reset();
+     recyclable_compositor_->widget()->ResetNSView();
+     recyclable_compositor_->compositor()->SetRootLayer(nullptr);
++    if (kept_frame) {
++      retired_compositor_ = HandedCompositor{std::move(recyclable_compositor_),
++                                             std::move(*kept_frame)};
++      base::SingleThreadTaskRunner::GetCurrentDefault()->PostTask(
++          FROM_HERE,
++          base::BindOnce(&BrowserCompositorMac::ReleaseUnusedCompositors,
++                         weak_factory_.GetWeakPtr()));
++    }
+     recyclable_compositor_.reset();
+   }
+ 
+@@ -272,8 +297,15 @@
+     state_ = UseParentLayerCompositor;
+   }
+   if (new_state == HasOwnCompositor) {
+-    recyclable_compositor_ = std::make_unique<ui::RecyclableCompositorMac>(
+-        content::GetContextFactory());
++    // Crest: draw on with the compositor of the view this one replaces.
++    if (adopted_compositor_) {
++      recyclable_compositor_ = std::move(adopted_compositor_->compositor);
++      continued_frame_ = std::move(adopted_compositor_->last_frame);
++      adopted_compositor_.reset();
++    } else {
++      recyclable_compositor_ = std::make_unique<ui::RecyclableCompositorMac>(
++          content::GetContextFactory());
++    }
+     display::ScreenInfo current = client_->GetCurrentScreenInfo();
+     recyclable_compositor_->UpdateSurface(
+         dfh_size_pixels_, current.device_scale_factor,
+@@ -307,8 +339,24 @@
+     BrowserCompositorMac* other) {
+   delegated_frame_host_->TakeFallbackContentFrom(
+       other->delegated_frame_host_.get());
++  // Crest: the replaced view, hidden in this task, leaves its compositor for
++  // this one, which draws with it once shown.
++  if (state_ == HasNoCompositor && other->retired_compositor_ &&
++      !adopted_compositor_) {
++    adopted_compositor_ = std::move(other->retired_compositor_);
++    other->retired_compositor_.reset();
++    base::SingleThreadTaskRunner::GetCurrentDefault()->PostTask(
++        FROM_HERE,
++        base::BindOnce(&BrowserCompositorMac::ReleaseUnusedCompositors,
++                       weak_factory_.GetWeakPtr()));
++  }
+ }
+ 
++void BrowserCompositorMac::ReleaseUnusedCompositors() {
++  retired_compositor_.reset();
++  adopted_compositor_.reset();
++}
++
+ ////////////////////////////////////////////////////////////////////////////////
+ // DelegatedFrameHost, public:
+ 

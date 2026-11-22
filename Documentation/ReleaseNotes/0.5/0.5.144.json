@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "shared-browser-windows",
+      "category": "new",
+      "message": "Open multiple windows with shared Spaces and tabs, keeping your place in each window"
+    },
+    {
+      "id": "temporary-blank-windows",
+      "category": "new",
+      "message": "Open disposable blank windows with your Space’s cookies and extensions, or create one by dragging a tab outside the window"
+    }
+  ]
+}

@@ -24,7 +24,6 @@ final class BrowserCloudSyncController {
         get { status.isEnabled }
         set {
             guard newValue != status.isEnabled else { return }
-            preferences.saveIsEnabled(newValue)
             let steps = advance(SetCloudSyncEnabled(isEnabled: newValue))
             Task { await take(steps) }
         }
@@ -88,7 +87,6 @@ final class BrowserCloudSyncController {
     }
 
     @ObservationIgnored private let core: CrestCore
-    @ObservationIgnored private let preferences: any BrowserCloudSyncPreferences
     /// Where an installed release kept the transport's state, which the core
     /// adopts the first time the transport opens.
     @ObservationIgnored private let legacyState: BrowserLegacyCloudSyncState?
@@ -112,7 +110,6 @@ final class BrowserCloudSyncController {
     init(
         core: CrestCore,
         configuration: BrowserCloudSyncConfiguration?,
-        preferences: any BrowserCloudSyncPreferences,
         legacyState: BrowserLegacyCloudSyncState? = nil,
         remoteService: (any BrowserCloudSyncRemoteService)?,
         transportFactory: (any BrowserCloudSyncTransportFactory)?,
@@ -120,7 +117,6 @@ final class BrowserCloudSyncController {
         accountCheckDeadline: Duration = .seconds(10)
     ) {
         self.core = core
-        self.preferences = preferences
         self.legacyState = legacyState
         self.remoteService = remoteService
         self.transportFactory = transportFactory
@@ -128,12 +124,10 @@ final class BrowserCloudSyncController {
         self.accountCheckDeadline = accountCheckDeadline
         containerIdentifier = configuration?.containerIdentifier
         let configure = ConfigureCloudSync(
-            isEnabled: preferences.loadIsEnabled() ?? true,
             canReachCloud: configuration != nil && remoteService != nil && transportFactory != nil)
-        var answered: CloudSyncStatus?
-        for case .cloudSyncAdvanced(let advanced) in (try? core.send(configure)) ?? [] { answered = advanced.status }
-        guard let answered else { preconditionFailure("The core answered no iCloud sync status.") }
-        status = answered
+        let advanced = ((try? core.send(configure)) ?? []).compactMap(\.cloudSyncAdvanced).last
+        guard let advanced else { preconditionFailure("The core answered no iCloud sync status.") }
+        status = advanced.status
     }
 
     // MARK: - Actions - Requests
@@ -219,7 +213,7 @@ final class BrowserCloudSyncController {
     }
 
     private func failed(_ step: CloudSyncStep, _ error: any Error, observed: Int?) -> [CloudSyncStep] {
-        let message = remoteService?.message(for: error) ?? String(describing: error)
+        let message = remoteService?.message(for: error) ?? error.localizedDescription
         return advance(
             CloudStepFailed(attempt: step.attempt, step: step.kind, message: message, observedCloudRecords: observed))
     }
@@ -257,12 +251,9 @@ final class BrowserCloudSyncController {
     /// Tells the core `intent`, keeps the status it answered, and answers the
     /// steps to take.
     private func advance(_ intent: some CloudSyncControlIntent) -> [CloudSyncStep] {
-        guard let changes = try? core.send(intent) else { return [] }
-        for case .cloudSyncAdvanced(let advanced) in changes {
-            status = advanced.status
-            return advanced.steps
-        }
-        return []
+        guard let advanced = (try? core.send(intent))?.compactMap(\.cloudSyncAdvanced).first else { return [] }
+        status = advanced.status
+        return advanced.steps
     }
 
     private func remote() throws -> any BrowserCloudSyncRemoteService {

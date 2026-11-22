@@ -1,0 +1,40 @@
+{
+  "entries": [
+    {
+      "id": "iphone-duo-layout",
+      "category": "new",
+      "message": "On iPhone Duo, Crest's controls move to the side bar where iOS puts them, pages use the outer display's full width, the open display's page and sidebar reach its edges, and folded like a book the sidebar and page, or a Split View's two pages, each take one side of the fold.",
+      "platforms": ["ios"]
+    },
+    {
+      "id": "no-room-for-hidden-keyboard",
+      "category": "fixed",
+      "message": "On iPhone and iPad, Crest no longer leaves an empty band at the bottom of the window for a keyboard that isn't on screen.",
+      "platforms": ["ios"]
+    },
+    {
+      "id": "history-swipe-from-page-frame",
+      "category": "new",
+      "message": "On iPhone and iPad, a swipe to go back or forward can also start on the frame around the page, where a finger reaching for the edge of the screen lands.",
+      "platforms": ["ios"]
+    },
+    {
+      "id": "sidebar-keeps-space-across-displays",
+      "category": "fixed",
+      "message": "On iPhone Duo, opening or closing the phone keeps the sidebar and its colors on the Space you're in instead of showing your first Space.",
+      "platforms": ["ios"]
+    },
+    {
+      "id": "split-view-shows-every-page-on-open",
+      "category": "fixed",
+      "message": "On iPhone Duo, a Split View made on the outer display shows both of its pages when you open the phone, instead of one staying blank until you tap it.",
+      "platforms": ["ios"]
+    },
+    {
+      "id": "narrower-default-sidebar-ipad",
+      "category": "improved",
+      "message": "On iPad and iPhone Duo, the sidebar starts narrower, leaving more of the window to the page.",
+      "platforms": ["ios"]
+    }
+  ]
+}

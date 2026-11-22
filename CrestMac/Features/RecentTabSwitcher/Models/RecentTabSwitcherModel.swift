@@ -59,16 +59,32 @@ final class RecentTabSwitcherModel {
 
     // MARK: - Actions - Reading
 
-    /// The tabs of `item` as the window's Space holds them, in display order.
+    /// The tabs of `item` as its Space holds them, in display order.
     func tabs(of item: RecentTabItem) -> [TabStateModel] {
-        guard let space = browser.shownSpace else { return [] }
+        guard let space = space(of: item) else { return [] }
         return item.tabIDs.compactMap { space.shownTab($0) }
     }
 
-    /// What VoiceOver says for the item at `index`.
+    /// The Space `item` belongs to.
+    func space(of item: RecentTabItem) -> SpaceModel? {
+        browser.spaceModel(item.spaceID)
+    }
+
+    /// Whether the items come from more than one Space, as the Spaces of a
+    /// Sub-Space group's do, so each card names its Space.
+    var mixesSpaces: Bool {
+        Set(session.items.map(\.spaceID)).count > 1
+    }
+
+    /// What VoiceOver says for the item at `index`: its titles, and its
+    /// Space's name when the items come from more than one.
     func spokenTitle(at index: Int) -> String {
         guard session.items.indices.contains(index) else { return "" }
-        let title = tabs(of: session.items[index]).map(\.shownTitle).joined(separator: ", ")
+        let item = session.items[index]
+        let title = tabs(of: item).map(\.shownTitle).joined(separator: ", ")
+        if mixesSpaces, let space = space(of: item) {
+            return String(localized: "\(title), \(space.settings.name), \(index + 1) of \(session.items.count)")
+        }
         return String(localized: "\(title), \(index + 1) of \(session.items.count)")
     }
 }

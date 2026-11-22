@@ -124,14 +124,6 @@ final class BrowserSharedPageRuntimeTests: XCTestCase {
         XCTAssertEqual(historyState, 7)
     }
 
-    private func waitUntil(_ condition: @MainActor () -> Bool) async throws {
-        for _ in 0..<200 {
-            if condition() { return }
-            try await Task.sleep(for: .milliseconds(20))
-        }
-        XCTFail("Timed out waiting for the live page update.")
-    }
-
     /// A window over a session holding `space`, on `core` when another
     /// workspace of the test already hosts pages there.
     private func hosting(_ space: SpaceState.Seed, on core: CrestCore = .hostingPages()) -> BrowserStore {

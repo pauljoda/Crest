@@ -16,7 +16,8 @@ internal static partial class StoredSessionCodec {
 
     /// A Space's branding, with the native reader's defaults for anything missing
     /// and for a term this build cannot name. Colors that are not color records
-    /// are left out.
+    /// are left out, and a palette color's gradient that is not a gradient
+    /// record is plain.
     internal static SpaceBranding DecodeBranding(JsonNode? node) {
         var value = Object(node);
         var fade = OptionalNumber(value[Key.ReadabilityFade]);
@@ -34,7 +35,10 @@ internal static partial class StoredSessionCodec {
             Integer(value[Key.RenderingVersion]) ?? FirstRenderingVersion,
             OptionalNumber(value[Key.FolderColorIntensity]) ?? 0,
             SpaceTextColorMode.Named(Text(value[Key.TextColorMode])) ?? SpaceTextColorMode.Automatic,
-            Flag(value[Key.HasCustomAppearance]));
+            Flag(value[Key.HasCustomAppearance]),
+            SpaceGradientKind.Named(Text(value[Key.GradientKind])),
+            value[Key.SymbolGradient] is JsonObject symbolGradient ? DecodeGradient(symbolGradient) : null,
+            value[Key.ColorGradients] is JsonArray colorGradients ? DecodeGradients(colorGradients) : null);
     }
 
     /// The texture strength a branding stored by any build lies under. A build
@@ -50,7 +54,9 @@ internal static partial class StoredSessionCodec {
     /// A branding as the stored session and sync keep it. Whether a texture
     /// shows is the switch builds before texture strength read, and the
     /// strength is written only where the switch alone can't say it, between
-    /// none and full.
+    /// none and full. A gradient's kind is written only when it isn't linear,
+    /// and the gradients its colors run on into only when it has them, which
+    /// builds before them pass over to draw each color plain.
     internal static JsonObject Encode(SpaceBranding branding) {
         var value = new JsonObject {
             [Key.Colors] = Encode(branding.Colors),
@@ -70,11 +76,39 @@ internal static partial class StoredSessionCodec {
         value[Key.FolderColorIntensity] = branding.FolderColorIntensity;
         value[Key.TextColorMode] = branding.TextColorMode.Name;
         if (branding.HasCustomAppearance is { } custom) value[Key.HasCustomAppearance] = custom;
+        if (branding.GradientKind is { } kind && kind != SpaceGradientKind.Linear) value[Key.GradientKind] = kind.Name;
+        if (branding.SymbolGradient is { } symbolGradient) value[Key.SymbolGradient] = Encode(symbolGradient);
+        if (branding.ColorGradients is { } colorGradients) value[Key.ColorGradients] = Encode(colorGradients);
         return value;
     }
 
+    /// The gradient a color runs on into. Colors that are not color records are
+    /// left out, a kind this build cannot name runs along a line, and the angle
+    /// is none unless it says.
+    internal static BrandGradient DecodeGradient(JsonObject value) =>
+        new(Palette(value[Key.Colors]) ?? new([]), SpaceGradientKind.Named(TolerantText(value[Key.Kind])),
+            OptionalNumber(value[Key.Angle]) ?? 0);
+
+    /// A gradient as the stored session and sync keep it, its kind written
+    /// only when it isn't linear.
+    internal static JsonObject Encode(BrandGradient gradient) {
+        var value = new JsonObject { [Key.Colors] = Encode(gradient.Colors) };
+        if (gradient.Kind is { } kind && kind != SpaceGradientKind.Linear) value[Key.Kind] = kind.Name;
+        value[Key.Angle] = gradient.Angle;
+        return value;
+    }
+
+    /// The gradients a palette's colors run on into, by index; a slot that is
+    /// not a gradient record is plain.
+    private static PaletteGradients DecodeGradients(JsonArray slots) =>
+        new([.. slots.Select(slot => slot is JsonObject gradient ? DecodeGradient(gradient) : BrandGradient.Plain)]);
+
+    private static JsonArray Encode(PaletteGradients gradients) =>
+        new(gradients.Slots.Select(slot => (JsonNode?)Encode(slot)).ToArray());
+
     /// A crest composition. Missing layer indices read as the first color, the
-    /// edge follows the trim, and every other parameter takes its neutral value.
+    /// edge follows the trim, a palette color's gradient that is not a gradient
+    /// record is plain, and every other parameter takes its neutral value.
     internal static SpaceCrest DecodeCrest(JsonObject value) {
         int Index(string key, int fallback = 0) => Integer(value[key]) ?? fallback;
         double Measure(CrestMeasure measure) => OptionalNumber(value[measure.Name]) ?? measure.Default;
@@ -95,9 +129,13 @@ internal static partial class StoredSessionCodec {
             Measure(CrestMeasure.ChargeScale), Measure(CrestMeasure.ChargeOffset),
             CrestChargeWeight.Named(Text(value[Key.ChargeWeight])) ?? CrestChargeWeight.Bold,
             Measure(CrestMeasure.SheenAngle), Count(CrestMeasure.SealTeeth), TolerantFlag(value[Key.ShowsOutline]) ?? false,
-            CrestDepth.Named(Text(value[Key.Depth])) ?? CrestDepth.None);
+            CrestDepth.Named(Text(value[Key.Depth])) ?? CrestDepth.None,
+            value[Key.PaletteGradients] is JsonArray paletteGradients ? DecodeGradients(paletteGradients) : null);
     }
 
+    /// A crest as the stored session and sync keep it, with the gradients its
+    /// own palette's colors run on into only when it has them, which builds
+    /// before them pass over to draw each color plain.
     internal static JsonObject Encode(SpaceCrest crest) {
         var value = new JsonObject {
             [Key.Backplate] = crest.Backplate.Name,
@@ -115,6 +153,7 @@ internal static partial class StoredSessionCodec {
         Put(value, Key.StartingPresetId, crest.StartingPresetId);
         value[Key.EdgeColorIndex] = crest.EdgeColorIndex;
         if (crest.Palette is { } palette) value[Key.Palette] = Encode(palette);
+        if (crest.PaletteGradients is { } paletteGradients) value[Key.PaletteGradients] = Encode(paletteGradients);
         if (crest.Charge is { } charge) value[Key.Charge] = Encode(charge);
         value[CrestMeasure.PlateScale.Name] = crest.PlateScale;
         value[CrestMeasure.EdgeWidth.Name] = crest.EdgeWidth;
@@ -138,20 +177,14 @@ internal static partial class StoredSessionCodec {
     internal static CrestCharge DecodeCharge(JsonObject value) {
         var text = TolerantText(value[Key.Value]) ?? "";
         var kind = CrestChargeKind.Named(TolerantText(value[Key.Kind])) ?? CrestChargeKind.None;
-        return kind.Kind switch {
-            CrestChargeKind.Kinds.Heraldic => new(kind, CrestSymbol.Named(text) ?? CrestSymbol.Fallback),
-            CrestChargeKind.Kinds.System or CrestChargeKind.Kinds.Emoji => new(kind, Text: text),
-            CrestChargeKind.Kinds.Monogram => new(kind, Text: text,
-                Style: CrestMonogramStyle.Named(TolerantText(value[Key.Style])) ?? CrestMonogramStyle.Serif),
-            _ => new(CrestChargeKind.None)
-        };
+        return kind.Read(text, TolerantText(value[Key.Style]));
     }
 
     internal static JsonObject Encode(CrestCharge charge) {
         var value = new JsonObject { [Key.Kind] = charge.Kind.Name };
-        if (charge.Kind == CrestChargeKind.Heraldic && charge.Symbol is { } symbol) value[Key.Value] = symbol.Name;
-        else if (charge.Kind != CrestChargeKind.None) value[Key.Value] = charge.Text ?? "";
-        if (charge.Kind == CrestChargeKind.Monogram) value[Key.Style] = (charge.Style ?? CrestMonogramStyle.Serif).Name;
+        var (stored, style) = charge.Kind.Written(charge);
+        if (stored is not null) value[Key.Value] = stored;
+        if (style is not null) value[Key.Style] = style;
         return value;
     }
 

@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-03-space-return-editor-focus",
+      "category": "fixed",
+      "message": "Continue typing where you left off in webpage editors after switching Spaces on macOS",
+      "platforms": ["mac"]
+    }
+  ]
+}

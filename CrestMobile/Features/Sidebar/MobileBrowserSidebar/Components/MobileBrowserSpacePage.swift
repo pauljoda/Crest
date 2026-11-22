@@ -68,11 +68,14 @@ struct MobileBrowserSpacePage: View {
                     openNewTab: openNewTab,
                     openNewWindow: { openWindow(value: MobileWindowRequest()) },
                     createFolder: beginCreatingFolder,
+                    collapseAllFolders: { _ = tabActions.collapseAllFolders() },
+                    canCollapseAllFolders: { tabActions.canCollapseAllFolders },
                     showHistory: showHistory,
                     showPasswords: showPasswords,
                     closePrivateBrowsing: closePrivateBrowsing,
                     showSettings: showSettings,
-                    cleanup: { _ = tabActions.clearCurrentTabs() }
+                    clearOtherTabs: { _ = tabActions.clearCurrentTabs(keepingShownTab: true) },
+                    clearAllTabs: { _ = tabActions.clearCurrentTabs(keepingShownTab: false) }
                 )
             )
 
@@ -140,11 +143,14 @@ struct MobileBrowserSpacePage: View {
 
     private func restoreSavedLocation(_ tabID: UUID) {
         guard isCurrentAndUnlocked else { return }
-        MobileSavedLocationRestoreAction(
-            browser: browser,
-            pages: pages,
-            selectTab: selectTab,
-            spaceAccess: spaceAccess
+        BrowserSavedLocationRestoreAction(
+            browser: browser, pages: pages, spaceAccess: spaceAccess,
+            show: { [browser, pages, spaceAccess, selectTab] assignment in
+                selectTab(assignment.tabID)
+                return MobileSelectedPageActionPort(
+                    browser: browser, pages: pages, spaceAccess: spaceAccess, expectedAssignment: assignment
+                ).activePage
+            }
         ).perform(
             BrowserTabRuntimeAssignment(
                 tabID: tabID,

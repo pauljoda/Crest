@@ -27,9 +27,18 @@ struct BrowserSpaceGroupCrestRow: View {
     let requestDeletion: (BrowserSpaceDeletionRequest) -> Void
 
     @State private var dropTargetID: UUID?
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var tone: CrestSpaceIconPickerTone { .over(colorScheme) }
+
+    /// The row's style with corners as round as the tabs' and pins'.
+    private var shapedStyle: CrestSpaceIconPickerStyle {
+        style.rounded(CGFloat(BrowserDeviceAppearanceStore.shared.sidebarCornerRadius))
+    }
 
     var body: some View {
         let members = browser.groupMembers(of: space)
+        let style = shapedStyle
         HStack(spacing: CrestSpacing.small) {
             HStack(spacing: 0) {
                 ForEach(members) { member in
@@ -38,11 +47,7 @@ struct BrowserSpaceGroupCrestRow: View {
             }
             .padding(style.trackPadding)
             .background {
-                CrestSpaceIconPickerShape(style: style).fill(.primary.opacity(style.trackFillOpacity))
-            }
-            .overlay {
-                CrestSpaceIconPickerShape(style: style)
-                    .strokeBorder(.primary.opacity(style.trackBorderOpacity), lineWidth: CrestLayout.hairline / 2)
+                CrestSpaceIconPickerShape(style: style).fill(tone.wellColor)
             }
             if !browser.isPrivateBrowsing, let last = members.last {
                 Button("New Sub-Space", systemImage: "plus") { addSubSpace(last.id) }
@@ -60,8 +65,8 @@ struct BrowserSpaceGroupCrestRow: View {
     // MARK: - Crests
 
     private func crest(_ member: SpaceModel) -> some View {
+        let style = shapedStyle
         let isSelected = member.id == space.id
-        let tint = member.identity.branding.primaryColor.color
         let isDropTarget = dropTargetID == member.id
         return Button {
             select(member.id)
@@ -72,13 +77,7 @@ struct BrowserSpaceGroupCrestRow: View {
                 .background {
                     if isSelected || isDropTarget {
                         CrestSpaceIconPickerShape(style: style)
-                            .fill(
-                                tint.opacity(isSelected ? style.selectionFillOpacity : style.selectionFillOpacity / 2)
-                            )
-                            .overlay {
-                                CrestSpaceIconPickerShape(style: style).strokeBorder(
-                                    tint, lineWidth: CrestLayout.hairline)
-                            }
+                            .fill(isSelected ? tone.selectorColor : tone.groupColor)
                     }
                 }
         }

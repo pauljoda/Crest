@@ -263,7 +263,7 @@ final class BrowserPageHost {
     /// or the state the source left.
     func prepareTabCopy(from source: TabState, copyID: UUID, in space: BrowserSpaceRuntimeAssignment) {
         let sourceAssignment = BrowserTabRuntimeAssignment(tabID: source.id, in: space)
-        let sourceURL = source.url.flatMap(URL.init(string:))
+        let sourceURL = source.url.flatMap(URL.init(address:))
         let url: URL?
         let state: Data?
         let history: Data?

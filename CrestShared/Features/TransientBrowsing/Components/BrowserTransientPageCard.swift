@@ -6,6 +6,14 @@ import SwiftUI
 /// through `webContent` and answers `pageStatus` for the two states that are
 /// not a page: never arrived, and given up under memory pressure.
 struct BrowserTransientPageCard<WebContent: View>: View {
+    // MARK: - Static Variables
+
+    /// How long the card gives WebKit, once content commits, to display its
+    /// first frames before it shows the page: about two frames at 60 Hz.
+    private static var firstFramesWait: Duration { .milliseconds(34) }
+
+    // MARK: - Variables
+
     let arrangement: BrowserTransientCardArrangement
     let pageStatus: BrowserTransientPageStatus
     let vocabulary: BrowserTransientOverlayVocabulary
@@ -35,7 +43,7 @@ struct BrowserTransientPageCard<WebContent: View>: View {
             }
             // Give WebKit its first display frames after committing content,
             // without waiting for images or other subresources to finish.
-            try? await Task.sleep(for: .milliseconds(34))
+            try? await Task.sleep(for: Self.firstFramesWait)
             guard !Task.isCancelled else { return }
             isWebContentVisible = true
         }
@@ -111,15 +119,19 @@ private struct BrowserTransientReleasedPageView: View {
 
     var body: some View {
         ContentUnavailableView {
-            Label(vocabulary.releasedTitle, systemImage: "memorychip")
+            Label {
+                Text(vocabulary.releasedTitle).font(CrestTypography.displayPage)
+            } icon: {
+                Image(systemName: "memorychip")
+            }
         } description: {
             Text(vocabulary.releasedDescription)
         } actions: {
             Button(vocabulary.restoreTitle, action: restore)
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.crestPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.background)
+        .background(CrestBrandTheme.canvas)
     }
 }
 

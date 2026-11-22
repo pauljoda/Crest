@@ -2,33 +2,88 @@ import SwiftUI
 
 /// Dynamic Type-aware roles for Crest-authored content.
 ///
-/// Crest pairs a serif display face with a humanist sans for body and controls.
-/// Both faces ship with macOS and iOS, so nothing is embedded in the bundle.
+/// Crest sets its voice in Allo at its roundest, heavy, for hero lines,
+/// titles, buttons and small caps labels, over SF Pro for body and
+/// supporting copy. Allo ships inside the app (``CrestDisplayFace``); SF Pro
+/// ships with macOS and iOS. Each role reads the size its text style has now,
+/// so text set in it follows the person's text size.
 enum CrestTypography {
-    /// The serif display face used for brand voice: hero lines, page titles, and
-    /// section headings in Crest-authored surfaces.
-    static let displayFontName = "Iowan Old Style"
-    /// The humanist sans used for supporting copy and control labels.
-    static let sansFontName = "Avenir Next"
-
     static let controlTitle = Font.body.weight(.medium)
+    /// A button's title: rounded and bold.
+    static var buttonTitle: Font { display(.body, weight: .bold) }
+    /// A compact button's title, as on a card in the sidebar: rounded and
+    /// bold, a size down.
+    static var compactButtonTitle: Font { display(.subheadline, weight: .bold) }
+    /// A page's one large call to action: rounded and heavy.
+    static var largeButtonTitle: Font { display(.title3, weight: .heavy) }
+    /// A small caps label over a section or a group, in rounded heavy; set
+    /// with `crestCapsLabel()`, which adds its tracking and color.
+    static var capsLabel: Font { CrestDisplayFace.allo.font(size: 12, weight: .heavy) }
+    /// A settings or setup section's title: rounded heavy, at the size the
+    /// platform gives section headers.
+    static var sectionHeading: Font { display(.headline, weight: .heavy) }
+    /// A glyph alone on a control a finger presses, as on the phone's and
+    /// iPad's chrome.
+    static let touchControlGlyph = Font.system(size: 17, weight: .medium)
     static let metadata = Font.caption
     static let compactMetadata = Font.caption2
     static let badge = Font.caption2.monospaced().weight(.semibold)
 
-    /// Display serif that scales with Dynamic Type against `style`.
+    /// Display type, rounded and heavy, at `size`, scaling with Dynamic Type
+    /// as `style` does where the platform has it.
     static func display(_ size: CGFloat, relativeTo style: Font.TextStyle) -> Font {
-        .custom(displayFontName, size: size, relativeTo: style)
+        #if os(iOS)
+            let scaled = UIFontMetrics(forTextStyle: platformStyle(of: style)).scaledValue(for: size)
+            return CrestDisplayFace.allo.font(size: scaled, weight: .heavy)
+        #else
+            return CrestDisplayFace.allo.font(size: size, weight: .heavy)
+        #endif
     }
 
-    /// Display serif at a fixed optical size. Retained for hand-tuned editorial
-    /// layouts (the onboarding wizard) whose line breaks are composed by hand.
+    /// Display type, rounded and heavy, at a fixed size, for layouts whose
+    /// line breaks are composed by hand.
     static func display(_ size: CGFloat) -> Font {
-        .custom(displayFontName, size: size)
+        CrestDisplayFace.allo.font(size: size, weight: .heavy)
     }
 
+    /// Body and supporting type in the system face.
     static func sans(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        .custom(sansFontName, size: size).weight(weight)
+        .system(size: size, weight: weight)
+    }
+
+    /// Display type at the size `style` has now, which follows the person's
+    /// text size where the platform has one.
+    private static func display(_ style: Font.TextStyle, weight: CrestDisplayFace.Weight) -> Font {
+        #if os(iOS)
+            let size = UIFont.preferredFont(forTextStyle: platformStyle(of: style)).pointSize
+        #else
+            let size = NSFont.preferredFont(forTextStyle: platformStyle(of: style)).pointSize
+        #endif
+        return CrestDisplayFace.allo.font(size: size, weight: weight)
+    }
+
+    #if os(iOS)
+        private typealias PlatformTextStyle = UIFont.TextStyle
+    #else
+        private typealias PlatformTextStyle = NSFont.TextStyle
+    #endif
+
+    /// The platform's text style matching `style`, for reading or scaling a
+    /// size by it.
+    private static func platformStyle(of style: Font.TextStyle) -> PlatformTextStyle {
+        switch style {
+        case .largeTitle: .largeTitle
+        case .title: .title1
+        case .title2: .title2
+        case .title3: .title3
+        case .headline: .headline
+        case .subheadline: .subheadline
+        case .callout: .callout
+        case .footnote: .footnote
+        case .caption: .caption1
+        case .caption2: .caption2
+        default: .body
+        }
     }
 
     // MARK: - Named display roles

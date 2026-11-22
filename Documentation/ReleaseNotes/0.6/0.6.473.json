@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "chromium-fullscreen-video-hides-idle-pointer",
+      "category": "fixed",
+      "message": "Full-screen videos in the Chromium engine hide the pointer when you stop moving it, as they do in WebKit.",
+      "platforms": ["mac"]
+    }
+  ]
+}

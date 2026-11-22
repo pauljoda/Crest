@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "site-controls-full-screen",
+      "category": "fixed",
+      "message": "Site Controls and the extensions it lists now open on Mac when the window is in full screen, instead of closing as soon as you click the button."
+    }
+  ]
+}

@@ -108,7 +108,7 @@ struct BrowserSidebarWidgetAction: Hashable, Sendable {
     let cardButton: CardButton?
     private let softwareUpdatePerformance: (@MainActor @Sendable (any BrowserSoftwareUpdateActionPerformer) -> Void)?
     private let nowPlayingPerformance:
-        (@MainActor @Sendable (any BrowserNowPlayingActionPerformer, BrowserMediaSessionSnapshot) -> Void)?
+        (@MainActor @Sendable (BrowserMediaSessionStore, BrowserMediaSessionSnapshot) -> Void)?
 
     // MARK: - Initializers
 
@@ -132,7 +132,7 @@ struct BrowserSidebarWidgetAction: Hashable, Sendable {
     private init(
         name: String,
         nowPlaying:
-            @escaping @MainActor @Sendable (any BrowserNowPlayingActionPerformer, BrowserMediaSessionSnapshot)
+            @escaping @MainActor @Sendable (BrowserMediaSessionStore, BrowserMediaSessionSnapshot)
             -> Void
     ) {
         self.name = name
@@ -161,7 +161,7 @@ struct BrowserSidebarWidgetAction: Hashable, Sendable {
 
     /// Performs the action on a Now Playing card's session.
     @MainActor
-    func perform(on store: any BrowserNowPlayingActionPerformer, session: BrowserMediaSessionSnapshot) {
+    func perform(on store: BrowserMediaSessionStore, session: BrowserMediaSessionSnapshot) {
         nowPlayingPerformance?(store, session)
     }
 

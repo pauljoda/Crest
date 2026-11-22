@@ -935,7 +935,7 @@ documents and sign-ins that arrived before it was ready.
   launcher offers each `ShortcutCommand` that `OffersInPalette`, in catalog
   order; both show what `EnginesChanged` says the device offers.
 - **What stays native.** Window kinds (`BrowserMacWindowKind`: browser,
-  temporary, private, Quick Window, setup and update details), frames and
+  temporary, private, Quick Window and setup), frames and
   cascading, key focus and window activity, and the close gate every window
   shares (`BrowserWindowCloseGate`), which asks the core before a person's
   close. The shell adds AppKit's application, Edit, Window and Help menus, and

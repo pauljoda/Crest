@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "mobile-full-screen-video-shows",
+      "category": "fixed",
+      "message": "On iPhone and iPad, a video a site shows full screen, such as Reddit's, fills the screen instead of going black, and the page is back when you leave full screen.",
+      "platforms": ["ios"]
+    }
+  ]
+}

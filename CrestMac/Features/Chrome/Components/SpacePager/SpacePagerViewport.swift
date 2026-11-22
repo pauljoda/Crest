@@ -391,16 +391,19 @@ final class SpacePagerViewport<Content: View>: NSView {
         let projectedTravel = progress + releaseVelocity * current.direction * 0.15
         let completes = !cancelled && travel > 0 && projectedTravel >= bounds.width / 2
         let destination = completes ? current.target?.spaceID : nil
-        settleMotion(to: destination ?? current.origin.spaceID)
+        // A completing flick finishes at its own speed, up to the shortcut's.
+        let releaseSpeed =
+            completes && bounds.width > 0 ? max(0, releaseVelocity * current.direction / bounds.width) : 0
+        settleMotion(to: destination ?? current.origin.spaceID, releaseSpeed: releaseSpeed)
         return true
     }
 
-    func step(_ direction: BrowserSpaceSwipeDirection) {
+    func step(_ direction: AdjacentDirection) {
         guard !isInteractionLocked else { return }
         guard let token = beginInteractiveMotion(), let current = motion,
             let next = BrowserChromeAccessibility.adjacentSpaceID(
                 spaces: spaces, selectedSpaceID: current.origin.spaceID,
-                direction: direction == .next ? .next : .previous)
+                direction: direction)
         else {
             if let current = motion, current.settledDestination == nil {
                 settleMotion(to: current.origin.spaceID)
@@ -558,7 +561,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         return host.frame.minX
     }
 
-    private func settleMotion(to destination: UUID) {
+    private func settleMotion(to destination: UUID, releaseSpeed: CGFloat = 0) {
         guard var current = motion, assignment(for: destination) != nil else { return }
         let token = current.generation
         let startOffset = visibleOffset(for: current.origin, during: current)
@@ -576,7 +579,7 @@ final class SpacePagerViewport<Content: View>: NSView {
         let transition = SpacePagerSettlement(
             startPosition: CGFloat(originIndex) - startOffset / bounds.width * direction,
             endPosition: CGFloat(originIndex) - targetOffset / bounds.width * direction,
-            generation: token)
+            generation: token, releaseSpeed: releaseSpeed)
         current.transition = transition
         motion = current
         let moving = hosts.filter { key, host in

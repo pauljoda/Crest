@@ -57,23 +57,11 @@ struct BrowserCredentialImportAccountRow: View {
                 }
             }
 
-            ViewThatFits(in: .horizontal) {
-                HStack {
-                    Text("Password to keep")
-                        .font(.subheadline.weight(.medium))
-                    Spacer()
-                    selectionPicker
-                        .labelsHidden()
-                    passwordVisibilityButton
-                }
-                VStack(alignment: .leading, spacing: CrestSpacing.small) {
-                    Text("Password to keep")
-                        .font(.subheadline.weight(.medium))
-                    selectionPicker
-                        .labelsHidden()
-                    passwordVisibilityButton
-                }
+            CrestSettingRow("Password to keep") {
+                selectionPicker
+                    .labelsHidden()
             }
+            passwordVisibilityButton
 
             if group.collapsedDuplicateRowCount > 0 {
                 Label(
@@ -84,15 +72,7 @@ struct BrowserCredentialImportAccountRow: View {
                 .foregroundStyle(.secondary)
             }
         }
-        .padding(CrestSpacing.large)
-        .background(
-            Color.primary.opacity(BrowserCredentialImportReviewMetrics.cardFillOpacity),
-            in: RoundedRectangle(cornerRadius: CrestRadius.control)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: CrestRadius.control)
-                .stroke(Color.secondary.opacity(BrowserCredentialImportReviewMetrics.cardBorderOpacity))
-        }
+        .padding(.vertical, CrestSpacing.extraSmall)
         .accessibilityElement(children: .contain)
     }
 

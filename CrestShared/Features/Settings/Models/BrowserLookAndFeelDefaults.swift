@@ -7,10 +7,11 @@ import Foundation
 /// seeds a control and the migration code that seeds the store.
 enum BrowserLookAndFeelDefaults {
     static let appearanceMode = BrowserAppearanceMode.standard
-    static let customizationStyle = BrowserCustomizationStyle.standard
+    static let spaceIcons = BrowserSpaceIconDisplay.icons
     static let darkSpaceDimming = 0.0
     static let windowBorderWidth = BrowserChromeAppearance.defaultBorderWidth
     static let sidebarOnRight = false
+    static let addressBarPlacement = BrowserAddressBarPlacement.standard
     static let surfaceMaterial = CrestSurfaceMaterial.standard
     static let surfaceTone = CrestSurfaceTone.standard
     static let cornerRadius: Double = 10
@@ -26,6 +27,8 @@ enum BrowserLookAndFeelDefaults {
     /// How long, in milliseconds, the sidebar slides out over the page: a
     /// third quicker than the motion it is measured against.
     static let sidebarSlideDuration: Double = 160
+    /// How long a Peek takes to grow out of its link, in milliseconds.
+    static let peekOpenDuration: Double = 240
     /// A new device's tab appearance, made fresh each time so a reset never
     /// shares the one instance it puts back.
     @MainActor static var tabs: BrowserTabAppearance { BrowserTabAppearance() }
@@ -38,6 +41,10 @@ enum BrowserLookAndFeelDefaults {
     static let foldersShowBorders = true
     static let foldersIconOnly = false
     static let foldersTintTitle = false
+    static let groupsAlwaysVisible = false
+    static let groupsShowTabCounts = false
+    static let groupsShowBorders = false
+    static let groupsTintTitle = false
 
     /// Puts every device-wide appearance choice this pane owns back, but the
     /// customization style, which restyles Spaces and keeps its own Reset.
@@ -59,6 +66,7 @@ enum BrowserLookAndFeelDefaults {
         appearance.spaceIconScale = spaceIconScale
         appearance.windowBorderWidth = windowBorderWidth
         appearance.sidebarOnRight = sidebarOnRight
+        appearance.addressBarPlacement = addressBarPlacement
         appearance.tabScale = tabScale
         appearance.sidebarSpacing = sidebarSpacing
         appearance.pinColumns = pinColumns
@@ -68,6 +76,10 @@ enum BrowserLookAndFeelDefaults {
         appearance.foldersShowBorders = foldersShowBorders
         appearance.foldersIconOnly = foldersIconOnly
         appearance.foldersTintTitle = foldersTintTitle
+        appearance.groupsAlwaysVisible = groupsAlwaysVisible
+        appearance.groupsShowTabCounts = groupsShowTabCounts
+        appearance.groupsShowBorders = groupsShowBorders
+        appearance.groupsTintTitle = groupsTintTitle
         appearance.previewsTabsOnHover = previewsTabsOnHover
         appearance.previewsFoldersOnHover = previewsFoldersOnHover
         appearance.saveNow()

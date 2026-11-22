@@ -5,7 +5,11 @@ namespace CrestCore.Contracts;
 /// vocabulary the branding uses, which older readers need to read it faithfully.
 /// <see cref="HasCustomAppearance"/> is null for branding stored before it was recorded.
 /// <see cref="TextureStrength"/> is how strongly a grain lies over the sidebar, whatever its
-/// mode, from none at 0 to full at 1.
+/// mode, from none at 0 to full at 1. <see cref="GradientKind"/> is how a gradient runs, or
+/// null for along a line at <see cref="GradientAngle"/>, as every build before it drew.
+/// <see cref="SymbolGradient"/> is the gradient the icon's <see cref="SymbolColor"/> runs on
+/// into, and <see cref="ColorGradients"/> the ones each of <see cref="Colors"/> runs on into,
+/// by index. Without them each color is plain, which is how every build before them draws it.
 /// </summary>
 public sealed partial record SpaceBranding(
     ColorPalette Colors,
@@ -22,7 +26,10 @@ public sealed partial record SpaceBranding(
     int RenderingVersion,
     double FolderColorIntensity,
     SpaceTextColorMode TextColorMode,
-    bool? HasCustomAppearance) {
+    bool? HasCustomAppearance,
+    SpaceGradientKind? GradientKind = null,
+    BrandGradient? SymbolGradient = null,
+    PaletteGradients? ColorGradients = null) {
     #region Static Variables
 
     /// The rendering vocabulary every shipped build draws. A banner strength stored

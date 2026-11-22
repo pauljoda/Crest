@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-10-12-sidebar-surface-material",
+      "category": "improved",
+      "message": "Choose how much the sidebar’s tabs, folders and bars let the background show through, from Ultra Thin to Ultra Thick, in Look and Feel settings. Pinned tabs now sit closer under the address bar."
+    }
+  ]
+}

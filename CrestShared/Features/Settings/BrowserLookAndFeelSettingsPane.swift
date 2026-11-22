@@ -3,14 +3,13 @@ import SwiftUI
 /// Device appearance edits the visible sidebar in a browser tab. Sheets retain
 /// detached component previews because their browser is covered.
 ///
-/// The customization style leads the page and decides which rows follow it;
-/// the rows it leaves out wait in Advanced at the end.
+/// The page keeps the choices that change how Crest reads and behaves; the
+/// fine tuning waits in More Customization at the end.
 struct BrowserLookAndFeelSettingsPane: View {
     let browser: BrowserStore
     var space: BrowserSpaceAppearance? = nil
     @Environment(\.browserSettingsUsesLiveSidebar) private var usesLiveSidebar
-    @State private var showsAdvanced = false
-    private let appearance = BrowserDeviceAppearanceStore.shared
+    @State private var showsMore = false
 
     var body: some View {
         if usesLiveSidebar {
@@ -46,34 +45,28 @@ struct BrowserLookAndFeelSettingsPane: View {
     }
 
     private func form(showsInlinePreviews: Bool) -> some View {
-        let style = appearance.customizationStyle
-        return BrowserSettingsPane(.lookAndFeel) {
-            BrowserCustomizationStyleGroup(browser: browser)
+        BrowserSettingsPane(.lookAndFeel) {
+            BrowserPlatformAddressBarSettingsSection()
             Group {
                 BrowserSpaceIconsAppearanceGroup()
                 groups(showsInlinePreviews: showsInlinePreviews)
             }
-            .environment(
-                \.browserAppearanceSettingFilter, BrowserAppearanceSettingFilter(style: style, isAdvanced: false))
+            .environment(\.browserAppearanceSettingFilter, .page)
             BrowserPlatformAppIconSettingsSection()
-            if style.hidesSettings {
-                BrowserAppearanceAdvancedHeader(isExpanded: $showsAdvanced)
-                if showsAdvanced {
-                    Group {
-                        BrowserSpaceIconsAppearanceGroup()
-                        groups(showsInlinePreviews: showsInlinePreviews)
-                    }
-                    .environment(
-                        \.browserAppearanceSettingFilter,
-                        BrowserAppearanceSettingFilter(style: style, isAdvanced: true))
+            BrowserMoreCustomizationHeader(isExpanded: $showsMore)
+            if showsMore {
+                Group {
+                    BrowserSpaceIconsAppearanceGroup()
+                    groups(showsInlinePreviews: showsInlinePreviews)
                 }
+                .environment(\.browserAppearanceSettingFilter, .more)
             }
             BrowserPlatformLookAndFeelResetSection()
         }
     }
 
-    /// Every group whose rows a style can leave out, each showing the rows
-    /// the page's filter keeps.
+    /// Every group whose rows may wait in More Customization, each showing
+    /// the rows its part of the page keeps.
     @ViewBuilder private func groups(showsInlinePreviews: Bool) -> some View {
         BrowserPlatformAppearanceSettingsSection(space: space, showsPreview: showsInlinePreviews)
         if !usesLiveSidebar {
@@ -84,6 +77,7 @@ struct BrowserLookAndFeelSettingsPane: View {
         BrowserTabStatusAppearanceGroup()
         BrowserAddressAppearanceGroup(space: space, showsPreview: showsInlinePreviews, links: browser.linkPreferences)
         BrowserFolderAppearanceGroup(space: space, showsPreview: showsInlinePreviews)
+        BrowserGroupAppearanceGroup()
         BrowserHoverPreviewAppearanceGroup()
         if usesLiveSidebar {
             BrowserDefaultPageZoomSettingsSection(preferences: .shared, space: space, showsPreview: false)

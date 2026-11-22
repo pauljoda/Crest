@@ -69,15 +69,31 @@ struct BrowserSidebarTabActions {
         )
     }
 
-    /// Closes the Space's current tabs, leaving its pinned and saved tabs be.
+    /// Archives the Space's open tabs, leaving its pinned and saved tabs be,
+    /// and the tab the window shows there when `keepingShownTab`.
     @discardableResult
-    func clearCurrentTabs() -> Bool {
+    func clearCurrentTabs(keepingShownTab: Bool) -> Bool {
         guard
             browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) != nil,
-            browser.clearCurrentTabs(matching: assignment)
+            browser.clearCurrentTabs(matching: assignment, keepingShownTab: keepingShownTab)
         else { return false }
         syncPagesAfterMutation()
         return true
+    }
+
+    /// Whether the Space is the one shown, unlocked, and has a folder open to
+    /// collapse.
+    var canCollapseAllFolders: Bool {
+        browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) != nil
+            && browser.allows(.collapseAllFolders)
+    }
+
+    /// Collapses every open folder of the Space, however deep, leaving its
+    /// tabs be.
+    @discardableResult
+    func collapseAllFolders() -> Bool {
+        browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) != nil
+            && browser.collapseAllFolders(matching: assignment)
     }
 
     /// Routes an empty-background gesture through the host's existing New Tab

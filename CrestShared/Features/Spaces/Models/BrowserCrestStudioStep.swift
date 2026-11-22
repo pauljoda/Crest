@@ -1,31 +1,23 @@
 import Foundation
 
-/// The steps of making a crest, in the order arms are composed: the Forge's
-/// step bar on the Mac, and the Studio's groups everywhere.
+/// The parts of a crest, in the order arms are composed, as More
+/// Customization offers them: a step bar on the Mac, a list on a phone.
 struct BrowserCrestStudioStep: Hashable, Identifiable, Sendable {
     // MARK: - Types
 
     /// Each step shows its own choices. ``BrowserCrestForge`` switches on the
     /// kind to choose that step's concrete sections.
     enum Kinds: Sendable {
-        case start
         case shape
         case field
         case band
         case emblem
         case border
         case finish
-        case sidebar
     }
 
     // MARK: - Static Variables
 
-    static let start = BrowserCrestStudioStep(
-        kind: .start, name: "start", title: "Start from", symbol: "sparkles", isCrestOnly: false,
-        summary: { branding in
-            SpaceHouse.all.first { $0.isWorn(by: branding) }?.title
-                ?? SpaceScheme.all.first { $0.isWorn(by: branding) }?.title ?? "Custom"
-        })
     static let shape = BrowserCrestStudioStep(
         kind: .shape, name: "shape", title: "Shape", symbol: "shield", isCrestOnly: true,
         summary: { $0.crest.backplate.title })
@@ -47,13 +39,11 @@ struct BrowserCrestStudioStep: Hashable, Identifiable, Sendable {
         summary: { $0.crest.trim.title })
     static let finish = BrowserCrestStudioStep(
         kind: .finish, name: "finish", title: "Finish", symbol: "light.max", isCrestOnly: true,
-        summary: { $0.crest.finish.title })
-    static let sidebar = BrowserCrestStudioStep(
-        kind: .sidebar, name: "sidebar", title: "Sidebar", symbol: "sidebar.left", isCrestOnly: false,
-        summary: { $0.themeMode == .gradient ? "Gradient" : $0.bannerPattern.title })
-
+        summary: { branding in
+            BrowserCrestFinishChoice.all.first { $0.isWorn(by: branding.crest) }?.title ?? branding.crest.finish.title
+        })
     /// Every step, in the step bar's order.
-    static let all: [BrowserCrestStudioStep] = [start, shape, field, band, emblem, border, finish, sidebar]
+    static let all: [BrowserCrestStudioStep] = [shape, field, band, emblem, border, finish]
 
     // MARK: - Variables
 

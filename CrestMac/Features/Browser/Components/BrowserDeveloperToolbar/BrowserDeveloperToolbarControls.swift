@@ -14,6 +14,13 @@ struct BrowserDeveloperAddressField: View {
             .onSubmit(navigate)
             .accessibilityLabel("Developer URL")
             .accessibilityIdentifier("developer-url-field")
+            // The toolbar can sit under the title bar at the top of the page.
+            // A drag across the field selects its text, while the toolbar
+            // around it still moves the window.
+            .background {
+                BrowserWindowTitleBarControlArea()
+                    .accessibilityHidden(true)
+            }
     }
 }
 

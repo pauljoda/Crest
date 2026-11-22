@@ -18,6 +18,8 @@ public sealed class NativeSyncAuthority {
     #region Variables
 
     private readonly SyncStager stager;
+    /// The time staging stamps on what it stages, and that delays wait on.
+    internal IClock Clock { get; }
     private NativeSyncJournal journal;
     private NativeSyncTransaction? pending;
     internal NativeSessionAuthority? Session { get; set; }
@@ -37,8 +39,9 @@ public sealed class NativeSyncAuthority {
 
     #region Constructors
 
-    public NativeSyncAuthority(NativeSyncJournal initial) {
+    public NativeSyncAuthority(NativeSyncJournal initial, IClock? clock = null) {
         journal = initial;
+        Clock = clock ?? new SystemClock();
         stager = new(this);
     }
 
@@ -132,18 +135,19 @@ public sealed class NativeSyncAuthority {
         stager.Queue(previous, next, staging);
 
     /// Stages `session`, a revision about to be saved in place of `previous`,
-    /// for `reason`, replacing whatever is queued; a record a queued edit
+    /// as `staging` says, replacing whatever is queued; a record a queued edit
     /// removed keeps that edit's reason. Answers the sealed transaction the
     /// revision's reservation saves and publishes; disposing it uncommitted
     /// queues the replaced stage again. Throws `Rejected` naming why it cannot
     /// stage.
-    internal NativeSyncTransaction StageWithSave(SessionState previous, SessionState session, SyncDeletionReason reason) {
+    internal NativeSyncTransaction StageWithSave(SessionState previous, SessionState session, SyncStaging staging) {
+        var reason = staging.Reason;
         var replaced = stager.Supersede();
         var value = Begin(sequence: null);
         value.Superseded = replaced;
         try {
-            var removals = (replaced?.Removals ?? SyncRemovals.None).Adding(new(previous, session, reason));
-            value.Stage(session, reason, removals.Reasons(reason), StoredSessionCodec.Seconds(DateTimeOffset.UtcNow));
+            var removals = (replaced?.Removals ?? SyncRemovals.None).Adding(new(previous, session, reason, staging.Deleted, staging.Emptied));
+            value.Stage(session, reason, removals.Reasons(reason), StoredSessionCodec.Seconds(Clock.Now), removals.Emptied);
             _ = value.Seal();
             return value;
         } catch (Exception error) {
@@ -164,7 +168,7 @@ public sealed class NativeSyncAuthority {
         }
         try {
             value.Stage(request.Session, request.Reason, request.Removals.Reasons(request.Reason),
-                StoredSessionCodec.Seconds(DateTimeOffset.UtcNow));
+                StoredSessionCodec.Seconds(Clock.Now), request.Removals.Emptied);
             if (!value.Seal()) {
                 value.Dispose();
                 return false;

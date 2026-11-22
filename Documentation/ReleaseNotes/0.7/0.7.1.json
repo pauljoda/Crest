@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "opaque-mac-windows-external-display-load",
+      "category": "fixed",
+      "message": "Crest windows on Mac no longer keep the system's WindowServer busy, which could use a lot of CPU on large or high-refresh external displays. The focused-window transparency setting has been removed."
+    }
+  ]
+}

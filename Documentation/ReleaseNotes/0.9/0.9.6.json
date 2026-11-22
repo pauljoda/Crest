@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "peek-loads-when-page-updates-address",
+      "category": "fixed",
+      "message": "On Mac, a link that opens in Peek from a Chromium page now loads even when the page updates its own address as it opens the link, as web apps such as Google Drive can, instead of leaving an empty Peek or opening nothing.",
+      "platforms": ["mac"]
+    }
+  ]
+}

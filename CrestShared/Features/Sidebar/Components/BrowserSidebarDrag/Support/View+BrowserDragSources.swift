@@ -10,7 +10,8 @@ extension View {
         reorder: BrowserSidebarReorderContext? = nil,
         parentSplitGroupID: UUID? = nil,
         isEnabled: Bool = true,
-        requiresSelectedSpace: Bool = false
+        requiresSelectedSpace: Bool = false,
+        isTabSelected: Bool = false
     ) -> some View {
         modifier(
             BrowserTabDragSourceModifier(
@@ -22,7 +23,8 @@ extension View {
                 reorder: reorder,
                 parentSplitGroupID: parentSplitGroupID,
                 isEnabled: isEnabled,
-                requiresSelectedSpace: requiresSelectedSpace
+                requiresSelectedSpace: requiresSelectedSpace,
+                isTabSelected: isTabSelected
             )
         )
     }

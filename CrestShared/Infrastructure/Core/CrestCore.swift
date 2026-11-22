@@ -34,11 +34,34 @@ final class EngineAnswer {
 final class CrestCore {
     // MARK: - Types
 
-    /// A registration to hear something the core did, which lasts as long as
-    /// its owner.
-    struct Follower<Value> {
-        weak var owner: AnyObject?
-        let handler: @MainActor (Value) -> Void
+    /// The callers that hear one kind of thing the core did, each for as long
+    /// as its owner lives. It is a class, so a follower that sends an intent
+    /// or follows again while it hears one reaches the same list safely.
+    @MainActor
+    final class Followers<Event> {
+        /// One registration, which lasts as long as its owner.
+        private struct Follower {
+            weak var owner: AnyObject?
+            let handler: @MainActor (Event) -> Void
+        }
+
+        private var followers: [Follower] = []
+
+        /// Adds `handler` for as long as `owner` lives.
+        func follow(_ owner: AnyObject, _ handler: @escaping @MainActor (Event) -> Void) {
+            followers.removeAll { $0.owner == nil }
+            followers.append(Follower(owner: owner, handler: handler))
+        }
+
+        /// Hands each of `events`, in order, to every follower alive when it
+        /// starts. A follower added meanwhile hears the next events.
+        func send(_ events: [Event]) {
+            followers.removeAll { $0.owner == nil }
+            let alive = followers
+            for event in events {
+                for follower in alive { follower.handler(event) }
+            }
+        }
     }
 
     // MARK: - Variables
@@ -60,40 +83,40 @@ final class CrestCore {
     /// Callers waiting for a revision to reach disk. A drain resumes them.
     @ObservationIgnored var saveWaiters: [(revision: Int64, continuation: CheckedContinuation<Void, Never>)] = []
     /// Who hears that an intent from the cloud transport committed.
-    @ObservationIgnored private var cloudDeliveryFollowers: [Follower<Void>] = []
+    private let cloudDeliveryFollowers = Followers<Void>()
     /// Who hears each site permission change once it is applied. Until WP C
     /// (e) moves live revocation into engine commands, the pages' permission
     /// plumbing learns this way what a change covered.
-    @ObservationIgnored private var sitePermissionFollowers: [Follower<SitePermissionsChanged>] = []
-    @ObservationIgnored private var notificationAccessFollowers: [Follower<Void>] = []
+    private let sitePermissionFollowers = Followers<SitePermissionsChanged>()
+    private let notificationAccessFollowers = Followers<Void>()
     /// Who hears the questions the core asks the person and those that no
     /// longer wait, once their batch is applied.
-    @ObservationIgnored private var promptFollowers: [Follower<any CorePromptChange>] = []
+    private let promptFollowers = Followers<any CorePromptChange>()
     /// Who hears each download record the core changed, once its batch is
     /// applied.
-    @ObservationIgnored private var downloadFollowers: [Follower<DownloadState>] = []
+    private let downloadFollowers = Followers<DownloadState>()
     /// Who hears each download an engine began on a page, once its batch is
     /// applied.
-    @ObservationIgnored private var downloadStartFollowers: [Follower<DownloadStarted>] = []
+    private let downloadStartFollowers = Followers<DownloadStarted>()
     /// Who hears each tab page the core unloaded under memory pressure, once
     /// its batch is applied.
-    @ObservationIgnored private var unloadFollowers: [Follower<PageUnloaded>] = []
+    private let unloadFollowers = Followers<PageUnloaded>()
     /// Who hears each saved or pinned tab's page put away, once its batch is
     /// applied.
-    @ObservationIgnored private var putAwayFollowers: [Follower<TabPagePutAway>] = []
+    private let putAwayFollowers = Followers<TabPagePutAway>()
     /// Who hears each page the core moved to another engine, once its batch
     /// is applied.
-    @ObservationIgnored private var rehostFollowers: [Follower<PageRehosted>] = []
+    private let rehostFollowers = Followers<PageRehosted>()
     /// Who hears each page an engine opened by itself that the core adopted
     /// for a tab, once its batch is applied.
-    @ObservationIgnored private var adoptionFollowers: [Follower<OfferedPageAdopted>] = []
+    private let adoptionFollowers = Followers<OfferedPageAdopted>()
     /// Who hears each window the core brings to the front, once its batch is
     /// applied.
-    @ObservationIgnored private var broughtForwardFollowers: [Follower<WindowBroughtForward>] = []
-    @ObservationIgnored private var windowAdoptionFollowers: [Follower<OfferedWindowAdopted>] = []
+    private let broughtForwardFollowers = Followers<WindowBroughtForward>()
+    private let windowAdoptionFollowers = Followers<OfferedWindowAdopted>()
     /// Who hears each Quick Window or Peek page the core closed, once its
     /// batch is applied.
-    @ObservationIgnored private var transientCloseFollowers: [Follower<TransientPageClosed>] = []
+    private let transientCloseFollowers = Followers<TransientPageClosed>()
     /// Who waits for each close preparation to end, by its request.
     @ObservationIgnored private var closeWaiters: [UUID: @MainActor (Bool) -> Void] = [:]
     /// Whether the app prepares to quit, or quits: a quit asked for that the
@@ -103,7 +126,8 @@ final class CrestCore {
     @ObservationIgnored private var dataDeletionWaiters: [UUID: @MainActor (Bool) -> Void] = [:]
     /// What waits for each website data reading to end, by its request.
     @ObservationIgnored private var websiteDataWaiters: [UUID: @MainActor (WebsiteDataRead?) -> Void] = [:]
-    #if DEBUG
+    // A test hook: Debug builds, and CI's Release test build, which alone passes CREST_TEST_FIXTURES.
+    #if DEBUG || CREST_TEST_FIXTURES
         /// Hears each batch of changes once `state` has applied it, so a test
         /// can apply the same batch again.
         @ObservationIgnored var batchApplied: (([Change]) -> Void)?
@@ -283,13 +307,11 @@ final class CrestCore {
     /// once the drain that brought what it changed has landed. The
     /// registration lasts as long as `owner`.
     func followCloudDeliveries(_ owner: AnyObject, _ handler: @escaping @MainActor () -> Void) {
-        cloudDeliveryFollowers.removeAll { $0.owner == nil }
-        cloudDeliveryFollowers.append(Follower(owner: owner, handler: handler))
+        cloudDeliveryFollowers.follow(owner, handler)
     }
 
     private func cloudIntentDelivered() {
-        cloudDeliveryFollowers.removeAll { $0.owner == nil }
-        for follower in cloudDeliveryFollowers { follower.handler(()) }
+        cloudDeliveryFollowers.send([()])
     }
 
     // MARK: - Actions - Queries
@@ -362,25 +384,22 @@ final class CrestCore {
         state.finishBatch()
         // Profile notifications have no live page to withdraw them when a
         // Space locks, disappears, or changes its permission choices.
-        if batch.notificationAccessChanged {
-            notificationAccessFollowers.removeAll { $0.owner == nil }
-            for follower in notificationAccessFollowers { follower.handler(()) }
-        }
+        if batch.notificationAccessChanged { notificationAccessFollowers.send([()]) }
         if !batch.pageRecords.isEmpty { engines.recordsApplied(batch.pageRecords) }
-        if !batch.permissionChanges.isEmpty { sitePermissionsChanged(batch.permissionChanges) }
-        if !batch.prompts.isEmpty { promptsChanged(batch.prompts) }
-        if !batch.downloads.isEmpty { downloadsChanged(batch.downloads) }
-        if !batch.startedDownloads.isEmpty { downloadsStarted(batch.startedDownloads) }
-        if !batch.unloadedPages.isEmpty { pagesUnloaded(batch.unloadedPages) }
-        if !batch.putAwayPages.isEmpty { pagesPutAway(batch.putAwayPages) }
+        if !batch.permissionChanges.isEmpty { sitePermissionFollowers.send(batch.permissionChanges) }
+        if !batch.prompts.isEmpty { promptFollowers.send(batch.prompts) }
+        if !batch.downloads.isEmpty { downloadFollowers.send(batch.downloads) }
+        if !batch.startedDownloads.isEmpty { downloadStartFollowers.send(batch.startedDownloads) }
+        if !batch.unloadedPages.isEmpty { unloadFollowers.send(batch.unloadedPages) }
+        if !batch.putAwayPages.isEmpty { putAwayFollowers.send(batch.putAwayPages) }
         // The page's owner hosts it on its new engine before anyone hears it moved.
         if !batch.movedPages.isEmpty { engines.pagesMoved(batch.movedPages) }
-        if !batch.rehostedPages.isEmpty { pagesRehosted(batch.rehostedPages) }
-        if !batch.adoptedPages.isEmpty { pagesAdopted(batch.adoptedPages) }
-        if !batch.broughtForward.isEmpty { windowsBroughtForward(batch.broughtForward) }
-        if !batch.adoptedWindows.isEmpty { windowsAdopted(batch.adoptedWindows) }
-        if !batch.closedTransientPages.isEmpty { transientPagesClosed(batch.closedTransientPages) }
-        #if DEBUG
+        if !batch.rehostedPages.isEmpty { rehostFollowers.send(batch.rehostedPages) }
+        if !batch.adoptedPages.isEmpty { adoptionFollowers.send(batch.adoptedPages) }
+        if !batch.broughtForward.isEmpty { broughtForwardFollowers.send(batch.broughtForward) }
+        if !batch.adoptedWindows.isEmpty { windowAdoptionFollowers.send(batch.adoptedWindows) }
+        if !batch.closedTransientPages.isEmpty { transientCloseFollowers.send(batch.closedTransientPages) }
+        #if DEBUG || CREST_TEST_FIXTURES
             batchApplied?(changes)
         #endif
         // Last, because a waiter may send the intent its close was waiting for.
@@ -395,32 +414,27 @@ final class CrestCore {
     /// applied, so a decision asked from the handler reads the new choices.
     /// The registration lasts as long as `owner`.
     func followSitePermissions(_ owner: AnyObject, _ handler: @escaping @MainActor (SitePermissionsChanged) -> Void) {
-        sitePermissionFollowers.removeAll { $0.owner == nil }
-        sitePermissionFollowers.append(Follower(owner: owner, handler: handler))
+        sitePermissionFollowers.follow(owner, handler)
     }
 
     func followNotificationAccess(_ owner: AnyObject, _ handler: @escaping @MainActor () -> Void) {
-        notificationAccessFollowers.removeAll { $0.owner == nil }
-        notificationAccessFollowers.append(Follower(owner: owner) { _ in handler() })
+        notificationAccessFollowers.follow(owner) { _ in handler() }
     }
 
     /// Shows `host` each question the core asks the person and closes each
     /// one that no longer waits, in order, once its batch is applied. The
     /// registration lasts as long as `host`.
     func followPrompts(_ host: some CorePromptHost) {
-        promptFollowers.removeAll { $0.owner == nil }
-        promptFollowers.append(
-            Follower(owner: host) { [weak host] prompt in
-                guard let host else { return }
-                prompt.present(on: host)
-            })
+        promptFollowers.follow(host) { [weak host] prompt in
+            guard let host else { return }
+            prompt.present(on: host)
+        }
     }
 
     /// Calls `handler` with each download record the core changed, in order,
     /// once its batch is applied. The registration lasts as long as `owner`.
     func followDownloads(_ owner: AnyObject, _ handler: @escaping @MainActor (DownloadState) -> Void) {
-        downloadFollowers.removeAll { $0.owner == nil }
-        downloadFollowers.append(Follower(owner: owner, handler: handler))
+        downloadFollowers.follow(owner, handler)
     }
 
     /// Calls `handler` with each download an engine began on a page, once its
@@ -428,8 +442,7 @@ final class CrestCore {
     /// download's record is already in `state`. The registration lasts as long
     /// as `owner`.
     func followStartedDownloads(_ owner: AnyObject, _ handler: @escaping @MainActor (DownloadStarted) -> Void) {
-        downloadStartFollowers.removeAll { $0.owner == nil }
-        downloadStartFollowers.append(Follower(owner: owner, handler: handler))
+        downloadStartFollowers.follow(owner, handler)
     }
 
     /// Calls `handler` with each tab page the core unloaded under memory
@@ -437,64 +450,35 @@ final class CrestCore {
     /// page's engine held, so its owner lets the page go without releasing it.
     /// The registration lasts as long as `owner`.
     func followUnloadedPages(_ owner: AnyObject, _ handler: @escaping @MainActor (PageUnloaded) -> Void) {
-        unloadFollowers.removeAll { $0.owner == nil }
-        unloadFollowers.append(Follower(owner: owner, handler: handler))
+        unloadFollowers.follow(owner, handler)
     }
 
     /// Calls `handler` with each saved or pinned tab's page the core put away,
     /// once its batch is applied, so the page host of the window that asked
     /// lets the page go. The registration lasts as long as `owner`.
     func followPutAwayPages(_ owner: AnyObject, _ handler: @escaping @MainActor (TabPagePutAway) -> Void) {
-        putAwayFollowers.removeAll { $0.owner == nil }
-        putAwayFollowers.append(Follower(owner: owner, handler: handler))
-    }
-
-    private func pagesPutAway(_ pages: [TabPagePutAway]) {
-        putAwayFollowers.removeAll { $0.owner == nil }
-        let followers = putAwayFollowers
-        for page in pages {
-            for follower in followers { follower.handler(page) }
-        }
+        putAwayFollowers.follow(owner, handler)
     }
 
     /// Calls `handler` with each page the core moved to another engine, once
     /// its batch is applied: the page on its new engine is already in
     /// `state`. The registration lasts as long as `owner`.
     func followRehostedPages(_ owner: AnyObject, _ handler: @escaping @MainActor (PageRehosted) -> Void) {
-        rehostFollowers.removeAll { $0.owner == nil }
-        rehostFollowers.append(Follower(owner: owner, handler: handler))
-    }
-
-    private func pagesRehosted(_ pages: [PageRehosted]) {
-        rehostFollowers.removeAll { $0.owner == nil }
-        let followers = rehostFollowers
-        for page in pages {
-            for follower in followers { follower.handler(page) }
-        }
+        rehostFollowers.follow(owner, handler)
     }
 
     /// Calls `handler` with each page an engine opened by itself that the core
     /// adopted for a tab, once its batch is applied, so the window that hosts
     /// the page shows it. The registration lasts as long as `owner`.
     func followAdoptedPages(_ owner: AnyObject, _ handler: @escaping @MainActor (OfferedPageAdopted) -> Void) {
-        adoptionFollowers.removeAll { $0.owner == nil }
-        adoptionFollowers.append(Follower(owner: owner, handler: handler))
+        adoptionFollowers.follow(owner, handler)
     }
 
     /// Calls `handler` with each window a page asked for that the core adopted
     /// as a Quick Window page, once its batch is applied, so the window that
     /// hosts the page shows it. The registration lasts as long as `owner`.
     func followAdoptedWindows(_ owner: AnyObject, _ handler: @escaping @MainActor (OfferedWindowAdopted) -> Void) {
-        windowAdoptionFollowers.removeAll { $0.owner == nil }
-        windowAdoptionFollowers.append(Follower(owner: owner, handler: handler))
-    }
-
-    private func windowsAdopted(_ windows: [OfferedWindowAdopted]) {
-        windowAdoptionFollowers.removeAll { $0.owner == nil }
-        let followers = windowAdoptionFollowers
-        for window in windows {
-            for follower in followers { follower.handler(window) }
-        }
+        windowAdoptionFollowers.follow(owner, handler)
     }
 
     /// Calls `handler` with each Quick Window or Peek page the core closed,
@@ -504,24 +488,7 @@ final class CrestCore {
     func followClosedTransientPages(
         _ owner: AnyObject, _ handler: @escaping @MainActor (TransientPageClosed) -> Void
     ) {
-        transientCloseFollowers.removeAll { $0.owner == nil }
-        transientCloseFollowers.append(Follower(owner: owner, handler: handler))
-    }
-
-    private func transientPagesClosed(_ pages: [TransientPageClosed]) {
-        transientCloseFollowers.removeAll { $0.owner == nil }
-        let followers = transientCloseFollowers
-        for page in pages {
-            for follower in followers { follower.handler(page) }
-        }
-    }
-
-    private func pagesAdopted(_ pages: [OfferedPageAdopted]) {
-        adoptionFollowers.removeAll { $0.owner == nil }
-        let followers = adoptionFollowers
-        for page in pages {
-            for follower in followers { follower.handler(page) }
-        }
+        transientCloseFollowers.follow(owner, handler)
     }
 
     /// Calls `handler` with each window the core brings to the front, once its
@@ -530,56 +497,7 @@ final class CrestCore {
     func followWindowsBroughtForward(
         _ owner: AnyObject, _ handler: @escaping @MainActor (WindowBroughtForward) -> Void
     ) {
-        broughtForwardFollowers.removeAll { $0.owner == nil }
-        broughtForwardFollowers.append(Follower(owner: owner, handler: handler))
-    }
-
-    private func windowsBroughtForward(_ windows: [WindowBroughtForward]) {
-        broughtForwardFollowers.removeAll { $0.owner == nil }
-        let followers = broughtForwardFollowers
-        for window in windows {
-            for follower in followers { follower.handler(window) }
-        }
-    }
-
-    private func pagesUnloaded(_ pages: [PageUnloaded]) {
-        unloadFollowers.removeAll { $0.owner == nil }
-        let followers = unloadFollowers
-        for page in pages {
-            for follower in followers { follower.handler(page) }
-        }
-    }
-
-    private func downloadsChanged(_ downloads: [DownloadState]) {
-        downloadFollowers.removeAll { $0.owner == nil }
-        let followers = downloadFollowers
-        for download in downloads {
-            for follower in followers { follower.handler(download) }
-        }
-    }
-
-    private func downloadsStarted(_ downloads: [DownloadStarted]) {
-        downloadStartFollowers.removeAll { $0.owner == nil }
-        let followers = downloadStartFollowers
-        for download in downloads {
-            for follower in followers { follower.handler(download) }
-        }
-    }
-
-    private func promptsChanged(_ prompts: [any CorePromptChange]) {
-        promptFollowers.removeAll { $0.owner == nil }
-        let followers = promptFollowers
-        for prompt in prompts {
-            for follower in followers { follower.handler(prompt) }
-        }
-    }
-
-    private func sitePermissionsChanged(_ changes: [SitePermissionsChanged]) {
-        sitePermissionFollowers.removeAll { $0.owner == nil }
-        let followers = sitePermissionFollowers
-        for change in changes {
-            for follower in followers { follower.handler(change) }
-        }
+        broughtForwardFollowers.follow(owner, handler)
     }
 
     /// Tells the core the main queue finished the turn a wake's drain followed,

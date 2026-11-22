@@ -2,6 +2,16 @@ import Foundation
 import WebKit
 
 extension PageFailure {
+    // MARK: - Static Variables
+
+    /// The domain of the errors WebKit reports from before `WKError`, and its
+    /// `WebKitErrorFrameLoadInterruptedByPolicyChange` code, which WebKit's
+    /// public headers no longer name.
+    private static let legacyErrorDomain = "WebKitErrorDomain"
+    private static let frameLoadInterruptedByPolicyChange = 102
+
+    // MARK: - Initializers
+
     /// The failure WebKit reported with `error`, which `replacedDocument` when
     /// it came after the new document took the page's place, or nil for an
     /// interruption that is no failure. `fallbackURL` names the address when
@@ -22,6 +32,8 @@ extension PageFailure {
             code: Int64(error.code)
         )
     }
+
+    // MARK: - Actions - Failures
 
     static func webContentProcessStopped(url: URL?) -> PageFailure {
         PageFailure(
@@ -47,7 +59,7 @@ extension PageFailure {
         // policy: most commonly when a navigation becomes a download, and also
         // when Crest cancels a navigation to hand its URL to another app. Neither
         // is a failure the user should see an error page for.
-        return error.domain == "WebKitErrorDomain" && error.code == 102
+        return error.domain == legacyErrorDomain && error.code == frameLoadInterruptedByPolicyChange
     }
 
     private static func kind(for error: NSError) -> NavigationError {

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "extension-sign-in-survives-relaunch",
+      "category": "fixed",
+      "message": "Extensions that sign you back in on their own when the browser starts, such as Claude, now stay signed in after Crest restarts on Mac, as they do in Chrome."
+    },
+    {
+      "id": "extension-tab-groups-as-folders",
+      "category": "new",
+      "message": "Tab groups that extensions make, such as the tabs Claude works in, now appear on Mac as folders in the Space’s open tabs, in the group’s name and color. Renaming, recoloring, collapsing or deleting the folder, or moving tabs in or out, changes the group the extension sees, and the folder keeps following the group after Crest restarts."
+    }
+  ]
+}

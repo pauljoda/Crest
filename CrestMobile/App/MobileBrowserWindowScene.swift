@@ -14,7 +14,7 @@ struct MobileBrowserWindowScene: View {
 
     @State private var runtime = Runtime()
     private let makeModel: @MainActor () -> MobileBrowserWindowSceneModel
-    @State private var browsingMode: BrowserBrowsingMode = .standard
+    @State private var workspaceKind: WorkspaceKind = .persistent
     @State private var hasPresentedAutomaticOnboarding = false
 
     init(
@@ -150,24 +150,31 @@ struct MobileBrowserWindowScene: View {
         model.closeWindowRuntime()
     }
 
-    @ViewBuilder
+    /// The browser, held back while a first launch's setup gates it until
+    /// setup nears its end, when it comes up behind setup, holding its own
+    /// launch, so it is ready when setup hands over; with setup over it while
+    /// setup is presented. Setup keeps its place when the gate lifts as setup
+    /// finishes, and goes once the browser shows its page underneath.
     private var sceneSurface: some View {
-        if showsAutomaticLaunchGate {
-            onboardingSurface
-        } else {
-            browserSurfaceWithOnboardingOverlay
-        }
-    }
-
-    private var browserSurfaceWithOnboardingOverlay: some View {
         ZStack {
-            browserSurface
-                .allowsHitTesting(!onboardingCoordinator.isMobilePresented)
-                .accessibilityHidden(onboardingCoordinator.isMobilePresented)
+            if !showsAutomaticLaunchGate || onboardingCoordinator.preparesBrowser {
+                browserSurface
+                    .allowsHitTesting(!onboardingCoordinator.isMobilePresented)
+                    .accessibilityHidden(onboardingCoordinator.isMobilePresented)
+                    // Under setup, the Start Page's search leaves the keyboard
+                    // to setup.
+                    .environment(\.commandPaletteFocusesOnShow, !onboardingCoordinator.isMobilePresented)
+            }
 
-            if onboardingCoordinator.isMobilePresented {
+            if showsAutomaticLaunchGate || onboardingCoordinator.isMobilePresented {
                 onboardingSurface
-                    .transition(.opacity.combined(with: .scale(scale: 0.985)))
+                    // Handing over, setup goes at once: Crest's page already
+                    // covers it on a phone, and an iPad's copy has grown into
+                    // the same page Crest shows.
+                    .transition(
+                        onboardingCoordinator.isHandingOver
+                            ? .identity : .opacity.combined(with: .scale(scale: 0.985))
+                    )
                     .zIndex(10)
             }
         }
@@ -175,7 +182,7 @@ struct MobileBrowserWindowScene: View {
 
     @ViewBuilder
     private var browserSurface: some View {
-        if browsingMode.isPrivate {
+        if workspaceKind.isPrivate {
             MobileBrowserRootView(
                 browser: model.privateBrowser,
                 pages: model.privatePages,
@@ -183,7 +190,7 @@ struct MobileBrowserWindowScene: View {
                 navigation: model.privateNavigation,
                 transientBrowsing: model.privateTransientBrowsing,
                 windowState: model.windowState,
-                suspendsCompactPagePresentation: onboardingCoordinator.isMobilePresented,
+                suspendsCompactPagePresentation: suspendsPagePresentation,
                 startupBehavior: .lastActiveTab,
                 togglePrivateBrowsing: togglePrivateBrowsing,
                 closePrivateBrowsing: closePrivateBrowsing
@@ -198,7 +205,9 @@ struct MobileBrowserWindowScene: View {
                 transientBrowsing: model.transientBrowsing,
                 spaceAccess: model.spaceAccess,
                 windowState: model.windowState,
-                suspendsCompactPagePresentation: onboardingCoordinator.isMobilePresented,
+                suspendsCompactPagePresentation: suspendsPagePresentation,
+                holdsStartup: showsAutomaticLaunchGate,
+                presentsPageOverSetup: onboardingCoordinator.isMobilePresented && onboardingCoordinator.isHandingOver,
                 startupBehavior: model.startupBehavior,
                 togglePrivateBrowsing: togglePrivateBrowsing,
                 closePrivateBrowsing: closePrivateBrowsing
@@ -216,12 +225,18 @@ struct MobileBrowserWindowScene: View {
             spaceAccess: model.spaceAccess,
             didOpenGettingStarted: { assignment in
                 if model.presentGettingStartedAfterSetup(matching: assignment) {
-                    browsingMode = .standard
+                    workspaceKind = .persistent
                 }
             }
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
+    }
+
+    /// Whether the browser holds its page back while setup is over it: until
+    /// setup hands over, when the page it opens on comes up behind setup.
+    private var suspendsPagePresentation: Bool {
+        onboardingCoordinator.isMobilePresented && !onboardingCoordinator.isHandingOver
     }
 
     private var showsAutomaticLaunchGate: Bool {
@@ -262,16 +277,16 @@ struct MobileBrowserWindowScene: View {
     }
 
     private func togglePrivateBrowsing() {
-        let destinationMode = model.togglePrivateBrowsing(from: browsingMode)
+        let destinationMode = model.togglePrivateBrowsing(from: workspaceKind)
         withAnimation(modeAnimation) {
-            browsingMode = destinationMode
+            workspaceKind = destinationMode
         }
     }
 
     private func closePrivateBrowsing() {
         let destinationMode = model.closePrivateBrowsing()
         withAnimation(modeAnimation) {
-            browsingMode = destinationMode
+            workspaceKind = destinationMode
         }
     }
 
@@ -283,7 +298,7 @@ struct MobileBrowserWindowScene: View {
         Task {
             guard await model.routeExternalURL(link) else { return }
             withAnimation(modeAnimation) {
-                browsingMode = .standard
+                workspaceKind = .persistent
             }
         }
     }

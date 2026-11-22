@@ -55,10 +55,6 @@ extension KeyedDecodingContainer {
         try decode(StoredIdentity.self, forKey: key).value
     }
 
-    func decodeIdentityIfPresent(forKey key: Key) throws -> UUID? {
-        try decodeIfPresent(StoredIdentity.self, forKey: key)?.value
-    }
-
 }
 
 // MARK: - Writing
@@ -74,10 +70,6 @@ extension KeyedEncodingContainer {
     /// Writes `id` under `key` in the stored spelling, `{"rawValue": UUID}`.
     mutating func encodeStoredIdentity(_ id: UUID, forKey key: Key) throws {
         try encode(StoredIdentity(id), forKey: key)
-    }
-
-    mutating func encodeStoredIdentityIfPresent(_ id: UUID?, forKey key: Key) throws {
-        try encodeIfPresent(id.map(StoredIdentity.init), forKey: key)
     }
 
 }

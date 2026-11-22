@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-06-space-entry-keeps-tabs-unloaded",
+      "category": "improved",
+      "message": "Show Start Page when entering a Mac Space with an unloaded tab, keeping the page unloaded until you select it"
+    }
+  ]
+}

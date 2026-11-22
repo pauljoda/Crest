@@ -70,7 +70,7 @@ internal abstract class SyncPayloadType {
         Subject(value)[Kind.NamesItsSpace ? StoredSessionCodec.Key.Id : StoredSessionCodec.Key.SpaceId]!;
 
     /// Whether the sync category `preferences` syncs `value`.
-    public virtual bool SyncsUnder(JsonNode preferences, JsonObject value) => preferences["historyAndArchive"]!.GetValue<bool>();
+    public virtual bool SyncsUnder(JsonNode preferences, JsonObject value) => preferences[NativeSyncJournal.Key.HistoryAndArchive]!.GetValue<bool>();
 
     /// Whether every device can take `value`: one naming an address only this
     /// device opens stays on it.
@@ -95,6 +95,15 @@ internal abstract class SyncPayloadType {
     /// its Space stays, and `removal` the reason of the edit that removed it.
     public virtual SyncDeletionReason? DeletionReason(JsonObject value, ArchiveReason? archiveReason, bool owningSpaceRemains,
         SyncDeletionReason removal) => removal;
+
+    /// `payload`, a record's, marked as gone for holding nothing at `now` in
+    /// seconds since 2001, or null for a kind no edit empties.
+    public virtual JsonObject? Emptied(JsonObject payload, double now) => null;
+
+    /// Whether a device leaves the record `value` out of its session while it
+    /// holds nothing there, so that a session lacking it is no evidence it
+    /// went: a group, or a folder marked emptied, of the open tabs.
+    public virtual bool HidesWhenEmpty(JsonObject value) => false;
 
     /// The value of this type that holds `tab`, the tab a record of the
     /// counterpart type holds.
@@ -160,7 +169,7 @@ internal abstract class SyncPayloadType {
     /// Whether `preferences` syncs a value placed where `value[member]` says:
     /// the current tabs, or the saved structure.
     private static bool SyncsPlaced(JsonNode preferences, JsonObject value, string member) =>
-        preferences[TabPlacement.Named(value[member]!.GetValue<string>())?.IsDurable == false ? "currentTabs" : "savedStructure"]!
+        preferences[TabPlacement.Named(value[member]!.GetValue<string>())?.IsDurable == false ? NativeSyncJournal.Key.CurrentTabs : NativeSyncJournal.Key.SavedStructure]!
             .GetValue<bool>();
 
     #endregion
@@ -195,11 +204,39 @@ internal abstract class SyncPayloadType {
 
         public override JsonNode? ParentFolder(JsonObject value) => value[StoredSessionCodec.Key.ParentId];
 
-        public override void MergeFields(JsonObject result, JsonObject first, JsonObject second, int winner) =>
+        /// A folder merges its disclosure field by field, and when it emptied
+        /// and when a device last held a tab in it each to the later side,
+        /// whichever copy wins, so a rename or a collapse made elsewhere at the
+        /// same time never drops either.
+        public override void MergeFields(JsonObject result, JsonObject first, JsonObject second, int winner) {
             LatestFields(result, first, second, StoredSessionCodec.Key.CollapseModifiedAt, StoredSessionCodec.Key.IsCollapsed);
+            LatestFields(result, first, second, SyncPayload.Key.EmptiedAt);
+            LatestFields(result, first, second, SyncPayload.Key.HeldAt);
+        }
 
         public override SyncDeletionReason? DeletionReason(JsonObject value, ArchiveReason? archiveReason, bool owningSpaceRemains,
             SyncDeletionReason removal) => removal.ForStructure;
+
+        /// A folder keeps its record when an edit empties it: the record is
+        /// dated emptied, after any time a device held a tab in it, and every
+        /// device shows the folder again once a tab sits in it. A record that
+        /// stands emptied already stays as it is. Only the date changes, so a
+        /// record an earlier build stored keeps everything else as it was.
+        public override JsonObject? Emptied(JsonObject payload, double now) {
+            var value = SyncPayload.ValueOf(payload);
+            var held = NativeSyncEvaluator.Date(value, SyncPayload.Key.HeldAt);
+            if (FolderPayload.StandsEmptied(NativeSyncEvaluator.Date(value, SyncPayload.Key.EmptiedAt), held)) return payload;
+            var marked = payload.DeepClone().AsObject();
+            SyncPayload.ValueOf(marked)[SyncPayload.Key.EmptiedAt] = Math.Max(now, (held ?? double.MinValue) + 0.001);
+            return marked;
+        }
+
+        /// Read leniently, since a record an earlier build stored may spell
+        /// what it holds otherwise.
+        public override bool HidesWhenEmpty(JsonObject value) =>
+            value[StoredSessionCodec.Key.Location] is JsonValue location && location.TryGetValue<string>(out var placed)
+            && TabPlacement.Named(placed)?.IsDurable == false && (value[SyncPayload.Key.EmptiedAt] is not null
+                || value[StoredSessionCodec.Key.IsGroup] is JsonValue group && group.TryGetValue<bool>(out var isGroup) && isGroup);
     }
 
     private sealed class TabType() : SyncPayloadType(SyncRecordKind.Tab, TabPayload.Read) {

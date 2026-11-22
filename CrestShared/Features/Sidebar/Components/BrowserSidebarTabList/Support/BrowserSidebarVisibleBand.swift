@@ -13,6 +13,15 @@ import SwiftUI
 /// it has stayed far from the screen across a step, so a frame it reports
 /// for a moment while the list first lays out never lets it go, and nothing
 /// is let go while a drag is in flight.
+///
+/// A folder is let go only while it is below the screen. Its tab rows sit in
+/// lazy stacks, and when the rows a lazy stack has made above the screen are
+/// dropped or drawn again, the scroll view moves the list back by about
+/// their height, even though the block that takes their place is as tall.
+/// Scrolling down a long folder let go of the folder above it, which threw
+/// the list back past that folder; the folder was drawn again, and the list
+/// never got further. So a folder the screen has passed stays drawn, and a
+/// block it has passed waits until it comes near again.
 @MainActor
 final class BrowserSidebarVisibleBand {
     // MARK: - Types
@@ -23,6 +32,9 @@ final class BrowserSidebarVisibleBand {
     @MainActor
     final class Slot {
         fileprivate(set) var isPlaceholder = false
+        /// Whether a block has stood in for the folder, so drawing it now
+        /// draws it again.
+        @ObservationIgnored fileprivate(set) var wasLetGo = false
         @ObservationIgnored fileprivate var frame: CGRect?
         /// Whether the folder has a drawn height a block could take.
         @ObservationIgnored fileprivate var canLetGo = false
@@ -35,8 +47,8 @@ final class BrowserSidebarVisibleBand {
     /// The content's own coordinates, in which frames don't move as it scrolls.
     static let contentSpace = NamedCoordinateSpace.named("browser-sidebar-scroll-content")
 
-    /// How far from the screen, in screens, a drawn folder may be before it is
-    /// let go, and how near a block must come to be drawn again. The gap
+    /// How far below the screen, in screens, a drawn folder may be before it
+    /// is let go, and how near a block must come to be drawn again. The gap
     /// between them keeps a folder at the edge from changing at every step.
     private static let releaseDistance: CGFloat = 2
     private static let drawDistance: CGFloat = 1
@@ -107,7 +119,8 @@ final class BrowserSidebarVisibleBand {
         let screen = visible.upperBound - visible.lowerBound
         let margin = screen * (slot.isPlaceholder ? Self.drawDistance : Self.releaseDistance)
         let isNear = frame.maxY >= visible.lowerBound - margin && frame.minY <= visible.upperBound + margin
-        guard !isNear, slot.canLetGo else {
+        let isPassed = frame.maxY < visible.lowerBound
+        guard !isNear, slot.canLetGo, slot.isPlaceholder || !isPassed else {
             slot.farSince = nil
             if slot.isPlaceholder { slot.isPlaceholder = false }
             return
@@ -115,6 +128,7 @@ final class BrowserSidebarVisibleBand {
         guard !slot.isPlaceholder, !isHolding else { return }
         if let farSince = slot.farSince, farSince < step {
             slot.isPlaceholder = true
+            slot.wasLetGo = true
         } else if slot.farSince == nil {
             slot.farSince = step
         }

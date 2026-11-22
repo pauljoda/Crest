@@ -43,7 +43,7 @@ final class MobileBrowserRootModelTests: XCTestCase {
     private func makeFixture(
         spaces: [SpaceState.Seed],
         selectedSpaceID: UUID,
-        browsingMode: BrowserBrowsingMode = .standard,
+        workspaceKind: WorkspaceKind = .persistent,
         startupBehavior: StartupBehavior,
         spaceAccess: BrowserSpaceAccessController = BrowserSpaceAccessController()
     ) -> MobileBrowserRootFixture {
@@ -53,12 +53,12 @@ final class MobileBrowserRootModelTests: XCTestCase {
             // Every Space shows its first tab, as a window restoring them would.
             tabs: Dictionary(
                 uniqueKeysWithValues: spaces.compactMap { space in space.tabs.first.map { (space.id, $0.id) } }),
-            browsingMode: browsingMode,
+            workspaceKind: workspaceKind,
             core: .hostingPages(contentRuleLists: EmptyMobileRootContentRuleListProvider())
         )
         let pages = MobileBrowserPageStore(
             browser: browser,
-            browsingMode: browsingMode,
+            workspaceKind: workspaceKind,
             usesEphemeralWebsiteDataStores: true
         )
         let navigation = MobileBrowserNavigationState()
@@ -82,12 +82,12 @@ final class MobileBrowserRootModelTests: XCTestCase {
 
     private func makeSpace(index: Int) -> SpaceState.Seed {
         let tab = TabState.Seed.startPage(
-            id: fixedUUID(index * 10 + 1),
+            id: UUID(fixed: index * 10 + 1),
             placement: .current
         )
         return SpaceState.Seed(
-            id: fixedUUID(index * 10 + 2),
-            profileID: fixedUUID(index * 10 + 3),
+            id: UUID(fixed: index * 10 + 2),
+            profileID: UUID(fixed: index * 10 + 3),
             name: "Space \(index)",
             symbol: "circle",
             accent: .indigo,
@@ -96,14 +96,6 @@ final class MobileBrowserRootModelTests: XCTestCase {
         )
     }
 
-    private func fixedUUID(_ value: Int) -> UUID {
-        UUID(
-            uuidString: String(
-                format: "00000000-0000-0000-0000-%012x",
-                value
-            )
-        )!
-    }
 }
 
 @MainActor

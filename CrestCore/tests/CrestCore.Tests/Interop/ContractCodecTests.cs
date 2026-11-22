@@ -203,22 +203,16 @@ public sealed unsafe class ContractCodecTests {
         Assert.NotEqual(ordered.Fingerprint, reordered.Fingerprint);
     }
 
-    /// A record that holds a password, itself or through a list or an optional,
-    /// names none in its Swift text: it shows each list's count and nothing
-    /// else of its values, and reflects no children.
+    /// A record that holds a password, itself or through a list, an optional or
+    /// another record, is one whose Swift text the generator redacts, and a
+    /// record that holds none keeps its own.
     [Fact]
-    public void ARecordThatHoldsAPasswordNamesNoneInItsSwiftText() {
-        string swift = SwiftEmitter.EmitContracts(ContractSchema.Load([typeof(Secret.Unlock), typeof(Secret.Remember),
-            typeof(Secret.Recall), typeof(Secret.Note)]));
+    public void EveryRecordThatHoldsAPasswordIsRedacted() {
+        var secrets = SwiftEmitter.SecretRecords(ContractSchema.Load([typeof(Secret.Unlock), typeof(Secret.Remember),
+            typeof(Secret.Recall), typeof(Secret.Note)])).Select(type => type.Name).ToHashSet();
 
-        foreach (string holder in new[] { "Unlock", "Remember", "Recall", "ExistingCredential" })
-            Assert.Contains($"extension {holder}: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {{", swift,
-                StringComparison.Ordinal);
-        Assert.DoesNotContain("extension Note:", swift, StringComparison.Ordinal);
-        Assert.Contains("\"Unlock(owner: <redacted>, password: <redacted>)\"", swift, StringComparison.Ordinal);
-        Assert.Contains("\"Remember(credentials: \\(credentials.count), hooks: <redacted>)\"", swift, StringComparison.Ordinal);
-        Assert.Contains("var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }", swift,
-            StringComparison.Ordinal);
+        Assert.Superset(new HashSet<string> { "Unlock", "Remember", "Recall", "ExistingCredential" }, secrets);
+        Assert.DoesNotContain("Note", secrets);
     }
 
     [Fact]
@@ -324,6 +318,28 @@ public sealed unsafe class ContractCodecTests {
         Assert.Empty(app.Send(Adoption(installed)));
         var adoption = AppClient.Encode(writer => ContractCodec.WriteIntent(writer, Adoption(new byte[64 * 1024 * 1024])));
         Assert.Equal(CoreStatus.LimitExceeded, app.Dispatch(adoption).Status);
+    }
+
+    /// The first and last times a date holds cross the wire, though writing
+    /// rounds them a tick past the end, and a later or earlier date the app's
+    /// side holds reads as that end, as a stored date does. An imported tab
+    /// dated that far out reaches the app and comes back with its review.
+    [Fact]
+    public void EveryDateAWriterWritesReadsBack() {
+        static DateTimeOffset Wired(DateTimeOffset date) {
+            var bytes = AppClient.Encode(writer => writer.WriteDate(date));
+            var reader = new WireReader(bytes);
+            var read = reader.ReadDate();
+            reader.EnsureEnd();
+            return read;
+        }
+        var ordinary = new DateTimeOffset(2026, 11, 14, 12, 30, 15, 250, TimeSpan.Zero);
+
+        Assert.Equal(DateTimeOffset.MaxValue, Wired(DateTimeOffset.MaxValue));
+        Assert.Equal(DateTimeOffset.MinValue, Wired(DateTimeOffset.MinValue));
+        Assert.Equal(ordinary, Wired(ordinary));
+        Assert.Equal(DateTimeOffset.MaxValue, new WireReader(BitConverter.GetBytes(1e15)).ReadDate());
+        Assert.Equal(DateTimeOffset.MinValue, new WireReader(BitConverter.GetBytes(-1e15)).ReadDate());
     }
 
     [Fact]

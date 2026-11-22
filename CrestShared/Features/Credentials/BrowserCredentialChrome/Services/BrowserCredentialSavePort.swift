@@ -40,3 +40,17 @@ struct BrowserCredentialSavePort {
     typealias SystemPasswordsOffer =
         (BrowserCredentialSaveCandidate, String) async throws -> Void
 }
+
+extension BrowserCredentialSavePort {
+    // MARK: - Initializers
+
+    /// What the save prompt asks of `page`, with the offer to the system's
+    /// Passwords app where the shell makes one.
+    init(page: BrowserPlatformPage, offerToSystemPasswords: SystemPasswordsOffer?) {
+        self.init(
+            spaceID: page.spaceID,
+            presentedCandidateID: { page.credentialSaveCandidate?.id },
+            dismiss: page.dismissCredentialSaveCandidate,
+            offerToSystemPasswords: offerToSystemPasswords)
+    }
+}

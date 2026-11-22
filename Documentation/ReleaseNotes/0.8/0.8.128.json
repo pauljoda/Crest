@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "chromium-extensions-act-on-page-in-use",
+      "category": "fixed",
+      "message": "Extensions on Mac now act on the page you're using in a Quick Window, a Peek or the focused side of a split, including from their keyboard shortcuts, instead of on another tab."
+    }
+  ]
+}

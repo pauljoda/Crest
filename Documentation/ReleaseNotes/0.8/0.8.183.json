@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "chromium-share-this-tab-uses-crest-picker",
+      "category": "fixed",
+      "message": "On Chromium pages, a site that asks to share its own tab now asks in Crest's sharing picker over the page, instead of in a separate window.",
+      "platforms": ["mac"]
+    }
+  ]
+}

@@ -48,7 +48,7 @@ final class BrowserQuitPreparation {
         core.prepareToClose(
             PrepareToQuit(requestID: UUID()),
             refused: { [weak self] rejection in
-                if case .spaceDeletionUnderway(let underway) = rejection {
+                if let underway = rejection.spaceDeletionUnderway {
                     self?.waitForSpaceDeletions(underway, retry: retry)
                 } else {
                     self?.settle()

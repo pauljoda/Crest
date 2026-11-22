@@ -6,8 +6,11 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 /// A tab's synced value: its page or native view, title and symbol, where it
-/// sits, its split and folder, the clocks of its last move and rename, and
-/// whether its page stays loaded.
+/// sits, its split and folder, the clocks of its last move and rename,
+/// whether its page stays loaded, and the title of the page a saved tab
+/// belongs to with that page's address, so a build that changes the saved
+/// address without knowing the title leaves one that no longer counts.
+/// Favicons never sync, the saved page's included.
 internal sealed record TabPayload(
     Guid Id,
     Guid SpaceId,
@@ -24,7 +27,9 @@ internal sealed record TabPayload(
     SyncTime? PositionModifiedAt,
     string? CustomTitle,
     SyncTime? TitleModifiedAt,
-    bool KeepsPageLoaded) : SyncPayload {
+    bool KeepsPageLoaded,
+    string? SavedTitle = null,
+    SyncedAddress? SavedTitleUrl = null) : SyncPayload {
     #region Static Variables
 
     /// The members a tab's value carries; a record keeps what a newer build
@@ -34,7 +39,7 @@ internal sealed record TabPayload(
         StoredSessionCodec.Key.Url, StoredSessionCodec.Key.SavedUrl, StoredSessionCodec.Key.Symbol, StoredSessionCodec.Key.Placement,
         StoredSessionCodec.Key.FolderId, StoredSessionCodec.Key.SplitGroupId, SyncPayload.Key.OrderToken, StoredSessionCodec.Key.LastActivatedAt,
         StoredSessionCodec.Key.PositionModifiedAt, StoredSessionCodec.Key.CustomTitle, StoredSessionCodec.Key.TitleModifiedAt,
-        StoredSessionCodec.Key.KeepsPageLoaded
+        StoredSessionCodec.Key.KeepsPageLoaded, StoredSessionCodec.Key.SavedTitle, StoredSessionCodec.Key.SavedTitleUrl
     ];
 
     private const int MaximumNativeKindBytes = 128;
@@ -73,7 +78,9 @@ internal sealed record TabPayload(
         value.OptionalWrappedIdentity(StoredSessionCodec.Key.FolderId), value.OptionalWrappedIdentity(StoredSessionCodec.Key.SplitGroupId),
         value.Text(Key.OrderToken), value.Time(StoredSessionCodec.Key.LastActivatedAt),
         value.OptionalTime(StoredSessionCodec.Key.PositionModifiedAt), value.OptionalText(StoredSessionCodec.Key.CustomTitle),
-        value.OptionalTime(StoredSessionCodec.Key.TitleModifiedAt), value.OptionalFlag(StoredSessionCodec.Key.KeepsPageLoaded) ?? false);
+        value.OptionalTime(StoredSessionCodec.Key.TitleModifiedAt), value.OptionalFlag(StoredSessionCodec.Key.KeepsPageLoaded) ?? false,
+        value.OptionalText(StoredSessionCodec.Key.SavedTitle),
+        value.OptionalText(StoredSessionCodec.Key.SavedTitleUrl) is { } titled ? new SyncedAddress(titled) : null);
 
     public override JsonObject EncodeValue(SyncPayloadForm form) {
         var value = new JsonObject {
@@ -98,6 +105,8 @@ internal sealed record TabPayload(
         Put(value, StoredSessionCodec.Key.CustomTitle, CustomTitle);
         Put(value, StoredSessionCodec.Key.TitleModifiedAt, TitleModifiedAt, form);
         value[StoredSessionCodec.Key.KeepsPageLoaded] = KeepsPageLoaded;
+        Put(value, StoredSessionCodec.Key.SavedTitle, SavedTitle);
+        Put(value, StoredSessionCodec.Key.SavedTitleUrl, SavedTitleUrl is { } titled ? titled.Spelled ?? titled.Text : null);
         return value;
     }
 
@@ -112,6 +121,7 @@ internal sealed record TabPayload(
         }
         RequireText(Title, SyncedText.TabTitle.Limit);
         if (CustomTitle is { } rename) RequireText(rename, SyncedText.TabCustomTitle.Limit);
+        if (SavedTitle is { } saved) RequireText(saved, SyncedText.TabSavedTitle.Limit);
         RequireText(Symbol, SyncedText.TabSymbol.Limit);
         RequireOrderToken(OrderToken);
         if (Url is { } url && url.Text != BlankPage) RequireWebAddress(url);

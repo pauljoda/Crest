@@ -14,6 +14,9 @@ public sealed partial record SpaceBranding {
     internal const int MaximumColorCount = 3;
     internal const int MaximumCrestPaletteCount = 6;
 
+    /// How many colors a color runs on into after its own.
+    internal const int MaximumGradientColorCount = 2;
+
     /// The Space color used when a branding record has none.
     internal static BrandColor DefaultColor { get; } = new(0.29, 0.25, 0.58);
 
@@ -28,6 +31,12 @@ public sealed partial record SpaceBranding {
     /// that exists. The crest's own palette is dropped when it holds no color,
     /// its composition parameters stay within the ranges the renderer draws,
     /// and a custom figure that is the crest's own symbol is no custom figure.
+    /// A linear gradient is kept as no kind, as every build before kinds read it.
+    /// The icon's color runs on into a gradient only when the icon has a color
+    /// of its own, and the palette's colors only up to the colors it keeps,
+    /// with no plain color after the last that runs on. The crest's own
+    /// palette colors run on into theirs the same way, and into none when the
+    /// crest has no palette of its own.
     /// It announces the readability and rendering vocabulary its values need.
     internal static SpaceBranding Normalized(SpaceBranding branding) {
         ArgumentNullException.ThrowIfNull(branding);
@@ -43,11 +52,15 @@ public sealed partial record SpaceBranding {
             BannerStrength = Unit(branding.BannerStrength),
             ReadabilityFade = Unit(branding.ReadabilityFade),
             GradientAngle = NormalizedAngle(branding.GradientAngle),
+            GradientKind = StoredKind(branding.GradientKind),
             TextureStrength = Unit(branding.TextureStrength),
             FolderColorIntensity = Unit(branding.FolderColorIntensity),
             SymbolColor = branding.SymbolColor is { } symbol ? NormalizedColor(symbol) : null,
+            SymbolGradient = branding.SymbolColor is null ? null : NormalizedGradient(branding.SymbolGradient),
+            ColorGradients = NormalizedGradients(branding.ColorGradients, colors.Length),
             Crest = crest with {
                 Palette = palette is null ? null : new(palette),
+                PaletteGradients = palette is null ? null : NormalizedGradients(crest.PaletteGradients, palette.Length),
                 BackplateColorIndex = LayerIndex(crest.BackplateColorIndex, layers),
                 SecondaryFieldColorIndex = LayerIndex(crest.SecondaryFieldColorIndex, layers),
                 OrdinaryColorIndex = LayerIndex(crest.OrdinaryColorIndex, layers),
@@ -84,6 +97,29 @@ public sealed partial record SpaceBranding {
         var figure = charge.Kind.Normalized(charge);
         return figure.Kind == CrestChargeKind.Heraldic && figure.Symbol == symbol ? null : figure;
     }
+
+    /// The gradient a color runs on into as every client draws it: at most two
+    /// colors after its own, its kind and its angle within a turn, or null for
+    /// one that runs on into no color, which is plain.
+    private static BrandGradient? NormalizedGradient(BrandGradient? gradient) {
+        if (gradient is null) return null;
+        var colors = gradient.Colors.Colors.Take(MaximumGradientColorCount).Select(NormalizedColor).ToArray();
+        return colors.Length == 0 ? null : new(new(colors), StoredKind(gradient.Kind), NormalizedAngle(gradient.Angle));
+    }
+
+    /// The gradients a palette of `colorCount` colors runs on into: none past
+    /// its last color, each as every client draws it, and none plain after the
+    /// last that runs on, or null when every color is plain.
+    private static PaletteGradients? NormalizedGradients(PaletteGradients? gradients, int colorCount) {
+        if (gradients is null) return null;
+        var slots = gradients.Slots.Take(colorCount).Select(slot => NormalizedGradient(slot) ?? BrandGradient.Plain).ToList();
+        while (slots.Count > 0 && slots[^1].IsPlain) slots.RemoveAt(slots.Count - 1);
+        return slots.Count == 0 ? null : new(slots);
+    }
+
+    /// A gradient's kind as it is kept: a linear one as no kind, as every build
+    /// before kinds draws it.
+    private static SpaceGradientKind? StoredKind(SpaceGradientKind? kind) => kind == SpaceGradientKind.Linear ? null : kind;
 
     /// A strength, fade, intensity or color component, kept within 0 through 1.
     /// A value that is not a number falls back to `fallback`.

@@ -61,8 +61,8 @@ final class BrowserSpaceDownloadSettingsModel {
 
     private func chooseDirectory(for space: SpaceModel) {
         let panel = NSOpenPanel()
-        panel.title = "Choose Download Folder for \(space.settings.name)"
-        panel.prompt = "Choose"
+        panel.title = String(localized: "Choose Download Folder for \(space.settings.name)")
+        panel.prompt = String(localized: "Choose")
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false

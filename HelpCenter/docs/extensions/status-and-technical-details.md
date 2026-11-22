@@ -28,7 +28,7 @@ For errors and every other detail, open the manager for the extension's Space:
 - From the extension's action menu, choose **Manage Extension…** for that extension, or **Manage Extensions…** for the whole list.
 - On the Space's Extensions page in **Crest Settings**, select **Chromium Extension Manager**.
 
-The manager shows what Chrome's does, including errors the extension reported. Include them, with the extension version, Crest version and the steps that fail, in a bug report.
+The manager shows every detail of the extension, including errors it reported. Include them, with the extension version, Crest version and the steps that fail, in a bug report.
 
 ## An extension whose files are gone
 

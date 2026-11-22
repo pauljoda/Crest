@@ -30,6 +30,9 @@ internal sealed record SyncSessionRecord(SyncRecordKind Kind, Guid Id, Guid Spac
         if (type == SyncPayloadType.Tab) prepared = ReadTab(value);
         else if (type == SyncPayloadType.Folder) {
             prepared = Placed(StoredSessionCodec.Encode(StoredSessionCodec.DecodeFolder(value)), value);
+            // The stored folder keeps no emptied or held date, which only the journal holds.
+            foreach (var key in new[] { SyncPayload.Key.EmptiedAt, SyncPayload.Key.HeldAt })
+                if (value[key] is { } date) prepared[key] = date.DeepClone();
         } else if (type == SyncPayloadType.Archive) {
             prepared[StoredSessionCodec.Key.Tab] = ReadTab(value[StoredSessionCodec.Key.Tab]!.AsObject());
             prepared[StoredSessionCodec.Key.Reason] =
@@ -38,7 +41,14 @@ internal sealed record SyncSessionRecord(SyncRecordKind Kind, Guid Id, Guid Spac
         return type.Read(new SyncPayloadReader(prepared, SyncPayloadForm.Journal));
     }
 
-    private static JsonObject ReadTab(JsonObject value) => Placed(StoredSessionCodec.Encode(StoredSessionCodec.DecodeTab(value)), value);
+    private static JsonObject ReadTab(JsonObject value) {
+        var prepared = Placed(StoredSessionCodec.Encode(StoredSessionCodec.DecodeTab(value)), value);
+        // The address a saved title was written for travels only in the
+        // record, which the stored tab codec leaves out.
+        if (value[StoredSessionCodec.Key.SavedTitleUrl] is { } titled)
+            prepared[StoredSessionCodec.Key.SavedTitleUrl] = titled.DeepClone();
+        return prepared;
+    }
 
     /// `prepared` with the Space and position `value` names, which the stored
     /// folder and tab codecs leave out; an empty position when it names none.

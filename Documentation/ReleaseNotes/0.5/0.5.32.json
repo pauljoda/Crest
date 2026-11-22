@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-03-hover-link-destinations",
+      "category": "new",
+      "message": "Preview link destinations after hovering for a moment on macOS",
+      "platforms": ["mac"]
+    }
+  ]
+}

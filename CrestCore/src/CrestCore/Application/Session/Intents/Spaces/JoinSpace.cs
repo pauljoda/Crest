@@ -36,7 +36,7 @@ public sealed record JoinSpace(Guid WorkspaceId, Guid SpaceId, Guid GroupSpaceId
         var last = spaces.FindLastIndex(space => space.Id == primary.Id || space.PrimaryId == primary.Id);
         spaces.Insert(last + 1, joined);
         var next = (basis with { Spaces = spaces }).Sharing(joined, GroupSetting.Lock);
-        var pending = basis.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
+        var pending = basis.DeletingSpaceIds;
         return new(next with { Spaces = SpaceGroup.Regrouped(next.Spaces, pending) }, SyncStaging.Protection);
     }
 

@@ -8,27 +8,14 @@ struct MobileDownloadsContent: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if let space {
-                    BrowserUtilityListContent(
-                        surface: .downloads,
-                        space: space,
-                        downloads: downloads,
-                        searchText: "",
-                        filter: .all,
-                        actions: actions
-                    )
-                } else {
-                    ContentUnavailableView("No Space", systemImage: "square.grid.2x2")
+            MobileUtilityList(surface: .downloads, space: space, downloads: downloads, actions: actions)
+                .navigationTitle("Downloads")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done", action: dismiss)
+                    }
                 }
-            }
-            .navigationTitle("Downloads")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", action: dismiss)
-                }
-            }
         }
         .frame(minWidth: 320, minHeight: 300)
         .presentationDetents([.medium, .large])

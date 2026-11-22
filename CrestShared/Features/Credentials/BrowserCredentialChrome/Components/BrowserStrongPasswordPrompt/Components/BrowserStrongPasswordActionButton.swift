@@ -2,7 +2,6 @@ import SwiftUI
 
 struct BrowserStrongPasswordActionButton: View {
     let isWorking: Bool
-    let tint: Color
     let metrics: BrowserCredentialPromptMetrics
     let action: () -> Void
 
@@ -29,8 +28,7 @@ struct BrowserStrongPasswordActionButton: View {
                 )
             }
         }
-        .buttonStyle(.borderedProminent)
-        .tint(tint)
+        .buttonStyle(.crestPrimary)
         .disabled(isWorking)
     }
 }
@@ -38,8 +36,8 @@ struct BrowserStrongPasswordActionButton: View {
 #if DEBUG
     #Preview("Ready and working") {
         VStack(spacing: 20) {
-            BrowserStrongPasswordActionButton(isWorking: false, tint: .indigo, metrics: .pointer, action: {})
-            BrowserStrongPasswordActionButton(isWorking: true, tint: .indigo, metrics: .touch, action: {})
+            BrowserStrongPasswordActionButton(isWorking: false, metrics: .pointer, action: {})
+            BrowserStrongPasswordActionButton(isWorking: true, metrics: .touch, action: {})
         }.padding().frame(width: 380)
     }
 #endif

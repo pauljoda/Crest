@@ -19,9 +19,6 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
     /// The most tabs one window or Space brings.
     public const int MaximumTabs = BrowserDataSpace.MaximumTabs;
 
-    private const string UntitledFolder = "Untitled Folder";
-    /// The fewest tabs a split view shows.
-    private const int MinimumSplitMembers = 2;
 
     #endregion
 
@@ -133,7 +130,7 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
             if (folder.ParentSourceId is { } parentSource)
                 parent = parentSource != folder.SourceId && folderIds.TryGetValue(parentSource, out var mapped) ? mapped
                     : throw new Rejected(new SessionUnrecognized());
-            string title = ImportText.Bounded(folder.Title, UntitledFolder, ImportText.MaximumFolderTitle)
+            string title = ImportText.Bounded(folder.Title, FolderState.UntitledTitle, FolderState.MaximumTitleLength)
                 ?? throw new Rejected(new SessionOverLimits());
             return Folder(folderIds[folder.SourceId], title, FolderState.DefaultSymbol, parent, folder.Placement, folder.Color?.Color);
         })];
@@ -160,17 +157,22 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
                 }
                 folder = overflow;
             }
-            string title = ImportText.Bounded(tab.Title, tab.Address.Host, ImportText.MaximumTitle)
+            string title = ImportText.Bounded(tab.Title, tab.Address.Host, BrowserTab.MaximumTitleLength)
                 ?? throw new Rejected(new SessionOverLimits());
+            // The name the person gave the tab comes in as a rename in Crest
+            // does, over its page's title; a blank one is none, and one too
+            // long to keep stays behind with the page's title showing.
+            string? rename = ImportText.Bounded(tab.CustomTitle, "", BrowserTab.MaximumTitleLength);
             string url = tab.Address.Spelling;
             bool fits = folder is { } held && folderPlaces.TryGetValue(held, out var place) && place == placement;
             tabs.Add(new(ids.Next(), title, NativeContent: null, url, placement.IsDurable ? url : null,
                 placement.ImportedSymbol ?? TabIconMode.WebSymbol, placement,
-                fits ? folder : null, SplitGroupId: null, tab.LastActivatedAt ?? importedAt));
+                fits ? folder : null, SplitGroupId: null, tab.LastActivatedAt ?? importedAt, rename,
+                rename is null ? null : BrowserEditTimestamp.Normalize(importedAt)));
         }
         var splits = Split(ordered, tabs, ids);
 
-        string name = ImportText.Bounded(Name, Fallback(names, numbered), ImportText.MaximumSpaceName)
+        string name = ImportText.Bounded(Name, Fallback(names, numbered), SpaceCustomization.MaximumNameLength)
             ?? throw new Rejected(new SessionOverLimits());
         string symbol = Symbol ?? source.Symbol;
         return new(name, symbol, Accent ?? source.Accent, Branding ?? SpaceBranding.NeutralImport(symbol), Ordered(folders), tabs,
@@ -190,7 +192,7 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
         var counts = kept.OfType<Guid>().GroupBy(group => group).ToDictionary(group => group.Key, group => group.Count());
         List<BrowserDataSplit> splits = [];
         for (int index = 0; index < tabs.Count; index++) {
-            Guid? group = kept[index] is { } joined && joined == asked[index] && counts[joined] >= MinimumSplitMembers ? joined : null;
+            Guid? group = kept[index] is { } joined && joined == asked[index] && counts[joined] >= SplitGroupState.MinimumMembers ? joined : null;
             tabs[index] = tabs[index] with { SplitGroupId = group };
             if (group is { } made && splits.All(split => split.Id != made))
                 splits.Add(new BrowserDataSplit(made, CustomTitle: null, TitleModifiedAt: null, CustomIconSymbol: null, IconModifiedAt: null,
@@ -214,10 +216,13 @@ internal sealed record SessionDraft(int Ordinal, string? Name, IReadOnlyList<Ses
         return ordered;
     }
 
-    /// A folder in the default color, among the saved tabs unless `placement` says otherwise.
+    /// A folder in the default color, among the saved tabs unless `placement`
+    /// says otherwise, and closed: another browser's session keeps no folder
+    /// open or closed for Crest to follow, and an imported sidebar reads more
+    /// easily with its folders shut.
     private static BrowserDataFolder Folder(Guid id, string title, string symbol, Guid? parent, TabPlacement? placement = null,
         BrandColor? color = null) =>
-        new(id, placement ?? TabPlacement.Saved, title, symbol, color ?? FolderState.DefaultColor, parent, IsCollapsed: false,
+        new(id, placement ?? TabPlacement.Saved, title, symbol, color ?? FolderState.DefaultColor, parent, IsCollapsed: true,
             OrderAnchorTabId: null);
 
     private static bool IsForest(IReadOnlyList<BrowserDataFolder> folders) {

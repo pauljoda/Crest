@@ -5,7 +5,6 @@ struct BrowserNavigationFailureActions: View {
     let canGoBack: Bool
     let canProceed: Bool
     let showsDetails: Bool
-    let accent: Color
     let retry: () -> Void
     let goBack: () -> Void
     let proceed: () -> Void
@@ -15,11 +14,8 @@ struct BrowserNavigationFailureActions: View {
     var body: some View {
         if layout.stacksActions {
             VStack(spacing: CrestSpacing.medium) {
-                BrowserNavigationFailureRetryButton(
-                    accent: accent,
-                    action: retry
-                )
-                .frame(maxWidth: .infinity)
+                BrowserNavigationFailureRetryButton(action: retry)
+                    .frame(maxWidth: .infinity)
 
                 if canProceed {
                     BrowserNavigationFailureProceedButton(action: proceed)
@@ -54,10 +50,7 @@ struct BrowserNavigationFailureActions: View {
                     BrowserNavigationFailureProceedButton(action: proceed)
                 }
 
-                BrowserNavigationFailureRetryButton(
-                    accent: accent,
-                    action: retry
-                )
+                BrowserNavigationFailureRetryButton(action: retry)
             }
         }
     }

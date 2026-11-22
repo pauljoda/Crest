@@ -22,7 +22,7 @@ namespace CrestCore.Contracts;
 /// release kept each value in its defaults, which hold a few megabytes a value
 /// in practice: a session core and a journal of up to about 4 MiB each and a
 /// full history of about 2 MiB a Space.
-[MessageLimit(64 * 1024 * 1024)]
+[MessageLimit(MessageLimitAttribute.SessionBytes)]
 public sealed record AdoptLegacySession(LegacySession Installed, SessionState? Seed) : Intent {
     #region Actions - App
 

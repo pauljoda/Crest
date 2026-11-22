@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "palette-search-typed-address",
+      "category": "improved",
+      "message": "The command palette offers to search for a typed or pasted address as well as open it."
+    }
+  ]
+}

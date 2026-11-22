@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Domain;
 
 /// What a person typed, read as the start of an address: at least two
@@ -48,9 +50,9 @@ public sealed class TypedAddress {
         string lowercased = text.ToLowerInvariant();
         string schemePrefix = "";
         if (text.Contains("://", StringComparison.Ordinal)) {
-            if (lowercased.StartsWith("https://", StringComparison.Ordinal)) schemePrefix = "https://";
-            else if (lowercased.StartsWith("http://", StringComparison.Ordinal)) schemePrefix = "http://";
-            else return null;
+            if (WebScheme.All.FirstOrDefault(scheme => lowercased.StartsWith(scheme.Prefix, StringComparison.Ordinal)) is not { } scheme)
+                return null;
+            schemePrefix = scheme.Prefix;
         }
         string typed = text[schemePrefix.Length..];
         if (typed.Length < MinimumLength) return null;

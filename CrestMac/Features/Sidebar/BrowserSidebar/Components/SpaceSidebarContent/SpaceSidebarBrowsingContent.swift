@@ -65,8 +65,11 @@ struct SpaceSidebarBrowsingContent: View {
             actions: BrowserSpaceHeaderActions(
                 openNewTab: openNewTab,
                 createFolder: beginCreatingFolder,
+                collapseAllFolders: { _ = tabActions.collapseAllFolders() },
+                canCollapseAllFolders: { tabActions.canCollapseAllFolders },
                 showHistory: showHistory,
-                cleanup: { _ = tabActions.clearCurrentTabs() },
+                clearOtherTabs: { _ = tabActions.clearCurrentTabs(keepingShownTab: true) },
+                clearAllTabs: { _ = tabActions.clearCurrentTabs(keepingShownTab: false) },
                 toggleSavedTabs: toggleSavedTabs
             )
         )
@@ -74,6 +77,8 @@ struct SpaceSidebarBrowsingContent: View {
         SpaceSidebarTabListScroll(browser: browser) {
             BrowserSidebarBackgroundInteractionView(
                 editSpace: editSpace,
+                collapseAllFolders: { _ = tabActions.collapseAllFolders() },
+                canCollapseAllFolders: { tabActions.canCollapseAllFolders },
                 createSpace: createSpace,
                 createSubSpace: browser.isPrivateBrowsing
                     ? nil
@@ -157,9 +162,12 @@ struct SpaceSidebarBrowsingContent: View {
 
     private func restoreSavedLocation(_ tabID: UUID) {
         BrowserSavedLocationRestoreAction(
-            browser: browser,
-            pages: pages,
-            spaceAccess: spaceAccess
+            browser: browser, pages: pages, spaceAccess: spaceAccess,
+            show: { [browser, pages] assignment in
+                browser.selectTab(assignment.tabID)
+                pages.select()
+                return pages.activePage(matching: assignment)
+            }
         ).perform(
             BrowserTabRuntimeAssignment(
                 tabID: tabID,
@@ -198,15 +206,17 @@ private struct BrowserSidebarSelectionReconciler: View {
         guard browser.spaceModel(space.id) === space, !context.spaceAccess.isLocked(space) else { return }
         for folder in space.folders.models {
             let folderTabIDs = space.tabIDs(inFolder: folder.id)
+            let loadedTabIDs = folderTabIDs.filter {
+                context.pageAccess.containsResidentPageMatching(
+                    BrowserTabRuntimeAssignment(tabID: $0, spaceID: space.id, profileID: space.profileID))
+            }
             interaction.reconcileCollapsedFolder(
                 BrowserFolderRuntimeAssignment(folderID: folder.id, spaceID: space.id, profileID: space.profileID),
                 isExpanded: !folder.isCollapsed,
                 selectedTabID: folderTabIDs.first { context.window.shownTabIDs.contains($0) },
                 folderTabIDs: folderTabIDs,
-                residentFolderTabIDs: folderTabIDs.filter {
-                    context.pageAccess.containsResidentPageMatching(
-                        BrowserTabRuntimeAssignment(tabID: $0, spaceID: space.id, profileID: space.profileID))
-                })
+                residentFolderTabIDs: folder.kind.keepsLoadedTabsWhenClosed ? loadedTabIDs : [],
+                loadedFolderTabIDs: loadedTabIDs)
         }
         guard browser.selectedSpaceID == space.id,
             !interaction.sidebarReorderState.hasLiftInFlight

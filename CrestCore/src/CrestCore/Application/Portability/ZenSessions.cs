@@ -27,7 +27,7 @@ internal static class ZenSessions {
     /// The SF Symbol that draws each of Zen's Space icons.
     private static readonly IReadOnlyDictionary<string, string> IconSymbols = new Dictionary<string, string>(StringComparer.Ordinal) {
         ["airplane"] = "airplane",
-        ["american-football"] = "football.fill",
+        ["american-football"] = "american.football.fill",
         ["baseball"] = "baseball.fill",
         ["basket"] = "basket.fill",
         ["bed"] = "bed.double.fill",
@@ -83,7 +83,7 @@ internal static class ZenSessions {
         ["music"] = "music.note",
         ["navigate"] = "location.north.fill",
         ["nuclear"] = "atom",
-        ["page"] = "doc.fill",
+        ["page"] = "document.fill",
         ["palette"] = "paintpalette.fill",
         ["paw"] = "pawprint.fill",
         ["people"] = "person.2.fill",
@@ -92,17 +92,17 @@ internal static class ZenSessions {
         ["present"] = "gift.fill",
         ["rocket"] = "paperplane.fill",
         ["school"] = "graduationcap.fill",
-        ["shapes"] = "square.on.circle.fill",
+        ["shapes"] = "square.fill.on.circle.fill",
         ["shirt"] = "tshirt.fill",
         ["skull"] = "exclamationmark.octagon.fill",
         ["square"] = "square.fill",
-        ["squares"] = "square.on.square.fill",
+        ["squares"] = "square.fill.on.square.fill",
         ["star"] = "star.fill",
         ["star-1"] = "star.circle.fill",
         ["stats-chart"] = "chart.bar.fill",
         ["sun"] = "sun.max.fill",
         ["tada"] = "party.popper.fill",
-        ["terminal"] = "terminal.fill",
+        ["terminal"] = "apple.terminal.fill",
         ["ticket"] = "ticket.fill",
         ["time"] = "clock.fill",
         ["trash"] = "trash.fill",
@@ -114,7 +114,6 @@ internal static class ZenSessions {
         ["water"] = "drop.fill",
         ["weight"] = "dumbbell.fill"
     };
-    private const string UntitledFolder = "Untitled Folder";
     private const double DefaultOpacity = 0.65;
     /// The group of the workspaces that share the profile's session.
     private const string SharedSession = "profile";
@@ -165,7 +164,7 @@ internal static class ZenSessions {
             }
             var spaceGroups = all.Where(group => !group.IsSplit && group.Workspace == workspace).ToArray();
             HashSet<string> kept = [.. spaceGroups.Select(group => group.Id)];
-            var spaceFolders = spaceGroups.Select(group => new SessionFolder(group.Id, group.Name ?? UntitledFolder,
+            var spaceFolders = spaceGroups.Select(group => new SessionFolder(group.Id, group.Name ?? FolderState.UntitledTitle,
                 Holder(group.ParentId, groups, kept))).ToArray();
             List<SessionTab> spaceTabs = [];
             foreach (var (tab, owner, essential) in owned)
@@ -177,8 +176,9 @@ internal static class ZenSessions {
             // The workspaces of one profile share its session, and those that
             // open their tabs in one container share that container's.
             var container = ImportJson.Integer(ImportJson.Member(space, "containerTabId"));
-            drafts.Add(new SessionDraft(index + 1, name, spaceFolders, spaceTabs, Icon(ImportJson.Text(ImportJson.Member(space, "icon"))),
-                colors.Count == 0 ? SpaceAccent.Indigo : SpaceAccent.Nearest(colors[0]), Look(colors, theme),
+            string icon = Icon(ImportJson.Text(ImportJson.Member(space, "icon")));
+            drafts.Add(new SessionDraft(index + 1, name, spaceFolders, spaceTabs, icon,
+                colors.Count == 0 ? SpaceAccent.Indigo : SpaceAccent.Nearest(colors[0]), Look(colors, theme, icon),
                 Group: container is > 0 ? ContainerSession + container.Value.ToString(CultureInfo.InvariantCulture) : SharedSession));
         }
         return drafts;
@@ -273,12 +273,13 @@ internal static class ZenSessions {
     }
 
     /// A gradient banner in bands of several colors, or a solid banner of
-    /// one, as strong as the theme's opacity and textured as it is.
-    private static SpaceBranding? Look(IReadOnlyList<BrandColor> colors, JsonElement? theme) => colors.Count == 0 ? null
+    /// one, as strong as the theme's opacity and textured as it is, with the
+    /// workspace's icon `symbol` on its crest.
+    private static SpaceBranding? Look(IReadOnlyList<BrandColor> colors, JsonElement? theme, string symbol) => colors.Count == 0 ? null
         : SpaceBranding.Painted(colors, colors.Count > 1 ? SpaceBannerPattern.Bands : SpaceBannerPattern.Solid,
             Math.Clamp(ImportJson.Number(ImportJson.Member(theme, "opacity")) ?? DefaultOpacity, 0, 1), SpaceBranding.LegacyReadabilityFade,
             SpaceThemeMode.Gradient, gradientAngle: 45,
-            textureStrength: (ImportJson.Integer(ImportJson.Member(theme, "texture")) ?? 0) != 0 ? 1 : 0);
+            textureStrength: (ImportJson.Integer(ImportJson.Member(theme, "texture")) ?? 0) != 0 ? 1 : 0, symbol: symbol);
 
     #endregion
 }

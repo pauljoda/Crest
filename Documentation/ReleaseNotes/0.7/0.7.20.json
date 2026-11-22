@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "pinned-tab-unpin-menu",
+      "category": "improved",
+      "message": "A pinned tab's menu now offers Unpin Tab, and a selection of pinned tabs offers Unpin Tabs."
+    }
+  ]
+}

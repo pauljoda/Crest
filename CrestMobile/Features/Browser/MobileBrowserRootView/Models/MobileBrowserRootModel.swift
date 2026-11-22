@@ -81,6 +81,13 @@ extension MobileBrowserRootModel {
         hasPreparedBrowser = true
         // Pages opened while the rules compiled were built without them.
         await pages.reconcileContentBlocking()
+        // After an update, the first window opens the release's notes in
+        // place of the launch's new tab, in the Space that tab would open in.
+        if let releasePage = await BrowserReleasePage.dueAtLaunch(in: browser) {
+            if startupBehavior.opensNewTab { _ = showDefaultSpaceForNewTab() }
+            openURL(releasePage.url)
+            return false
+        }
         if startupBehavior.opensNewTab {
             return showDefaultSpaceForNewTab()
         }
@@ -269,7 +276,7 @@ extension MobileBrowserRootModel {
     }
 
     func switchSpace(
-        _ direction: BrowserSpaceSwipeDirection,
+        _ direction: AdjacentDirection,
         reduceMotion: Bool
     ) {
         withAnimation(accessibleAnimation(CrestMotion.navigation, reduceMotion)) {
@@ -462,6 +469,13 @@ extension MobileBrowserRootModel {
         )
     }
 
+    /// The widths the columns of `space`'s split take in this window, as
+    /// fractions of its row, for a split another Space shows.
+    func splitColumnFractions(in space: SpaceModel) -> [Double] {
+        layoutPersistence.splitColumnFractions(
+            groupID: browser.shownSplitGroupID(in: space), memberCount: browser.cards(in: space).count)
+    }
+
     func commitSplitColumnFractions(_ fractions: [Double]) {
         layoutPersistence.commitSplitLayout(fractions, groupID: presentedSplitGroupID)
     }
@@ -581,8 +595,10 @@ private struct MobilePaletteOpener: BrowserCommandPaletteOpener {
     }
 
     func openTab(_ url: URL, from source: BrowserTabRuntimeAssignment, selecting: Bool) -> Bool {
-        guard selecting else { return model.browser.openBackgroundTab(url: url, in: source.spaceID) != nil }
-        guard model.browser.openAddress(url, in: source.spaceID) else { return false }
+        guard selecting else {
+            return model.browser.openBackgroundTab(url: url, in: source.spaceID, savesInSavedFolder: true) != nil
+        }
+        guard model.browser.openAddress(url, in: source.spaceID, placesAsNewTab: true) else { return false }
         model.showLoading(url)
         return true
     }

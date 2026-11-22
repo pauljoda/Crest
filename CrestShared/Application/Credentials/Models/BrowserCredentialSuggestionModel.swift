@@ -26,7 +26,7 @@ final class BrowserCredentialSuggestionModel {
     func load(
         _ request: BrowserCredentialFillRequest,
         in spaceID: UUID,
-        using loader: any BrowserCredentialSuggestionLoading
+        using loader: BrowserStore
     ) async {
         cancelActiveOperation()
 

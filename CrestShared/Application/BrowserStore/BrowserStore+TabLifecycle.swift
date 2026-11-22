@@ -3,9 +3,11 @@ import Foundation
 // MARK: - Opening
 
 extension BrowserStore {
+    /// Opens the new tab the person asked for: a Start Page where the app's
+    /// preferences put a new tab.
     @discardableResult
     func openNewTab() -> UUID? {
-        showStartPage(outsideSplits: false)
+        showStartPage(outsideSplits: false, placesAsNewTab: true)
     }
 
     /// Presents the Start Page before the person chooses a restored tab.
@@ -26,12 +28,14 @@ extension BrowserStore {
     }
 
     /// Shows a Start Page in the Space this window shows, which the core
-    /// chooses or opens, and answers it.
-    private func showStartPage(outsideSplits: Bool) -> UUID? {
+    /// chooses or opens, and answers it. With `placesAsNewTab` a new one goes
+    /// where the app's preferences put a new tab, which may be the folder the
+    /// shown tab sits in.
+    private func showStartPage(outsideSplits: Bool, placesAsNewTab: Bool = false) -> UUID? {
         guard let space = shownSpace else { return nil }
         let opening = ShowStartPage(
             workspaceID: family.workspaceID, windowID: windowID, spaceID: space.id, tabID: UUID(),
-            outsideSplits: outsideSplits)
+            outsideSplits: outsideSplits, placesAsNewTab: placesAsNewTab)
         guard family.perform(opening, from: self) != nil else { return nil }
         return selectedTabID(in: space.id)
     }
@@ -47,15 +51,23 @@ extension BrowserStore {
         openNewTab(url: url, in: spaceID, selecting: true)
     }
 
+    /// Opens `url` in a new tab after the one shown in Space `spaceID`, or,
+    /// when `placesAsNewTab`, as for a link the person opened, where the app's
+    /// preferences put a new tab, which may be the end of the folder that tab
+    /// sits in, a saved one too when `savesInSavedFolder`, as for an address
+    /// typed for a new tab.
     @discardableResult
     func openNewTab(
         url: URL,
         in spaceID: UUID,
-        selecting: Bool
+        selecting: Bool,
+        placesAsNewTab: Bool = false,
+        savesInSavedFolder: Bool = false
     ) -> UUID? {
         guard !isDeleting(spaceID), spaceModel(spaceID) != nil else { return nil }
         return openSessionTab(
-            .page(url), in: spaceID, insertingAfter: selectedTabID(in: spaceID), shouldSelect: selecting)
+            .page(url), in: spaceID, insertingAfter: selectedTabID(in: spaceID), shouldSelect: selecting,
+            placesAsNewTab: placesAsNewTab, savesInSavedFolder: savesInSavedFolder)
     }
 
     @discardableResult
@@ -73,11 +85,16 @@ extension BrowserStore {
     }
 
     /// Opens `url` in a new tab behind the one shown in Space `spaceID`, as a
-    /// person asked from a link or the palette, and confirms it. Tabs opened
-    /// for anyone else, such as an agent, use `openNewTab`.
+    /// person asked from a link or the palette, and confirms it: in a saved
+    /// folder the shown tab sits in only when `savesInSavedFolder`, as for an
+    /// address typed in the palette. Tabs opened for anyone else, such as an
+    /// agent, use `openNewTab`.
     @discardableResult
-    func openBackgroundTab(url: URL, in spaceID: UUID) -> UUID? {
-        guard let tabID = openNewTab(url: url, in: spaceID, selecting: false) else { return nil }
+    func openBackgroundTab(url: URL, in spaceID: UUID, savesInSavedFolder: Bool = false) -> UUID? {
+        guard
+            let tabID = openNewTab(
+                url: url, in: spaceID, selecting: false, placesAsNewTab: true, savesInSavedFolder: savesInSavedFolder)
+        else { return nil }
         interactionObserver?.browserDidOpenBackgroundTab()
         return tabID
     }
@@ -86,7 +103,9 @@ extension BrowserStore {
     /// selected when `selecting`, and answers the tab with its Space.
     func openModifiedLink(_ url: URL, in spaceID: UUID, selecting: Bool) -> BrowserModifiedLinkRegistration? {
         let opened =
-            selecting ? openNewTab(url: url, in: spaceID, selecting: true) : openBackgroundTab(url: url, in: spaceID)
+            selecting
+            ? openNewTab(url: url, in: spaceID, selecting: true, placesAsNewTab: true)
+            : openBackgroundTab(url: url, in: spaceID)
         guard let tabID = opened,
             let space = spaceModel(spaceID),
             let tab = space.shownTab(tabID)
@@ -118,12 +137,14 @@ extension BrowserStore {
     }
 
     /// Opens `url` in a Space this window shows: the Start Page on show there
-    /// takes it, or a new tab opens it, which the core decides.
+    /// takes it, or a new tab opens it, which the core decides. With
+    /// `placesAsNewTab`, as for a new tab the person typed in the palette, that
+    /// tab goes where the app's preferences put a new tab.
     @discardableResult
-    func openAddress(_ url: URL, in spaceID: UUID) -> Bool {
+    func openAddress(_ url: URL, in spaceID: UUID, placesAsNewTab: Bool = false) -> Bool {
         let opening = OpenAddress(
             workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID, tabID: UUID(),
-            address: url.absoluteString)
+            address: url.absoluteString, placesAsNewTab: placesAsNewTab)
         return family.perform(opening, from: self) != nil
     }
 
@@ -132,9 +153,19 @@ extension BrowserStore {
 // MARK: - Metadata
 
 extension BrowserStore {
-    /// The open tabs of `space`, which clearing puts away.
-    private static func currentTabIDs(of space: SpaceModel) -> Set<UUID> {
-        Set(space.tabs.models.filter { $0.placement == .current }.map(\.id))
+    /// The open tabs of `space` that clearing puts away, as the sidebar offers
+    /// Clear from the read model: all of them, or, keeping the shown tab, all
+    /// but the tab this window shows there and the rest of its split. Clearing
+    /// itself asks the core (see `ClearedTabs`).
+    func clearedTabIDs(of space: SpaceModel, keepingShownTab: Bool) -> Set<UUID> {
+        let open = space.tabs.models.filter { $0.placement == .current }
+        guard keepingShownTab, let shown = selectedTabID(in: space.id).flatMap({ space.tabs.model($0) }) else {
+            return Set(open.map(\.id))
+        }
+        let kept = { (tab: TabStateModel) in
+            tab.id == shown.id || (shown.splitGroupID != nil && tab.splitGroupID == shown.splitGroupID)
+        }
+        return Set(open.filter { !kept($0) }.map(\.id))
     }
 
     @discardableResult
@@ -157,27 +188,38 @@ extension BrowserStore {
         return closeTab(id, in: assignment.spaceID)
     }
 
+    /// Archives the Space's open tabs, but for the tab this window shows there
+    /// when `keepingShownTab`.
     @discardableResult
     func clearCurrentTabs(
-        matching assignment: BrowserSpaceRuntimeAssignment
+        matching assignment: BrowserSpaceRuntimeAssignment,
+        keepingShownTab: Bool
     ) -> Bool {
-        guard let space = spaceModel(matching: assignment) else { return false }
-        let ids = Self.currentTabIDs(of: space)
-        guard !ids.isEmpty else { return false }
-        let tabs = ids.map { BrowserTabRuntimeAssignment(tabID: $0, spaceID: space.id, profileID: space.profileID) }
+        guard spaceModel(matching: assignment) != nil else { return false }
+        let clearing = ClearedTabs(
+            workspaceID: family.workspaceID, windowID: windowID, spaceID: assignment.spaceID,
+            keepsShownTab: keepingShownTab)
+        guard let ids = try? core.query(clearing).tabIDs, !ids.isEmpty else { return false }
+        let tabs = ids.map {
+            BrowserTabRuntimeAssignment(tabID: $0, spaceID: assignment.spaceID, profileID: assignment.profileID)
+        }
         return performPageDismissal(of: tabs) { [weak self] in
-            guard let self, let current = self.spaceModel(matching: assignment), Self.currentTabIDs(of: current) == ids,
-                self.clearSessionTabs(in: assignment.spaceID)
+            // A tab that opened or went while its pages were asked was not
+            // asked itself, so the Space stays as it is.
+            guard let self, self.spaceModel(matching: assignment) != nil,
+                Set((try? self.core.query(clearing).tabIDs) ?? []) == Set(ids),
+                self.clearSessionTabs(in: assignment.spaceID, keepingShownTab: keepingShownTab)
             else { return false }
             return true
         }
     }
 
-    /// Clears the open tabs of the Space this window shows, unless it is locked.
+    /// Clears the open tabs of the Space this window shows, unless it is
+    /// locked, keeping the shown tab when `keepingShownTab`.
     @discardableResult
-    func clearShownSpaceTabs(accessController: BrowserSpaceAccessController) -> Bool {
+    func clearShownSpaceTabs(accessController: BrowserSpaceAccessController, keepingShownTab: Bool) -> Bool {
         guard let space = shownSpace, !accessController.isLocked(space) else { return false }
-        return clearCurrentTabs(matching: BrowserSpaceRuntimeAssignment(space: space))
+        return clearCurrentTabs(matching: BrowserSpaceRuntimeAssignment(space: space), keepingShownTab: keepingShownTab)
     }
 
     @discardableResult

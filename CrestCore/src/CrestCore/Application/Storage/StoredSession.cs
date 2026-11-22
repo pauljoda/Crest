@@ -14,7 +14,7 @@ internal sealed record StoredSession(SessionState? Session, NativeSyncJournal? J
 
     private const string SchemaVersionField = "schemaVersion";
     private const int JournalSchemaVersion = 1;
-    private static readonly JsonDocumentOptions DocumentOptions = new() { MaxDepth = 64 };
+    private static readonly JsonDocumentOptions DocumentOptions = JsonDepth.Session.Options;
 
     #endregion
 

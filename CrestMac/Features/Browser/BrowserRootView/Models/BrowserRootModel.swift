@@ -59,6 +59,8 @@ final class BrowserRootModel {
     }
     @ObservationIgnored private var isSidebarApproachingDockStorage = false
     private(set) var isSidebarSurfaceHovered = false
+    /// The chrome this window draws over its Split View cards.
+    let splitCoveringChrome = BrowserSplitCoveringChrome()
     /// Whether the floating sidebar came out because the pointer reached the
     /// window edge, rather than from a click, command or page request.
     private(set) var isFloatingSidebarRevealedByPointer = false
@@ -96,9 +98,14 @@ final class BrowserRootModel {
     )
     /// The window owns the lift so its preview can outlive the source surface.
     let splitCardLift = BrowserSplitCardLiftState()
+    /// The window owns a carried extension tile for the same reason.
+    let extensionTileLift = BrowserExtensionTileLiftState()
     /// This window's extension side panel, if one is open. Transient by
     /// construction: nothing about it reaches the session, disk or sync.
     let extensionSidePanel = BrowserExtensionSidePanelHost()
+    /// Where each page card's address field lies, while the address bar is
+    /// on top, for the palette to drop out of.
+    let pageBarFieldFrames = BrowserPageBarFieldFrames()
 
     init(
         browser: BrowserStore,
@@ -149,6 +156,15 @@ extension BrowserRootModel {
             browser.presentStartPageForLaunch()
             address = ""
         }
+        // After an update, the first window opens the release's notes, in
+        // the launch's Start Page when it shows one.
+        if let releasePage = await BrowserReleasePage.dueAtLaunch(in: browser) {
+            browser.openExternalURL(releasePage.url)
+        }
+        // Crest's own pages load no web content, so a window opening on one,
+        // such as Getting Started after setup, shows it without waiting for
+        // the rule lists to compile.
+        if !selectedSpaceIsLocked, pages.showsOnlyNativeContent { pages.select() }
         await pages.prepareContentBlocking()
         isPrepared = true
         // Pages opened while the rules compiled were built without them.
@@ -633,11 +649,12 @@ extension BrowserRootModel {
     }
 
     /// Which side of the field-to-palette morph holds the shared identity. The
-    /// field is on screen whenever the sidebar is, docked or floating.
+    /// sidebar's field is on screen whenever the sidebar is, docked or
+    /// floating, unless the address bar is on top and the sidebar has none.
     func commandPaletteHandoff(reduceMotion: Bool) -> BrowserCommandPaletteHandoff {
         .resolve(
             isPaletteShown: isCommandPaletteShown,
-            isFieldOnScreen: sidebarPresentation.showsSidebar,
+            isFieldOnScreen: showsPageCardBars ? showsWindowTopBar : sidebarPresentation.showsSidebar,
             animates: BrowserCommandSurfaceMorph.animatesCommandPalette(reduceMotion: reduceMotion)
         )
     }
@@ -663,15 +680,16 @@ extension BrowserRootModel {
             targetWindowID: windowID,
             layoutDirection: layoutDirection,
         )
-        .paletteRegistry(shortcuts: shortcuts) { [weak self] name in self?.openPaletteSettings(name, in: settings) }
+        .paletteRegistry(shortcuts: shortcuts) { [weak self] destination in
+            self?.openPaletteSettings(destination, in: settings)
+        }
     }
 
-    /// Opens Settings at the page the settings call `name`, which `settings`
-    /// presents.
-    func openPaletteSettings(_ name: String, in settings: BrowserSpaceSettingsPresentationState?) {
-        guard let destination = BrowserSettingsDestination.all.first(where: { $0.name == name }),
-            let space = browser.shownSpace
-        else { return }
+    /// Opens Settings at `destination`, which `settings` presents.
+    func openPaletteSettings(
+        _ destination: BrowserSettingsDestination, in settings: BrowserSpaceSettingsPresentationState?
+    ) {
+        guard let space = browser.shownSpace else { return }
         settings?.present(destination, assignment: BrowserSpaceRuntimeAssignment(space: space))
         browser.openSettings()
         pages.select()
@@ -740,8 +758,10 @@ private struct BrowserMacPaletteOpener: BrowserCommandPaletteOpener {
     }
 
     func openTab(_ url: URL, from source: BrowserTabRuntimeAssignment, selecting: Bool) -> Bool {
-        guard selecting else { return model.browser.openBackgroundTab(url: url, in: source.spaceID) != nil }
-        guard model.browser.openAddress(url, in: source.spaceID) else { return false }
+        guard selecting else {
+            return model.browser.openBackgroundTab(url: url, in: source.spaceID, savesInSavedFolder: true) != nil
+        }
+        guard model.browser.openAddress(url, in: source.spaceID, placesAsNewTab: true) else { return false }
         model.showLoading(url)
         return true
     }

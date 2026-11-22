@@ -5,8 +5,7 @@ extension BrowserCloudSyncController {
     convenience init(
         core: CrestCore,
         configuration: BrowserCloudSyncConfiguration? = .configured(),
-        defaults: UserDefaults? = nil,
-        enabledKey: String = UserDefaultsBrowserCloudSyncPreferences.defaultEnabledKey
+        defaults: UserDefaults? = nil
     ) {
         if defaults == nil,
             BrowserLaunchEnvironment.current.requiresIsolation
@@ -14,17 +13,12 @@ extension BrowserCloudSyncController {
             self.init(
                 core: core,
                 configuration: nil,
-                preferences: InMemoryBrowserCloudSyncPreferences(),
                 remoteService: nil,
                 transportFactory: nil
             )
             return
         }
         let defaults = defaults ?? .standard
-        let preferences = UserDefaultsBrowserCloudSyncPreferences(
-            defaults: defaults,
-            enabledKey: enabledKey
-        )
         let remoteService = configuration.map {
             CloudKitBrowserCloudSyncRemoteService(configuration: $0)
         }
@@ -37,7 +31,6 @@ extension BrowserCloudSyncController {
         self.init(
             core: core,
             configuration: configuration,
-            preferences: preferences,
             legacyState: .production(defaults: defaults),
             remoteService: remoteService,
             transportFactory: transportFactory

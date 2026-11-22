@@ -54,6 +54,13 @@ final class BrowserAppPreferenceStore {
         }
     }
 
+    /// Where a pinned tab returns when closing puts its page away.
+    var pinnedTabClosePolicy: SavedTabClosePolicy {
+        get { preferences.pinnedTabClose }
+        set { set { $0.pinnedTabClose = newValue } }
+    }
+
+    /// Where a saved tab returns when closing puts its page away.
     var savedTabClosePolicy: SavedTabClosePolicy {
         get { preferences.savedTabClose }
         set { set { $0.savedTabClose = newValue } }
@@ -88,6 +95,19 @@ final class BrowserAppPreferenceStore {
     var showsRecentTabs: Bool {
         get { preferences.showsRecentTabs }
         set { set { $0.showsRecentTabs = newValue } }
+    }
+
+    /// Where among the open tabs a new tab the person opens goes.
+    var newTabPosition: NewTabPosition {
+        get { preferences.newTabPosition }
+        set { set { $0.newTabPosition = newValue } }
+    }
+
+    /// Whether a new tab opened from a tab in a folder opens at the end of
+    /// that folder; off, it opens at `newTabPosition`.
+    var newTabsJoinFolder: Bool {
+        get { preferences.newTabsJoinFolder }
+        set { set { $0.newTabsJoinFolder = newValue } }
     }
 
     /// How the command palette ranks and arranges what it offers.

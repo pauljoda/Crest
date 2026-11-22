@@ -1,0 +1,34 @@
+{
+  "entries": [
+    {
+      "id": "site-controls-security-same-on-both-engines",
+      "category": "fixed",
+      "message": "Site Controls now describes a site’s connection the same way whichever engine shows the page."
+    },
+    {
+      "id": "core-owns-extension-policy",
+      "category": "internal",
+      "message": "Decide in the core which Spaces' extensions may change, where an extension's copies go, and which consent answers an install, for any engine that runs extensions."
+    },
+    {
+      "id": "chromium-extension-installs-portable",
+      "category": "internal",
+      "message": "Download and install Chrome Web Store packages in the portable Chromium binding, asking the core rather than a window whether each install may go ahead."
+    },
+    {
+      "id": "managed-extensions-offer-no-changes",
+      "category": "fixed",
+      "message": "An extension managed by a policy no longer offers to enable, disable, pin or remove it, and a copy of an extension stops when the Space it goes to starts being deleted."
+    },
+    {
+      "id": "imported-extension-copies-continue-after-one-fails",
+      "category": "fixed",
+      "message": "When an extension chosen during import can’t be installed in one Space, the other Spaces that chose it still receive it."
+    },
+    {
+      "id": "imported-extension-copies-skip-a-space-being-deleted",
+      "category": "fixed",
+      "message": "An extension chosen during import still reaches its other Spaces when one of them is being deleted while the extension installs."
+    }
+  ]
+}

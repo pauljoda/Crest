@@ -4,7 +4,7 @@ description: Where extensions run in Crest, and the limits that apply to them.
 slug: /extension-compatibility
 sidebar_label: Known limitations
 sidebar_position: 8
-keywords: [extension compatibility, known limitations, Chrome extension, Chromium, private windows]
+keywords: [extension compatibility, known limitations, Chrome Web Store, Chromium, private windows]
 ---
 
 # Extension known limitations
@@ -19,7 +19,7 @@ Extensions run only on Chromium pages in Crest for Mac. Pages you open in WebKit
 
 - Chrome Web Store extensions install and update through Chromium.
 - Unpacked extensions install from Chromium's extension manager in developer mode.
-- Firefox add-ons, Safari Web Extensions, Safari content blockers and Safari App Extensions are not supported.
+- Extensions in other browsers' formats, including ones that ship inside a Mac app, are not supported. Many are also on the Chrome Web Store.
 
 ## Spaces and private windows
 
@@ -29,7 +29,7 @@ Extensions run only on Chromium pages in Crest for Mac. Pages you open in WebKit
 
 ## Browser features
 
-- Crest does not yet match Chrome for every extension API. A feature that needs part of Chrome's window that Crest does not draw may be missing.
+- Crest does not yet support every extension API. A feature that needs a part of the browser window Crest does not draw may be missing.
 - A window an extension opens appears as a Crest window in the extension's Space. A requested window state, such as maximized, is ignored.
 - Extension shortcuts work only when Crest's own shortcuts don't use the same keys.
 

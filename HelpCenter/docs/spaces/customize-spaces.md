@@ -16,7 +16,7 @@ Crest offers two presentation styles:
 - **Banner** uses Crest Studio: begin with a template, then choose a shape, field division, pattern, trim, and heraldic artwork. Use independent colors for the parts of your design, or make an identity with an emoji, monogram, or searchable SF Symbol.
 - **Gradient**, the last choice in Crest Studio's **Sidebar** step, blends one to three colors with direction, intensity, and optional texture.
 
-The result appears in the Space picker and browser chrome on Mac, iPad, and iPhone.
+The result appears in the Space picker and across the window on Mac, iPad, and iPhone.
 
 Crest Studio is on the Space’s Appearance page. The crest sits on the Space’s own sidebar background, with its colors named by what they paint:
 

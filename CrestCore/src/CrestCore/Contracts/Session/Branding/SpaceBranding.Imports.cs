@@ -11,6 +11,14 @@ public sealed partial record SpaceBranding {
     /// otherwise: the backplate, second field, ordinary, trim, figure and edge.
     private static readonly int[] ImportedLayers = [1, 1, 2, 1, 2, 1];
 
+    /// The layers of an imported Space's own crest: the field and its edge in
+    /// the crest's first color, the Space's own, and the figure in its second.
+    private static readonly int[] OwnCrestLayers = [0, 0, 0, 0, 1, 0];
+
+    /// How light a Space's color is, by its luminance, before its crest's
+    /// figure turns from cream to ink.
+    private const double LightFieldLuminance = 0.6;
+
     #endregion
 
     #region Actions - Imports
@@ -26,16 +34,37 @@ public sealed partial record SpaceBranding {
         Neutral with { Crest = Neutral.Crest with { Symbol = LegacyFigure(symbol) } };
 
     /// A look painted with another browser's `colors`, keeping controls
-    /// readable unless `readabilityFade` says otherwise, with a plain mountain
-    /// crest unless `figure` names another. An imported look keeps controls
-    /// readable with `LegacyReadabilityFade` unless it names its own.
+    /// readable unless `readabilityFade` says otherwise. Where the browser
+    /// named the Space's icon, `symbol`, its crest is that icon raised off a
+    /// round of the Space's first color, as the browser drew the Space;
+    /// otherwise a plain mountain crest unless `figure` names another. An
+    /// imported look keeps controls readable with `LegacyReadabilityFade`
+    /// unless it names its own.
     internal static SpaceBranding Painted(IReadOnlyList<BrandColor> colors, SpaceBannerPattern pattern, double strength,
-        double readabilityFade, SpaceThemeMode theme, double gradientAngle, double textureStrength, CrestSymbol? figure = null) {
-        var crest = SpaceCrest.PlainField(CrestBackplate.Shield, figure ?? CrestSymbol.Mountain, CrestTrim.None, ImportedLayers,
-            trimWeight: 1, chargeScale: 1);
+        double readabilityFade, SpaceThemeMode theme, double gradientAngle, double textureStrength, CrestSymbol? figure = null,
+        string? symbol = null) {
+        var crest = symbol is not null && colors.Count > 0 ? OwnCrest(colors[0], symbol)
+            : SpaceCrest.PlainField(CrestBackplate.Shield, figure ?? CrestSymbol.Mountain, CrestTrim.None, ImportedLayers,
+                trimWeight: 1, chargeScale: 1);
         return new(new(colors), pattern, strength, readabilityFade, readabilityFade > 0, theme, gradientAngle, textureStrength,
             SpaceIconStyle.SimpleSymbol, SymbolColor: null, crest, BaselineRenderingVersion, FolderColorIntensity: 0,
             SpaceTextColorMode.Automatic, HasCustomAppearance: null);
+    }
+
+    /// An imported Space's own crest: its icon `symbol`, an emoji or a system
+    /// symbol, the symbol cream on a dark `field` and ink on a light one,
+    /// raised off a plain round of `field`, in the simple style.
+    private static SpaceCrest OwnCrest(BrandColor field, string symbol) {
+        double luminance = 0.2126 * field.Red + 0.7152 * field.Green + 0.0722 * field.Blue;
+        var figure = luminance > LightFieldLuminance ? Tincture.CrestInk.Color : Tincture.CrestCream.Color;
+        return SpaceCrest.PlainField(CrestBackplate.Circle, CrestSymbol.Mountain, CrestTrim.None, OwnCrestLayers, trimWeight: 1,
+            chargeScale: 1) with {
+            Palette = new([field, figure]),
+            Charge = EmojiIcon.Parse(symbol) is { } emoji
+                ? new CrestCharge(CrestChargeKind.Emoji, Text: emoji.Emoji) : new CrestCharge(CrestChargeKind.System, Text: symbol),
+            Depth = CrestDepth.Figure,
+            EdgeWidth = 0
+        };
     }
 
     #endregion

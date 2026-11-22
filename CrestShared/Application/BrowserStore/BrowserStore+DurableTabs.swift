@@ -18,4 +18,20 @@ extension BrowserStore {
         // closed tab's split, whose other members would present it again.
         return closeSessionTab(tab.id, in: space.id)
     }
+
+    /// Closes several saved or pinned tabs of one Space together: the core
+    /// puts their pages away, and a window that showed one of them returns to
+    /// a tab outside them rather than to another of them.
+    @discardableResult
+    func closeDurableTabs(_ assignments: [BrowserTabRuntimeAssignment]) -> Bool {
+        guard let first = assignments.first,
+            let space = spaceModel(
+                matching: BrowserSpaceRuntimeAssignment(spaceID: first.spaceID, profileID: first.profileID))
+        else { return false }
+        let tabIDs = assignments.compactMap { space.shownTab($0.tabID) }.filter(\.placement.isDurable).map(\.id)
+        guard !tabIDs.isEmpty else { return false }
+        return family.perform(
+            PutAwayTabs(workspaceID: family.workspaceID, windowID: windowID, spaceID: space.id, tabIDs: tabIDs),
+            from: self) != nil
+    }
 }

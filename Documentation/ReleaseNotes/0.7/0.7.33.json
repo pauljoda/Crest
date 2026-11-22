@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "space-switching-keeps-crest-open",
+      "category": "fixed",
+      "message": "Switching Spaces no longer makes Crest quit unexpectedly on macOS 26.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "settings-opens-in-browser-window",
+      "category": "fixed",
+      "message": "Settings opens in your browser window instead of a new window while a Quick Window is in front."
+    }
+  ]
+}

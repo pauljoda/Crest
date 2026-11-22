@@ -3,8 +3,8 @@ import SwiftUI
 struct BrowserSidebarPointerNavigation: NSViewRepresentable {
     let isSidebarVisible: Bool
     let perform: @MainActor @Sendable (BrowserSidebarMouseButtonAction) -> Void
-    let navigationTargets: @MainActor @Sendable () -> [any BrowserSidebarMouseNavigationTarget]
-    let activeTarget: @MainActor @Sendable () -> (any BrowserSidebarMouseNavigationTarget)?
+    let navigationTargets: @MainActor @Sendable () -> [BrowserPage]
+    let activeTarget: @MainActor @Sendable () -> BrowserPage?
 
     func makeNSView(context: Context) -> BrowserSidebarPointerNavigationView {
         let view = BrowserSidebarPointerNavigationView(

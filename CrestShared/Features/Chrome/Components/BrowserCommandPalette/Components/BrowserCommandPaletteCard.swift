@@ -11,7 +11,6 @@ import SwiftUI
 /// field holds it, the card simply appears where it rests.
 struct BrowserCommandPaletteCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.browserCommandPaletteTransitionPhase) private var transitionPhase
 
     let model: BrowserCommandPaletteModel
@@ -65,15 +64,11 @@ struct BrowserCommandPaletteCard: View {
                 // Takes whatever frame the morph proposes. The resting
                 // contents overflow it from the query row's edge.
                 .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: queryAlignment)
-                .modifier(
-                    BrowserCommandPaletteShellMaterial(
-                        shape: morphingShape,
-                        reduceTransparency: reduceTransparency
-                    )
-                )
+                .modifier(BrowserCommandPaletteShellMaterial(shape: morphingShape))
                 .clipShape(morphingShape)
+                .modifier(BrowserCommandPaletteCardEdge(cornerRadius: morphingCornerRadius))
                 .modifier(BrowserSearchProviderGlow(color: model.activeProvider?.color, shape: morphingShape))
-                .animation(glassAnimation) {
+                .animation(surfaceAnimation) {
                     $0.opacity(isSettled ? 1 : 0)
                 }
                 .matchedGeometryEffect(
@@ -89,13 +84,9 @@ struct BrowserCommandPaletteCard: View {
         } else {
             contents
                 .frame(maxWidth: BrowserCommandPaletteMetrics.maximumCardWidth)
-                .modifier(
-                    BrowserCommandPaletteShellMaterial(
-                        shape: restingShape,
-                        reduceTransparency: reduceTransparency
-                    )
-                )
+                .modifier(BrowserCommandPaletteShellMaterial(shape: restingShape))
                 .clipShape(restingShape)
+                .modifier(BrowserCommandPaletteCardEdge(cornerRadius: presentation.cornerRadius))
                 .modifier(BrowserSearchProviderGlow(color: model.activeProvider?.color, shape: restingShape))
                 .opacity(isSettled ? 1 : 0)
         }
@@ -137,6 +128,10 @@ struct BrowserCommandPaletteCard: View {
         } action: {
             fieldExcessHeight = max(0, $0 - presentation.input.minimumHeight)
         }
+        // Over the results. A card resting under the window's title bar
+        // stretches the results' scroll view up into the title bar's safe
+        // area, over the field, where it would take the field's presses.
+        .zIndex(1)
     }
 
     @ViewBuilder
@@ -178,12 +173,11 @@ struct BrowserCommandPaletteCard: View {
     /// The card's own outline at rest, and the field's while the card is
     /// growing out of it or shrinking back, animated with the frame.
     private var morphingShape: RoundedRectangle {
-        isSettled
-            ? restingShape
-            : RoundedRectangle(
-                cornerRadius: BrowserDeviceAppearanceStore.shared.sidebarCornerRadius,
-                style: .continuous
-            )
+        RoundedRectangle(cornerRadius: morphingCornerRadius, style: .continuous)
+    }
+
+    private var morphingCornerRadius: CGFloat {
+        isSettled ? presentation.cornerRadius : BrowserDeviceAppearanceStore.shared.sidebarCornerRadius
     }
 
     private var restingShape: RoundedRectangle {
@@ -197,9 +191,9 @@ struct BrowserCommandPaletteCard: View {
         return fade.unlessReducingMotion(reduceMotion)
     }
 
-    /// The glass takes over from the field as the frame leaves it, and hands
-    /// back to the field as the frame lands on it.
-    private var glassAnimation: Animation? {
+    /// The card's surface takes over from the field as the frame leaves it,
+    /// and hands back to the field as the frame lands on it.
+    private var surfaceAnimation: Animation? {
         let fade = isSettled ? BrowserCommandSurfaceMorph.leadingFade : BrowserCommandSurfaceMorph.trailingFade
         return fade.unlessReducingMotion(reduceMotion)
     }

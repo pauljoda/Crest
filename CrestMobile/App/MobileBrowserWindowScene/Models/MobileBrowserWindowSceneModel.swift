@@ -61,7 +61,7 @@ final class MobileBrowserWindowSceneModel {
         let navigation = MobileBrowserNavigationState(
             regularSidebarIsPresented: sidebarIsPresented,
             initiallyShowsCompactPage: !sidebarIsPresented,
-            allowsCompactFloatingSidebar: MobileBrowserRootPreferences.allowsFloatingSidebar
+            allowsCompactFloatingSidebar: BrowserDeviceAppearanceStore.shared.allowsFloatingSidebar
         )
         let transientBrowsing = BrowserTransientBrowsingCoordinator()
         let pages = MobileBrowserPageStore(
@@ -139,19 +139,19 @@ final class MobileBrowserWindowSceneModel {
         flushPendingPersistence()
     }
 
-    func togglePrivateBrowsing(from mode: BrowserBrowsingMode) -> BrowserBrowsingMode {
+    func togglePrivateBrowsing(from mode: WorkspaceKind) -> WorkspaceKind {
         if mode.isPrivate {
             cancelPrivateDownloadConfirmations()
             synchronizeSidebarPresentation(navigation)
-            return .standard
+            return .persistent
         }
 
         synchronizeSidebarPresentation(privateNavigation)
         privateNavigation.selectTab()
-        return .privateBrowsing
+        return .private
     }
 
-    func closePrivateBrowsing() -> BrowserBrowsingMode {
+    func closePrivateBrowsing() -> WorkspaceKind {
         let closingSpaces = privateBrowser.spaceModels.map(BrowserSpaceRuntimeAssignment.init(space:))
         cancelPrivateDownloadConfirmations()
         privatePages.closePrivateBrowsingSession(closingSpaces)
@@ -159,7 +159,7 @@ final class MobileBrowserWindowSceneModel {
         privateNavigation.showTabViewer()
         privateTransientBrowsing.dismissPeek()
         synchronizeSidebarPresentation(navigation)
-        return .standard
+        return .persistent
     }
 
     /// Opens a link another app handed this window where the core routes it,
@@ -195,12 +195,12 @@ final class MobileBrowserWindowSceneModel {
         let privateBrowser = BrowserStore.privateBrowsing(core: core)
         let privateNavigation = MobileBrowserNavigationState(
             regularSidebarIsPresented: sidebarIsPresented,
-            allowsCompactFloatingSidebar: MobileBrowserRootPreferences.allowsFloatingSidebar
+            allowsCompactFloatingSidebar: BrowserDeviceAppearanceStore.shared.allowsFloatingSidebar
         )
         let privateTransientBrowsing = BrowserTransientBrowsingCoordinator()
         let privatePages = MobileBrowserPageStore(
             browser: privateBrowser,
-            browsingMode: .privateBrowsing,
+            workspaceKind: .private,
             permissionCenter: downloads?.center.permissionCenter ?? BrowserSitePermissionCenter(),
             downloads: downloads,
             linkDestinationHost: BrowserLinkDestinationHost(browser: privateBrowser, spaceAccess: spaceAccess),

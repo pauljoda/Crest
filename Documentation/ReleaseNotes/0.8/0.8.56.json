@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-hover-in-full-screen",
+      "category": "new",
+      "message": "Settings > Appearance can keep the sidebar hover area working while a video plays full screen, so the sidebar floats over the video when the pointer reaches the edge of the screen."
+    }
+  ]
+}

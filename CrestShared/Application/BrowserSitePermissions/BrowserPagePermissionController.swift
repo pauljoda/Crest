@@ -6,6 +6,12 @@ import Observation
 @Observable
 @MainActor
 final class BrowserPagePermissionController {
+    // MARK: - Static Variables
+
+    /// How long the requests wait, once no window shows their page, before
+    /// they are dropped.
+    static let defaultHostGrace: Duration = .seconds(2)
+
     struct Request: Identifiable, Equatable {
         let id = UUID()
         let permission: SitePermission
@@ -37,7 +43,7 @@ final class BrowserPagePermissionController {
     /// `hostGrace` covers a page that changes windows, whose new window shows
     /// it a moment after the old one stops, and a Quick Window whose page
     /// asks during its first load, before the window has drawn.
-    init(hostGrace: Duration = .seconds(2)) {
+    init(hostGrace: Duration = defaultHostGrace) {
         self.hostGrace = hostGrace
     }
 

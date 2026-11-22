@@ -44,6 +44,13 @@ final class BrowserSplitCardFrameRegistry {
         framesByTabID[tabID] = nil
     }
 
+    /// Hands the frame registered for `oldTabID` to `newTabID`, for a lone
+    /// card that now shows another tab where it stands.
+    func moveFrame(from oldTabID: UUID, to newTabID: UUID) {
+        guard let frame = framesByTabID.removeValue(forKey: oldTabID) else { return }
+        framesByTabID[newTabID] = frame
+    }
+
     func frame(for tabID: UUID) -> CGRect? {
         framesByTabID[tabID]
     }

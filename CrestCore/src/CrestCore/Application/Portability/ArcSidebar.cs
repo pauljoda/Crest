@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 
 using CrestCore.Contracts;
@@ -15,16 +16,74 @@ namespace CrestCore.Application;
 internal static class ArcSidebar {
     #region Static Variables
 
-    /// The SF Symbol each of Arc's built-in Space icons stands for.
+    /// The SF Symbol that draws each of Arc's own Space icons, which Arc names
+    /// after the Ionicons it draws, in camel case. An icon Zen draws from the
+    /// same Ionicon wears the symbol Zen's does. Arc's `linear` and `figma` are
+    /// app logos no symbol draws, so they wear Arc's own symbol.
     private static readonly IReadOnlyDictionary<string, string> IconSymbols = new Dictionary<string, string>(StringComparer.Ordinal) {
-        ["planet"] = "globe.americas.fill",
-        ["briefcase"] = "briefcase.fill",
+        ["airplane"] = "airplane",
+        ["albums"] = "rectangle.stack.fill",
+        ["apps"] = "square.grid.3x3.fill",
+        ["bag"] = "bag.fill",
+        ["bandage"] = "bandage.fill",
+        ["barbell"] = "dumbbell.fill",
+        ["baseball"] = "baseball.fill",
+        ["bed"] = "bed.double.fill",
+        ["bonfire"] = "flame.fill",
         ["book"] = "book.fill",
-        ["code"] = "chevron.left.forwardslash.chevron.right"
+        ["bookmark"] = "bookmark.fill",
+        ["briefcase"] = "briefcase.fill",
+        ["bulb"] = "lightbulb.fill",
+        ["calendar"] = "calendar",
+        ["chatBubbleEllipses"] = "ellipsis.bubble.fill",
+        ["checkbox"] = "checkmark.square.fill",
+        ["cloud"] = "cloud.fill",
+        ["cloudOutline"] = "cloud",
+        ["code"] = "chevron.left.forwardslash.chevron.right",
+        ["colorPallete"] = "paintpalette.fill",
+        ["construction"] = "wrench.and.screwdriver.fill",
+        ["copy"] = "square.fill.on.square.fill",
+        ["document"] = "document.fill",
+        ["egg"] = "frying.pan.fill",
+        ["ellipse"] = "circle.fill",
+        ["fileTrayFull"] = "tray.full.fill",
+        ["flag"] = "flag.fill",
+        ["flash"] = "bolt.fill",
+        ["folder"] = "folder.fill",
+        ["gift"] = "gift.fill",
+        ["github"] = "chevron.left.forwardslash.chevron.right",
+        ["grid"] = "square.grid.2x2.fill",
+        ["heart"] = "heart.fill",
+        ["layers"] = "square.stack.3d.up.fill",
+        ["leaf"] = "leaf.fill",
+        ["mail"] = "envelope.fill",
+        ["map"] = "map.fill",
+        ["medical"] = "staroflife.fill",
+        ["moon"] = "moon.fill",
+        ["musicalNote"] = "music.note",
+        ["notifications"] = "bell.fill",
+        ["paw"] = "pawprint.fill",
+        ["people"] = "person.2.fill",
+        ["pizza"] = "fork.knife.circle.fill",
+        ["planet"] = "globe.americas.fill",
+        ["receipt"] = "receipt.fill",
+        ["restaurant"] = "fork.knife",
+        ["rss"] = "dot.radiowaves.up.forward",
+        ["search"] = "magnifyingglass",
+        ["server"] = "cylinder.split.1x2.fill",
+        ["shapes"] = "square.fill.on.circle.fill",
+        ["skull"] = "exclamationmark.octagon.fill",
+        ["square"] = "square.fill",
+        ["star"] = "star.fill",
+        ["sunny"] = "sun.max.fill",
+        ["terminal"] = "apple.terminal.fill",
+        ["thumbsUp"] = "hand.thumbsup.fill",
+        ["train"] = "tram.fill",
+        ["triangle"] = "triangle.fill",
+        ["video"] = "video.fill"
     };
 
     private const string DefaultSymbol = "sidebar.left";
-    private const string UntitledFolder = "Untitled Folder";
     private const string UnpinnedSection = "unpinned";
     private const string PinnedSection = "pinned";
 
@@ -36,7 +95,9 @@ internal static class ArcSidebar {
 
     private sealed record Content(ArcTab? Tab, bool IsFolder, bool IsSplit);
 
-    private sealed record ArcTab(string Title, string? Url, JsonElement? LastActive);
+    /// A tab: its page's title, the name the person gave it, its address and
+    /// when it was last active.
+    private sealed record ArcTab(string Title, string? CustomTitle, string? Url, JsonElement? LastActive);
 
     private sealed record Space(string? Title, IReadOnlyList<string> Sections, string ProfileKey, string? ProfileFolder,
         JsonElement? CustomInfo);
@@ -90,7 +151,7 @@ internal static class ArcSidebar {
                 string symbol = Symbol(space.CustomInfo);
                 var colors = Colors(space.CustomInfo);
                 drafts.Add(new SessionDraft(drafts.Count + 1, name, draft.Folders, draft.Tabs,
-                    symbol, colors.Count == 0 ? null : SpaceAccent.Nearest(colors[0]), Look(colors), space.ProfileFolder,
+                    symbol, colors.Count == 0 ? null : SpaceAccent.Nearest(colors[0]), Look(colors, symbol), space.ProfileFolder,
                     Group: space.ProfileKey));
             }
         }
@@ -118,19 +179,22 @@ internal static class ArcSidebar {
                 yield return (member.Value, member.Value.TryGetProperty("id", out var own) ? ImportJson.Text(own) : member.Name);
     }
 
+    /// An item, whose own `title` is the name the person gave it in Arc, or
+    /// null when they gave none; a tab's `savedTitle` is its page's title.
     private static Item ReadItem(JsonElement value) {
         var data = ImportJson.Object(ImportJson.Member(value, "data"));
+        string? title = ImportJson.Text(ImportJson.Member(value, "title"));
         Content? content = null;
         if (data is not null) {
             var tab = ImportJson.Object(ImportJson.Member(data, "tab"));
             content = new(tab is null ? null : new ArcTab(
-                ImportJson.Text(ImportJson.Member(tab, "savedTitle")) ?? ImportJson.Text(ImportJson.Member(value, "title")) ?? "",
+                ImportJson.Text(ImportJson.Member(tab, "savedTitle")) ?? title ?? "", title,
                 ImportJson.Text(ImportJson.Member(tab, "savedURL")),
                 ImportJson.Member(tab, "timeLastActiveAt") ?? ImportJson.Member(value, "createdAt")),
                 ImportJson.Object(ImportJson.Member(data, "list")) is not null,
                 ImportJson.Object(ImportJson.Member(data, "splitView")) is not null);
         }
-        return new(ImportJson.Text(ImportJson.Member(value, "title")), Strings(ImportJson.Member(value, "childrenIds")), content);
+        return new(title, Strings(ImportJson.Member(value, "childrenIds")), content);
     }
 
     private static Space ReadSpace(JsonElement value) {
@@ -187,7 +251,7 @@ internal static class ArcSidebar {
             var time = ImportJson.Number(tab.LastActive) is { } raw && double.IsFinite(raw) ? ImportDate.FromUnixOrReferenceSeconds(raw)
                 : null;
             draft.Tabs.Add(new SessionTab(tab.Title, address, placement, placement == TabPlacement.Saved ? parent : null,
-                time ?? importedAt, split));
+                time ?? importedAt, split, tab.CustomTitle));
             return;
         }
         if (content.IsSplit) {
@@ -196,7 +260,7 @@ internal static class ArcSidebar {
         }
         if (content.IsFolder && placement == TabPlacement.Saved) {
             if (draft.Folders.Count > FolderTree.MaximumCount) return;
-            draft.Folders.Add(new SessionFolder(id, item.Title ?? UntitledFolder, parent));
+            draft.Folders.Add(new SessionFolder(id, item.Title ?? FolderState.UntitledTitle, parent));
             foreach (var child in item.Children) Append(child, placement, id, depth + 1, items, draft, importedAt);
             return;
         }
@@ -207,12 +271,21 @@ internal static class ArcSidebar {
 
     #region Actions - Looks
 
+    /// The Space's icon: the emoji the person chose, else the SF Symbol that
+    /// draws the Arc icon they chose, else Arc's own symbol.
     private static string Symbol(JsonElement? customInfo) {
         var icon = ImportJson.Member(customInfo, "iconType");
-        if (ImportJson.Text(ImportJson.Member(icon, "emoji_v2")) is { Length: > 0 } emoji) return EmojiIcon.Chosen(emoji)?.Symbol ?? emoji;
+        if (EmojiIcon.Chosen(Emoji(icon)) is { } emoji) return emoji.Symbol;
         return ImportJson.Text(ImportJson.Member(icon, "icon")) is { } name && IconSymbols.TryGetValue(name, out var symbol)
             ? symbol : DefaultSymbol;
     }
+
+    /// The emoji an icon holds, as text, or as the one code point an older
+    /// file keeps of it.
+    private static string? Emoji(JsonElement? icon) =>
+        ImportJson.Text(ImportJson.Member(icon, "emoji_v2")) is { Length: > 0 } text ? text
+            : ImportJson.Integer(ImportJson.Member(icon, "emoji")) is { } code and > 0 and <= int.MaxValue
+                && Rune.TryCreate((int)code, out var rune) ? rune.ToString() : null;
 
     /// The Space's colors: its gradient's base colors, else its single color,
     /// else its palette's mid tone, at most as many as a look keeps.
@@ -245,9 +318,10 @@ internal static class ArcSidebar {
     private static double Unit(double value) => Math.Clamp(value, 0, 1);
 
     /// A diagonal gradient banner of several colors, or a solid banner of one.
-    private static SpaceBranding? Look(IReadOnlyList<BrandColor> colors) => colors.Count == 0 ? null : SpaceBranding.Painted(colors,
-        colors.Count > 1 ? SpaceBannerPattern.Diagonal : SpaceBannerPattern.Solid, strength: 1, SpaceBranding.LegacyReadabilityFade,
-        colors.Count > 1 ? SpaceThemeMode.Gradient : SpaceThemeMode.Banner, gradientAngle: 45, textureStrength: 0);
+    private static SpaceBranding? Look(IReadOnlyList<BrandColor> colors, string symbol) => colors.Count == 0 ? null
+        : SpaceBranding.Painted(colors, colors.Count > 1 ? SpaceBannerPattern.Diagonal : SpaceBannerPattern.Solid, strength: 1,
+            SpaceBranding.LegacyReadabilityFade, colors.Count > 1 ? SpaceThemeMode.Gradient : SpaceThemeMode.Banner, gradientAngle: 45,
+            textureStrength: 0, symbol: symbol);
 
     #endregion
 }

@@ -75,10 +75,4 @@ final class BrowserLaunchEnvironmentTests: XCTestCase {
         XCTAssertTrue(installed.presentsInstalledApplicationUI)
     }
 
-    /// The extension pool a named isolated launch composes keeps its
-    /// installations, so a validation relaunch does not begin by re-adding
-    /// every extension while WebKit still holds their storage.
-
-    /// A profile name is a directory name too, so anything that could climb
-    /// out of the isolated root is refused rather than staged.
 }

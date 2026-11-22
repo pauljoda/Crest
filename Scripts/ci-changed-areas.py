@@ -3,8 +3,8 @@
 
 Prints `mac=true|false` and `ios=true|false` lines for `$GITHUB_OUTPUT`. A
 change that touches only documentation builds neither app, and one confined to
-one app's own folders leaves the other alone. The version, the release-note
-catalog and the generated project ride along with most app changes without
+one app's own folders leaves the other alone. The version, the release
+notes and the generated project ride along with most app changes without
 deciding which app they reach; a change of nothing else builds both. A release
 source, a manual run, and a change whose files cannot be listed build both.
 """
@@ -28,27 +28,27 @@ class Area:
     excluded: tuple[str, ...] = ()
 
     def holds(self, path: str) -> bool:
-        if path in self.excluded:
+        if path.startswith(self.excluded):
             return False
         if path in self.files or path.startswith(self.folders):
             return True
         return "/" not in path and path.endswith(self.root_suffixes)
 
 
-# What no app build reads. Both apps bundle the release-note catalog, so it
-# is not documentation here.
+# What no app build reads. Both apps bundle the release notes, so they are
+# not documentation here.
 DOCUMENTATION = Area(
     name="documentation",
     folders=("Website/", "HelpCenter/", "Marketing/", "Documentation/", ".github/ISSUE_TEMPLATE/"),
     root_suffixes=(".md", "LICENSE", "NOTICE"),
-    excluded=("Documentation/ReleaseNotes.json",),
+    excluded=("Documentation/ReleaseNotes/",),
 )
 # What both apps read but no change to it can break one app alone. CI
 # regenerates the project from project.yml before it builds.
 SHARED_METADATA = Area(
     name="shared metadata",
-    folders=("Crest.xcodeproj/",),
-    files=("Config/Version.xcconfig", "Documentation/ReleaseNotes.json"),
+    folders=("Crest.xcodeproj/", "Documentation/ReleaseNotes/"),
+    files=("Config/Version.xcconfig",),
 )
 MAC_ONLY = Area(
     name="macOS only",

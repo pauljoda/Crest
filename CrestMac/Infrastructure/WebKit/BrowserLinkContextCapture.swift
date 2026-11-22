@@ -134,10 +134,9 @@ struct BrowserLinkContextCapture: Equatable, Sendable {
         guard let string = value as? String,
             string.count <= maximumURLLength,
             let url = address(string),
-            let scheme = url.scheme?.lowercased(),
-            ["http", "https", "blob", "data"].contains(scheme)
+            url.webScheme != nil || [.blob, .data].contains(url.urlScheme)
         else { return nil }
-        if ["http", "https"].contains(scheme), url.host?.isEmpty != false {
+        if url.webScheme != nil, url.host?.isEmpty != false {
             return nil
         }
         return url

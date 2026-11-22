@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "chromium-form-submit-autofill-save-crash",
+      "category": "fixed",
+      "message": "Crest no longer quits when you submit a form containing a payment card or address."
+    }
+  ]
+}

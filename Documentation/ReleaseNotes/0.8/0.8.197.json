@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "ad-hiding-out-of-sites-reach",
+      "category": "improved",
+      "message": "On Chromium pages on Mac, sites can no longer see which of your blocking rules they match or bring back what Crest hides.",
+      "platforms": ["mac"]
+    }
+  ]
+}

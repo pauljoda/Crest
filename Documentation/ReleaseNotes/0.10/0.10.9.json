@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "chromium-pages-load-without-flash",
+      "category": "fixed",
+      "message": "Pages in Chromium Spaces no longer flash blank or white while the next page loads after you follow a link: the page you're on stays until the next one draws.",
+      "platforms": ["mac"]
+    }
+  ]
+}

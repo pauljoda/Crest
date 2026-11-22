@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "cross-space-link-tab-activation",
+      "category": "fixed",
+      "message": "Opening a link in another Space shows the link there instead of the Start Page."
+    }
+  ]
+}

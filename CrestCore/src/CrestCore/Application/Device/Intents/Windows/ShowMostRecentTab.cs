@@ -15,8 +15,8 @@ public sealed record ShowMostRecentTab(Guid WindowId) : WindowIntent {
         var session = device.Workspace(window.WorkspaceId).Current;
         Guid spaceId;
         lock (device.Gate) spaceId = window.ShownSpaceId;
-        var items = Device.Available(session, spaceId) is { } space ? device.RecentItems(window, space) : [];
-        if (items.Count > 1) new ShowTab(WindowId, spaceId, items[1].FocusedTabId).Apply(device, turn);
+        var items = Device.Available(session, spaceId) is { } space ? device.RecentItems(window, space, turn.Pages) : [];
+        if (items.Count > 1) new ShowTab(WindowId, items[1].SpaceId, items[1].FocusedTabId).Apply(device, turn);
     }
 
     #endregion

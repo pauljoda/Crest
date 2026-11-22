@@ -129,4 +129,44 @@ public sealed partial class BrowserContractsTests {
         var ended = Assert.Single(changes.OfType<ExtensionInstallChanged>()).Install;
         Assert.Equal((ExtensionInstallStage.Installed, null, 1), (ended.Stage, ended.Failure, ended.InstalledCount));
     }
+
+    /// A failed first install ends the install and says why, a copy that
+    /// failed is skipped while the install still finishes, and closing the
+    /// review stops an install under way.
+    [Fact]
+    public void AFailedFirstInstallEndsTheInstallAndAFailedCopyIsSkipped() {
+        var (app, chromium, binding, _, first, second, firstProfile, secondProfile) = ExtensionHost();
+        using var disposal = app;
+        app.Report(chromium, new ExtensionsListed(firstProfile, []));
+        app.Report(chromium, new ExtensionsListed(secondProfile, []));
+
+        var failing = Guid.NewGuid();
+        app.Send(new InstallExtension(failing, first, EngineKind.Chromium, "reader", [second], PreApproved: true));
+        app.Report(chromium, new ExtensionDownloaded(failing));
+        app.Drain();
+        app.Report(chromium, new ExtensionInstallFailed(failing, firstProfile, ExtensionInstallFailure.Refused));
+        Assert.Equal(new EndExtensionInstall(failing), binding.Commands[^1]);
+        var failed = Assert.IsType<ExtensionInstallChanged>(app.Drain().Last()).Install;
+        Assert.Equal((ExtensionInstallStage.Failed, ExtensionInstallFailure.Refused, 0),
+            (failed.Stage, failed.Failure, failed.InstalledCount));
+
+        var copying = Guid.NewGuid();
+        app.Send(new InstallExtension(copying, first, EngineKind.Chromium, "reader", [second], PreApproved: true));
+        app.Report(chromium, new ExtensionDownloaded(copying));
+        app.Report(chromium, new ExtensionInstalled(copying, firstProfile));
+        Assert.Equal(new InstallExtensionPackage(copying, secondProfile), binding.Commands[^1]);
+        app.Drain();
+        app.Report(chromium, new ExtensionInstallFailed(copying, secondProfile, ExtensionInstallFailure.Refused));
+        Assert.Equal(new EndExtensionInstall(copying), binding.Commands[^1]);
+        var copied = Assert.IsType<ExtensionInstallChanged>(app.Drain().Last()).Install;
+        Assert.Equal((ExtensionInstallStage.Installed, null, 1), (copied.Stage, copied.Failure, copied.InstalledCount));
+
+        var canceled = Guid.NewGuid();
+        app.Send(new InstallExtension(canceled, first, EngineKind.Chromium, "notes", [second], PreApproved: true));
+        app.Drain();
+        var stopped = Assert.Single(app.Send(new CancelExtensionInstall(canceled)).OfType<ExtensionInstallChanged>()).Install;
+        Assert.Equal(new EndExtensionInstall(canceled), binding.Commands[^1]);
+        Assert.Equal((ExtensionInstallStage.Failed, ExtensionInstallFailure.Canceled), (stopped.Stage, stopped.Failure));
+        Assert.Empty(app.Send(new CancelExtensionInstall(canceled)));
+    }
 }

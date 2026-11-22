@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "web-pages-only-icloud-sync",
+      "category": "fixed",
+      "message": "Keep extension and built-in pages on their own device so they cannot block iCloud sync"
+    }
+  ]
+}

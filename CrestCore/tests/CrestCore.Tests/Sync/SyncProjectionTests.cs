@@ -4,6 +4,8 @@ using CrestCore.Application;
 using CrestCore.Contracts;
 using CrestCore.Domain;
 
+using CrestCore.Tests.Session;
+
 using Xunit;
 
 namespace CrestCore.Tests;
@@ -84,7 +86,7 @@ public sealed partial class BrowserContractsTests {
     [InlineData(false, 811679532.600512)]
     public void ReceivingCommandEditsDoesNotCreateAnotherRevisionDuringRepair(bool renames, double now) {
         var fixture = SavedSession();
-        var source = NativeSessionMaintenance.Repair(fixture.Document["session"]!.AsObject(), now)["session"]!;
+        var source = StoredSessionMaintenance.Repair(fixture.Document["session"]!.AsObject(), now)["session"]!;
         source.AsObject().Remove("disposableSeedMarker");
         source["spaces"]![0]!["history"] = new JsonArray();
         source["spaces"]![0]!["archivedTabs"] = new JsonArray();

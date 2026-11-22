@@ -20,25 +20,20 @@ project="$repository_root/Crest.xcodeproj"
 [[ -d "$project" ]] \
   || { print -u2 "error: Crest.xcodeproj is missing; run XcodeGen first."; exit 2; }
 
-derived_data="$(mktemp -d /private/tmp/crest-periphery-audit.XXXXXX)"
-cleanup() {
-  if [[ -n "${derived_data:-}" && -d "$derived_data" ]]; then
-    find "$derived_data" -depth -delete
-  fi
-}
-trap cleanup EXIT INT TERM HUP
-
 print "Periphery findings are evidence, not deletion instructions."
 print "Confirm references, builds, and tests before removing declarations; dynamic WebKit and AppKit entry points need manual review."
+print "Periphery builds into its own cache under ~/Library/Caches; remove it when the audit is done."
 
-typeset -a schemes=(Crest CrestMobile)
+# The Chromium product's callers count as uses only when its scheme is scanned
+# too; the Crest scheme alone builds the WebKit app.
+typeset -a schemes=(Crest CrestChromiumUIProduct CrestMobile)
 typeset -a configurations=(Debug Release)
 
 for scheme in "${schemes[@]}"; do
-  if [[ "$scheme" == "Crest" ]]; then
-    destination="platform=macOS,arch=arm64"
-  else
+  if [[ "$scheme" == "CrestMobile" ]]; then
     destination="generic/platform=iOS Simulator"
+  else
+    destination="platform=macOS,arch=arm64"
   fi
 
   for configuration in "${configurations[@]}"; do
@@ -51,8 +46,7 @@ for scheme in "${schemes[@]}"; do
       --retain-codable-properties \
       -- \
       -configuration "$configuration" \
-      -destination "$destination" \
-      -derivedDataPath "$derived_data"
+      -destination "$destination"
   done
 done
 

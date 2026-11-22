@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "swift-values-once",
+      "category": "internal",
+      "message": "Swift reads web schemes, limits, waits, log categories, settings links and accessibility identifiers from one owner each, and a link opened in Split View takes its first title from the core."
+    }
+  ]
+}

@@ -1,6 +1,11 @@
 import SwiftUI
 
+/// A Quick Window's page bar: the shared bar after the window's buttons, with
+/// the Quick Window's own field, which edits in place where no palette
+/// opens, and the Space it can move its page to at the end.
 struct BrowserQuickWindowToolbar: View {
+    // MARK: - Variables
+
     let model: BrowserQuickWindowModel
     @Binding var addressText: String
     @Binding var isAddressEditing: Bool
@@ -9,47 +14,51 @@ struct BrowserQuickWindowToolbar: View {
     let commandPaletteHandoff: BrowserCommandPaletteHandoff
     let promote: (BrowserSpaceRuntimeAssignment) -> Void
 
+    @Environment(\.browserMacWindows) private var windows
+
     var body: some View {
-        HStack(spacing: BrowserQuickWindowLayout.toolbarSpacing) {
-            BrowserQuickWindowNavigationControls(model: model)
-            BrowserQuickWindowFieldLayout(
-                fieldMinimumWidth: BrowserQuickWindowLayout.addressMinimumWidth,
-                widthBeforeExtensions: BrowserQuickWindowLayout.addressWidthBeforeExtensions,
-                spacing: BrowserQuickWindowLayout.toolbarSpacing
-            ) {
-                BrowserQuickWindowAddressControl(
-                    model: model,
-                    addressText: $addressText,
-                    isAddressEditing: $isAddressEditing,
-                    addressFocusRequest: addressFocusRequest,
-                    commandSurfaceNamespace: commandSurfaceNamespace,
-                    commandPaletteHandoff: commandPaletteHandoff
-                )
-                // The field sits under the title bar. A drag across it selects
-                // its text, while the strip around it still moves the window.
-                .background {
-                    BrowserWindowTitleBarControlArea()
-                        .accessibilityHidden(true)
-                }
-                if let space = model.spaceModel {
-                    BrowserEngineToolbarAccessory(page: model.page, space: space, browser: model.browser)
-                }
+        BrowserPageBar(
+            metrics: .quickWindow,
+            windowControlsClearance: BrowserQuickWindowLayout.windowControlClearance,
+            port: port,
+            branding: model.spaceModel?.settings.look
+        ) {
+            BrowserQuickWindowAddressControl(
+                model: model,
+                addressText: $addressText,
+                isAddressEditing: $isAddressEditing,
+                addressFocusRequest: addressFocusRequest,
+                commandSurfaceNamespace: commandSurfaceNamespace,
+                commandPaletteHandoff: commandPaletteHandoff
+            )
+        } extensions: {
+            if let space = model.spaceModel {
+                BrowserEngineToolbarAccessory(page: model.page, space: space, browser: model.browser)
             }
-            .layoutPriority(1)
+        } trailingAccessory: {
+            // Names the Space while there is room, and is cut short before
+            // the address field gives up its minimum.
             BrowserPeekDestinationControl(
                 spaces: model.availableSpaceModels.map(\.identity),
                 selectedSpaceID: model.selectedAssignment.spaceID,
                 style: .toolbar,
                 openInSpace: promote
             )
-            // Names the Space while there is room, and is cut short before
-            // the address field gives up its minimum.
-            .layoutPriority(1)
         }
-        .padding(.leading, BrowserQuickWindowLayout.windowControlClearance)
-        .padding(.trailing, BrowserQuickWindowLayout.horizontalPadding)
-        .padding(.top, BrowserQuickWindowLayout.toolbarTopPadding)
-        .frame(maxWidth: .infinity)
-        .frame(height: BrowserQuickWindowLayout.toolbarHeight)
+    }
+
+    private var port: BrowserSidebarNavigationPort {
+        BrowserSidebarNavigationPort(
+            page: { [model] in model.page },
+            recordActivity: { [model] in model.recordUserActivity() },
+            showHistory: showHistory
+        )
+    }
+
+    // MARK: - Actions - History
+
+    /// A Quick Window keeps no History of its own: the browser window's opens.
+    private func showHistory() {
+        windows?.contextBringingBrowserWindowForward()?.chrome.presentUtility(.history)
     }
 }

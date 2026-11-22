@@ -11,16 +11,15 @@ namespace CrestCore.Application;
 public static class NativeSyncMaterializer {
     #region Actions - Materialization
 
-    public static JsonObject Materialize(JsonObject session, JsonNode preferences, IReadOnlyList<JsonObject> records, double now,
-        SpaceAccessAuthority? access = null) => StoredSessionCodec.Encode(Materialize(StoredSessionCodec.DecodeSession(session),
-            NativeSyncProjection.Preferences(preferences), records.Select(SyncSessionRecord.Read).ToArray(), StoredSessionCodec.Date(now), access));
-
     internal static SessionState Materialize(SessionState session, SyncPreferences policy, IReadOnlyList<SyncSessionRecord> records,
         DateTimeOffset now, SpaceAccessAuthority? access) {
         var owners = records.Where(record => record.Kind == SyncRecordKind.Folder).ToDictionary(record => record.Id, record => record.SpaceId);
-        var deleted = records.Where(record => record.Kind == SyncRecordKind.Folder && record.Tombstone is not null).Select(record => record.Id).ToHashSet();
+        var emptied = records.Where(record => record.Payload is FolderPayload { IsEmptied: true }).Select(record => record.Id).ToHashSet();
+        var deletedAt = records.Where(record => record.Kind == SyncRecordKind.Folder && record.Tombstone is not null)
+            .ToDictionary(record => record.Id, record => record.Tombstone!.DeletedAt.Moment);
+        var deleted = deletedAt.Keys.ToHashSet();
         var locals = session.Spaces.ToDictionary(space => space.Id);
-        var pending = session.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
+        var pending = session.DeletingSpaceIds;
         var brandingIds = records.Where(record => record.Kind == SyncRecordKind.Space && record.SuppliesBranding).Select(record => record.Id).ToHashSet();
         var spaces = new List<SpaceState>();
         var profiles = new HashSet<Guid>();
@@ -30,8 +29,9 @@ public static class NativeSyncMaterializer {
             locals.TryGetValue(remote.Id, out var local);
             if (local is not null && local.OwnProfileId != remote.ProfileId) throw Error(SyncRecordFlaw.ProfileChanged, remote.Id);
             if (pending.Contains(remote.Id) && local is not null) { spaces.Add(local); continue; }
-            var folders = Folders(remote.Id, records, policy, local, owners, deleted);
-            var tabs = Tabs(remote.Id, records, policy, local, folders, owners, deleted);
+            var folders = Folders(remote.Id, records, policy, local, owners, deleted, emptied);
+            var tabs = Tabs(remote.Id, records, policy, local, folders, owners, deletedAt);
+            folders = Shown(folders, new FolderTree(folders).Holding(tabs), emptied);
             var archive = Archive(remote.Id, records, policy, local, tabs);
             var history = History(remote.Id, records, policy, local);
             var localSplitIds = (local?.Tabs ?? []).Where(tab => !Portable(tab) && tab.SplitGroupId is not null)
@@ -132,28 +132,70 @@ public static class NativeSyncMaterializer {
 
     #region Actions - Folders and tabs
 
+    /// The folders of `space` the records and this device hold, leaving out a
+    /// hidden one that no tab could sit in, so hidden folders never count
+    /// toward the most a Space keeps. A tab or folder in a deleted folder this
+    /// device holds counts toward the folders above it, which it moves up to.
     private static List<FolderState> Folders(Guid space, IReadOnlyList<SyncSessionRecord> records, SyncPreferences policy, SpaceState? local,
-        IReadOnlyDictionary<Guid, Guid> owners, HashSet<Guid> deleted) {
+        IReadOnlyDictionary<Guid, Guid> owners, HashSet<Guid> deleted, IReadOnlySet<Guid> emptied) {
         var colorIds = records.Where(record => record.Kind == SyncRecordKind.Folder && record.SuppliesFolderColor).Select(record => record.Id).ToHashSet();
-        var synced = Payloads<FolderPayload>(records, space).Where(folder => policy.Includes(folder.Location))
+        IReadOnlyList<FolderState> synced = Payloads<FolderPayload>(records, space).Where(folder => policy.Includes(folder.Location))
             .OrderBy(folder => folder.OrderToken, StringComparer.Ordinal).ThenBy(folder => folder.Id.ToString("D"), StringComparer.Ordinal)
             .Select(folder => new FolderState(folder.Id, folder.Location, folder.Title, folder.Symbol, colorIds.Contains(folder.Id) ? folder.Color : null, folder.ParentId,
-                folder.IsCollapsed, folder.CollapseModifiedAt?.Moment, folder.OrderAnchorTabId)).ToArray();
+                folder.IsCollapsed, folder.CollapseModifiedAt?.Moment, folder.OrderAnchorTabId, folder.IsGroup)).ToArray();
+        var places = Payloads<TabPayload>(records, space).Select(tab => tab.FolderId).Concat((local?.Tabs ?? []).Select(tab => tab.FolderId));
+        var bridges = (local?.Folders ?? []).Where(folder => deleted.Contains(folder.Id));
+        synced = Shown(synced, new FolderTree([.. synced, .. bridges]).Holding(places), emptied);
         IReadOnlyList<FolderState> resolved;
-        try { resolved = FolderTree.Materialized(space, synced, owners, LocalFolders(local), deleted); } catch (BrowserRuleException) { throw Error(SyncRecordFlaw.InvalidFolderHierarchy, space); }
+        try { resolved = FolderTree.SettledGroups(FolderTree.Materialized(space, synced, owners, LocalFolders(local), deleted)); } catch (BrowserRuleException) { throw Error(SyncRecordFlaw.InvalidFolderHierarchy, space); }
         var included = resolved.Select(folder => folder.Id).ToHashSet();
         return [.. resolved, .. (local?.Folders ?? []).Where(folder => !included.Contains(folder.Id) && !policy.Includes(folder.Location))];
     }
 
-    private static TabState Tab(TabPayload remote, TabState? local, bool archived = false) => new(remote.Id, remote.Title,
-        remote.Url is { } url ? url.Spelled ?? url.Text : null, remote.NativeContent,
-        !archived && remote.Placement.IsDurable ? remote.SavedUrl?.Spelled ?? remote.SavedUrl?.Text ?? remote.Url?.Spelled ?? remote.Url?.Text : null,
-        remote.Symbol, local?.FaviconUrl, local?.IconAccent, local?.StoredIconMode, archived ? TabPlacement.Current : remote.Placement,
-        null, archived ? null : remote.SplitGroupId, remote.LastActivatedAt.Moment, remote.PositionModifiedAt?.Moment,
-        remote.CustomTitle, remote.TitleModifiedAt?.Moment, remote.KeepsPageLoaded);
+    /// `folders` without the hidden ones that hold none of `holding`, the
+    /// folders that hold a tab, nor a folder that stays: a group, or a folder
+    /// `emptied` names, of the open tabs. Such a folder shows again as soon as
+    /// a tab sits in it, and its record stays meanwhile.
+    private static List<FolderState> Shown(IReadOnlyList<FolderState> folders, IReadOnlySet<Guid> holding, IReadOnlySet<Guid> emptied) {
+        var hidden = new FolderTree(folders).Empty(holding,
+            folder => folder.GoesWhenEmptied && ((folder.IsGroup && folder.ParentId is null) || emptied.Contains(folder.Id)));
+        return [.. folders.Where(folder => !hidden.Contains(folder.Id))];
+    }
 
+    /// The tab `remote` describes, keeping what never syncs from `local`: its
+    /// favicon, and the saved page's favicon and accent while the tab still
+    /// belongs to the same address. A record without a saved title for its
+    /// saved address keeps the one this device holds for that address.
+    private static TabState Tab(TabPayload remote, TabState? local, bool archived = false) {
+        var savedUrl = !archived && remote.Placement.IsDurable
+            ? remote.SavedUrl?.Spelled ?? remote.SavedUrl?.Text ?? remote.Url?.Spelled ?? remote.Url?.Text : null;
+        // The record spells the address as sync does, so the local one is compared spelled the same way.
+        var sameSavedPage = savedUrl is not null && local?.SavedUrl is { } localSaved
+            && (new SyncedAddress(localSaved).Spelled ?? localSaved) == savedUrl;
+        return new(remote.Id, remote.Title, remote.Url is { } url ? url.Spelled ?? url.Text : null, remote.NativeContent, savedUrl,
+            remote.Symbol, local?.FaviconUrl, local?.IconAccent, local?.StoredIconMode, archived ? TabPlacement.Current : remote.Placement,
+            null, archived ? null : remote.SplitGroupId, remote.LastActivatedAt.Moment, remote.PositionModifiedAt?.Moment,
+            remote.CustomTitle, remote.TitleModifiedAt?.Moment, remote.KeepsPageLoaded,
+            savedUrl is null ? null : SavedPageTitle(remote) ?? (sameSavedPage ? local!.SavedTitle : null),
+            sameSavedPage ? local!.SavedFaviconUrl : null, sameSavedPage ? local!.SavedIconAccent : null);
+    }
+
+    /// The saved page's title `remote` carries, when it was written for the
+    /// address the tab is saved at. A build that changes the saved address
+    /// without knowing the title carries the old one forward with its old
+    /// address, which no longer counts.
+    private static string? SavedPageTitle(TabPayload remote) =>
+        remote.SavedTitleUrl is { } titled && titled == remote.SavedUrl ? remote.SavedTitle : null;
+
+    /// The tabs of `space` the records and this device hold. A tab whose
+    /// folder was deleted, at the time `deletedAt` gives, moves to that
+    /// folder's nearest ancestor still here, dated a moment after the copy it
+    /// came from was placed, or at the deletion for a copy never moved: its
+    /// move wins over that copy, so the tab never comes to name a folder no
+    /// device holds, and over no move made since.
     private static List<TabState> Tabs(Guid space, IReadOnlyList<SyncSessionRecord> records, SyncPreferences policy, SpaceState? local,
-        IReadOnlyList<FolderState> folders, IReadOnlyDictionary<Guid, Guid> owners, HashSet<Guid> deleted) {
+        IReadOnlyList<FolderState> folders, IReadOnlyDictionary<Guid, Guid> owners, IReadOnlyDictionary<Guid, DateTimeOffset> deletedAt) {
+        var deleted = deletedAt.Keys.ToHashSet();
         var locals = local?.Tabs ?? [];
         var localOnly = locals.Select((tab, index) => (tab, index)).Where(item => !Portable(item.tab)).ToArray();
         var localOnlyIds = localOnly.Select(item => item.tab.Id).Concat((local?.ArchivedTabs ?? [])
@@ -168,11 +210,14 @@ public static class NativeSyncMaterializer {
         var localFolders = LocalFolders(local);
         foreach (var remote in synced) {
             var folder = remote.FolderId;
+            var moved = remote.PositionModifiedAt?.Moment;
             if (remote.Placement.HoldsFolders && folder is { } missing && !folderIds.Contains(missing)) {
                 if (owners.TryGetValue(missing, out var owner) && owner != space) throw Error(SyncRecordFlaw.DanglingFolder, remote.Id);
                 if (!FolderTree.TryPromote(missing, folderIds, localFolders, deleted, out folder)) continue;
+                moved = moved is { } placed ? placed.AddMilliseconds(1) : deletedAt[missing];
             }
-            result.Add(Tab(remote, byId.GetValueOrDefault(remote.Id)) with { FolderId = remote.Placement.HoldsFolders ? folder : null });
+            var tab = Tab(remote, byId.GetValueOrDefault(remote.Id));
+            result.Add(tab with { FolderId = remote.Placement.HoldsFolders ? folder : null, PositionModifiedAt = moved });
         }
         if (!TabPlacement.All.All(placement => placement.Holds(result.Count(tab => tab.Placement == placement))))
             throw Error(SyncRecordFlaw.TooManyPinnedTabs, space);
@@ -204,7 +249,7 @@ public static class NativeSyncMaterializer {
         foreach (var record in records.Where(record => record.Kind == SyncRecordKind.Tab && record.SpaceId == space
             && record.Tombstone?.Reason.IsExplicit == true)) {
             if (projected.Contains(record.Id) || !localTabs.TryGetValue(record.Id, out var tab)) continue;
-            result.Add(new(tab with { Placement = TabPlacement.Current, FolderId = null, SavedUrl = null, SplitGroupId = null },
+            result.Add(new(tab.SavedAt(null) with { Placement = TabPlacement.Current, FolderId = null, SplitGroupId = null },
                 record.Tombstone!.DeletedAt.Moment, ArchiveReason.Received(explicitDeletion: true)));
         }
         return [.. result.Concat(localOnly).OrderByDescending(archived => archived.ArchivedAt)];

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "search-host-trailing-dot",
+      "category": "fixed",
+      "message": "A custom search engine on localhost or a .local name written with a trailing or full-width dot is refused, as it already was without one."
+    }
+  ]
+}

@@ -13,6 +13,7 @@ struct BrowserSpaceHeaderActionsMenu: View {
     let actions: BrowserSpaceHeaderActions
 
     @Environment(\.supportsMultipleWindows) private var supportsMultipleWindows
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         styledMenu
@@ -62,6 +63,14 @@ struct BrowserSpaceHeaderActionsMenu: View {
             action: actions.createFolder
         )
 
+        if let collapseAllFolders = actions.collapseAllFolders {
+            Button(ShortcutCommand.collapseAllFolders) {
+                withAnimation(CrestMotion.disclosure.unlessReducingMotion(reduceMotion), collapseAllFolders)
+            }
+            .disabled(!actions.canCollapseAllFolders())
+            .accessibilityIdentifier("collapse-all-folders")
+        }
+
         Button(ShortcutCommand.showHistory, action: actions.showHistory)
 
         if let showPasswords = actions.showPasswords {
@@ -93,7 +102,8 @@ struct BrowserSpaceHeaderActionsMenu: View {
                 .accessibilityIdentifier("settings-button")
         }
 
-        Button(ShortcutCommand.clearUnpinnedTabs, action: actions.cleanup)
+        Button(ShortcutCommand.clearOtherTabs, action: actions.clearOtherTabs)
+        Button(ShortcutCommand.clearAllTabs, action: actions.clearAllTabs)
     }
 
     @ViewBuilder

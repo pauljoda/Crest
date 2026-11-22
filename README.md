@@ -1,19 +1,18 @@
 <div align="center">
-  <img src="Website/assets/crest-logo.svg" width="128" alt="Crest app icon">
-  <h1>Crest</h1>
+  <img src="Website/assets/readme/banner.png" width="800" alt="Crest: Spaces for your browsing">
   <p><strong>An open source browser for Mac, iPhone, and iPad.</strong></p>
   <p>Built with SwiftUI, running Chromium and WebKit on Mac, with separate Spaces for different parts of your life.</p>
   <p>
-    <a href="https://github.com/pauljoda/Crest/actions/workflows/ci.yml"><img alt="Build Crest" src="https://github.com/pauljoda/Crest/actions/workflows/ci.yml/badge.svg"></a>
-    <a href="https://github.com/pauljoda/Crest/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/pauljoda/Crest?display_name=tag&sort=semver&filter=v*"></a>
-    <a href="LICENSE"><img alt="MPL-2.0 license" src="https://img.shields.io/badge/license-MPL--2.0-315f93"></a>
+    <a href="https://github.com/crest-browser/Crest/actions/workflows/ci.yml"><img alt="Build Crest" src="https://github.com/crest-browser/Crest/actions/workflows/ci.yml/badge.svg"></a>
+    <a href="https://github.com/crest-browser/Crest/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/crest-browser/Crest?display_name=tag&sort=semver&filter=v*"></a>
+    <a href="LICENSE"><img alt="MPL-2.0 license" src="https://img.shields.io/badge/license-MPL--2.0-2B6CC4"></a>
   </p>
   <p>
     <a href="https://crestbrowser.com/"><strong>Visit the product site</strong></a>
     ·
     <a href="https://crestbrowser.com/guides/">Read the guides</a>
     ·
-    <a href="https://github.com/pauljoda/Crest/releases/latest">Download for Mac</a>
+    <a href="https://github.com/crest-browser/Crest/releases/latest">Download for Mac</a>
     ·
     <a href="https://github.com/users/pauljoda/projects/3">Roadmap</a>
     ·
@@ -21,12 +20,12 @@
   </p>
 </div>
 
-Browse Mac releases by channel: [Stable](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse),
-[Nightly](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22), or
-[Development](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22).
+Browse Mac releases by channel: [Stable](https://github.com/crest-browser/Crest/releases?q=prerelease%3Afalse),
+[Nightly](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22), or
+[Development](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22).
 
 <p align="center">
-  <a href="Website/assets/crest-work-mac.png"><img src="Website/assets/crest-work-mac.png" width="100%" alt="Crest on Mac with Lion Work first, Winter Personal second, and Audience research open beside the Launch Atlas folder"></a>
+  <img src="Website/assets/readme/hero.png" width="100%" alt="Crest on Mac: the Work Space with its pins and the Launch Atlas folder, and the command palette searching for launch">
 </p>
 
 ## A browser with boundaries
@@ -35,7 +34,15 @@ Most browsers put every login, tab, and distraction into one long-lived containe
 
 Switching Spaces changes more than the color of the window. It changes the browsing context.
 
+<p align="center">
+  <img src="Website/assets/readme/spaces.png" width="100%" alt="Two iPhones: the Work Space and the Personal Space, each with its own pins, folders and tabs">
+</p>
+
 When several Spaces should share one set of sign-ins, make them **Sub-Spaces**: each keeps its own tabs and look while the group shares cookies, history, passwords, and extensions. [Read the Sub-Spaces guide.](https://crestbrowser.com/guides/sub-spaces/)
+
+<p align="center">
+  <img src="Website/assets/readme/sub-spaces.png" width="100%" alt="Three Sub-Spaces, Work, Client A and Client B, each with its own tabs and look, sharing sign-ins and cookies, history, passwords, extensions and site permissions">
+</p>
 
 ## Two engines on Mac
 
@@ -52,15 +59,18 @@ per-website rules in **Settings → Engines**. iPhone and iPad use WebKit. The
 [engine guide](https://crestbrowser.com/guides/engines/) lists what each engine
 supports.
 
+<p align="center">
+  <img src="Website/assets/readme/engines.png" width="100%" alt="Chromium, the Mac default with Crest's privacy changes and Chrome Web Store extensions, and WebKit on Mac, iPhone and iPad, with Reader, whole-page translation and FairPlay video">
+</p>
+
 ## Crest Studio and Appearance
 
-**Crest Studio** puts each Space's crest on that Space's own sidebar background. Start from a template, then step through shape, field, band, emblem, border, finish and sidebar, choosing from previews of your own crest. Every part of the crest and the sidebar has its own color, named by what it paints. Use heraldic artwork, emoji, monograms, or a searchable SF Symbols picker, and Shuffle and Undo freely.
+**Crest Studio** gives each Space its own look. Pick one of thirteen color sets, or set your own Background and Accent, each one color or a gradient of up to three, chosen on a color wheel with brightness and texture. Then give the Space a crest, a symbol from a searchable SF Symbols picker, or an emoji, and Shuffle until it feels right. Crests and sidebar patterns sit under More Customization.
 
 **Appearance** lets you dock the sidebar on either edge, go borderless, adjust tab shape and scale, choose a pin layout, and tune tab and address-field colors, or let them follow each Space's accent. Start with a preset, see changes live, and reset individual settings. Choose an app icon palette, folder colors and icons, and a default page zoom from 50% to 300%.
 
 <p align="center">
-  <a href="Website/assets/crest-studio-mac.png"><img src="Website/assets/crest-studio-mac.png" width="49%" alt="Crest Studio with a Winter crest on its Space’s sidebar background, its colors, the shape step, and the live sidebar"></a>
-  <a href="Website/assets/crest-look-and-feel-mac.png"><img src="Website/assets/crest-look-and-feel-mac.png" width="49%" alt="Appearance settings with window, accent, tab, and pin controls"></a>
+  <img src="Website/assets/readme/studio.png" width="100%" alt="Crest Studio for the Work Space: its crest, Background and Accent, the color sets, and the crest picker">
 </p>
 
 ## Browsing features
@@ -73,7 +83,9 @@ supports.
 - **Search and commands.** Open a URL, search the web, find tabs and history in your Space, or run a command from one field. Choose custom search engines and optional suggestions. Mac shortcuts can be rebound.
 - **Getting Started.** Learn tabs, pins, and folders in an interactive browser tab, with Split View practice on Mac.
 
-![Two pages open side by side in a Split View group in Crest on Mac](Website/assets/crest-split-view-mac.png)
+<p align="center">
+  <img src="Website/assets/readme/split-view.png" width="100%" alt="Crest on Mac with two pages side by side in a Split View group">
+</p>
 
 ## Page tools
 
@@ -90,7 +102,11 @@ supports.
 
 **Private Spaces** use temporary website storage and stay out of normal history, restoration, and sync. They can require device authentication and relock when Crest leaves the foreground. **Crest Passwords** keeps origin- and Space-matched credentials in the system Keychain, with authentication for sensitive access.
 
-Site permissions and content blocking are controlled per Space. Built-in ad and tracker blocking covers iPhone, iPad, and WebKit pages; on Chromium pages, install a blocking extension. Closed and cleaned-up tabs go to a recoverable Archive, subject to your retention settings. **Keep Loaded** protects a page from ordinary unloading when its live state matters.
+Site permissions and content blocking are controlled per Space. Built-in ad and tracker blocking covers every page, in Chromium and WebKit: choose Off, Balanced, or Strict, and hide anything else with Block Element. Closed and cleaned-up tabs go to a recoverable Archive, subject to your retention settings. **Keep Loaded** protects a page from ordinary unloading when its live state matters.
+
+<p align="center">
+  <img src="Website/assets/readme/privacy.png" width="100%" alt="Content blocking at Off, Balanced or Strict, with EasyList, EasyPrivacy, uBlock Origin lists, your language and your own filters, and Block Element">
+</p>
 
 Optional **iCloud sync** carries durable Spaces, tabs, folders, Split View groups, appearance, history, and Archive between devices. Password values stay out of CloudKit; eligible passwords can use iCloud Keychain separately. Start a browser import on Mac, review each destination Space, or export a portable Crest archive.
 
@@ -101,13 +117,12 @@ Read the [privacy policy](https://crestbrowser.com/privacy/), [Space isolation g
 The same Spaces, shaped for each screen. iPad keeps the sidebar beside your page; iPhone gives your tabs and folders their own view.
 
 <p align="center">
-  <a href="Website/assets/crest-work-ipad.png"><img src="Website/assets/crest-work-ipad.png" width="72%" alt="Lion Work first and Winter Personal second on iPad, with Audience research open"></a>
-  <a href="Website/assets/crest-work-iphone-sidebar.png"><img src="Website/assets/crest-work-iphone-sidebar.png" width="25%" alt="The same Spaces, Launch Atlas folder, and selected Audience research tab in the iPhone sidebar"></a>
+  <img src="Website/assets/readme/devices.png" width="100%" alt="Crest on iPad with the sidebar beside the page, and on iPhone with the page and the address field at the bottom">
 </p>
 
 | Platform | Install |
 | --- | --- |
-| Mac · Apple silicon · macOS 26.1+ | [Signed, notarized download](https://github.com/pauljoda/Crest/releases/latest) with built-in Sparkle updates.<br><br>Or install via Homebrew:<br>`brew install --cask crest-browser` |
+| Mac · Apple silicon · macOS 26.1+ | [Signed, notarized download](https://github.com/crest-browser/Crest/releases/latest) with built-in Sparkle updates.<br><br>Or install via Homebrew:<br>`brew install --cask crest-browser` |
 | iPhone · iOS 26.1+ | [App Store](https://apps.apple.com/us/app/crest-browser/id6797335023) |
 | iPad · iPadOS 26.1+ | [App Store](https://apps.apple.com/us/app/crest-browser/id6797335023) |
 | iPhone & iPad beta | [TestFlight](https://testflight.apple.com/join/vV1CM49Q) |
@@ -137,7 +152,7 @@ Requirements:
 - .NET SDK pinned by `CrestCore/global.json`, installable with `Scripts/control-plane/install-dotnet.sh`
 
 ```bash
-git clone https://github.com/pauljoda/Crest.git
+git clone https://github.com/crest-browser/Crest.git
 cd Crest
 Scripts/bootstrap.sh
 open Crest.xcodeproj
@@ -149,12 +164,10 @@ Xcode builds and embeds the self-contained .NET core for Mac, iOS, and Simulator
 
 ## Releases and updates
 
-[Crest 0.9.1](CHANGELOG.md#091---2026-11-10) updates Chromium to
-157.0.8103.51, which fixes CVE-2026-125350, a security flaw being exploited in
-the wild. The [Crest 0.9 release notes](CHANGELOG.md#090---2026-11-10) describe
-Sub-Spaces, built-in ad blocking, and the Chromium engine now built from
-Chromium itself. Crest requires Apple silicon and macOS 26.1 or later on Mac; iPhone and
-iPad use WebKit.
+The [Crest 0.10 release notes](https://crestbrowser.com/releases/mac/stable/0.10.8/) describe three
+styles, the address bar above the page on Mac, and new sidebar and color
+settings. Crest requires Apple silicon and macOS 26.1 or later on Mac; iPhone
+and iPad use WebKit.
 
 When updating from a WebKit-only release, your Spaces, tabs, history, and Crest
 Passwords carry over. Chromium has separate website storage, so sites may ask
@@ -195,9 +208,9 @@ Crest is under active development. The current implementation includes the core 
 
 Use [r/CrestBrowser](https://www.reddit.com/r/CrestBrowser) for questions,
 feedback, ideas, and website or extension compatibility discussion. Use
-[GitHub Issues](https://github.com/pauljoda/Crest/issues/new/choose) for
+[GitHub Issues](https://github.com/crest-browser/Crest/issues/new/choose) for
 reproducible bugs and concrete tracked outcomes. Security concerns belong in a
-[private vulnerability report](https://github.com/pauljoda/Crest/security/advisories/new),
+[private vulnerability report](https://github.com/crest-browser/Crest/security/advisories/new),
 never a public post. [SUPPORT.md](SUPPORT.md) explains each route in detail.
 
 Crest is one of several open source projects built by Paul Davis. You can
@@ -209,17 +222,19 @@ buy roadmap priority or private access.
 ## Sponsors
 
 Monthly support helps pay for hosting, signing, testing, and development across
-Paul's open source projects. Sponsors can be recognized in the public
-[sponsor roll](SPONSORS.md) at one of three levels:
+Paul's open source projects. Monthly supporters are listed on the
+[credits page](https://crestbrowser.com/credits/#supporters) at one of three
+levels:
 
 - **Sponsor — $25/month:** top placement with an optional approved link.
 - **Sustainer — $10/month:** higher placement with an optional approved link.
-- **Supporter — $3/month:** name in the public roll.
+- **Supporter — $3/month:** name on the credits page.
 
-Every level can also have a sponsor flair on
-[r/CrestBrowser](https://www.reddit.com/r/CrestBrowser). Recognition is
-optional. A listing is a thank-you, not an endorsement or a way to buy roadmap
-priority, private support, or project ownership. See the membership tiers on
+Supporters are listed by their Ko-fi or Patreon name. Ask there to add a link,
+change your listing, or be hidden. Every level can also have a sponsor flair on
+[r/CrestBrowser](https://www.reddit.com/r/CrestBrowser). A listing is a
+thank-you, not an endorsement or a way to buy roadmap priority, private support,
+or project ownership. See the membership tiers on
 [Ko-fi](https://ko-fi.com/pauljoda/tiers) or
 [Patreon](https://www.patreon.com/CrestBrowser) to become a monthly sponsor.
 
@@ -272,8 +287,8 @@ of each platform.
 
 ## Contributors
 
-<a href="https://github.com/pauljoda/Crest/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=pauljoda/Crest" alt="People who have contributed to Crest">
+<a href="https://github.com/crest-browser/Crest/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=crest-browser/Crest" alt="People who have contributed to Crest">
 </a>
 
 ## License and brand
@@ -287,10 +302,10 @@ in [TRADEMARKS.md](TRADEMARKS.md). Third-party notices are collected in
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=pauljoda%2Fcrest&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=crest-browser%2Fcrest&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=pauljoda/crest&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=pauljoda/crest&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=pauljoda/crest&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=crest-browser/crest&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=crest-browser/crest&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=crest-browser/crest&type=date&legend=top-left" />
  </picture>
 </a>

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-03-extension-debugger-reconnect",
+      "category": "fixed",
+      "message": "Keep extension debugging sessions stable when an extension reattaches to a page quickly"
+    }
+  ]
+}

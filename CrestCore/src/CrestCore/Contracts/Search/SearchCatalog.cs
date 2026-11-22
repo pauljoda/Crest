@@ -108,6 +108,15 @@ public sealed record SearchCatalog(IReadOnlyList<SearchProviderSettings> BuiltIn
         (PrivateCustomId is { } custom ? Custom.FirstOrDefault(provider => provider.Id == custom)?.Provider : null)
         ?? Resolving(PrivateBuiltIn ?? BuiltInSearchProvider.DuckDuckGo);
 
+    /// The providers Settings and setup offer as a default: those of a kind
+    /// that may be one and are on, and the two defaults themselves.
+    public IEnumerable<SearchProvider> DefaultChoices {
+        get {
+            var defaults = new[] { Default, PrivateDefault };
+            return Providers.Where(provider => provider.Kind.CanBeDefault && (IsEnabled(provider) || defaults.Contains(provider)));
+        }
+    }
+
     #endregion
 
     #region Constructors

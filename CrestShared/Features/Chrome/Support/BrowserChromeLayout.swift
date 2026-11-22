@@ -8,7 +8,7 @@ enum BrowserChromeLayout {
     static let addressEditingRingWidth: CGFloat = 0.5
     static let addressHeight: CGFloat = 36
     static let addressCornerRadius = CrestRadius.compact
-    /// About as narrow as Arc's sidebar goes: just wide enough for the
+    /// As narrow as a vertical sidebar usefully goes: just wide enough for the
     /// navigation strip's narrowed back, forward and reload beside the
     /// window's own controls.
     static let sidebarMinimumWidth: CGFloat = 164

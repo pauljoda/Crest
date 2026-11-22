@@ -8,7 +8,7 @@ namespace CrestCore.Contracts;
 /// `Existing` means. The core reads the file and keeps nothing of it. Throws
 /// `Rejected` with `InvalidCredentialFile` for a file it cannot import at all.
 [HoldsSecrets]
-[MessageLimit(64 * 1024 * 1024)]
+[MessageLimit(MessageLimitAttribute.SessionBytes)]
 public sealed record CredentialImportPreview(byte[] Document, IReadOnlyList<ExistingCredential> Existing) : Query<CredentialImportPlan> {
     #region Actions - Text
 

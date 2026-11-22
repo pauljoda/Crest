@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "keep-site-control-popover-text-readable",
+      "category": "fixed",
+      "message": "Keep site controls and permission prompts readable in light-colored Spaces"
+    }
+  ]
+}

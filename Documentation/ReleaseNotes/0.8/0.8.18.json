@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "quick-window-page-tools",
+      "category": "fixed",
+      "message": "Translate, Reader, content blocking, the Web Inspector and moving a page to the other engine now work on a Quick Window’s page."
+    }
+  ]
+}

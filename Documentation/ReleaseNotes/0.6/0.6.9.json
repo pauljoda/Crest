@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "preview-editable-ui-components-in-place",
+      "category": "internal",
+      "message": "Add interactive component previews beside editable UI and isolate visual content from saved appearance preferences"
+    }
+  ]
+}

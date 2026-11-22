@@ -10,7 +10,7 @@ struct BrowserSiteExtensionsHeader: View {
             Spacer(minLength: CrestSpacing.small)
             Button(action: manageExtensions) {
                 Image(systemName: "plus")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(CrestTypography.sans(BrowserSiteControlMetrics.manageExtensionGlyphSize, weight: .semibold))
             }
             .buttonStyle(
                 CrestChromeButtonStyle(
@@ -18,7 +18,6 @@ struct BrowserSiteExtensionsHeader: View {
                         width: BrowserSiteControlMetrics.manageExtensionControlSize,
                         height: BrowserSiteControlMetrics.manageExtensionControlSize
                     ),
-                    cornerRadius: 6,
                     showsRestingFill: true
                 )
             )

@@ -38,8 +38,10 @@ struct BrowserFolderArtwork: View {
     }
 }
 
-/// Holds the symbol in its column, and sizes it where the shell reads the row
-/// from further away than a desk.
+/// Holds the symbol in its column, which is the tab rows' favicon box, so
+/// the folder's icon and title line up with the favicons and titles beside
+/// it, and sizes it where the shell reads the row from further away than a
+/// desk.
 private struct BrowserFolderIconColumn: ViewModifier {
     let metrics: BrowserFolderHeaderMetrics
     let isExpanded: Bool
@@ -49,12 +51,13 @@ private struct BrowserFolderIconColumn: ViewModifier {
         content
             .font(
                 .system(
-                    size: ((metrics.iconGlyphSize ?? 16) + 2) * BrowserSidebarDensity(iconScale).contentScale,
+                    size: (metrics.iconGlyphSize ?? 16) * BrowserSidebarDensity(iconScale).contentScale,
                     weight: metrics.iconGlyphWeight)
             )
-            // Reserve the open front's projected edge without moving the title
-            // when the folder toggles. The bottom hinge lowers its optical center.
+            // The bottom hinge lowers its optical center.
             .offset(y: (isExpanded ? -1.5 : -0.5) * BrowserSidebarDensity(iconScale).contentScale)
-            .frame(width: (metrics.iconWidth + 6) * BrowserSidebarDensity(iconScale).contentScale)
+            .frame(
+                width: metrics.iconWidth
+                    * (metrics.scalesIconColumn ? BrowserSidebarDensity(iconScale).contentScale : 1))
     }
 }

@@ -28,7 +28,7 @@ final class BrowserStore {
     /// not finish, or a Space deletion whose cleanup needs another attempt.
     /// A rule refusing an intent is never one.
     var localSyncErrorDescription: String?
-    let browsingMode: BrowserBrowsingMode
+    let workspaceKind: WorkspaceKind
     let tabMultiSelection = BrowserTabMultiSelection()
     let family: BrowserStoreFamily
     /// The process's core, which every window of every browsing mode shares.
@@ -75,7 +75,7 @@ final class BrowserStore {
         return windowModel.shownTabID(in: spaceID)
     }
 
-    var isPrivateBrowsing: Bool { browsingMode.isPrivate }
+    var isPrivateBrowsing: Bool { workspaceKind.isPrivate }
     var isTemporaryWorkspace: Bool { temporarySourceAssignment != nil }
     var temporarySourceAssignment: BrowserSpaceRuntimeAssignment? { family.temporarySourceAssignment }
 
@@ -91,9 +91,9 @@ final class BrowserStore {
     /// Shows the Space before or after this window's, wrapping, among the
     /// Spaces it may show, and answers it; nil when the core showed no other.
     @discardableResult
-    func selectAdjacentSpace(_ direction: BrowserSpaceSwipeDirection) -> UUID? {
+    func selectAdjacentSpace(_ direction: AdjacentDirection) -> UUID? {
         let shown = selectedSpaceID
-        guard sendWindowIntent(ShowAdjacentSpace(windowID: windowID, direction: direction.core)),
+        guard sendWindowIntent(ShowAdjacentSpace(windowID: windowID, direction: direction)),
             selectedSpaceID != shown
         else { return nil }
         spaceStep = BrowserSpaceStep(origin: shown, destination: selectedSpaceID, direction: direction)
@@ -141,15 +141,19 @@ final class BrowserStore {
     }
 
     /// Shows the tab or split `item` stands for, focusing the tab the core
-    /// named. False when the core showed nothing new.
+    /// named, in its own Space, which may be another Space of the shown
+    /// Space's Sub-Space group. False when the core showed nothing new.
     @discardableResult
     func showRecentTab(_ item: RecentTabItem) -> Bool {
-        guard let spaceID = shownSpace?.id else { return false }
         let shown = shownTab?.id
+        let space = selectedSpaceID
         guard
-            sendWindowIntent(ShowTab(windowID: windowID, spaceID: spaceID, tabID: item.focusedTabID)),
+            sendWindowIntent(ShowTab(windowID: windowID, spaceID: item.spaceID, tabID: item.focusedTabID)),
             shownTab?.id != shown
         else { return false }
+        // A selection belongs to the Space it was made in, as a Space switch
+        // drops it.
+        if item.spaceID != space { tabMultiSelection.clear() }
         windowRevision &+= 1
         return true
     }
@@ -213,15 +217,15 @@ final class BrowserStore {
         showing spaceID: UUID? = nil,
         tabs: [UUID: UUID] = [:],
         credentialVault: any CredentialVault = InMemoryCredentialVault(),
-        browsingMode: BrowserBrowsingMode = .standard,
+        workspaceKind: WorkspaceKind = .persistent,
         linkPreferences: BrowserLinkPreferenceStore? = nil,
         core: CrestCore = CrestCore()
     ) {
         self.init(
             opening: BrowserWindowOpening(showingSpaceID: spaceID, showingTabs: tabs, restoresTabs: spaceID == nil),
             credentialVault: credentialVault,
-            browsingMode: browsingMode,
-            family: BrowserStoreFamily(seed: seed, images: images, browsingMode: browsingMode, core: core),
+            workspaceKind: workspaceKind,
+            family: BrowserStoreFamily(seed: seed, images: images, workspaceKind: workspaceKind, core: core),
             linkPreferences: linkPreferences,
             core: core
         )
@@ -232,7 +236,7 @@ final class BrowserStore {
     init(
         opening: BrowserWindowOpening = BrowserWindowOpening(),
         credentialVault: any CredentialVault,
-        browsingMode: BrowserBrowsingMode,
+        workspaceKind: WorkspaceKind,
         family: BrowserStoreFamily,
         linkPreferences: BrowserLinkPreferenceStore? = nil,
         core: CrestCore
@@ -241,7 +245,7 @@ final class BrowserStore {
         self.linkPreferences = linkPreferences ?? BrowserLinkPreferenceStore(core: core)
         self.core = core
         self.credentialVault = credentialVault
-        self.browsingMode = browsingMode
+        self.workspaceKind = workspaceKind
         self.family = family
         localSyncErrorDescription = nil
         lastWindow = WindowState(
@@ -310,7 +314,7 @@ extension BrowserStore {
         let store = BrowserStore(
             opening: opening,
             credentialVault: credentialVault,
-            browsingMode: browsingMode,
+            workspaceKind: workspaceKind,
             family: family,
             linkPreferences: linkPreferences,
             core: core

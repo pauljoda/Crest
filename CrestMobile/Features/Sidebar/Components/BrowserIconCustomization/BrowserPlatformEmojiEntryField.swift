@@ -1,7 +1,8 @@
 import SwiftUI
 
 enum BrowserPlatformEmojiInput {
-    static let presentation = BrowserNativeEmojiPickerPresentation.focusedTextInput
+    /// The emoji button focuses the field so the emoji keyboard can come up.
+    static var actionTitle: LocalizedStringKey { "Use Emoji Keyboard" }
 }
 
 struct BrowserPlatformEmojiEntryField: View {
@@ -16,7 +17,7 @@ struct BrowserPlatformEmojiEntryField: View {
             .focused($isFocused)
             .submitLabel(.done)
             .onSubmit(commit)
-            .accessibilityIdentifier("browser-emoji-icon-field")
+            .accessibilityIdentifier(BrowserMobileAccessibilityID.emojiIconField)
         BrowserNativeEmojiPickerButton { isFocused = true }
     }
 }

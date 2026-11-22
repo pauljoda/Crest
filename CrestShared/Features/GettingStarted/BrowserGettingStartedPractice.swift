@@ -72,7 +72,7 @@ final class BrowserGettingStartedPractice {
     private static func opened() -> (browser: BrowserStore, tabIDs: [PracticeTab: UUID]) {
         let core = CrestCore()
         let browser = BrowserStore(
-            credentialVault: InMemoryCredentialVault(), browsingMode: .standard,
+            credentialVault: InMemoryCredentialVault(), workspaceKind: .persistent,
             family: BrowserStoreFamily(startingAs: .practice, in: core), core: core)
         var identities: [PracticeTab: UUID] = [:]
         guard let space = browser.workspaceModel?.spaces.models.first else { return (browser, identities) }
@@ -150,7 +150,7 @@ final class BrowserGettingStartedPractice {
         BrowserSidebarPageAccess(
             containsResidentPage: { _ in true }, containsResidentPageMatching: { _ in true },
             siteThemeIconAccent: { _ in nil }, residencyRevision: { 0 }, selectPages: {},
-            deactivatePagePresentation: {}, unloadPage: { _, _ in }, pullFavicon: { _, _ in nil },
+            deactivatePagePresentation: {}, unloadPages: { _, _ in }, pullFavicon: { _, _ in nil },
             downloadCenter: downloads)
     }
 

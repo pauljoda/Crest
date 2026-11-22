@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "add-to-home-screen",
+      "category": "new",
+      "message": "On iPhone and iPad, Add to Home Screen in a page’s actions puts the site on your Home Screen, where it opens as a web app or, with Open as Web App off, in your default browser.",
+      "platforms": ["ios"]
+    }
+  ]
+}

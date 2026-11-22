@@ -85,7 +85,7 @@ private struct BrowserTabPreviewCardSlot: View {
     /// The widest a held card grows across a narrow window.
     private static let heldMaximumWidth: CGFloat = 360
     /// How the card grows out of its row.
-    private static let opening = Spring(duration: 0.3, bounce: 0.12)
+    private static let opening = Spring(duration: 0.22, bounce: 0.12)
 
     // MARK: - Variables
 

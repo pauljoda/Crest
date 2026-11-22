@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-05-macos-space-picker-alignment",
+      "category": "improved",
+      "message": "Keep the Mac Space picker centered as it fills up, with arrows to reveal more Spaces"
+    }
+  ]
+}

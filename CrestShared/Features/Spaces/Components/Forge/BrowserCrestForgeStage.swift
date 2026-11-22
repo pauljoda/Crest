@@ -1,10 +1,14 @@
 import SwiftUI
 
-/// The crest on the Space's own sidebar field, beside the colors it and the
-/// sidebar wear, each labeled by what it paints.
+/// The crest on the Space's own sidebar field, beside the Space's colors:
+/// its Background and Accent, its Pattern while the sidebar shows one, and
+/// each part of the crest while `showsCrestColors`.
 struct BrowserCrestForgeStage: View {
     @Binding var branding: SpaceBranding
     let symbol: String
+    /// Whether the stage shows a color for each part of the crest, as More
+    /// Customization does.
+    var showsCrestColors = false
     /// The Space's name, which the stage lets a person edit where nothing
     /// else on the page does.
     var name: Binding<String>? = nil
@@ -83,22 +87,50 @@ struct BrowserCrestForgeStage: View {
         }
     }
 
-    /// The colors in columns of `columnWidth`: a crest's layers, or an
-    /// icon's one color, then the sidebar's three, which take wider columns
-    /// where that keeps their names whole.
+    /// The colors in columns of `columnWidth`: the Space's, which take wider
+    /// columns where that keeps their names whole, then the crest's parts.
     private func swatches(columnWidth: CGFloat, sidebarColumnWidth: CGFloat? = nil) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            swatchGroup(branding.iconStyle.title) {
-                ForEach(BrowserCrestForgeLayer.shown(by: branding)) { layer in
-                    layerSwatch(layer, columnWidth: columnWidth)
-                }
-            }
-            swatchGroup("Sidebar") {
-                ForEach(BrowserSpaceBrandColorRole.all) { role in
+            swatchGroup("Colors") {
+                ForEach(shownRoles) { role in
                     sidebarSwatch(role, columnWidth: sidebarColumnWidth ?? columnWidth)
                 }
             }
+            if showsCrestColors, branding.iconStyle == .layeredCrest {
+                swatchGroup(branding.iconStyle.title) {
+                    ForEach(BrowserCrestForgeLayer.shown(by: branding)) { layer in
+                        layerSwatch(layer, columnWidth: columnWidth)
+                    }
+                }
+            }
         }
+    }
+
+    /// The Space's colors the stage offers: Background and Accent, and
+    /// Pattern while the sidebar draws a pattern.
+    private var shownRoles: [BrowserSpaceBrandColorRole] {
+        branding.showsPattern ? BrowserSpaceBrandColorRole.all : [.background, .accent]
+    }
+
+    /// The Space's texture, which its Background's picker sets.
+    private var texture: Binding<Double> {
+        Binding(
+            get: { branding.textureStrength },
+            set: { strength in
+                branding.textureStrength = strength
+                branding.hasCustomAppearance = true
+                branding = branding.normalized()
+            })
+    }
+
+    /// The fill a Space color wears, which a pick sets as the Space's wells do.
+    private func fill(of role: BrowserSpaceBrandColorRole) -> Binding<CrestColorFill> {
+        Binding(
+            get: { branding.wellFill(role) },
+            set: { fill in
+                branding.setWellFill(fill, of: role)
+                branding = branding.normalized()
+            })
     }
 
     /// The Space's own sidebar field, shaded toward the colors so they read.
@@ -143,7 +175,7 @@ struct BrowserCrestForgeStage: View {
     private func layerSwatch(_ layer: BrowserCrestForgeLayer, columnWidth: CGFloat) -> some View {
         let isDrawn = layer.isDrawn(by: branding)
         return BrowserCrestForgeSwatch(
-            title: layer.title(in: branding), color: branding.forgeColor(of: layer), isDrawn: isDrawn,
+            title: layer.title(in: branding), fill: branding.forgeFill(of: layer), isDrawn: isDrawn,
             hint: isDrawn ? nil : layer.enablingHint(for: branding), isOpen: openLayer == layer,
             columnWidth: columnWidth
         ) {
@@ -154,17 +186,21 @@ struct BrowserCrestForgeStage: View {
             isPresented: Binding(get: { openLayer == layer }, set: { if !$0, openLayer == layer { openLayer = nil } }),
             arrowEdge: .bottom
         ) {
-            BrowserCrestForgePalette(title: layer.title(in: branding), color: branding.forgeColor(of: layer)) { color in
-                branding.setForgeColor(color, of: layer)
-                branding = branding.normalized()
-            }
+            CrestColorPopover(
+                fill: Binding(
+                    get: { branding.forgeFill(of: layer) },
+                    set: { fill in
+                        branding.setForgeFill(fill, of: layer)
+                        branding = branding.normalized()
+                    })
+            )
             .presentationCompactAdaptation(.popover)
         }
     }
 
     private func sidebarSwatch(_ role: BrowserSpaceBrandColorRole, columnWidth: CGFloat) -> some View {
         BrowserCrestForgeSwatch(
-            title: role.title, color: branding.forgeColor(of: role), isOpen: openSidebarColor == role,
+            title: role.title, fill: branding.wellFill(role), isOpen: openSidebarColor == role,
             columnWidth: columnWidth
         ) {
             openSidebarColor = role
@@ -174,12 +210,8 @@ struct BrowserCrestForgeStage: View {
                 get: { openSidebarColor == role }, set: { if !$0, openSidebarColor == role { openSidebarColor = nil } }),
             arrowEdge: .bottom
         ) {
-            BrowserCrestForgePalette(title: role.title, caption: role.caption, color: branding.forgeColor(of: role)) {
-                color in
-                branding.setForgeColor(color, of: role)
-                branding = branding.normalized()
-            }
-            .presentationCompactAdaptation(.popover)
+            CrestColorPopover(fill: fill(of: role), texture: role == .background ? texture : nil)
+                .presentationCompactAdaptation(.popover)
         }
     }
 }
@@ -188,7 +220,8 @@ struct BrowserCrestForgeStage: View {
 /// draw shows its color faintly, says on hover how to add it, and leads there.
 private struct BrowserCrestForgeSwatch: View {
     let title: LocalizedStringResource
-    let color: BrandColor
+    /// What the part wears: one color, or a gradient.
+    let fill: CrestColorFill
     var isDrawn = true
     var hint: LocalizedStringResource? = nil
     let isOpen: Bool
@@ -200,7 +233,7 @@ private struct BrowserCrestForgeSwatch: View {
         Button(action: open) {
             VStack(spacing: 6) {
                 Circle()
-                    .fill(color.color)
+                    .fill(fill.style)
                     .frame(width: BrowserCrestForgeMetrics.swatchSize, height: BrowserCrestForgeMetrics.swatchSize)
                     .overlay { Circle().strokeBorder(.white.opacity(0.35), lineWidth: 1.5) }
                     .shadow(color: .black.opacity(0.3), radius: 1.5, y: 1)
@@ -219,9 +252,9 @@ private struct BrowserCrestForgeSwatch: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
-        .help(hint.map { Text($0) } ?? Text(color.title))
+        .help(hint.map { Text($0) } ?? Text(fill.colors[0].title))
         .accessibilityLabel(Text(title))
-        .accessibilityValue(Text(color.title))
+        .accessibilityValue(fill.isGradient ? Text("Gradient") : Text(fill.colors[0].title))
         .accessibilityHint(hint.map { Text($0) } ?? Text(""))
     }
 }

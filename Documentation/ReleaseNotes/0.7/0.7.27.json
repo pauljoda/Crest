@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "chromium-upstream-154-0-8037-97-1-1-6c05ab379fd7",
+      "category": "fixed",
+      "message": "Chromium is updated to 154.0.8037.97 with upstream security and compatibility fixes.",
+      "platforms": ["mac"]
+    }
+  ]
+}

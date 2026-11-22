@@ -51,8 +51,8 @@ struct MobileBrowserCommands: Commands {
 
             // The arrow aliases are second chords for commands the table
             // already carries, and the store holds exactly one binding per
-            // command. They stay literal on purpose: a hardware keyboard on
-            // iPad expects ⌘←/→ for history the way Safari does, and rebinding
+            // command. They stay literal on purpose: people with a hardware
+            // keyboard on iPad expect ⌘←/→ for history, and rebinding
             // "Back" should not take that away.
             button(.back)
             alias(.back, "Back (Arrow)", .leftArrow, modifiers: .command)
@@ -67,7 +67,8 @@ struct MobileBrowserCommands: Commands {
             button(.toggleSelectedTabPinned)
             button(.duplicateTab)
             button(.reopenClosedTab)
-            button(.clearUnpinnedTabs)
+            button(.clearOtherTabs)
+            button(.clearAllTabs)
             button(.archiveTab)
 
             Divider()
@@ -164,6 +165,7 @@ struct MobileBrowserCommands: Commands {
             .disabled(context?.canToggleTranslationToolbar != true)
 
             button(.toggleSidebar)
+            button(.collapseAllFolders)
             button(.showHistory)
             button(.showArchive)
             button(.showDownloads)

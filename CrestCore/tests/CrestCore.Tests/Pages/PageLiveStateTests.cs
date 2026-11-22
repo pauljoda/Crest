@@ -56,6 +56,99 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(PageSecurity.Named(expected), PageSecurity.Judging(facts, url));
     }
 
+    /// A site typed without a scheme that https can't reach loads over http,
+    /// once. An address typed with https://, one Crest holds, and a failure
+    /// http can't fix all stay failures.
+    [Fact]
+    public void OnlyASiteTypedWithoutASchemeFallsBackToHttp() {
+        var (app, engine, binding, page, _, window, _, _) = LivePage();
+        PageFailure Unreachable(string url) => new(NavigationError.SecureConnectionFailed, url, ReplacedDocument: true, "net", -113);
+
+        // The palette opens the address its row resolved, then records the pick.
+        app.Send(new LoadAddress(page, "https://httpforever.org"));
+        app.Send(new RecordPaletteChoice(window, "httpforever.org", PaletteRow.Of(PaletteRowKind.OpenAddress, "Open httpforever.org",
+            "https://httpforever.org", address: "https://httpforever.org", httpFallback: "http://httpforever.org")));
+        app.Drain();
+        app.Report(engine, new NavigationFailed(page, Unreachable("https://httpforever.org/")));
+        Assert.Equal(new LoadPage(page, "http://httpforever.org"), binding.Commands[^1]);
+        app.Drain();
+
+        // A history row, or the address row of a site the Space knows, opens
+        // an address Crest holds, even after the site was typed without a scheme.
+        foreach (var held in new[] {
+            PaletteRow.Of(PaletteRowKind.History, "Example", "https://example.org", address: "https://example.org"),
+            PaletteRow.Of(PaletteRowKind.OpenAddress, "Open example.org", "https://example.org", address: "https://example.org") }) {
+            app.Send(new LoadAddress(page, "https://example.org"));
+            app.Send(new RecordPaletteChoice(window, "example.org", held));
+            var opened = binding.Commands.Count;
+            app.Drain();
+            app.Report(engine, new NavigationFailed(page, Unreachable("https://example.org/")));
+            Assert.Equal(opened, binding.Commands.Count);
+            Assert.NotNull(Live(app.Drain()).Failure);
+        }
+
+        app.Send(new Navigate(page, "httpforever.com"));
+        Assert.Equal(new LoadPage(page, "https://httpforever.com"), binding.Commands[^1]);
+        app.Report(engine, new NavigationFailed(page, Unreachable("https://httpforever.com/")));
+        Assert.Equal(new LoadPage(page, "http://httpforever.com"), binding.Commands[^1]);
+        app.Drain();
+
+        // Each fallback is taken once.
+        app.Report(engine, new NavigationFailed(page, Unreachable("https://httpforever.com/")));
+        Assert.NotNull(Live(app.Drain()).Failure);
+
+        foreach (var load in new PageIntent[] { new Navigate(page, "https://example.org"), new LoadAddress(page, "https://example.net") }) {
+            app.Send(load);
+            var loaded = binding.Commands.Count;
+            app.Drain();
+            app.Report(engine, new NavigationFailed(page, Unreachable(((LoadPage)binding.Commands[^1]).Url)));
+            Assert.Equal(loaded, binding.Commands.Count);
+            Assert.NotNull(Live(app.Drain()).Failure);
+        }
+
+        app.Send(new Navigate(page, "nowhere.example"));
+        app.Drain();
+        app.Report(engine, new NavigationFailed(page,
+            new PageFailure(NavigationError.CannotFindServer, "https://nowhere.example/", ReplacedDocument: true, "net", -105)));
+        Assert.Equal(new LoadPage(page, "https://nowhere.example"), binding.Commands[^1]);
+    }
+
+    /// A fallback belongs to the load that typed its site: a later load in
+    /// the same page, such as the same site typed with https://, or a new
+    /// document, ends it, and another page's typed load keeps its own.
+    [Fact]
+    public void AnHttpFallbackBelongsToItsOwnPagesTypedLoad() {
+        var (app, engine, binding, page, workspace, window, space, _) = LivePage();
+        PageFailure Unreachable(string url) => new(NavigationError.SecureConnectionFailed, url, ReplacedDocument: true, "net", -113);
+
+        app.Send(new Navigate(page, "example.org"));
+        app.Send(new Navigate(page, "https://example.org"));
+        var loaded = binding.Commands.Count;
+        app.Drain();
+        app.Report(engine, new NavigationFailed(page, Unreachable("https://example.org/")));
+        Assert.Equal(loaded, binding.Commands.Count);
+        Assert.NotNull(Live(app.Drain()).Failure);
+
+        app.Send(new Navigate(page, "example.org"));
+        app.Report(engine, new NavigationCommitted(page, "https://example.org/", SameDocument: false));
+        loaded = binding.Commands.Count;
+        app.Drain();
+        app.Report(engine, new NavigationFailed(page, Unreachable("https://example.org/")));
+        Assert.Equal(loaded, binding.Commands.Count);
+        app.Drain();
+
+        var other = Guid.NewGuid();
+        app.Send(new OpenPage(other, workspace, space, null, window));
+        app.Report(engine, new PageCreated(other));
+        app.Send(new Navigate(page, "example.org"));
+        app.Send(new Navigate(other, "example.org"));
+        app.Drain();
+        app.Report(engine, new NavigationFailed(page, Unreachable("https://example.org/")));
+        Assert.Equal(new LoadPage(page, "http://example.org"), binding.Commands[^1]);
+        app.Report(engine, new NavigationFailed(other, Unreachable("https://example.org/")));
+        Assert.Equal(new LoadPage(other, "http://example.org"), binding.Commands[^1]);
+    }
+
     [Fact]
     public void NavigateLoadsInternalPagesOnlyOnAnEngineThatShowsThemAndNeverInALockedSpace() {
         var session = SavedSession().Document["session"]!;

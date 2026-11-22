@@ -62,20 +62,33 @@ internal sealed partial class Device {
         lock (gate) return open.TryGetValue(windowId, out var window) ? window : throw new Rejected(new WindowNotOpen(windowId));
     }
 
-    /// What `window` switches between in `space` (see `Window.RecentItems`).
-    /// While it has listed no other tab there, as after a launch or in a new
-    /// window, the Space's tab used last stands second, a split as one item,
-    /// unless another open window shows it. A locked Space lists nothing, as
-    /// its palette offers none of its tabs. Called without the device lock,
-    /// since it reads whether the Space is locked.
-    internal IReadOnlyList<RecentTabItem> RecentItems(Window window, SpaceState space) {
-        if (Workspace(window.WorkspaceId).IsLocked(space)) return [];
+    /// What `window` switches between in `space` (see `Window.RecentItems`):
+    /// the shown item and the others whose pages `pages` holds loaded or that
+    /// show a native view, which has nothing to load. While
+    /// it has listed no other tab there, as after a launch or in a new window,
+    /// the Space's loaded tab used last stands second, a split as one item,
+    /// unless another open window shows it. A Space with Sub-Spaces lists the
+    /// loaded tabs of its whole group instead (see `Window.GroupRecentItems`),
+    /// leaving out its locked Spaces. A locked Space lists nothing, as its
+    /// palette offers none of its tabs. Called without the device lock, since
+    /// it reads whether the Space is locked.
+    internal IReadOnlyList<RecentTabItem> RecentItems(Window window, SpaceState space, Pages pages) {
+        var workspace = Workspace(window.WorkspaceId);
+        if (workspace.IsLocked(space)) return [];
+        var session = workspace.Current;
+        IReadOnlyList<SpaceState> group = session.GroupOf(space.Id) is { SubSpaces.Count: > 0 } members
+            ? [.. members.Members.Select(member => member.Id == space.Id ? space : Available(session, member.Id))
+                .OfType<SpaceState>().Where(member => member.Id == space.Id || !workspace.IsLocked(member))]
+            : [space];
+        HashSet<Guid> loaded = [.. pages.LoadedTabs(window.WorkspaceId),
+            .. group.SelectMany(member => member.Tabs).Where(tab => tab.NativeContent is not null).Select(tab => tab.Id)];
         lock (gate) {
-            var items = window.RecentItems(space);
+            if (group.Count > 1) return window.GroupRecentItems(space, group, loaded);
+            var items = window.RecentItems(space, loaded);
             if (items.Count != 1) return items;
             HashSet<Guid> elsewhere = [.. open.Values.Where(other => other.Id != window.Id)
                 .Select(other => other.Tab(space.Id)).OfType<Guid>()];
-            return window.LastUsed(space, elsewhere) is { } last ? [items[0], last] : items;
+            return window.LastUsed(space, elsewhere, loaded) is { } last ? [items[0], last] : items;
         }
     }
 

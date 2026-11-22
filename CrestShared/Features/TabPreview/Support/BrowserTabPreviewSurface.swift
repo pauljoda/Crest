@@ -1,15 +1,14 @@
 import SwiftUI
 
-/// The surface every sidebar preview card floats on: Liquid Glass, as for
-/// everything that floats over the page, with the soft shadow of Crest's
-/// notices. A card holds what it shows the sidebar's inset from its sides,
-/// and its corners run parallel to the corners of the sidebar's layers
+/// The surface every sidebar preview card floats on: Crest's flyout surface,
+/// as for everything that floats over the page, with the soft shadow of
+/// Crest's notices. A card holds what it shows the sidebar's inset from its
+/// sides, and its corners run parallel to the corners of the sidebar's layers
 /// inside it.
 ///
-/// What the card shows reads in the label colors of the scheme its glass
-/// draws in, the window's, whichever the Space's text or the device's
-/// material color would choose, so its text never draws light on light
-/// glass or dark on dark.
+/// What the card shows reads in the label colors of that surface, whichever
+/// the Space's text, the window's appearance or the page behind would choose,
+/// so its text never draws light on light or dark on dark.
 struct BrowserTabPreviewSurface: ViewModifier {
     // MARK: - Static Variables
 
@@ -32,9 +31,7 @@ struct BrowserTabPreviewSurface: ViewModifier {
             .foregroundStyle(Color.primary)
             .environment(\.spaceChromeForeground, nil)
             .frame(width: width, alignment: .leading)
-            .glassEffect(
-                .regular, in: .rect(cornerRadius: BrowserSidebarMetrics.layerCornerRadius() + Self.padding)
-            )
+            .crestFloatingFlyoutStyle(in: .rect(cornerRadius: BrowserSidebarMetrics.layerCornerRadius() + Self.padding))
             .shadow(
                 color: .black.opacity(reduceTransparency ? 0 : CrestOpacity.controlShadow),
                 radius: 14, y: 6)

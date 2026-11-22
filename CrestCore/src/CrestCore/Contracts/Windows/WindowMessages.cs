@@ -27,10 +27,10 @@ public sealed record FallbackTabIndex(int? Index);
 /// when the window shows no tab there.
 public sealed record RecentTabList(IReadOnlyList<RecentTabItem> Items);
 
-/// One thing to switch to: a tab, or the tabs of a split, which are one item.
-/// `TabIds` are its tabs in the order they show side by side, and
-/// `FocusedTabId` is the one to show, the one of a split used last.
-public sealed record RecentTabItem(IReadOnlyList<Guid> TabIds, Guid FocusedTabId);
+/// One thing to switch to: a tab, or the tabs of a split, which are one item,
+/// in Space `SpaceId`. `TabIds` are its tabs in the order they show side by
+/// side, and `FocusedTabId` is the one to show, the one of a split used last.
+public sealed record RecentTabItem(Guid SpaceId, IReadOnlyList<Guid> TabIds, Guid FocusedTabId);
 
 /// The tab "Split With Next Tab" would add, or null when it would add none.
 public sealed record SplitJoinCandidateTab(Guid? TabId);
@@ -84,6 +84,10 @@ public sealed record WindowChanged(WindowState Window) : Change;
 
 /// A window is no longer open.
 public sealed record WindowClosed(Guid WindowId) : Change;
+
+/// This launch follows an update to the release `Version`, whose notes the
+/// window that took them opens.
+public sealed record ReleaseNotesDue(string Version) : Change;
 
 /// The device store holds the window records an installed release kept.
 /// `Layouts` are the sidebar values those records also carried, which the

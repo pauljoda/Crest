@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 
 import chromium_engine
+from repository import REPOSITORY
 
 
 def release_ready(release, key):
@@ -31,7 +32,7 @@ def published_release(repository, key):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repository", default=os.environ.get("GITHUB_REPOSITORY", "pauljoda/Crest"))
+    parser.add_argument("--repository", default=os.environ.get("GITHUB_REPOSITORY", REPOSITORY))
     parser.add_argument("--require", action="store_true")
     args = parser.parse_args()
     key = chromium_engine.engine_key(Path(__file__).resolve().parents[2])

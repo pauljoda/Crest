@@ -20,7 +20,7 @@ internal static partial class StoredSessionCodec {
     /// platforms' dates do.
     internal const double ReferenceEpochUnixSeconds = 978_307_200;
 
-    private static readonly DateTimeOffset ReferenceEpoch = DateTimeOffset.UnixEpoch.AddSeconds(ReferenceEpochUnixSeconds);
+    internal static readonly DateTimeOffset ReferenceEpoch = DateTimeOffset.UnixEpoch.AddSeconds(ReferenceEpochUnixSeconds);
 
     /// The stored member names, shared by every record that uses one.
     internal static class Key {
@@ -28,6 +28,7 @@ internal static partial class StoredSessionCodec {
         public const string Accent = "accent";
         public const string AlsoOffersSaveToSystemPasswords = "alsoOffersSaveToSystemPasswords";
         public const string Alpha = "alpha";
+        public const string Angle = "angle";
         public const string AppPreferences = "appPreferences";
         public const string Archive = "archive";
         public const string ArchivedAt = "archivedAt";
@@ -48,6 +49,7 @@ internal static partial class StoredSessionCodec {
         public const string ChecksSpelling = "checksSpelling";
         public const string CollapseModifiedAt = "collapseModifiedAt";
         public const string Color = "color";
+        public const string ColorGradients = "colorGradients";
         public const string Colors = "colors";
         public const string CompletesInline = "completesInline";
         public const string ContentBlockingPolicy = "contentBlockingPolicy";
@@ -73,6 +75,7 @@ internal static partial class StoredSessionCodec {
         public const string FolderId = "folderID";
         public const string Folders = "folders";
         public const string GradientAngle = "gradientAngle";
+        public const string GradientKind = "gradientKind";
         public const string Green = "green";
         public const string HasCustomAppearance = "hasCustomAppearance";
         public const string History = "history";
@@ -82,6 +85,7 @@ internal static partial class StoredSessionCodec {
         public const string Id = "id";
         public const string IsCollapsed = "isCollapsed";
         public const string IsEnabled = "isEnabled";
+        public const string IsGroup = "isGroup";
         public const string IsSavedTabsExpanded = "isSavedTabsExpanded";
         public const string KeepsControlsReadable = "keepsControlsReadable";
         public const string KeepsPageLoaded = "keepsPageLoaded";
@@ -90,6 +94,7 @@ internal static partial class StoredSessionCodec {
         public const string LastVisitedAt = "lastVisitedAt";
         public const string Layout = "layout";
         public const string LearnsChoices = "learnsChoices";
+        public const string LegacySavedTabClosePolicy = "savedTabClosePolicy";
         public const string LegacySearchProvider = "searchProvider";
         public const string LegacySelectedSpace = "selectedSpaceID";
         public const string LegacySelectedTab = "selectedTabID";
@@ -98,13 +103,17 @@ internal static partial class StoredSessionCodec {
         public const string MembershipModifiedAt = "membershipModifiedAt";
         public const string Name = "name";
         public const string NativeContent = "nativeContent";
+        public const string NewTabPosition = "newTabPosition";
+        public const string NewTabsJoinFolder = "newTabsJoinFolder";
         public const string OffersTranslation = "offersTranslation";
         public const string OperationId = "operationID";
         public const string OrderAnchorTabId = "orderAnchorTabID";
         public const string Ordinary = "ordinary";
         public const string OrdinaryColorIndex = "ordinaryColorIndex";
         public const string Palette = "palette";
+        public const string PaletteGradients = "paletteGradients";
         public const string ParentId = "parentID";
+        public const string PinnedTabsAfterClosing = "pinnedTabsAfterClosing";
         public const string Placement = "placement";
         public const string PositionModifiedAt = "positionModifiedAt";
         public const string PrefersOpenTabs = "prefersOpenTabs";
@@ -119,11 +128,15 @@ internal static partial class StoredSessionCodec {
         public const string Red = "red";
         public const string RenderingVersion = "renderingVersion";
         public const string ResourceId = "resourceID";
-        public const string SavedTabClosePolicy = "savedTabClosePolicy";
         public const string SavedTabFaviconReturnsToSavedUrl = "savedTabFaviconReturnsToSavedURL";
+        public const string SavedTabsAfterClosing = "savedTabsAfterClosing";
         public const string SavedTabsExpansionModifiedAt = "savedTabsExpansionModifiedAt";
         public const string CredentialsEnabledModifiedAt = "credentialsEnabledModifiedAt";
         public const string AccessPolicyModifiedAt = "accessPolicyModifiedAt";
+        public const string SavedFaviconUrl = "savedFaviconURL";
+        public const string SavedIconAccent = "savedIconAccent";
+        public const string SavedTitle = "savedTitle";
+        public const string SavedTitleUrl = "savedTitleURL";
         public const string SavedUrl = "savedURL";
         public const string SearchesSitesWithTab = "searchesSitesWithTab";
         public const string SearchFollowsDefault = "searchFollowsDefault";
@@ -157,6 +170,7 @@ internal static partial class StoredSessionCodec {
         public const string Symbol = "symbol";
         public const string SymbolColor = "symbolColor";
         public const string SymbolColorIndex = "symbolColorIndex";
+        public const string SymbolGradient = "symbolGradient";
         public const string SyncsCrestPasswordsWithICloud = "syncsCrestPasswordsWithICloud";
         public const string Tab = "tab";
         public const string Tabs = "tabs";
@@ -243,7 +257,9 @@ internal static partial class StoredSessionCodec {
     /// own arithmetic, so both sides agree to the bit and repair cannot invent an
     /// edit; any other stored value goes back exactly as it came.
     private static double EditSeconds(DateTimeOffset date) =>
-        (date - DateTimeOffset.UnixEpoch).Ticks % TimeSpan.TicksPerMillisecond == 0 ? NativeEditTimestamp.Encode(date) : Seconds(date);
+        (date - DateTimeOffset.UnixEpoch).Ticks % TimeSpan.TicksPerMillisecond == 0
+            ? BrowserEditTimestamp.NormalizeUnixSeconds((date - DateTimeOffset.UnixEpoch).TotalSeconds) - ReferenceEpochUnixSeconds
+            : Seconds(date);
 
     private static DateTimeOffset Date(JsonNode? node) => node is null ? ReferenceEpoch : Date(Number(node));
 

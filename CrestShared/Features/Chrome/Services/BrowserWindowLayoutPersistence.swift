@@ -24,10 +24,14 @@ struct BrowserWindowLayoutPersistence {
         groupID: UUID?, memberCount: Int, transaction: inout BrowserSplitWidthTransaction
     ) {
         guard memberCount > 0 else { return }
+        transaction.begin(fractions: splitColumnFractions(groupID: groupID, memberCount: memberCount))
+    }
+
+    /// The widths the columns of the split `groupID` take in this window, as
+    /// fractions of its row: the ones the window keeps for it, or even ones.
+    func splitColumnFractions(groupID: UUID?, memberCount: Int) -> [Double] {
         let persisted = groupID.flatMap { windowState?.splitColumnFractions(for: $0) }
-        transaction.begin(
-            fractions: BrowserSplitColumnLayout.seedFractions(persisted: persisted, memberCount: memberCount)
-        )
+        return BrowserSplitColumnLayout.seedFractions(persisted: persisted, memberCount: memberCount)
     }
 
     func commitSplitLayout(_ fractions: [Double], groupID: UUID?) {

@@ -34,6 +34,12 @@ struct BrowserRootPeekLayer: View {
                 BrowserWebFocusRestorationGate(
                     browserChromeOwnsFocus: !request.isSelected(in: model.browser), pageChromeOwnsFocus: false)
             )
+            // The card keeps Split View from handing the pointer to the card
+            // beneath it.
+            .environment(\.browserTransientCardFrameReport) { [chrome = model.splitCoveringChrome] frame in
+                chrome.record(request, frame: frame)
+            }
+            .onDisappear { model.splitCoveringChrome.record(request, frame: nil) }
             .zIndex(BrowserRootMetrics.peekZIndex)
         }
     }

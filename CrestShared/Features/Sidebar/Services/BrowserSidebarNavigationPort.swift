@@ -4,7 +4,7 @@ import Foundation
 /// nothing else.
 ///
 /// The two shells reach different things — one drives a pool of windowed pages
-/// through a session, the other a single compact page through `MobilePageActions`
+/// through a session, the other a single compact page through its selected-page port
 /// — but the back, forward, and reload controls only ever ask the same eleven
 /// questions. Those live here as closures rather than behind a protocol, for the
 /// same reason `BrowserSidebarPageAccess` does: there is no third implementation

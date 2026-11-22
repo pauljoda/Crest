@@ -44,33 +44,7 @@ final class BrowserPopupCoordinator {
         handOffExternalScheme(
             url,
             BrowserPopupTrigger.classify(navigationAction.navigationType),
-            sourceOrigin(for: navigationAction, currentURL: currentURL)
+            navigationAction.requestingOrigin(fallingBackTo: currentURL)
         )
-    }
-
-    /// The origin that asked for the window. WebKit annotates `sourceFrame` as
-    /// non-null and every real popup has one, so it is read as an optional purely
-    /// so a missing frame falls back to the page the user is looking at instead of
-    /// trapping. A frame WebKit reports without a host — `about:blank`, a
-    /// sandboxed frame — takes the same fallback, which is the origin a prompt
-    /// would name anyway.
-    private func sourceOrigin(
-        for navigationAction: WKNavigationAction,
-        currentURL: URL?
-    ) -> SiteOrigin? {
-        if let provider = navigationAction
-            as? any BrowserNavigationActionSourceOriginProviding
-        {
-            return provider.browserSourceOrigin
-                ?? currentURL.flatMap(SiteOrigin.init(url:))
-        }
-        let sourceFrame: WKFrameInfo? = navigationAction.sourceFrame
-        if let sourceFrame {
-            let frameOrigin = SiteOrigin(sourceFrame.securityOrigin)
-            if !frameOrigin.host.isEmpty {
-                return frameOrigin
-            }
-        }
-        return currentURL.flatMap(SiteOrigin.init(url:))
     }
 }

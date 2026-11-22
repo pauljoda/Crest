@@ -40,6 +40,9 @@ extension BrowserMacShell {
         // While a Most Recent Tab shortcut is held, its keys are the
         // switcher's and no page or command sees them.
         if event.type == .keyDown, recentTabSwitcher.handleKeyDown(event) { return true }
+        // A sidebar selection takes the keys it answers, such as Command-D
+        // duplicating it, before any command claims them.
+        if BrowserTabSelectionMonitor.SelectionView.takesKey(event) { return true }
         guard let windows, let application, event.type == .keyDown,
             NSApp.modalWindow == nil, NSApp.keyWindow?.attachedSheet == nil,
             (NSApp.keyWindow?.firstResponder as? ShortcutRecorderButton)?.isRecording != true,
@@ -75,8 +78,8 @@ extension BrowserMacShell {
         }
         // What no Crest command claims can belong to the engine, such as an
         // extension's binding in the Space of the page in front: a key Quick
-        // Window's page, a Peek, or the active tab. It goes ahead of the page
-        // as it does in Chrome.
+        // Window's page, a Peek, or the active tab. It goes ahead of the page,
+        // as an extension's shortcut expects.
         guard let page = pageActions?.commandPage else { return false }
         return engineHost.handleUnclaimedShortcut(event, page: page)
     }

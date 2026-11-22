@@ -1,8 +1,8 @@
 import Foundation
 
 struct BrowserCredentialSecretLease: Sendable {
-    static let revealLifetime: TimeInterval = 30
-    static let clipboardLifetime: TimeInterval = 60
+    static let revealLifetime: TimeInterval = CredentialRecord.revealLifetime
+    static let clipboardLifetime: TimeInterval = CredentialRecord.clipboardLifetime
 
     private let password: String
     let expiration: Date

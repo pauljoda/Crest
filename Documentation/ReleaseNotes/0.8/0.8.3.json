@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "pin-layout-honors-chosen-columns",
+      "category": "fixed",
+      "message": "Pins fill each row to the number chosen in Settings, as far as the sidebar width allows, instead of evening out the rows."
+    }
+  ]
+}

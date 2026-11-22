@@ -12,7 +12,7 @@ struct BrowserPageTab: Equatable {
     var id: UUID { state.id }
 
     /// The address the tab shows, as the platform reads addresses.
-    var url: URL? { state.url.flatMap(URL.init(string:)) }
+    var url: URL? { state.url.flatMap(URL.init(address:)) }
 
     /// The native document the tab shows, if it shows one.
     var nativeContent: BrowserNativeTabContent? {
@@ -52,7 +52,8 @@ struct BrowserPageTab: Equatable {
                 id: UUID(), title: title, url: url.absoluteString, nativeContent: nil, savedURL: nil, symbol: "globe",
                 faviconURL: nil, iconAccent: nil, storedIconMode: nil, placement: .current, folderID: nil,
                 splitGroupID: nil, lastActivatedAt: .now, positionModifiedAt: nil, customTitle: nil,
-                titleModifiedAt: nil, keepsPageLoaded: false, iconMode: .automatic, displayTitle: title,
+                titleModifiedAt: nil, keepsPageLoaded: false, savedTitle: nil, savedFaviconURL: nil,
+                savedIconAccent: nil, iconMode: .automatic, displayTitle: title,
                 isAwayFromSavedAddress: false, pageIconIsCurrent: false, surface: .webPage, nativeView: nil),
             faviconData: nil)
     }

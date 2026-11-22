@@ -15,8 +15,11 @@ public sealed class CrestVocabulary {
     /// The Crest Studio vocabulary: parametric shapes, own tinctures, custom
     /// charges, finishes and depth.
     public static readonly CrestVocabulary Studio = new(name: "studio", version: 5);
+    /// The simple vocabulary: soft shapes, rounded figures and a figure
+    /// raised off its field.
+    public static readonly CrestVocabulary Simple = new(name: "simple", version: 6);
 
-    public static IReadOnlyList<CrestVocabulary> All { get; } = [Baseline, ExpandedCharges, Customization, Studio];
+    public static IReadOnlyList<CrestVocabulary> All { get; } = [Baseline, ExpandedCharges, Customization, Studio, Simple];
 
     public string Name { get; }
 

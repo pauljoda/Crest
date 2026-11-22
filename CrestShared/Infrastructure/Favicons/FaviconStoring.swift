@@ -16,7 +16,15 @@ protocol BrowserFaviconStoring: AnyObject, Sendable {
     /// Updates one live tab's last known favicon. Missing or invalid bytes leave
     /// the cached file alone; pruning is the only operation that removes it.
     func reconcile(_ faviconData: Data?, tabID: UUID)
-    /// Drops favicons for tabs the live session no longer has.
+    /// Removes one live tab's favicon, which the core told it no longer to
+    /// wear, so a later launch does not put it back.
+    func forgetFavicon(tabID: UUID)
+    /// The image one tab keeps for the page at its saved address, if any.
+    func savedFavicon(tabID: UUID) -> BrowserSavedFavicon?
+    /// Keeps `favicon` as one tab's saved page's image, or none when nil.
+    func keepSavedFavicon(_ favicon: BrowserSavedFavicon?, tabID: UUID)
+    /// Drops favicons, saved pages' included, for tabs the live session no
+    /// longer has.
     func pruneFavicons(keeping tabIDs: Set<UUID>)
     func flushPendingWrites() async
 }

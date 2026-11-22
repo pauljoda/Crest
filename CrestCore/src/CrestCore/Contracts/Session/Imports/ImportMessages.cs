@@ -34,6 +34,46 @@ public enum ImportFlaw {
     UnpairedChoices
 }
 
+/// The core could not work out the import its Spaces and choices ask for: one
+/// of its steps broke on something they hold, which `Cause` names by the
+/// exception and the methods it went through, never by anything the Spaces
+/// hold, so the app can write it to its log. Nothing changed.
+public sealed record UnpreparedImport(string Cause) : Rejection {
+    #region Static Variables
+
+    /// The most methods `Cause` names.
+    private const int MaximumFrames = 8;
+
+    #endregion
+
+    #region Variables
+
+    /// What the person is told.
+    [Localized]
+    public string Message => "Crest couldn’t prepare this import.";
+
+    #endregion
+
+    #region Actions - Naming
+
+    /// The refusal for an import `error` broke: its type, then the type and
+    /// method of each frame it went through, innermost first. A stack trace
+    /// names methods and their parameter types alone; the exception's message
+    /// is left out, since it may quote a value.
+    internal static UnpreparedImport Of(Exception error) {
+        ArgumentNullException.ThrowIfNull(error);
+        var frames = (error.StackTrace ?? "").Split('\n')
+            .Select(line => line.Trim())
+            .Where(line => line.StartsWith("at ", StringComparison.Ordinal))
+            .Select(line => line[3..].Split('(')[0].Split('.'))
+            .Select(parts => string.Join('.', parts.TakeLast(2)))
+            .Take(MaximumFrames);
+        return new(string.Join(" < ", [error.GetType().Name, .. frames]));
+    }
+
+    #endregion
+}
+
 /// A reviewed import includes none of its Spaces.
 public sealed record NoIncludedSpaces : Rejection {
     #region Variables

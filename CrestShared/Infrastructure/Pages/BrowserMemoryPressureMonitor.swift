@@ -54,10 +54,7 @@ final class BrowserMemoryPressureMonitor {
         guard coalescer.shouldHandle(level, at: time) else { return }
         for owner in owners() { owner.relieveMemoryPressure(level) }
         let changes = (try? core?.send(ReportMemoryPressure(level: level))) ?? []
-        let unloaded = changes.compactMap { change -> UUID? in
-            guard case .pageUnloaded(let unloaded) = change else { return nil }
-            return unloaded.tabID
-        }
+        let unloaded = changes.compactMap(\.pageUnloaded).map(\.tabID)
         DiagnosticLog.pages.notice(
             "Memory pressure \(level.name) unloads the pages of tabs \(unloaded.map(\.uuidString))")
     }

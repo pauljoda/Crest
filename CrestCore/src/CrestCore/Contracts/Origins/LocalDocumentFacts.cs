@@ -11,7 +11,7 @@ public sealed record LocalDocumentFacts(bool IsFile, bool HasUser, bool HasPath,
     /// `file://localhost/…` is this device spelled the long way round.
     internal bool IsAcceptedDocument {
         get {
-            if (!IsFile || HasUser || !HasPath || Host is { Length: > ExternalWebLink.MaximumHostLength }) return false;
+            if (!IsFile || HasUser || !HasPath || Host is { Length: > SiteOrigin.MaximumHostLength }) return false;
             return string.IsNullOrEmpty(Host) || string.Equals(Host, "localhost", StringComparison.OrdinalIgnoreCase);
         }
     }

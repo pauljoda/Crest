@@ -62,29 +62,33 @@ public sealed record SetupDraft(Guid WorkspaceId, IReadOnlyList<SetupDraftSpace>
         return this with { Spaces = [.. Spaces, space] };
     }
 
-    /// The setup with its new Spaces, and a first launch's disposable ones
-    /// in `session`, wearing `look` in place of `previous`: a new Space the
-    /// person has not edited takes the look a new Space of `look` gets, and
-    /// any other keeps its colors and crest in the new mode. An existing
-    /// Space the person made keeps its own.
-    internal SetupDraft Restyled(SetupLook previous, SetupLook look, SessionState session) {
-        ArgumentNullException.ThrowIfNull(previous);
-        ArgumentNullException.ThrowIfNull(look);
-        ArgumentNullException.ThrowIfNull(session);
-        bool disposable = session.DisposableSeedMarker is not null;
-        return this with {
-            Spaces = [.. Spaces.Select(space =>
-                space.IsNew && space.Customization.Branding == previous.NewSpaceLook(space.Customization.Accent)
-                    ? space with { Customization = space.Customization with { Branding = look.NewSpaceLook(space.Customization.Accent) } }
-                    : space.IsNew || disposable ? space.Restyled(look)
-                    : space)]
-        };
+    /// The setup with a new Sub-Space of the Space `fromId`, sharing its
+    /// group's session, right after the group's last Space: named with the
+    /// next number of its Space's name, as "Work 2", and wearing that Space's
+    /// look. A setup that holds no such Space stays as it is. Throws `Rejected`
+    /// with `SpaceLimitReached` when the setup holds as many Spaces as a
+    /// workspace may.
+    internal SetupDraft AddingSubSpace(Guid fromId, Func<Guid> nextId) {
+        ArgumentNullException.ThrowIfNull(nextId);
+        if (Spaces.FirstOrDefault(space => space.SpaceId == fromId) is not { } from) return this;
+        if (Spaces.Count >= SessionState.MaximumSpaces) throw new Rejected(new SpaceLimitReached(SessionState.MaximumSpaces));
+        var primaryId = from.PrimaryId ?? from.SpaceId;
+        var primary = Spaces.FirstOrDefault(space => space.SpaceId == primaryId) ?? from;
+        var space = new SetupDraftSpace(nextId(), nextId(), IsNew: true,
+            from.Customization with { Name = SpaceCustomization.NextName(primary.ShownName, Spaces.Select(space => space.ShownName)) }, primaryId);
+        var spaces = Spaces.ToList();
+        int last = spaces.FindLastIndex(candidate => candidate.SpaceId == primaryId || candidate.PrimaryId == primaryId);
+        spaces.Insert(last + 1, space);
+        return this with { Spaces = spaces };
     }
 
-    /// The setup without the new Space `spaceId`. An existing Space stays.
+    /// The setup without the new Space `spaceId`, and without the new
+    /// Sub-Spaces that join it. An existing Space stays.
     internal SetupDraft Removing(Guid spaceId) =>
         Spaces.Any(space => space.SpaceId == spaceId && space.IsNew)
-            ? this with { Spaces = [.. Spaces.Where(space => space.SpaceId != spaceId)] }
+            ? this with {
+                Spaces = [.. Spaces.Where(space => space.SpaceId != spaceId && !(space.IsNew && space.PrimaryId == spaceId))]
+            }
             : this;
 
     /// The setup with `spaceId` where `targetId` stands, keeping its order.

@@ -10,11 +10,11 @@ import OSLog
 final class CorePage {
     // MARK: - Static Variables
 
-    private static let logger = Logger(subsystem: "com.pauldavis.crest", category: "Pages")
+    private static let logger = DiagnosticLog.pages.logger
 
     /// Times each step through a page's history, from the person's input to
     /// the command the core hands its engine, for Instruments.
-    static let historySignposter = OSSignposter(subsystem: "com.pauldavis.crest", category: "PageHistory")
+    static let historySignposter = DiagnosticLog.pageHistory.signposter
 
     // MARK: - Variables
 
@@ -200,12 +200,6 @@ final class CorePage {
         let interval = Self.historySignposter.beginInterval("Show History Entry")
         defer { Self.historySignposter.endInterval("Show History Entry", interval) }
         _ = try? core.send(ShowHistoryEntry(pageID: id, entryID: entryID))
-    }
-
-    /// Leaves the page's failed navigation for the document behind it.
-    func leaveFailure() {
-        guard !isReleased, live.failure != nil else { return }
-        _ = try? core?.send(LeavePageFailure(pageID: id))
     }
 
     // MARK: - Actions - Engines

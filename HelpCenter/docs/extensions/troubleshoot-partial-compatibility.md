@@ -1,6 +1,6 @@
 ---
 title: Troubleshoot an extension
-description: Steps to try when a Chrome extension installs in Crest but a feature does not work.
+description: Steps to try when an extension installs in Crest but a feature does not work.
 slug: /troubleshoot-extension-compatibility
 sidebar_label: Troubleshoot an extension
 sidebar_position: 9
@@ -9,7 +9,7 @@ keywords: [extension not working, extension error, troubleshooting, Chromium ext
 
 # Troubleshoot an extension
 
-Extensions run on Chromium, so most behave as they do in Chrome. When one doesn't, the cause is usually its Space, its site access, or a browser feature Crest draws differently from Chrome.
+Extensions run on Chromium, so most work as their developers built them. When one doesn't, the cause is usually its Space, its site access, or a part of the browser window Crest draws its own way.
 
 ## Try these first
 
@@ -25,7 +25,7 @@ Choose **Manage Extension…** from the extension's action menu to open Chromium
 
 ## In a private window
 
-Private windows use a fresh profile and do not inherit a Space's installed extensions. You cannot install or remove extensions there. Test the extension in its normal Space instead; enabling Chrome's incognito option does not copy it into Crest's separate private profile.
+Private windows use a fresh profile and do not inherit a Space's installed extensions. You cannot install or remove extensions there. Test the extension in its normal Space instead; allowing it in incognito in the Chromium Extension Manager does not copy it into Crest's separate private profile.
 
 ## Password managers and companion apps
 
@@ -33,4 +33,4 @@ If the extension needs a Mac app, such as 1Password or iCloud Passwords, the app
 
 ## Features Crest draws differently
 
-Crest shows popups, side panels, extension windows and keyboard shortcuts in its own interface. An extension that expects part of Chrome's window that Crest does not draw may lose that feature. See [Extension compatibility](./api-compatibility-matrix.md).
+Crest shows popups, side panels, extension windows and keyboard shortcuts in its own interface. An extension that expects a part of the browser window Crest does not draw may lose that feature. See [Extension compatibility](./api-compatibility-matrix.md).

@@ -8,7 +8,7 @@ namespace CrestCore.Contracts;
 /// </summary>
 /// <remarks>
 /// A Start Page is listed nowhere. A section that holds splits shows the first run of
-/// at least <see cref="SplitGroupState.MinimumShownMembers"/> tabs of one split as one
+/// at least <see cref="SplitGroupState.MinimumMembers"/> tabs of one split as one
 /// row, and a split folds once. A section that holds folders lists each folder where
 /// its first row falls in the Space's tab order; a folder without rows keeps its place
 /// before the row holding the tab it anchors to, or else ends its list.
@@ -108,7 +108,7 @@ public sealed record SidebarOutline(IReadOnlyList<SidebarList> Lists) {
             }
             int end = index + 1;
             while (end < listed.Count && listed[end].SplitGroupId == group) end++;
-            if (end - index >= SplitGroupState.MinimumShownMembers) {
+            if (end - index >= SplitGroupState.MinimumMembers) {
                 IReadOnlyList<Guid> members = [.. listed[index..end].Select(member => member.Id)];
                 items.Add(new Item(group, SidebarRowKind.Split, tab.FolderId, members));
                 (folded ??= []).Add(group);

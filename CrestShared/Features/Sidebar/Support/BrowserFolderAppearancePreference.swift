@@ -9,11 +9,10 @@ enum BrowserFolderAppearancePreference {
     static let showsBordersKey = "crest.folders.showsBorders"
     static let iconOnlyKey = "crest.folders.iconOnly"
     static let tintsTitleKey = "crest.folders.tintsTitle"
+    static let groupsAlwaysVisibleKey = "crest.groups.alwaysShowHighlights"
+    static let groupsShowsTabCountsKey = "crest.groups.showsTabCounts"
+    static let groupsShowsBordersKey = "crest.groups.showsBorders"
+    static let groupsTintsTitleKey = "crest.groups.tintsTitle"
 
-    static let defaults: UserDefaults = {
-        let environment = BrowserLaunchEnvironment.current
-        guard environment.requiresIsolation else { return .standard }
-        let id = environment.persistentIsolationID ?? "ephemeral-\(UUID().uuidString)"
-        return UserDefaults(suiteName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(isolationID: id))!
-    }()
+    static let defaults = BrowserLaunchEnvironment.current.deviceDefaults
 }

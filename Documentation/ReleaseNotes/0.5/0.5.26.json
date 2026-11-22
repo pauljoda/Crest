@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-03-focused-tab-window-titles",
+      "category": "improved",
+      "message": "Show the focused tab title in macOS window lists while keeping locked Spaces private",
+      "platforms": ["mac"]
+    }
+  ]
+}

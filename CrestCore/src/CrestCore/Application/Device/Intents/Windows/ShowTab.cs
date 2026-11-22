@@ -18,7 +18,7 @@ public sealed record ShowTab(Guid WindowId, Guid SpaceId, Guid? TabId) : WindowI
         if (Device.Available(authority.Current, SpaceId) is not { } space) return;
         if (TabId is { } tabId) {
             if (space.Tabs.All(tab => tab.Id != tabId)) return;
-            if (authority.Touch(SpaceId, tabId, DateTimeOffset.UtcNow) is { } touched)
+            if (authority.Touch(SpaceId, tabId, turn.Now) is { } touched)
                 Device.Publish(SessionChanges.Publish(window.WorkspaceId, touched.Previous, touched.Next), turn.Changes);
         }
         var session = authority.Current;

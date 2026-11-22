@@ -1,26 +1,38 @@
 import SwiftUI
 
 /// Which rows of Settings › Appearance a part of the page shows: the rows the
-/// customization style keeps on the page, or, in Advanced at its end, the
-/// rows the style leaves out.
+/// page keeps, or, in More Customization at its end, the rest.
 struct BrowserAppearanceSettingFilter: Sendable {
     // MARK: - Static Variables
 
-    /// Every row, as the Heraldic style keeps them.
-    static let everything = BrowserAppearanceSettingFilter(style: .heraldic, isAdvanced: false)
+    /// Every row, where nothing waits in More Customization.
+    static let everything = BrowserAppearanceSettingFilter(showsPage: true, showsMore: true)
+    /// The rows the page keeps.
+    static let page = BrowserAppearanceSettingFilter(showsPage: true, showsMore: false)
+    /// The rows More Customization holds.
+    static let more = BrowserAppearanceSettingFilter(showsPage: false, showsMore: true)
 
     // MARK: - Variables
 
-    let style: BrowserCustomizationStyle
-    /// Whether this part of the page is Advanced, which shows the rows the
-    /// style leaves out.
-    let isAdvanced: Bool
+    private let showsPage: Bool
+    private let showsMore: Bool
+
+    // MARK: - Initializers
+
+    private init(showsPage: Bool, showsMore: Bool) {
+        self.showsPage = showsPage
+        self.showsMore = showsMore
+    }
+
+    /// Whether this is More Customization, holding only the rows the page
+    /// leaves out.
+    var isMore: Bool { showsMore && !showsPage }
 
     // MARK: - Actions - Filtering
 
     /// Whether this part of the page shows `setting`.
     func shows(_ setting: BrowserAppearanceSetting) -> Bool {
-        style.shows(setting) != isAdvanced
+        setting.isOnPage ? showsPage : showsMore
     }
 
     /// The resettable settings of the rows this part of the page shows, in

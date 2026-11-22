@@ -56,8 +56,11 @@ std::optional<engine::EngineDownloadWarning> WarningFor(
     bool* blocked) {
   *blocked = false;
   if (item->IsInsecure()) {
-    *blocked =
-        item->GetInsecureDownloadStatus() != download::DownloadItem::WARN;
+    // The engine holds a file that came over plain HTTP, warned or blocked,
+    // until the person keeps it, as it does a dangerous file. Only a silent
+    // block, which the engine never offers to keep, stays blocked.
+    *blocked = item->GetInsecureDownloadStatus() ==
+               download::DownloadItem::SILENT_BLOCK;
     return *blocked ? engine::EngineDownloadWarning::kInsecureBlocked
                     : engine::EngineDownloadWarning::kInsecureConnection;
   }

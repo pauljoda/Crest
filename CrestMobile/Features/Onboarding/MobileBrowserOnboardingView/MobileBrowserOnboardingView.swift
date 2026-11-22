@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Setup on iPhone and iPad. The core holds the step, where Back and Next
-/// lead, the manual setup, and what finishing does; this draws the step and
-/// finishes setup.
+/// Setup on iPhone and iPad. The core holds the step, the manual setup, and
+/// what finishing does. The welcome, the look and the manual setup are one
+/// screen of steps beside a live preview; the tour of Crest's features and
+/// bringing tabs in on a Mac have pages of their own.
 struct MobileBrowserOnboardingView: View {
     let request: BrowserOnboardingRequest
     let browser: BrowserStore
@@ -21,11 +22,16 @@ struct MobileBrowserOnboardingView: View {
     @State private var setup: BrowserManualSetupModel
     /// How long the welcome has waited on iCloud's check.
     @State private var cloudWait = BrowserOnboardingCloudWait()
-    @State private var selectedSpaceID: UUID?
     @State private var errorMessage: String?
     @State private var completionTask: Task<Void, Never>?
     /// The step shown while finishing, which stays as the sheet goes.
     @State private var finishingStep: SetupStep?
+    /// Whether setup finished and its copy of Crest grows to fill the screen
+    /// before Crest shows in its place.
+    @State private var isTakingOver = false
+    /// What the person changed in the preview's tabs and folders, which
+    /// Crest takes once setup finishes.
+    @State private var carriedEdits: BrowserSetupCopyEdits?
 
     init(
         request: BrowserOnboardingRequest,
@@ -59,18 +65,43 @@ struct MobileBrowserOnboardingView: View {
 
     var body: some View {
         ZStack {
-            Color(uiColor: .systemBackground)
+            // Crest's paper, which setup draws on too. Clear as setup hands
+            // over, so Crest shows through as the steps slide away.
+            BrowserSetupPaper()
                 .ignoresSafeArea()
+                .opacity(isTakingOver ? 0 : 1)
 
-            MobileOnboardingCurrentPage(context: pageContext)
-                .transition(.opacity)
+            if showsSetup {
+                setupView
+            } else {
+                MobileOnboardingCurrentPage(context: pageContext)
+                    .transition(.opacity)
+            }
         }
-        .tint(.accentColor)
         .crestFieldSurfaceRole(.brand)
         .modifier(lifecycleModifier)
         .task { await cloudWait.run() }
         .disabled(completionTask != nil)
         .onDisappear { completionTask?.cancel() }
+    }
+
+    /// Whether the step is one the setup screen draws: the welcome, the look
+    /// and the manual setup, which it shows as one screen of steps beside a
+    /// live preview.
+    private var showsSetup: Bool {
+        step == .welcome || step == .look || step == .manualSetup
+    }
+
+    private var setupView: some View {
+        MobileSetupView(
+            browser: browser, setup: setup, welcome: welcomeAction,
+            firstPath: request.entryPoint.firstStep == .manualSetup ? [.spaces] : [],
+            closes: !request.entryPoint.isGuided, errorMessage: errorMessage,
+            isFinishing: completionTask != nil || coordinator.isHandingOver,
+            isTakingOver: isTakingOver, setUpWithoutCloud: cloudWait.setUpWithoutCloud,
+            startBrowsing: startBrowsing,
+            prepareCrest: { coordinator.preparesBrowser = true },
+            openCrest: completeSetup, close: close)
     }
 
     private var lifecycleModifier: MobileOnboardingLifecycleModifier {
@@ -84,26 +115,12 @@ struct MobileBrowserOnboardingView: View {
     private var pageContext: MobileOnboardingPageContext {
         MobileOnboardingPageContext(
             step: step,
-            welcomeAction: welcomeAction,
-            welcomePrimaryTitle: welcomePrimaryTitle,
-            welcomeStatus: welcomeStatus(welcomeAction),
             previewWidth: previewWidth,
             personalSpace: tutorialPersonalSpace,
             workSpace: tutorialWorkSpace,
             featureCloseTitle: featureCloseTitle,
             featureCloseAction: featureCloseAction,
-            setup: setup,
-            selectedSpaceID: $selectedSpaceID,
-            look: flow?.look ?? .heraldic,
-            errorMessage: errorMessage,
-            opensGettingStarted: flow?.opensGuide == true,
-            welcomePrimaryAction: handleWelcomeAction,
-            welcomeSetupWithoutCloudAction: setUpWithoutCloud,
             advance: advance,
-            chooseLook: chooseLook,
-            adoptStyle: { browser.adoptCustomizationStyle($0) },
-            setupSecondaryAction: back,
-            finish: completeSetup,
             close: close,
             reviewFeatures: { move(to: .featureSpaces) }
         )
@@ -112,11 +129,6 @@ struct MobileBrowserOnboardingView: View {
     private var welcomeAction: BrowserOnboardingWelcomeAction {
         BrowserOnboardingWelcomeAction(
             flow: flow, cloudPhase: cloudSync.phase, wait: cloudWait.stage, forcesSetup: progress.forcesSetup)
-    }
-
-    private var welcomePrimaryTitle: String {
-        if welcomeAction.waitsOnCloud { return "Checking iCloud" }
-        return welcomeAction.opensCrest ? "Open Crest" : "Get Started"
     }
 
     private var featureCloseTitle: String? {
@@ -134,27 +146,12 @@ struct MobileBrowserOnboardingView: View {
             : MobileOnboardingLayout.compactPreviewWidth
     }
 
-    private func handleWelcomeAction() {
-        guard !welcomeAction.waitsOnCloud else { return }
-        if welcomeAction.opensCrest {
-            completeSetup()
-        } else {
-            advance()
-        }
-    }
-
-    /// Stops waiting on iCloud and goes on to set up this device; sync keeps
-    /// checking in the background.
-    private func setUpWithoutCloud() {
-        cloudWait.setUpWithoutCloud()
-        advance()
-    }
-
-    /// Gives the Spaces setup makes `look`.
-    private func chooseLook(_ look: SetupLook) {
-        withAnimation(CrestMotion.selection.unlessReducingMotion(reduceMotion)) {
-            _ = try? browser.core.send(ChooseSetupLook(look: look))
-        }
+    /// Finishes setup with the manual setup applied, then makes `edits`,
+    /// what the person changed in the preview's tabs and folders, in Crest.
+    private func startBrowsing(_ edits: BrowserSetupCopyEdits?) {
+        if step != .manualSetup { move(to: .manualSetup) }
+        carriedEdits = edits
+        completeSetup()
     }
 
     /// Goes on to the step the core says follows this one.
@@ -163,39 +160,12 @@ struct MobileBrowserOnboardingView: View {
         move(to: next)
     }
 
-    /// Goes back to the step the core names, or closes setup where Back
-    /// leads nowhere.
-    private func back() {
-        guard let previous = flow?.backStep else {
-            close()
-            return
-        }
-        move(to: previous)
-    }
-
     private func move(to newStep: SetupStep) {
         withAnimation(
             CrestMotion.selection.unlessReducingMotion(reduceMotion)
         ) {
             _ = try? browser.core.send(ShowSetupStep(step: newStep))
         }
-        setup.repairSelection($selectedSpaceID)
-    }
-
-    private func welcomeStatus(_ action: BrowserOnboardingWelcomeAction) -> String {
-        if action.waitsOnCloud {
-            return "Checking iCloud for an existing Crest setup…"
-        }
-        if action.opensCrest {
-            return "Your existing Spaces are ready."
-        }
-        if browser.workspaceModel?.isDisposableSeed != true {
-            return "Your existing Spaces are ready to customize."
-        }
-        if action.reportsCloudUnavailable {
-            return "iCloud is unavailable right now; you can still set up this device."
-        }
-        return "No existing setup was found in iCloud."
     }
 
     private func reset(for request: BrowserOnboardingRequest) {
@@ -210,16 +180,23 @@ struct MobileBrowserOnboardingView: View {
     /// starts it over.
     private func start(_ request: BrowserOnboardingRequest) {
         finishingStep = nil
+        isTakingOver = false
         _ = try? browser.core.send(StartSetup(workspaceID: browser.family.workspaceID, entry: request.entryPoint))
-        setup.repairSelection($selectedSpaceID)
+        if request.entryPoint.firstStep != .importBrowser, setup.draft == nil {
+            _ = try? browser.core.send(ShowSetupStep(step: .manualSetup))
+        }
     }
 
     /// Finishes setup: the core applies the manual setup and completes setup
-    /// on this device, and the guide opens where the core names it.
+    /// on this device, and the guide opens where the core names it. Setup
+    /// shows it is finishing at once, a frame before the work begins, and
+    /// Crest comes up behind it if it has not already.
     private func completeSetup() {
         guard completionTask == nil else { return }
         finishingStep = step
         completionTask = Task { @MainActor in
+            try? await Task.sleep(for: MobileBrowserOnboardingMetrics.feedbackFrame)
+            coordinator.preparesBrowser = true
             let result = await BrowserSetupFinish.finish(browser: browser, spaceAccess: spaceAccess)
             guard !Task.isCancelled else { return }
             completionTask = nil
@@ -228,7 +205,7 @@ struct MobileBrowserOnboardingView: View {
     }
 
     private func close() {
-        coordinator.isMobilePresented = false
+        coordinator.finishMobilePresentation()
     }
 }
 
@@ -237,9 +214,43 @@ extension MobileBrowserOnboardingView: BrowserSetupFinishReceiver {
 
     func setupCompleted(guide: BrowserTabRuntimeAssignment?) {
         errorMessage = nil
-        progress.setupFinished()
+        carriedEdits?.replay(into: browser)
+        carriedEdits = nil
+        // Crest shows the page it opens on behind setup, which waits for it,
+        // so setup goes over a finished page rather than one still coming up.
+        coordinator.isHandingOver = true
         if let guide { didOpenGettingStarted(guide) }
-        coordinator.isMobilePresented = false
+        guard showsSetup, !reduceMotion else {
+            finishPresentation()
+            return
+        }
+        // A phone's page covers the screen, rising over setup as it comes.
+        let pageRises = guide != nil && horizontalSizeClass == .compact
+        Task { @MainActor in
+            // These end once the main thread has built and drawn the page.
+            for _ in 0..<MobileBrowserOnboardingMetrics.handOverFrames {
+                try? await Task.sleep(for: MobileBrowserOnboardingMetrics.feedbackFrame)
+            }
+            if pageRises {
+                // Setup goes once the page has risen over it.
+                try? await Task.sleep(for: MobileBrowserOnboardingMetrics.pageRise)
+            } else {
+                // An iPad's copy of Crest grows to fill the screen, and steps
+                // standing alone slide away over Crest; setup then goes.
+                withAnimation(CrestMotion.onboardingHandOver) { isTakingOver = true }
+                try? await Task.sleep(for: .seconds(CrestMotion.onboardingHandOverTransition))
+            }
+            finishPresentation()
+        }
+    }
+
+    /// Marks setup finished on this device and lets Crest show.
+    private func finishPresentation() {
+        progress.setupFinished()
+        // Handing over, setup goes in the frame Crest takes its place.
+        var transaction = Transaction()
+        transaction.disablesAnimations = coordinator.isHandingOver
+        withTransaction(transaction) { coordinator.finishMobilePresentation() }
     }
 
     func setupCancelled() {
@@ -274,4 +285,14 @@ extension MobileBrowserOnboardingView: BrowserSetupFinishReceiver {
         tutorialPersonalSpace: fixture.alternateSpace,
         tutorialWorkSpace: fixture.space
     )
+}
+
+enum MobileBrowserOnboardingMetrics {
+    /// About one frame: the wait for setup to show it is finishing before
+    /// the work begins, and each wait for Crest to draw behind setup.
+    static let feedbackFrame = Duration.milliseconds(20)
+    /// The frames setup waits, once Crest builds its page, before it goes.
+    static let handOverFrames = 3
+    /// How long a phone's page takes to rise over setup, which goes after.
+    static let pageRise = Duration.milliseconds(650)
 }

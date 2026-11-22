@@ -38,11 +38,11 @@ class PublishedReleaseResolutionTests(unittest.TestCase):
   <channel>
     <item>
       <sparkle:channel>development</sparkle:channel>
-      <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Installer-Crest-0.4.0-development-2026-08-17-3e67cd3-arm64.dmg" />
+      <enclosure url="https://github.com/crest-browser/Crest/releases/download/development/Installer-Crest-0.4.0-development-2026-08-17-3e67cd3-arm64.dmg" />
     </item>
     <item>
       <sparkle:channel>development</sparkle:channel>
-      <enclosure url="https://github.com/pauljoda/Crest/releases/download/development/Crest-0.4.0-development-2026-08-17-0c2900b-arm64.dmg" />
+      <enclosure url="https://github.com/crest-browser/Crest/releases/download/development/Crest-0.4.0-development-2026-08-17-0c2900b-arm64.dmg" />
     </item>
   </channel>
 </rss>
@@ -66,7 +66,7 @@ class FakeGitHub:
 
     def run(self, arguments: list[str]) -> str:
         self.commands.append(tuple(arguments))
-        if arguments[:2] == ["api", "repos/pauljoda/Crest/releases/tags/development"]:
+        if arguments[:2] == ["api", "repos/crest-browser/Crest/releases/tags/development"]:
             return json.dumps({"id": 42})
         if arguments[:3] == ["api", "--paginate", "--slurp"]:
             return json.dumps([self.assets])
@@ -129,7 +129,7 @@ class ReleaseAssetRecoveryTests(unittest.TestCase):
             )
 
             self.reconciler.reconcile_asset(
-                repository="pauljoda/Crest",
+                repository="crest-browser/Crest",
                 release_tag="development",
                 asset_path=asset,
                 run_github=github.run,

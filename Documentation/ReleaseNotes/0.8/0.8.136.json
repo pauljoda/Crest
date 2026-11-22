@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "quick-window-remembers-size",
+      "category": "improved",
+      "message": "On Mac, a new Quick Window opens at the size you last gave one, even after restarting Crest.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "quick-window-size-after-contents-change",
+      "category": "fixed",
+      "message": "On Mac, a Quick Window goes on remembering the size you give it after its contents change.",
+      "platforms": ["mac"]
+    }
+  ]
+}

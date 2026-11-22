@@ -21,7 +21,8 @@ public sealed class ShortcutCatalogTests {
         "showDownloads", "webInspectorInstructions", "splitWithNextTab", "focusNextSplitCard", "focusPreviousSplitCard",
         "removeTabFromSplit", "separateSplitTabs", "moveSplitCardLeft", "moveSplitCardRight", "toggleDeveloperToolbar",
         "toggleTranslationToolbar", "openFile", "findNext", "findPrevious", "capturePage",
-        "mostRecentTabBackward", "clearSiteCookies", "clearSiteCache", "toggleSelectedTabSaved"
+        "mostRecentTabBackward", "clearSiteCookies", "clearSiteCache", "toggleSelectedTabSaved", "openNextExtension",
+        "clearAllTabs", "collapseAllFolders"
     ];
 
     private static readonly IReadOnlyList<ShortcutCommand> Offered = ShortcutCommand.All;
@@ -69,6 +70,8 @@ public sealed class ShortcutCatalogTests {
     [InlineData("newTab", "findNext", "g", ShortcutChord.Command)]
     [InlineData("newTab", "findPrevious", "g", ShortcutChord.Command | ShortcutChord.Shift)]
     [InlineData("newTab", "capturePage", "2", ShortcutChord.Command | ShortcutChord.Shift)]
+    [InlineData("newTab", "openNextExtension", "e", ShortcutChord.Command)]
+    [InlineData("newTab", "archiveTab", "e", ShortcutChord.Command | ShortcutChord.Shift)]
     public void MacDefaultsAddedLaterYieldToAPersistedCustomChord(string owner, string displaced, string key, int modifiers) {
         var overrides = ShortcutOverrides.Restore([new(owner, Key(key, modifiers)), new("showHistory", null)]);
         var bindings = overrides.Bindings(Offered, DevicePlatform.Desktop).ToDictionary(binding => binding.Command.Name);

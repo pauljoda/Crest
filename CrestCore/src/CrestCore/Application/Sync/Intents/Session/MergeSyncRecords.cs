@@ -11,7 +11,7 @@ namespace CrestCore.Contracts;
 /// archive that arrives in another Space than the journal holds it in moved
 /// there, and the winning version decides where it stays; any other record the
 /// journal holds in another Space is refused.
-[MessageLimit(64 * 1024 * 1024)]
+[MessageLimit(MessageLimitAttribute.SessionBytes)]
 public sealed record MergeSyncRecords(IReadOnlyList<SyncRecord> Records) : CloudSyncIntent {
     #region Actions - Sync
 

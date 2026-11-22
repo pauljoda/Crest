@@ -75,7 +75,7 @@ struct BrowserFolderGroupSurface: View {
             isPresented: interaction.isChoosingColor,
             arrowEdge: .trailing
         ) {
-            BrowserFolderColorPicker(color: interaction.folderColor)
+            BrowserFolderColorPicker(color: interaction.folderColor, title: folder.kind.colorTitle)
                 .presentationCompactAdaptation(.popover)
         }
         .browserIconCustomizationPopover(
@@ -126,22 +126,7 @@ struct BrowserFolderGroupSurface: View {
 
     /// The folder's menu, in the system's menu or behind its card's "…".
     private var organizationMenu: BrowserFolderOrganizationMenu {
-        BrowserFolderOrganizationMenu(
-            folder: folder,
-            context: configuration.context,
-            assignment: configuration.folderRuntimeAssignment,
-            createNestedFolder: interaction.beginCreatingChild,
-            renameFolder: interaction.beginRenaming,
-            changeColor: {
-                interaction.isChoosingColor.wrappedValue = true
-            },
-            changeIcon: {
-                interaction.isChoosingIcon.wrappedValue = true
-            },
-            deleteFolder: {
-                interaction.isConfirmingDeletion.wrappedValue = true
-            }
-        )
+        BrowserFolderOrganizationMenu(configuration: configuration, interaction: interaction)
     }
 
     /// Whether the header shows one of the presentations its menu raises,
@@ -205,6 +190,14 @@ private struct BrowserFolderCollapsedVisibilityUpdates: ViewModifier {
                 .onChange(of: interaction.isExpanded.wrappedValue, initial: true) { _, _ in reconcileVisibility() }
                 .onChange(of: configuration.shownFolderTabID) { _, _ in reconcileVisibility() }
                 .onChange(of: configuration.residencyRevision, initial: true) { _, _ in reconcileVisibility() }
+                // A folder that turns into a group, or back, keeps the rows its
+                // new kind keeps when closed, as though it closed now.
+                .onChange(of: configuration.folder.isGroup) { _, _ in
+                    configuration.sidebarInteraction.rekeepCollapsedFolder(
+                        configuration.folderRuntimeAssignment, isExpanded: !configuration.folder.isCollapsed,
+                        selectedTabID: configuration.shownFolderTabID, folderTabIDs: configuration.folderTabIDs,
+                        residentFolderTabIDs: configuration.residentFolderTabIDs)
+                }
         #else
             content
                 .onChange(
@@ -224,10 +217,18 @@ private struct BrowserFolderCollapsedVisibilityUpdates: ViewModifier {
                         selectedTabID: selectedTabID,
                         folderTabIDs: configuration.folderTabIDs
                     )
+                    // A tab closed while the window showed it leaves once
+                    // the window shows another.
+                    updateResidency()
                 }
-                .onChange(of: configuration.residencyRevision, initial: true) { _, _ in
-                    interaction.collapsedTabVisibility.wrappedValue.residencyDidChange(
+                .onChange(of: configuration.residencyRevision, initial: true) { _, _ in updateResidency() }
+                // A folder that turns into a group, or back, keeps the rows its
+                // new kind keeps when closed, as though it closed now.
+                .onChange(of: configuration.folder.isGroup) { _, _ in
+                    interaction.collapsedTabVisibility.wrappedValue.expansionDidChange(
                         isExpanded: interaction.isExpanded.wrappedValue,
+                        selectedTabID: configuration.shownFolderTabID,
+                        folderTabIDs: configuration.folderTabIDs,
                         residentFolderTabIDs: configuration.residentFolderTabIDs
                     )
                 }
@@ -242,7 +243,17 @@ private struct BrowserFolderCollapsedVisibilityUpdates: ViewModifier {
             configuration.sidebarInteraction.reconcileCollapsedFolder(
                 configuration.folderRuntimeAssignment, isExpanded: !configuration.folder.isCollapsed,
                 selectedTabID: configuration.shownFolderTabID, folderTabIDs: configuration.folderTabIDs,
-                residentFolderTabIDs: configuration.residentFolderTabIDs)
+                residentFolderTabIDs: configuration.residentFolderTabIDs,
+                loadedFolderTabIDs: configuration.loadedFolderTabIDs)
+        }
+    #else
+        private func updateResidency() {
+            interaction.collapsedTabVisibility.wrappedValue.residencyDidChange(
+                isExpanded: interaction.isExpanded.wrappedValue,
+                selectedTabID: configuration.shownFolderTabID,
+                residentFolderTabIDs: configuration.residentFolderTabIDs,
+                loadedFolderTabIDs: configuration.loadedFolderTabIDs
+            )
         }
     #endif
 }

@@ -7,6 +7,11 @@ enum CrestColor {
     static let hover = Color.primary.opacity(CrestOpacity.hover)
     static let subtleBorder = Color.primary.opacity(CrestOpacity.border)
     static let selectedBorder = Color.primary.opacity(CrestOpacity.selectedBorder)
+    /// The lift a selected tab on dark glass takes toward white.
+    static let darkSelectionLift = Color.white.opacity(CrestOpacity.darkSelectionLift)
+    /// The edge a selected tab on dark glass wears, where the standard
+    /// hairline disappears into a dark sidebar.
+    static let darkSelectionBorder = Color.white.opacity(CrestOpacity.darkSelectionBorder)
     static let dropIndicator = CrestBrandPalette.paper.opacity(CrestOpacity.dropIndicator)
     static let textPrimary = Color.primary
     static let textSecondary = Color.secondary
@@ -37,10 +42,10 @@ enum CrestColor {
     static let success = status(
         light: CrestColorComponents(red: 47, green: 112, blue: 66),
         dark: CrestColorComponents(red: 134, green: 196, blue: 142))
-    /// The wash under a row or tag that is in danger.
-    static let dangerFill = danger.opacity(CrestOpacity.statusFill)
     /// The wash under a row or tag that needs the person.
     static let warningFill = warning.opacity(CrestOpacity.statusFill)
+    /// The wash under a row or tag that failed or was refused.
+    static let dangerFill = danger.opacity(CrestOpacity.statusFill)
 
     private static func status(light: CrestColorComponents, dark: CrestColorComponents) -> Color {
         CrestPlatformDynamicColor.make(light: light, lightOpacity: 1, dark: dark, darkOpacity: 1)

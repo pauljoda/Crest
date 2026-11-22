@@ -132,7 +132,7 @@ struct BrowserLookAndFeelSidebarCrop: View {
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .background(Color(white: 0.98))
+            .background(CrestBrandPalette.paper)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .allowsHitTesting(false)
@@ -155,7 +155,7 @@ struct BrowserLookAndFeelSidebarCrop: View {
     private var edge: HorizontalEdge { appearance.sidebarEdge(in: layoutDirection) }
 
     private var branding: SpaceBranding {
-        space?.branding ?? SpaceHouse.winter.look
+        space?.branding ?? SpaceHouse.crest.look
     }
 
     private var stateDescription: String {

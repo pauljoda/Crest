@@ -1,0 +1,34 @@
+{
+  "entries": [
+    {
+      "id": "split-one-tab-message",
+      "category": "fixed",
+      "message": "Making a Split View from a single tab now asks you to select at least 2 tabs, instead of asking for fewer."
+    },
+    {
+      "id": "mobile-padlock-page-security",
+      "category": "internal",
+      "message": "iPhone, iPad and Mac decide the address field's padlock with one rule that reads the security Crest judged for the page."
+    },
+    {
+      "id": "session-save-failure-reason",
+      "category": "fixed",
+      "message": "When Crest can't save your session, Sync settings says why in plain words instead of showing an internal code."
+    },
+    {
+      "id": "translatable-dialogs",
+      "category": "internal",
+      "message": "Mac dialogs and save panels, sync and password-import messages, and the sidebar's media card text go through the string catalog so they can be translated."
+    },
+    {
+      "id": "untitled-names-everywhere",
+      "category": "fixed",
+      "message": "A folder or Space without a name is called Untitled Folder or Untitled Space wherever it comes from, including storage and sync."
+    },
+    {
+      "id": "browser-import-http-passwords",
+      "category": "fixed",
+      "message": "Importing another browser's passwords brings those for sites without HTTPS too, and setup says Crest won't fill them in, instead of leaving them out without a word."
+    }
+  ]
+}
