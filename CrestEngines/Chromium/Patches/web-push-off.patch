@@ -45,7 +45,7 @@
 -          features::kPushSubscriptionWithExpirationTime)) {
 -    app_identifier.set_expiration_time(
 -        base::Time::Now() + kPushSubscriptionExpirationPeriodTimeDelta);
--    DCHECK(app_identifier.expiration_time());
+-    CHECK(app_identifier.expiration_time(), base::NotFatalUntil::M162);
 -    ttl = kPushSubscriptionExpirationPeriodTimeDelta;
 -  }
 -

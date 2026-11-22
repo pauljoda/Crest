@@ -48,7 +48,7 @@
  #include "chrome/browser/custom_handlers/protocol_handler_registry_factory.h"
 @@ -253,6 +256,14 @@
      bool restore_tabbed_browser) {
-   DCHECK(profile);
+   CHECK(profile, base::NotFatalUntil::M162);
    profile_ = profile;
 +#if BUILDFLAG(IS_MAC)
 +  if (crest::IsEnabled()) {
@@ -228,24 +228,31 @@
      if (NSUUID* key = request.UUID;
          [GetPendingWebAuthRequests() objectForKey:key]) {
        // If the web authentication request is still pending, remove it from the
+--- a/chrome/BUILD.gn
++++ b/chrome/BUILD.gn
+@@ -1680,6 +1680,12 @@
+     public_deps += [ "//printing" ]
+   }
+ 
++  if (is_mac) {
++    # Crest's host, which depends on //chrome/browser rather than being one of
++    # its parts.
++    public_deps += [ "//chrome/browser:crest_host" ]
++  }
++
+   if (is_chromeos) {
+     public_deps += [
+       "//ash/constants",
 --- a/chrome/browser/BUILD.gn
 +++ b/chrome/browser/BUILD.gn
-@@ -4537,6 +4537,7 @@
-     deps += [
-       ":app_controller_mac",
-       ":chrome_browser_application_mac",
-+      ":crest_host",
-       ":global_keyboard_shortcuts_mac",
-       "//chrome/browser/apps/app_shim",
-       "//chrome/browser/mac",
-@@ -5252,6 +5253,74 @@
+@@ -4658,6 +4658,74 @@
    sources = []
  }
  
 +if (is_mac) {
 +  # Crest's host: its browser window, the engine it serves, and the protocols
-+  # Crest's Swift UI calls. It includes //chrome/browser headers, so like every
-+  # target circular with "browser" it carries browser_public_dependencies.
++  # Crest's Swift UI calls. It is built on the browser and depends on it, and
++  # //chrome:dependencies links it into the framework beside it.
 +  source_set("crest_host") {
 +    sources = [
 +      "ui/crest/crest_browser_window.h",
@@ -293,8 +300,8 @@
 +      "ui/crest/CrestChromiumHost.h",
 +    ]
 +
-+    public_deps = [ ":browser_public_dependencies" ]
 +    deps = [
++      ":browser",
 +      "//media/mojo/mojom",
 +      "//services/audio/public/mojom",
 +      "//services/media_session/public/mojom",
@@ -310,9 +317,9 @@
 +  }
 +}
 +
- # These are the dependencies for the "browser" target that are outside of
- # //chrome/browser. All gn targets that have circular dependencies with
- # "browser" should include this dependency.
+ # Any source files may be added to primitives. The only requirement is that
+ # there are no dependencies on //chrome/browser.
+ source_set("primitives") {
 --- a/chrome/browser/ui/tabs/tab_features.cc
 +++ b/chrome/browser/ui/tabs/tab_features.cc
 @@ -12,6 +12,10 @@
@@ -326,10 +333,10 @@
  #include "base/time/default_tick_clock.h"
  #include "chrome/browser/actor/actor_keyed_service.h"
  #include "chrome/browser/actor/actor_surface_tab_helper.h"
-@@ -800,9 +804,18 @@
+@@ -819,9 +823,18 @@
+               tab, tab, tab.GetContents(),
+               EnterpriseProxyErrorServiceFactory::GetForProfile(profile));
  
-   // Create the ReadAnythingController first to ensure it exists before
-   // any potential consumers, like the side panel controller.
 -  read_anything_controller_ =
 -      GetUserDataFactory().CreateInstance<ReadAnythingController>(
 -          tab, &tab, side_panel_registry_.get());
@@ -574,16 +581,20 @@
  
 --- a/chrome/browser/ui/views/permissions/permission_prompt_factory.cc
 +++ b/chrome/browser/ui/views/permissions/permission_prompt_factory.cc
-@@ -40,6 +40,8 @@
+@@ -39,6 +39,12 @@
+ #include "third_party/blink/public/common/features_generated.h"
  #include "url/origin.h"
  
- #if BUILDFLAG(IS_MAC)
++#include "build/build_config.h"
++#if BUILDFLAG(IS_MAC)
 +#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
 +#include "chrome/browser/ui/crest/crest_permission_prompt.h"
- #include "chrome/browser/ui/views/permissions/permission_prompt_notifications_mac.h"
- #include "chrome/browser/web_applications/os_integration/mac/web_app_shortcut_mac.h"
- #endif
-@@ -292,6 +294,9 @@
++#endif
++
+ namespace {
+ 
+ BrowserWindowInterface* GetBrowser(content::WebContents* web_contents) {
+@@ -314,6 +320,9 @@
  std::unique_ptr<permissions::PermissionPrompt> CreatePermissionPrompt(
      content::WebContents* web_contents,
      permissions::PermissionPrompt::Delegate* delegate) {
@@ -626,7 +637,7 @@
 @@ -87,6 +91,12 @@
      ExtensionInstallPrompt::DoneCallback done_callback,
      std::unique_ptr<InstallPromptData> prompt) {
-   DCHECK_CURRENTLY_ON(content::BrowserThread::UI);
+   CHECK_CURRENTLY_ON(content::BrowserThread::UI, base::NotFatalUntil::M162);
 +#if BUILDFLAG(IS_MAC)
 +  if (crest::IsEnabled()) {
 +    crest::ShowExtensionPrompt(std::move(show_params), std::move(done_callback), std::move(prompt));
@@ -1171,7 +1182,7 @@
 @@ -150,7 +150,8 @@
        mojo::PendingReceiver<
            mojom::blink::NavigationResumeDeferredCommitListener>,
-       std::optional<base::UnguessableToken> script_tool_invocation_id,
+       std::optional<ToolInvocationToken> script_tool_invocation_id,
 -      const String& script_injector_host) override;
 +      const String& script_injector_host,
 +      int crest_link_modifiers = 0) override;
@@ -1183,7 +1194,7 @@
 @@ -206,7 +206,8 @@
            mojom::blink::NavigationResumeDeferredCommitListener>
            resume_defer_commit_listener,
-       std::optional<base::UnguessableToken> script_tool_invocation_id,
+       std::optional<ToolInvocationToken> script_tool_invocation_id,
 -      const String& script_injector_host) = 0;
 +      const String& script_injector_host,
 +      int crest_link_modifiers = 0) = 0;
@@ -1195,14 +1206,14 @@
 @@ -639,7 +639,8 @@
      mojo::PendingReceiver<mojom::blink::NavigationResumeDeferredCommitListener>
          resume_defer_commit_listener,
-     std::optional<base::UnguessableToken> script_tool_invocation_id,
+     std::optional<ToolInvocationToken> script_tool_invocation_id,
 -    const String& script_injector_host) {
 +    const String& script_injector_host,
 +    int crest_link_modifiers) {
    if (!web_frame_->Client()) {
      return;
    }
-@@ -672,6 +673,7 @@
+@@ -668,6 +669,7 @@
        should_check_main_world_content_security_policy;
    navigation_info->blob_url_token = std::move(blob_url_token);
    navigation_info->input_start = input_start_time;
@@ -1272,7 +1283,7 @@
 @@ -131,7 +131,8 @@
      bool has_rel_opener,
      mojo::PendingReceiver<mojom::blink::NavigationResumeDeferredCommitListener>,
-     std::optional<base::UnguessableToken> script_tool_invocation_id,
+     std::optional<ToolInvocationToken> script_tool_invocation_id,
 -    const String&) {}
 +    const String&,
 +    int crest_link_modifiers) {}
@@ -1296,7 +1307,7 @@
 @@ -377,7 +377,8 @@
        mojo::PendingReceiver<
            mojom::blink::NavigationResumeDeferredCommitListener>,
-       std::optional<base::UnguessableToken> script_tool_invocation_id,
+       std::optional<ToolInvocationToken> script_tool_invocation_id,
 -      const String& script_injector_host) override;
 +      const String& script_injector_host,
 +      int crest_link_modifiers = 0) override;
@@ -1637,17 +1648,17 @@
    }
 --- a/chrome/browser/devtools/devtools_window.cc
 +++ b/chrome/browser/devtools/devtools_window.cc
-@@ -121,6 +121,9 @@
+@@ -123,6 +123,9 @@
  #else
  #include "chrome/browser/devtools/devtools_policy_dialog.h"
  #include "chrome/browser/devtools/devtools_ui_controller.h"
 +#if BUILDFLAG(IS_MAC)
 +#include "chrome/browser/ui/crest/crest_chrome_hooks.h"  // nogncheck
 +#endif
- #include "chrome/browser/ui/browser_tabstrip.h"
  #include "chrome/browser/ui/browser_window.h"
  #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"  // nogncheck crbug.com/40147906
-@@ -520,6 +523,11 @@
+ #include "chrome/browser/ui/browser_window/public/global_browser_collection.h"  // nogncheck crbug.com/40147906
+@@ -523,6 +526,11 @@
  
    base::RecordAction(base::UserMetricsAction("DevTools_Close"));
  
@@ -1659,7 +1670,7 @@
    UpdateBrowserWindow();
    UpdateBrowserToolbar();
  
-@@ -1075,8 +1083,13 @@
+@@ -1078,8 +1086,13 @@
          FROM_HERE, base::BindOnce(&DevToolsWindow::ActivateInspectedTab,
                                    weak_factory_.GetWeakPtr()));
  
@@ -1674,7 +1685,7 @@
        devtools_ui_controller->UpdateDevtools(inspected_web_contents);
      }
      main_web_contents_->SetInitialFocus();
-@@ -1415,7 +1428,15 @@
+@@ -1418,7 +1431,15 @@
  #endif  // BUILDFLAG(IS_MAC)
      DevtoolsUIController* devtools_ui_controller =
          browser ? DevtoolsUIController::From(browser) : nullptr;
@@ -2006,7 +2017,7 @@
      return nullptr;
    }
    BrowserView* browser_view = BrowserView::GetBrowserViewForBrowser(browser);
--  DCHECK(browser_view);
+-  CHECK(browser_view, base::NotFatalUntil::M162);
 +  // A browser hosted by Crest has a native window and no BrowserView. Crest
 +  // presents a terminated renderer itself.
 +  if (!browser_view) {
@@ -2033,7 +2044,7 @@
  
 --- a/chrome/browser/ui/views/bubble_anchor_util_views.cc
 +++ b/chrome/browser/ui/views/bubble_anchor_util_views.cc
-@@ -78,6 +78,12 @@
+@@ -75,6 +75,12 @@
      }
    }
  
@@ -2043,11 +2054,11 @@
 +    return {};
 +  }
 +
-   if (anchor == Anchor::kLocationBar &&
-       browser_view->GetIsPictureInPictureType()) {
+   if (anchor == Anchor::kLocationBar && browser_view->GetIsFloatingType()) {
      auto* frame_view = static_cast<PictureInPictureBrowserFrameView*>(
-@@ -194,6 +200,13 @@
-   DCHECK(GetPageInfoAnchorConfiguration(browser).anchor.IsNull());
+         browser_view->browser_widget()->GetFrameView());
+@@ -191,6 +197,13 @@
+         base::NotFatalUntil::M162);
  
    BrowserView* browser_view = BrowserView::GetBrowserViewForBrowser(browser);
 +  if (!browser_view) {
@@ -2127,8 +2138,8 @@
  }  // namespace
 @@ -117,6 +120,14 @@
                                        LoginModelData* login_model_data) {
-   DCHECK_CURRENTLY_ON(content::BrowserThread::UI);
-   DCHECK(!dialog_);
+   CHECK_CURRENTLY_ON(content::BrowserThread::UI, base::NotFatalUntil::M162);
+   CHECK(!dialog_, base::NotFatalUntil::M162);
 +
 +  if (crest::PresentHTTPAuthentication(web_contents(), auth_info(),
 +          [weak = weak_factory_.GetWeakPtr()](bool accepted,
@@ -2232,9 +2243,9 @@
   private:
 --- a/content/common/frame.mojom
 +++ b/content/common/frame.mojom
-@@ -797,6 +797,10 @@
-   // https://whatwg.org/C/dynamic-markup-insertion.html#document-open-steps.
-   DidOpenDocumentInputStream(url.mojom.Url url);
+@@ -805,6 +805,10 @@
+   // must drop state that is tied to the replaced document in the renderer.
+   DidCommitDocumentReplacement();
  
 +  // Crest: sent by the renderer when the frame asked for a protected media
 +  // key system this browser does not have.
@@ -2245,10 +2256,10 @@
    // URL. The token will then be used to look up the blob associated with the
 --- a/content/browser/renderer_host/render_frame_host_impl.h
 +++ b/content/browser/renderer_host/render_frame_host_impl.h
-@@ -3498,6 +3498,7 @@
-       mojom::DidCommitSameDocumentNavigationParamsPtr same_document_params)
+@@ -3535,6 +3535,7 @@
        override;
    void DidOpenDocumentInputStream(const GURL& url) override;
+   void DidCommitDocumentReplacement() override;
 +  void CrestKeySystemUnavailable(const std::string& key_system) override;
    // |initiator_navigation_state_keep_alive_handle| is needed to ensure that the
    // NavigationStateKeepAlive of the initiator RenderFrameHost can still be
@@ -2904,9 +2915,9 @@
 +        type == DesktopMediaID::Type::TYPE_WINDOW ||
 +        type == DesktopMediaID::Type::TYPE_NONE);
    if (@available(macOS 14.0, *)) {
-     active_picker_source_id_++;
-     active_picker_type_ = type;
-@@ -479,6 +481,15 @@
+     if (picker_callback_) {
+       // The system picker is already showing for another request; reject this
+@@ -486,6 +488,15 @@
        VLOG(1) << "NSCPM::Open: Show screen-sharing picker for source id = "
                << active_picker_source_id_;
        LogToUma(SCContentSharingPickerOperation::kPresentScreen_Start);
@@ -2922,7 +2933,7 @@
      } else {
        config.allowedPickerModes = SCContentSharingPickerModeSingleWindow;
        picker.defaultConfiguration = config;
-@@ -610,6 +621,19 @@
+@@ -617,6 +628,19 @@
        source.display_id = filter.includedDisplays.firstObject.displayID;
      }
    }
@@ -3160,16 +3171,16 @@
 +}
 --- a/content/browser/webid/request_handler.cc
 +++ b/content/browser/webid/request_handler.cc
-@@ -325,7 +325,10 @@
+@@ -326,7 +326,10 @@
  
    FederatedApiPermissionStatus permission_status = GetApiPermissionStatus();
  
--  if (!CanBypassPermissionStatusCheck(spec_->rp_mode(),
+-  if (!CanBypassPermissionStatusCheck(req_->rp_mode(),
 +  // A click lifts embargo and site settings, but not a build that has FedCM
 +  // turned off: such a browser may have no account chooser to show.
 +  if (permission_status == FederatedApiPermissionStatus::BLOCKED_VARIATIONS ||
-+      !CanBypassPermissionStatusCheck(spec_->rp_mode(),
-                                       spec_->mediation_requirement())) {
++      !CanBypassPermissionStatusCheck(req_->rp_mode(),
+                                       req_->mediation_requirement())) {
      if (permission_status != FederatedApiPermissionStatus::GRANTED) {
        std::pair<FederatedRequestResult, TokenStatus> resultAndTokenStatus =
 --- a/chrome/browser/mac/code_sign_clone_manager.mm
@@ -3244,85 +3255,6 @@
    if (!autofill_payment_methods_supported_ ||
        !prefs::IsAutofillPaymentMethodsEnabled(
            Profile::FromBrowserContext(web_contents()->GetBrowserContext())
---- a/net/data/ssl/chrome_root_store/root_store.textproto
-+++ b/net/data/ssl/chrome_root_store/root_store.textproto
-@@ -276,12 +276,6 @@
-   ev_policy_oids: "2.23.140.1.1"
- }
- 
--# CN=emSign ECC Root CA - G3, O=eMudhra Technologies Limited, OU=emSign PKI, C=IN
--trust_anchors {
--  sha256_hex: "86a1ecba089c4a8d3bbe2734c612ba341d813e043cf9e8a862cd5c57a36bbe6b"
--  crs_root_id: 28
--}
--
- # CN=GDCA TrustAUTH R5 ROOT, O=GUANG DONG CERTIFICATE AUTHORITY CO.,LTD., C=CN
- trust_anchors {
-   sha256_hex: "bfff8fd04433487d6a8aa60c1a29767a9fc2bbb05e420f713a13b992891d3893"
---- a/net/data/ssl/chrome_root_store/root_store.certs
-+++ b/net/data/ssl/chrome_root_store/root_store.certs
-@@ -1945,61 +1945,6 @@
- 6ftjk4BAtcZsCjEozgyfz7MjNYBBjWzEN3uBL4ChQEKF6dk4jeihU80Bv2noWgby
- RQuQ+q7hv53yrlc8pa6yVvSLZUDp/TGBLPQ5Cdjua6e0ph0VpZj3AYHYhX3zUVxx
- iN66zB+Afko=
-------END CERTIFICATE-----
--
--# 86a1ecba089c4a8d3bbe2734c612ba341d813e043cf9e8a862cd5c57a36bbe6b
--Certificate:
--    Data:
--        Version: 3 (0x2)
--        Serial Number:
--            3c:f6:07:a9:68:70:0e:da:8b:84
--        Signature Algorithm: ecdsa-with-SHA384
--        Issuer: C = IN, OU = emSign PKI, O = eMudhra Technologies Limited, CN = emSign ECC Root CA - G3
--        Validity
--            Not Before: Feb 18 18:30:00 2018 GMT
--            Not After : Feb 18 18:30:00 2043 GMT
--        Subject: C = IN, OU = emSign PKI, O = eMudhra Technologies Limited, CN = emSign ECC Root CA - G3
--        Subject Public Key Info:
--            Public Key Algorithm: id-ecPublicKey
--                Public-Key: (384 bit)
--                pub:
--                    04:23:a5:0c:b8:2d:12:f5:28:f3:b1:b2:dd:e2:02:
--                    12:80:9e:39:5f:49:4d:9f:c9:25:34:59:74:ec:bb:
--                    06:1c:e7:c0:72:af:e8:ae:2f:e1:41:54:87:14:a8:
--                    4a:b2:e8:7c:82:e6:5b:6a:b5:dc:b3:75:ce:8b:06:
--                    d0:86:23:bf:46:d5:8e:0f:3f:04:f4:d7:1c:92:7e:
--                    f6:a5:63:c2:f5:5f:8e:2e:4f:a1:18:19:02:2b:32:
--                    0a:82:64:7d:16:93:d1
--                ASN1 OID: secp384r1
--                NIST CURVE: P-384
--        X509v3 extensions:
--            X509v3 Subject Key Identifier:
--                7C:5D:02:84:13:D4:CC:8A:9B:81:CE:17:1C:2E:29:1E:9C:48:63:42
--            X509v3 Key Usage: critical
--                Certificate Sign, CRL Sign
--            X509v3 Basic Constraints: critical
--                CA:TRUE
--    Signature Algorithm: ecdsa-with-SHA384
--         30:66:02:31:00:be:f3:61:cf:02:10:1d:64:95:07:b8:18:6e:
--         88:85:05:2f:83:08:17:90:ca:1f:8a:4c:e8:0d:1b:7a:b1:ad:
--         d5:81:09:47:ef:3b:ac:08:04:7c:5c:99:b1:ed:47:07:d2:02:
--         31:00:9d:ba:55:fc:a9:4a:e8:ed:ed:e6:76:01:42:7b:c8:f8:
--         60:d9:8d:51:8b:55:3b:fb:8c:7b:eb:65:09:c3:f8:96:cd:47:
--         a8:82:f2:16:55:77:24:7e:12:10:95:04:2c:a3
-------BEGIN CERTIFICATE-----
--MIICTjCCAdOgAwIBAgIKPPYHqWhwDtqLhDAKBggqhkjOPQQDAzBrMQswCQYDVQQG
--EwJJTjETMBEGA1UECxMKZW1TaWduIFBLSTElMCMGA1UEChMcZU11ZGhyYSBUZWNo
--bm9sb2dpZXMgTGltaXRlZDEgMB4GA1UEAxMXZW1TaWduIEVDQyBSb290IENBIC0g
--RzMwHhcNMTgwMjE4MTgzMDAwWhcNNDMwMjE4MTgzMDAwWjBrMQswCQYDVQQGEwJJ
--TjETMBEGA1UECxMKZW1TaWduIFBLSTElMCMGA1UEChMcZU11ZGhyYSBUZWNobm9s
--b2dpZXMgTGltaXRlZDEgMB4GA1UEAxMXZW1TaWduIEVDQyBSb290IENBIC0gRzMw
--djAQBgcqhkjOPQIBBgUrgQQAIgNiAAQjpQy4LRL1KPOxst3iAhKAnjlfSU2fySU0
--WXTsuwYc58Byr+iuL+FBVIcUqEqy6HyC5ltqtdyzdc6LBtCGI79G1Y4PPwT01xyS
--fvalY8L1X44uT6EYGQIrMgqCZH0Wk9GjQjBAMB0GA1UdDgQWBBR8XQKEE9TMipuB
--zhccLikenEhjQjAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zAKBggq
--hkjOPQQDAwNpADBmAjEAvvNhzwIQHWSVB7gYboiFBS+DCBeQyh+KTOgNG3qxrdWB
--CUfvO6wIBHxcmbHtRwfSAjEAnbpV/KlK6O3t5nYBQnvI+GDZjVGLVTv7jHvrZQnD
--+JbNR6iC8hZVdyR+EhCVBCyj
- -----END CERTIFICATE-----
- 
- # bfff8fd04433487d6a8aa60c1a29767a9fc2bbb05e420f713a13b992891d3893
 --- a/chrome/browser/extensions/api/extension_action/extension_action_api.cc
 +++ b/chrome/browser/extensions/api/extension_action/extension_action_api.cc
 @@ -60,6 +60,17 @@
@@ -3393,7 +3325,7 @@
              CHECK(tab_contents);
 --- a/chrome/browser/extensions/api/identity/web_auth_flow.cc
 +++ b/chrome/browser/extensions/api/identity/web_auth_flow.cc
-@@ -107,15 +107,11 @@
+@@ -100,12 +100,12 @@
  
  WebAuthFlow::~WebAuthFlow() {
    CHECK(!delegate_, base::NotFatalUntil::M161);
@@ -3403,18 +3335,16 @@
 -          : nullptr;
 -  if (popup_browser) {
 -    popup_browser->GetWindow()->Close();
--  } else if (web_contents()) {
--    // Explicitly close `web_contents()` if it's not displayed in any browser
--    // window.
 +  // Crest: closes only the page, never the window that shows it. Crest shows
 +  // the page as a tab beside the person's own, in the same Browser, which
 +  // closing the window would close with it. Chrome's popup holds nothing
 +  // else, so closing its only tab closes it too.
 +  if (web_contents()) {
-     web_contents()->Close();
++    web_contents()->Close();
    }
  
-@@ -499,13 +495,8 @@
+   CloseInfoBar();
+@@ -520,12 +520,9 @@
    // already observe Profile destruction, so we can just be silent here.
    delegate_ = nullptr;
  
@@ -3424,12 +3354,12 @@
 -          : nullptr;
 -  if (popup_browser) {
 -    popup_browser->GetWindow()->Close();
--  } else if (web_contents()) {
 +  // Crest: closes only the page, as the destructor does.
 +  if (web_contents()) {
-     web_contents()->Close();
++    web_contents()->Close();
    }
  
+   WebContentsObserver::Observe(nullptr);
 --- a/chrome/browser/ui/webui/new_tab_page/new_tab_page_handler.cc
 +++ b/chrome/browser/ui/webui/new_tab_page/new_tab_page_handler.cc
 @@ -882,7 +882,11 @@
