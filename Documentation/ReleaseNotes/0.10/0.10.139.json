@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "dark-page-opens-without-white-flash",
+      "category": "fixed",
+      "message": "Pages opening in dark mode go straight from the loading screen to the page, without a flash of white in between.",
+      "platforms": ["mac"]
+    }
+  ]
+}
