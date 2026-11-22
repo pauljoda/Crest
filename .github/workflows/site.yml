@@ -1,0 +1,48 @@
+name: Refresh crestbrowser.com
+
+# crestbrowser.com is built in crest-browser/crestbrowser.com from Crest's Help
+# Center and release history. This starts its deploy whenever either changes.
+on:
+  push:
+    branches: [main]
+    # An App Store release is recorded by pushing its ios-v<version> tag.
+    tags: ["ios-v*"]
+    paths:
+      - "HelpCenter/**"
+      - "Documentation/ReleaseNotes/**"
+      - "Scripts/export-release-history.py"
+      - "Scripts/release_note_catalog.py"
+  # Each published Mac release adds a release page.
+  workflow_run:
+    workflows: ["Publish macOS release"]
+    types: [completed]
+  # The credits list each day's supporters and contributors.
+  schedule:
+    - cron: "23 7 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  deploy-site:
+    # Forks hold neither the app's key nor a site to deploy.
+    if: >-
+      github.repository == 'crest-browser/Crest' &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      # The automation app is installed on the site repository alone, and the
+      # token can only start its workflows.
+      - id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.AUTOMATION_CLIENT_ID }}
+          private-key: ${{ secrets.AUTOMATION_PRIVATE_KEY }}
+          owner: crest-browser
+          repositories: crestbrowser.com
+          permission-actions: write
+
+      - name: Deploy crestbrowser.com
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: gh workflow run deploy.yml --repo crest-browser/crestbrowser.com

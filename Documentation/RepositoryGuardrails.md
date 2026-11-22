@@ -77,14 +77,14 @@ notes directly with:
 python3 Scripts/release_note_catalog.py
 ```
 
-When the site deploys, `Scripts/export-release-history.py` turns the notes, the
-release tags and the version history into one JSON file, and
-`Scripts/build-release-pages.py` renders the site's `/releases/` pages from it.
-Preview them locally in `Website/releases/`, which is not committed:
+`Scripts/export-release-history.py` turns the notes, the release tags and the
+version history into one JSON file. The product site,
+[crest-browser/crestbrowser.com](https://github.com/crest-browser/crestbrowser.com),
+renders its `/releases/` pages from that file each time it deploys; its README
+shows how to preview them.
 
 ```sh
 python3 Scripts/export-release-history.py --output build/release-history.json
-python3 Scripts/build-release-pages.py --history build/release-history.json
 ```
 
 ## Architecture and Xcode 27 compatibility

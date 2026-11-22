@@ -151,11 +151,9 @@
   "workflowActionRepositories": {
     "actions/attest": "MIT",
     "actions/checkout": "MIT",
-    "actions/configure-pages": "MIT",
-    "actions/deploy-pages": "MIT",
+    "actions/create-github-app-token": "MIT",
     "actions/setup-dotnet": "MIT",
     "actions/setup-node": "MIT",
-    "actions/upload-pages-artifact": "MIT",
     "github/codeql-action": "MIT source; CodeQL CLI terms"
   },
   "helpCenterDirectDependencies": {

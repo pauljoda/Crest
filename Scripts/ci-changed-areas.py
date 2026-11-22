@@ -39,7 +39,7 @@ class Area:
 # not documentation here.
 DOCUMENTATION = Area(
     name="documentation",
-    folders=("Website/", "HelpCenter/", "Marketing/", "Documentation/", ".github/ISSUE_TEMPLATE/"),
+    folders=("HelpCenter/", "Documentation/", ".github/ISSUE_TEMPLATE/"),
     root_suffixes=(".md", "LICENSE", "NOTICE"),
     excluded=("Documentation/ReleaseNotes/",),
 )

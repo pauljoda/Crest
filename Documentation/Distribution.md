@@ -124,9 +124,14 @@ the update it offers, each in a new tab. After an update, the first window
 opens the new release's page; the core keeps the release each device launched
 last and decides when a launch follows an update.
 
-The product site builds its release notes from the same files and the release
-tags each time it deploys, which it does after every Mac publication: a page for
-every Stable, Nightly, and Development release at
+The product site, built from
+[crest-browser/crestbrowser.com](https://github.com/crest-browser/crestbrowser.com),
+renders its release notes from the history `Scripts/export-release-history.py`
+exports from the same files and the release tags. Crest's **Refresh
+crestbrowser.com** workflow starts the site's deploy after every Mac
+publication, on an `ios-v` tag, when the Help Center or the release notes
+change, and once a day. The site has a page for every Stable, Nightly, and
+Development release at
 `https://crestbrowser.com/releases/mac/<channel>/<version>/`, and for iPhone and
 iPad, App Store releases from `ios-v<version>` tags and a TestFlight timeline of
 every version with iPhone and iPad changes, at
@@ -135,20 +140,10 @@ page opens the channel's timeline at that release, with `release.json` beside
 it. An address for a version without its own page goes to the release that
 contains it, then to the channel.
 
-The site's credits page, `https://crestbrowser.com/credits/`, is built from
-`Documentation/Credits.json` on each deploy and once a day: the developer, the
-community, the code contributors GitHub lists for the repository without bots,
-any other roles, and the supporters by tier, each marked with the service they
-give through. When the repository secret `PATREON_ACCESS_TOKEN` holds the
-Patreon campaign's creator access token, its active patrons are listed at the
-highest tier their pledge reaches, by their first names and the initial of their
-last. A file entry whose `patreon` holds a patron's member ID gives them the
-name and link they asked for, without putting their Patreon name in the file,
-and drops out once that membership ends. Ko-fi offers no way to list members,
-so Ko-fi supporters are file entries marked `"source": "ko-fi"`. Anyone
-`supporters.hidden` names, by the name the page shows, their Patreon name or
-their member ID, never appears. The page saves each avatar and site icon beside it, so it loads
-nothing from other sites, and `credits.json` beside it lists the same people.
+The site's credits page, `https://crestbrowser.com/credits/`, is built in the
+site repository from its `data/credits.json`, Crest's GitHub contributors and the
+Patreon campaign; that repository's README explains who it lists and how to
+change a listing.
 
 ## Publication order
 
@@ -254,7 +249,7 @@ For a new release line, explicitly set the intended version with
 the distribution workflows own build numbers. Write the version's `release`
 write-up in its notes file, refresh
 the public roadmap with `Scripts/render-roadmap.py --write`, and review the
-maintained [iPhone and iPad listing](../Marketing/AppStore/README.md) against
+maintained [iPhone and iPad listing](https://github.com/crest-browser/crestbrowser.com/blob/main/marketing/AppStore/README.md) against
 the release's mobile capabilities.
 
 Commit the version and release documentation together, push that commit to

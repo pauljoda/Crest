@@ -17,7 +17,7 @@ The complete notices are preserved in
 [`ThirdParty/Chromium-LICENSE.txt`](ThirdParty/Chromium-LICENSE.txt). Allo's license
 ships beside the font, in
 [`CrestShared/Resources/Fonts/AlloVariable-OFL.txt`](CrestShared/Resources/Fonts/AlloVariable-OFL.txt)
-and the website's and Help Center's font folders. The content
+and the Help Center's font folder. The content
 filter's notices cover adblock-rust and every Rust crate its lock file resolves,
 and the license audit keeps that list in step with the lock.
 Chromium includes many third-party components under their own licenses; the
