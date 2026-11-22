@@ -14,7 +14,7 @@
     ·
     <a href="https://github.com/crest-browser/Crest/releases/latest">Download for Mac</a>
     ·
-    <a href="https://github.com/users/pauljoda/projects/3">Roadmap</a>
+    <a href="https://github.com/orgs/crest-browser/projects/1">Roadmap</a>
     ·
     <a href="https://www.reddit.com/r/CrestBrowser">Community</a>
   </p>
@@ -202,7 +202,7 @@ Run the relevant behavioral tests and repository checks. Review visual, layout, 
 
 ## Project status
 
-Crest is under active development. The current implementation includes the core browsing, Space isolation, native platform chrome, credentials, data portability, synchronization foundations, Quick Window, Peek, and privacy features described above. The [Crest Roadmap project](https://github.com/users/pauljoda/projects/3) is the public release view; approval-gated and physical-device work remains documented in the [roadmap](Documentation/ROADMAP.md).
+Crest is under active development. The current implementation includes the core browsing, Space isolation, native platform chrome, credentials, data portability, synchronization foundations, Quick Window, Peek, and privacy features described above. The [Crest Roadmap project](https://github.com/orgs/crest-browser/projects/1) is the public release view; approval-gated and physical-device work remains documented in the [roadmap](Documentation/ROADMAP.md).
 
 ## Community and support
 

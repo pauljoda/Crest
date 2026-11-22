@@ -94,7 +94,7 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
             for xcode_version, build_version, origin, expected_return_code, expected_error in (
                 ("26.6", "17F113", organization_origin, 64, "requires Xcode 27 or newer"),
                 ("27.0", "27A266a", organization_origin, 0, None),
-                ("27.0", "27A266a", previous_origin, 0, None),
+                ("27.0", "27A266a", previous_origin, 64, "primary repository"),
                 ("27.0", "27A266a", "https://github.com/someone/Crest.git", 64, "primary repository"),
                 ("27.0", "27A5228h", organization_origin, 64, "beta or prerelease"),
                 ("27.0", "27A266b", organization_origin, 64, "beta or prerelease"),

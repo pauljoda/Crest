@@ -24,7 +24,7 @@ report has a Crest version, Apple platform, repeatable steps, expected result,
 and actual result. Search existing issues first and add sanitized evidence only
 when it changes what another person can reproduce.
 
-The [Crest Roadmap project](https://github.com/users/pauljoda/projects/3) and
+The [Crest Roadmap project](https://github.com/orgs/crest-browser/projects/1) and
 the [release milestones](https://github.com/crest-browser/Crest/milestones) are the
 public view of currently planned outcomes. Only the maintainer adds items to
 them, so opening an issue doesn't put it on the roadmap. Scope may evolve as

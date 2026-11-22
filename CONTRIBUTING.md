@@ -82,7 +82,7 @@ Use [r/CrestBrowser](https://www.reddit.com/r/CrestBrowser) to discuss early
 ideas, user questions, and compatibility experiences before they become
 actionable engineering work. Use GitHub Issues for reproducible bugs and
 concrete outcomes. The public
-[Crest Roadmap project](https://github.com/users/pauljoda/projects/3) and
+[Crest Roadmap project](https://github.com/orgs/crest-browser/projects/1) and
 release milestones summarize planned work. Only the maintainer adds items to
 them: opening an issue or a pull request doesn't put it on the roadmap or
 commit to building it. [The roadmap](Documentation/ROADMAP.md)

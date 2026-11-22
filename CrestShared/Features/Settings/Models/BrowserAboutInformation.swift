@@ -35,7 +35,7 @@ enum BrowserAboutLinks {
     }
 
     static var roadmap: URL {
-        url("https://github.com/users/pauljoda/projects/3")
+        url("https://github.com/orgs/crest-browser/projects/1")
     }
 
     private static func url(_ value: String) -> URL {
