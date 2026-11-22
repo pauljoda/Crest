@@ -39956,7 +39956,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = Crest;
 				CODE_SIGN_ENTITLEMENTS = "$(CREST_NATIVE_CORE_ENTITLEMENTS)";
 				COMBINE_HIDPI_IMAGES = YES;
-				CREST_CORE_LIBRARY_DIR = "$(PROJECT_DIR)/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish";
+				CREST_CORE_LIBRARY_DIR = "$(PROJECT_DIR)/CrestCore/artifacts/mac-core";
 				CREST_DEFAULT_UPDATE_CHANNEL = development;
 				CREST_NATIVE_CORE_BUNDLE_IDENTIFIER = "com.pauldavis.crest.native-core";
 				CREST_NATIVE_CORE_ENTITLEMENTS = CrestNative/Apple/Composition/ControlPlane.entitlements;
@@ -40303,6 +40303,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APS_ENVIRONMENT = production;
 				ARCHS = arm64;
+				"ARCHS[sdk=macosx*]" = "arm64 x86_64";
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -40389,7 +40390,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = Crest;
 				CODE_SIGN_ENTITLEMENTS = "$(CREST_NATIVE_CORE_ENTITLEMENTS)";
 				COMBINE_HIDPI_IMAGES = YES;
-				CREST_CORE_LIBRARY_DIR = "$(PROJECT_DIR)/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish";
+				CREST_CORE_LIBRARY_DIR = "$(PROJECT_DIR)/CrestCore/artifacts/mac-core";
 				CREST_DEFAULT_UPDATE_CHANNEL = development;
 				CREST_NATIVE_CORE_BUNDLE_IDENTIFIER = "com.pauldavis.crest.native-core";
 				CREST_NATIVE_CORE_ENTITLEMENTS = CrestNative/Apple/Composition/ControlPlane.entitlements;
@@ -40460,6 +40461,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				APS_ENVIRONMENT = development;
 				ARCHS = arm64;
+				"ARCHS[sdk=macosx*]" = "arm64 x86_64";
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";

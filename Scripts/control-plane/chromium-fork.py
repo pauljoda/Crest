@@ -148,7 +148,8 @@ def main():
         key = chromium_engine.engine_key(REPO)
         receipt = {"engineKey": key, "chromium": workspace.lock["chromium"]["version"],
                    "source": str(workspace.source), "configuration": "performance",
-                   "argsSHA256": sha256(workspace.source / "out/CrestBaseline/args.gn"),
+                   "argsSHA256": {cpu: sha256(workspace.source / architecture["output"] / "args.gn")
+                                  for cpu, architecture in workspace.lock["architectures"].items()},
                    "commit": run("git", "-C", REPO, "rev-parse", "HEAD", capture=True).strip(),
                    "secondsPerStep": timings}
         if plan:

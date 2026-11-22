@@ -116,7 +116,7 @@ def release_tag(key: str) -> str:
 
 
 def asset_name(key: str) -> str:
-    return f"Crest-Chromium-Engine-{key[:16]}-arm64.zip"
+    return f"Crest-Chromium-Engine-{key[:16]}-universal.zip"
 
 
 def main():

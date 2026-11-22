@@ -18,7 +18,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import chromium_engine  # noqa: E402
-from chromium_fork import exclusive_workspace, performance_configuration_matches, read_json, sha256  # noqa: E402
+from chromium_fork import (exclusive_workspace, performance_configuration_matches, read_json, sha256,  # noqa: E402
+                           universal_engine)
 from repository import REPOSITORY  # noqa: E402
 
 
@@ -29,7 +30,6 @@ def run(*command, **kwargs):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", required=True, type=Path, help="The pinned external Chromium checkout")
-    parser.add_argument("--output", default="out/CrestBaseline", help="Build directory inside the checkout")
     parser.add_argument("--ninja", required=True, type=Path)
     parser.add_argument("--repository", default=REPOSITORY)
     parser.add_argument("--dry-run", action="store_true", help="Verify and package without uploading")
@@ -47,8 +47,10 @@ def publish(args):
     repo = Path(__file__).resolve().parents[2]
     source = args.source.resolve()
     lock = read_json(repo / "CrestEngines/Chromium/source.lock.json")
-    if not performance_configuration_matches(source, lock):
-        raise SystemExit("Published engines require the pinned performance configuration, SDK and PGO profile")
+    for cpu in lock["architectures"]:
+        if not performance_configuration_matches(source, lock, cpu=cpu):
+            raise SystemExit(f"Published engines require the pinned performance configuration, SDK and PGO profile "
+                             f"for {cpu}")
     run(sys.executable, repo / "Scripts/control-plane/prepare-chromium.py", "--source", source, "--verify-only")
     key = chromium_engine.engine_key(repo)
     tag, asset = chromium_engine.release_tag(key), chromium_engine.asset_name(key)
@@ -70,12 +72,18 @@ def publish(args):
         if (source / "chrome/browser/ui/crest" / header.name).read_bytes() != header.read_bytes():
             raise SystemExit(f"The checkout's contract header differs from the branch: {header.name}")
 
-    # And its build must have nothing left to do.
-    plan = run(args.ninja, "-C", source / args.output, "-n", "chrome", capture_output=True).stdout
-    if "no work to do" not in plan:
-        raise SystemExit("The engine build is not current; run build-chromium-baseline.py first")
+    # And every architecture's build must have nothing left to do.
+    for architecture in lock["architectures"].values():
+        plan = run(args.ninja, "-C", source / architecture["output"], "-n", "chrome", capture_output=True).stdout
+        if "no work to do" not in plan:
+            raise SystemExit(f"The {architecture['output']} build is not current; run build-chromium-baseline.py first")
 
-    browser = source / args.output / "Chromium.app"
+    # The universal engine merges them again here, so it holds exactly what
+    # they built, and every executable must hold every architecture.
+    try:
+        browser = universal_engine(source, lock)
+    except ValueError as error:
+        raise SystemExit(str(error)) from None
     helpers = browser.glob("Contents/Frameworks/*.framework/Versions/*/Helpers/*.app")
     if unknown := chromium_engine.unknown_engine_helpers(helpers):
         raise SystemExit(f"Unknown engine helpers {unknown}: add each to ENGINE_HELPER_KINDS in chromium_engine.py")
@@ -102,7 +110,8 @@ def publish(args):
         provenance.write_text(json.dumps({"schemaVersion": 1, "engineKey": key,
             "chromium": lock["chromium"]["version"], "sourceArchiveSHA256": lock["chromium"]["sourceArchiveSha256"],
             "configuration": "performance", "sdkVersion": lock["performanceInputs"]["macSDKVersion"],
-            "pgoSHA256": lock["performanceInputs"]["pgoSHA256"], "archiveSHA256": digest,
+            "pgoSHA256": {cpu: architecture["pgoSHA256"] for cpu, architecture in lock["architectures"].items()},
+            "architectures": list(lock["architectures"]), "archiveSHA256": digest,
             "sourceCommit": run("git", "-C", repo, "rev-parse", "HEAD", capture_output=True).stdout.strip()}, indent=2) + "\n")
         notes = (f"Chromium {lock['chromium']['version']} with Crest's native host, for release packaging.\n\n"
                  f"Engine key `{key}`, computed by `Scripts/control-plane/chromium_engine.py` over the "

@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "mac-builds-universal",
+      "category": "internal",
+      "message": "The Mac app, its native core, its helpers and the Chromium engine build for Intel as well as Apple silicon, and the Mac installer is one universal download named Installer-Crest-<version>.dmg. A release requires every part of the packaged app to hold both architectures.",
+      "platforms": ["mac"]
+    }
+  ]
+}

@@ -11,26 +11,33 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import content_filter  # noqa: E402
+import mac_core  # noqa: E402
 
 
 def main():
     repo = Path(__file__).resolve().parents[2]
     platform = os.environ["PLATFORM_NAME"]
-    runtimes = {"macosx": "osx-arm64", "iphoneos": "ios-arm64", "iphonesimulator": "iossimulator-arm64"}
-    if platform not in runtimes or os.environ.get("ARCHS", "arm64").split() != ["arm64"]:
-        raise RuntimeError("The Crest core currently supports Apple silicon macOS and arm64 iOS/device Simulator builds")
+    architectures = tuple(os.environ.get("ARCHS", "arm64").split())
+    # The Mac builds each architecture its build asks for; iOS builds arm64.
+    runtimes = {"iphoneos": "ios-arm64", "iphonesimulator": "iossimulator-arm64"}
+    if platform == "macosx":
+        if not architectures or not set(architectures) <= set(mac_core.RUNTIMES):
+            raise RuntimeError(f"The Crest core builds the Mac for {', '.join(mac_core.RUNTIMES)}, "
+                               f"not {' '.join(architectures)}")
+    elif platform not in runtimes or architectures != ("arm64",):
+        raise RuntimeError("The Crest core builds arm64 iOS and arm64 iOS Simulator apps")
     default = Path(os.environ["BUILT_PRODUCTS_DIR"]) / "CrestCore"
     key = "CREST_CORE_LIBRARY_DIR" if platform == "macosx" else "CREST_CORE_FRAMEWORK_DIR"
     output = Path(os.environ[key]).resolve()
-    product = output / ("CrestCore.Native.dylib" if platform == "macosx" else "CrestCoreABI.framework/CrestCoreABI")
+    product = output / (mac_core.LIBRARY if platform == "macosx" else "CrestCoreABI.framework/CrestCoreABI")
     if output != default.resolve():
         if not product.is_file():
             raise RuntimeError(f"Explicit {key} has no core library: {product}")
+        if platform == "macosx" and not set(architectures) <= mac_core.architectures_of(product):
+            raise RuntimeError(f"Explicit {key} lacks {' '.join(architectures)}: {product}")
         print(f"Using explicitly supplied core: {product}")
         return
-    candidates = [os.environ.get("CREST_DOTNET"), shutil.which("dotnet"),
-                  str(Path.home() / ".dotnet/dotnet"), "/usr/local/share/dotnet/dotnet"]
-    dotnet = next((p for p in candidates if p and Path(p).is_file()), None)
+    dotnet = mac_core.dotnet_path()
     if not dotnet:
         raise RuntimeError("Install the SDK in CrestCore/global.json, or run Scripts/control-plane/install-dotnet.sh")
     core = repo / "CrestCore"
@@ -50,7 +57,8 @@ def main():
               and not {"bin", "obj"}.intersection(p.relative_to(core).parts)]
     inputs += list((repo / "CrestShared/Infrastructure/Core/Generated").glob("*.swift"))
     inputs += list(core.glob("Directory.*")) + [core / "global.json", Path(__file__).resolve(),
-                                               repo / "Scripts/control-plane/package-apple-core.py"]
+                                               repo / "Scripts/control-plane/package-apple-core.py",
+                                               repo / "Scripts/control-plane/mac_core.py"]
     # The content filter library the core links: the one its lock names, or
     # its sources compiled while they differ from the lock.
     for name in content_filter.INPUTS + (content_filter.LOCK, "Scripts/control-plane/fetch-content-filter.py"):
@@ -64,6 +72,7 @@ def main():
     # A Debug app's core runs the core's cross-checks, which Release builds leave out.
     cross_checks = os.environ.get("CONFIGURATION") == "Debug"
     digest.update(f"cross-checks:{cross_checks}".encode())
+    digest.update(f"architectures:{' '.join(architectures)}".encode())
     fingerprint = digest.hexdigest()
     output.mkdir(parents=True, exist_ok=True)
     # App and framework targets can request the same core in a parallel build.
@@ -71,23 +80,22 @@ def main():
         fcntl.flock(lock, fcntl.LOCK_EX)
         stamp = output / ".source-hash"
         if product.is_file() and stamp.exists() and stamp.read_text() == fingerprint:
-            print(f"Crest core is current ({runtimes[platform]}, SDK {version})")
+            built = " ".join(architectures) if platform == "macosx" else runtimes[platform]
+            print(f"Crest core is current ({built}, SDK {version})")
             return
         # The Swift models and codecs are generated from the same contract
         # records; a stale copy would misread the core, so refuse to build.
         subprocess.run([dotnet, "run", "--project", "tools/CrestCore.Generator", "--nologo", "--",
                         "--check", "--root", str(repo)], cwd=core, env=environment, check=True)
-        publish = output / "publish"
-        command = [dotnet, "publish", "src/CrestCore.Native", "-c", "Release", "-r", runtimes[platform],
-                   "--artifacts-path", str(output / "intermediates"), "-o", str(publish), "--nologo",
-                   f"-p:CrestCrossChecks={'true' if cross_checks else 'false'}"]
-        if platform != "macosx":
-            command += ["-p:PublishAotUsingRuntimePack=true"]
-        subprocess.run(command, cwd=core, env=environment, check=True)
         if platform == "macosx":
-            shutil.copy2(publish / "CrestCore.Native.dylib", product.with_suffix(".pending"))
-            product.with_suffix(".pending").replace(product)
+            mac_core.publish(dotnet, output, architectures, environment, cross_checks)
         else:
+            publish = output / "publish"
+            subprocess.run([dotnet, "publish", "src/CrestCore.Native", "-c", "Release", "-r", runtimes[platform],
+                            "--artifacts-path", str(output / "intermediates"), "-o", str(publish), "--nologo",
+                            f"-p:CrestCrossChecks={'true' if cross_checks else 'false'}",
+                            "-p:PublishAotUsingRuntimePack=true"],
+                           cwd=core, env=environment, check=True)
             framework = output / "CrestCoreABI.framework"
             if framework.exists():
                 shutil.rmtree(framework)
