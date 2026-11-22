@@ -7,7 +7,7 @@ keywords: [download, install, update, macOS, GitHub Releases, Sparkle]
 
 # Install and update Crest for Mac
 
-Crest for Mac requires Apple silicon and macOS 26.1 or later. It is distributed directly as a signed and notarized app with Chromium and WebKit; see [Chromium and WebKit on Mac](../browsing/engines.md). Crest for iPhone and iPad is on the App Store and continues to use WebKit.
+Crest for Mac requires Apple silicon and macOS 15 or later. It is distributed directly as a signed and notarized app with Chromium and WebKit; see [Chromium and WebKit on Mac](../browsing/engines.md). Crest for iPhone and iPad is on the App Store and continues to use WebKit.
 
 ## Install the latest Mac release
 

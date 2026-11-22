@@ -118,7 +118,7 @@ def mac_test_library(static_library: Path, folder: Path) -> Path:
         return library
     library.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(["xcrun", "clang", "-dynamiclib", "-arch", "arm64",
-                    f"-mmacosx-version-min={content_filter.DEPLOYMENT_TARGET}",
+                    f"-mmacosx-version-min={content_filter.DEPLOYMENT_TARGETS['MACOSX_DEPLOYMENT_TARGET']}",
                     f"-Wl,-force_load,{static_library}", "-install_name", "@rpath/libcrest_content_filter.dylib",
                     "-o", library], check=True)
     stamp.write_text(content_filter.sha256(static_library))

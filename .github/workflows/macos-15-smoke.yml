@@ -1,0 +1,158 @@
+name: macOS 15 smoke
+
+# Builds the WebKit review app on the Xcode 27 runner and launches it on
+# GitHub's macOS 15 runner, the oldest macOS Crest supports. The app has to
+# reach its main window and load a page, and the screenshots show what macOS 15
+# draws where macOS 26 draws Liquid Glass. It takes two macOS runners, so it
+# runs on request: add the macos-15-smoke label to a pull request, or run it
+# from the Actions tab.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-15-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build the review app
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'macos-15-smoke')
+    runs-on: xcode-27
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/prepare-apple-build
+
+      - name: Build the native core
+        run: (cd CrestCore && "$HOME/.dotnet/dotnet" publish src/CrestCore.Native -c Release -r osx-arm64 --nologo)
+
+      # Ad-hoc signed without entitlements, under a bundle ID of its own, so
+      # it needs no signing secrets and the launch can mark setup as done.
+      - name: Build the review app
+        run: |
+          xcodebuild build \
+            -project Crest.xcodeproj \
+            -scheme CrestNativeCore \
+            -configuration Debug \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath "$RUNNER_TEMP/crest-smoke-derived-data" \
+            CREST_NATIVE_CORE_BUNDLE_IDENTIFIER=com.pauldavis.crest.smoke \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY=- \
+            DEVELOPMENT_TEAM= \
+            PROVISIONING_PROFILE_SPECIFIER= \
+            CODE_SIGN_ENTITLEMENTS=
+          app="$RUNNER_TEMP/crest-smoke-derived-data/Build/Products/Debug/CrestNativeCore.app"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$app/Contents/Info.plist")" = 15.0
+          ditto -c -k --keepParent "$app" "$RUNNER_TEMP/CrestSmoke.zip"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: crest-smoke-app
+          path: ${{ runner.temp }}/CrestSmoke.zip
+          retention-days: 3
+
+      - name: Remove generated build data
+        if: always()
+        run: find "$RUNNER_TEMP/crest-smoke-derived-data" -depth -delete 2>/dev/null || true
+
+  launch:
+    name: Launch on macOS 15
+    needs: build
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: crest-smoke-app
+          path: ${{ runner.temp }}
+
+      - name: Launch Crest, open a page and capture it
+        shell: bash
+        run: |
+          set -euo pipefail
+          sw_vers
+          test "$(sw_vers -productVersion | cut -d. -f1)" = 15
+          ditto -x -k "$RUNNER_TEMP/CrestSmoke.zip" "$RUNNER_TEMP/smoke"
+          app="$RUNNER_TEMP/smoke/CrestNativeCore.app"
+          xattr -cr "$app"
+          shots="$RUNNER_TEMP/screenshots"
+          mkdir -p "$shots"
+
+          # The app's windows that hold content: their numbers and titles.
+          cat > "$RUNNER_TEMP/windows.swift" <<'SWIFT'
+          import CoreGraphics
+
+          let pid = Int32(CommandLine.arguments[1])!
+          let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
+          for window in windows where window[kCGWindowOwnerPID as String] as? Int32 == pid {
+              let bounds = window[kCGWindowBounds as String] as? [String: Double] ?? [:]
+              guard window[kCGWindowLayer as String] as? Int == 0, (bounds["Height"] ?? 0) > 300 else { continue }
+              print("\(window[kCGWindowNumber as String]!) \(window[kCGWindowName as String] as? String ?? "")")
+          }
+          SWIFT
+          swiftc -O -o "$RUNNER_TEMP/windows" "$RUNNER_TEMP/windows.swift"
+
+          windows() { "$RUNNER_TEMP/windows" "$pid"; }
+          running() { kill -0 "$pid" 2>/dev/null; }
+          wait_for_windows() {
+            for _ in $(seq 60); do
+              running || { echo "::error::Crest quit"; return 1; }
+              [[ "$(windows | wc -l)" -ge "$1" ]] && return 0
+              sleep 1
+            done
+            echo "::error::Crest showed fewer than $1 windows"
+            return 1
+          }
+
+          # An isolated session that counts setup as done opens the main window.
+          defaults write com.pauldavis.crest.isolated.smoke crest.onboarding.completed -bool YES
+          open -n --env CREST_ISOLATED_SESSION=1 --env CREST_ISOLATED_PERSISTENCE_ID=smoke \
+            --env CREST_USE_IN_MEMORY_CREDENTIALS=1 "$app" --args -ApplePersistenceIgnoreState YES
+          for _ in $(seq 30); do
+            pid=$(pgrep -f "$app/Contents/MacOS/CrestNativeCore" || true)
+            [[ -n "$pid" ]] && break
+            sleep 1
+          done
+          [[ -n "$pid" ]] || { echo "::error::Crest did not start"; exit 1; }
+
+          wait_for_windows 1
+          sleep 10
+          main=$(windows | awk 'NR == 1 { print $1 }')
+          screencapture -x -o -l "$main" "$shots/main-window.png"
+
+          open -a "$app" https://example.com
+          wait_for_windows 2
+          sleep 8
+          quick=$(windows | awk -v main="$main" '$1 != main && !found { print $1; found = 1 }')
+          screencapture -x -o -l "$quick" "$shots/quick-window.png"
+          screencapture -x "$shots/screen.png"
+          windows | tee "$shots/windows.txt"
+          running || { echo "::error::Crest quit"; exit 1; }
+          if grep -q "Example Domain" "$shots/windows.txt"; then
+            echo "The page loaded."
+          else
+            echo "::warning::Window titles are hidden here; check quick-window.png for the page."
+          fi
+          kill "$pid"
+
+      - name: Keep crash reports
+        if: failure()
+        run: cp ~/Library/Logs/DiagnosticReports/CrestNativeCore* "$RUNNER_TEMP/screenshots/" 2>/dev/null || true
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: macos-15-screenshots
+          path: ${{ runner.temp }}/screenshots
+          retention-days: 14

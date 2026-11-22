@@ -27,6 +27,17 @@ final class BrowserPageTranslation {
     nonisolated private static let deliveryBatchSize = 8
     nonisolated private static let deliveryInterval: Duration = .milliseconds(60)
 
+    /// Whether pages can translate without the person asking. The sessions
+    /// that translate without their own interface arrived in macOS 26, so
+    /// before it only the Translate action translates.
+    static var canTranslateAutomatically: Bool {
+        if #available(macOS 26, *) {
+            true
+        } else {
+            false
+        }
+    }
+
     // MARK: - Variables
 
     /// The unsupported-language notice speaks for Detect Language only; a
@@ -320,6 +331,11 @@ final class BrowserPageTranslation {
             return
         }
         #if !targetEnvironment(simulator)
+            // The host asks only where ``canTranslateAutomatically``.
+            guard #available(macOS 26, *) else {
+                status = String(localized: "Automatic translation is unavailable. Tap Translate to try manually.")
+                return
+            }
             targetID = target.minimalIdentifier
             isWorking = true
             isAutomaticOperation = true
@@ -397,7 +413,12 @@ final class BrowserPageTranslation {
         }
         do {
             if automatic {
-                let ready = await session.isReady
+                let ready: Bool
+                if #available(macOS 26, *) {
+                    ready = await session.isReady
+                } else {
+                    ready = false
+                }
                 try validate(operation, revision: revision)
                 guard ready else {
                     status = String(localized: "Automatic translation is unavailable. Tap Translate to try manually.")
@@ -509,7 +530,9 @@ final class BrowserPageTranslation {
 
     func cancel(restoringCompleted: Bool = false) {
         guard isWorking || restoringCompleted else { return }
-        session?.cancel()
+        // Before macOS 26 a session can't be stopped; the cleared token
+        // drops whatever it still returns.
+        if #available(macOS 26, *) { session?.cancel() }
         session = nil
         configuration = nil
         isWorking = false

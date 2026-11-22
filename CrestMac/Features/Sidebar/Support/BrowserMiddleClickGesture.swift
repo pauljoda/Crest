@@ -21,9 +21,14 @@ struct BrowserMiddleClickGesture: NSGestureRecognizerRepresentable {
 }
 
 extension View {
+    @ViewBuilder
     func browserOnMiddleClick(
         perform: @escaping @MainActor () -> Void
     ) -> some View {
-        gesture(BrowserMiddleClickGesture(perform: perform))
+        if #available(macOS 26, *) {
+            gesture(BrowserMiddleClickGesture(perform: perform))
+        } else {
+            background(BrowserMiddleClickMonitor(perform: perform))
+        }
     }
 }

@@ -153,8 +153,10 @@
     "actions/checkout": "MIT",
     "actions/configure-pages": "MIT",
     "actions/deploy-pages": "MIT",
+    "actions/download-artifact": "MIT",
     "actions/setup-dotnet": "MIT",
     "actions/setup-node": "MIT",
+    "actions/upload-artifact": "MIT",
     "actions/upload-pages-artifact": "MIT",
     "github/codeql-action": "MIT source; CodeQL CLI terms"
   },
