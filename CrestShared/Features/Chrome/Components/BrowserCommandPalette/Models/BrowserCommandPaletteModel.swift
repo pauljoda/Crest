@@ -76,6 +76,9 @@ final class BrowserCommandPaletteModel {
     /// wait that runs it on the rows already shown.
     @ObservationIgnored private var waitingKey: (() -> Void)?
     @ObservationIgnored private var keyWaitTask: Task<Void, Never>?
+    /// Where the pointer last stood over a row, in window coordinates, or nil
+    /// since the rows last changed.
+    @ObservationIgnored private var lastPointer: CGPoint?
     /// The text on the pasteboard when the palette opened, offered with
     /// Paste and Go while the text is still what the palette opened with, or
     /// nil.
@@ -383,6 +386,16 @@ final class BrowserCommandPaletteModel {
         selectedResultIndex = index
     }
 
+    /// Selects the row at `index` under the pointer at `point`, in window
+    /// coordinates, only when the pointer moved there. A row that appears
+    /// under a resting pointer, as when the palette opens or its rows change,
+    /// leaves the selection to the keyboard.
+    func pointerMoved(to point: CGPoint, over index: Int) {
+        defer { lastPointer = point }
+        guard let lastPointer, point != lastPointer else { return }
+        selectResult(at: index)
+    }
+
     /// Forgets the row the person moved to: a row whose kind forgets from
     /// history takes its page out of the Space's history, and what the palette
     /// learned about the row goes. The row the palette leads with is never
@@ -565,6 +578,8 @@ final class BrowserCommandPaletteModel {
         shownSequence = asked
         groups = BrowserCommandPaletteGroup.groups(of: answer)
         items = groups.flatMap(\.items)
+        // New rows may stand under a resting pointer; only a later move selects.
+        lastPointer = nil
         completionProposal = answer.completion
         offeredSearch = answer.offeredSearch
         matchingProviders = answer.matchingProviders

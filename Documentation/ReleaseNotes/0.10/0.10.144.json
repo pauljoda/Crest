@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "palette-resting-pointer-keeps-selection",
+      "category": "fixed",
+      "message": "The command palette no longer selects the row that appears under a resting pointer, so Return opens what the keyboard chose. Moving the pointer still selects the row under it."
+    }
+  ]
+}

@@ -6,9 +6,9 @@ extension View {
         model: BrowserCommandPaletteModel,
         index: Int
     ) -> some View {
-        onHover { isHovering in
-            guard isHovering else { return }
-            model.selectResult(at: index)
+        onContinuousHover(coordinateSpace: .global) { phase in
+            guard case .active(let point) = phase else { return }
+            model.pointerMoved(to: point, over: index)
         }
     }
 }
