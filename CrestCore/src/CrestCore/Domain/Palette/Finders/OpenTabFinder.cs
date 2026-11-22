@@ -4,8 +4,10 @@ namespace CrestCore.Domain;
 
 /// The Space's open tabs that match, other than the one the window shows,
 /// ranked by how well they match, how often their page and how recently the
-/// tab was used, and whether the person prefers open tabs. One that starts
-/// with the text and was used enough may lead.
+/// tab was used, and whether the person prefers open tabs, by its name or,
+/// for a tab the person renamed, its page's own title too. One whose title,
+/// address or the site name its title ends with starts with the text, and
+/// that was used enough, may lead.
 internal sealed class OpenTabFinder : PaletteFinder {
     #region Variables
 
@@ -23,7 +25,8 @@ internal sealed class OpenTabFinder : PaletteFinder {
         if (context.Space is not { } space) yield break;
         foreach (var tab in space.Tabs.Where(tab => tab.Id != context.ShownTabId && !tab.IsStartPage && !tab.Placement.IsDurable)) {
             var row = PaletteRow.Of(PaletteRowKind.Tab, tab.DisplayTitle, PaletteContext.Host(tab.Url) ?? tab.Url ?? "", tab: tab.Id);
-            if (context.Evidence(query, row, tab.DisplayTitle, tab.Url, tab.LastActivatedAt, isOpen: true) is not { } evidence) continue;
+            if (context.Evidence(query, row, tab.DisplayTitle, tab.Url, tab.LastActivatedAt, isOpen: true,
+                pageTitle: tab.DisplayTitle == tab.Title ? null : tab.Title) is not { } evidence) continue;
             yield return Scored(context, source, row, evidence, tab.Url is null ? null : PaletteMemory.Place(tab.Url), Matching(evidence));
         }
     }
