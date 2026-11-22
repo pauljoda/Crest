@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "roadmap-at-crest-browser",
+    "development": "mac-builds-universal",
     "nightly": "roadmap-at-crest-browser"
   }
 }
