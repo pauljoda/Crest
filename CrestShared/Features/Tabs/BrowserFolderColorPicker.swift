@@ -32,7 +32,7 @@ struct BrowserFolderColorPicker: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
-                    .transition(.scale(scale: 0.72).combined(with: .opacity))
+                    .transition(.scale(scale: CrestMotion.entranceScale).combined(with: .opacity))
                     .help(Text(resetTitle))
                     .accessibilityLabel(Text(resetTitle))
                     .accessibilityIdentifier("browser-color-picker-reset")

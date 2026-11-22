@@ -39,7 +39,7 @@ struct BrowserUtilityFanControl: View {
                     select: select
                 )
                 .scaleEffect(
-                    isRevealed ? 1 : BrowserUtilitySwitcherLayout.collapsedScale
+                    isRevealed ? 1 : CrestMotion.entranceScale
                 )
                 .opacity(isRevealed ? 1 : 0)
                 // Each destination keeps its own surface, which moves with
