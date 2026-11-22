@@ -92,6 +92,11 @@ build stopped, configure and build each architecture:
 
 ```sh
 python Scripts/control-plane/configure-chromium.py \
+  --source /absolute/chromium/src --configuration performance --cpu arm64 \
+  --sdk /absolute/MacOSX26.5.sdk --pgo-profile /absolute/pinned-arm64-profile.profdata
+python Scripts/control-plane/build-chromium-baseline.py \
+  --source /absolute/chromium/src --output out/CrestBaseline --jobs 12 --min-free-gib 15
+python Scripts/control-plane/configure-chromium.py \
   --source /absolute/chromium/src --configuration performance --cpu x64 \
   --sdk /absolute/MacOSX26.5.sdk --pgo-profile /absolute/pinned-x64-profile.profdata
 python Scripts/control-plane/build-chromium-baseline.py \
