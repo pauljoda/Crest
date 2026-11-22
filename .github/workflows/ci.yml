@@ -262,8 +262,8 @@ jobs:
         if: always()
         run: find "$RUNNER_TEMP/crest-build-derived-data" -depth -delete 2>/dev/null || true
 
-  website:
-    name: Website and Help Center
+  help-center:
+    name: Help Center
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
