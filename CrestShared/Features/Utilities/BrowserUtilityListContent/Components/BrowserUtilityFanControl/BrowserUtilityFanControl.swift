@@ -18,7 +18,7 @@ struct BrowserUtilityFanControl: View {
     var body: some View {
         ZStack {
             ForEach(
-                BrowserUtilitySwitcherLayout.destinations.enumerated(),
+                Array(BrowserUtilitySwitcherLayout.destinations.enumerated()),
                 id: \.element
             ) { index, surface in
                 let isRevealed = revealedSurfaces.contains(surface)

@@ -43,7 +43,7 @@ struct BrowserCredentialImportAccountRow: View {
                         )
                     }
                     ForEach(
-                        group.candidates.enumerated(),
+                        Array(group.candidates.enumerated()),
                         id: \.element.rowNumber
                     ) { index, candidate in
                         BrowserCredentialImportPasswordValue(
@@ -97,7 +97,7 @@ struct BrowserCredentialImportAccountRow: View {
                     .tag(BrowserCredentialImportSelection.existing)
             }
             ForEach(
-                group.candidates.enumerated(),
+                Array(group.candidates.enumerated()),
                 id: \.element.rowNumber
             ) { index, candidate in
                 Text(

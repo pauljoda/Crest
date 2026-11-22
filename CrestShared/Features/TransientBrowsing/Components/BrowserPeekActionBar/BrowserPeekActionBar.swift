@@ -29,7 +29,7 @@ struct BrowserPeekActionBar: View {
     var body: some View {
         // Close, Open In and "…" stay separate pieces of glass, so Open In
         // keeps its Space's tint rather than blending into theirs.
-        GlassEffectContainer(spacing: 0) {
+        CrestGlassGroup(spacing: 0) {
             HStack(spacing: Self.controlSpacing) {
                 BrowserPeekCloseButton(
                     accessibilityLabel: closeAccessibilityLabel,

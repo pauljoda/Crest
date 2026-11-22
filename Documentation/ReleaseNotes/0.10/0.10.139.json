@@ -1,9 +1,9 @@
 {
   "entries": [
     {
-      "id": "dark-page-opens-without-white-flash",
-      "category": "fixed",
-      "message": "Pages opening in dark mode go straight from the loading screen to the page, without a flash of white in between.",
+      "id": "mac-runs-on-macos-15",
+      "category": "new",
+      "message": "Crest for Mac now runs on macOS 15 Sequoia and later on Mac computers with Apple silicon. On macOS 15, controls that stand on Liquid Glass on macOS 26 stand on Crest's own material instead, and pages translate when you choose Translate rather than automatically.",
       "platforms": ["mac"]
     }
   ]

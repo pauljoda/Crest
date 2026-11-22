@@ -9,7 +9,7 @@ options:
   bundleIdPrefix: com.pauldavis
   deploymentTarget:
     iOS: "26.1"
-    macOS: "26.1"
+    macOS: "15.0"
   xcodeVersion: "27.0"
 settings:
   base:
@@ -18,7 +18,7 @@ settings:
     DEVELOPMENT_TEAM: 3U2R97HLXF
     DEVELOPMENT_LANGUAGE: en
     ENABLE_HARDENED_RUNTIME: YES
-    MACOSX_DEPLOYMENT_TARGET: "26.1"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_EMIT_LOC_STRINGS: YES
     SWIFT_STRICT_CONCURRENCY: complete

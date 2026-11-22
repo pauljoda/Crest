@@ -21,7 +21,7 @@ struct BrowserUtilitySearchToolbar: View {
             CrestSearchField(
                 text: $searchText, isFocused: $isSearchFocused, height: BrowserChromeLayout.addressHeight
             ) {
-                TextField(surface.searchPrompt, text: $searchText)
+                TextField(String(localized: surface.searchPrompt), text: $searchText)
             }
             .onChange(of: focusRequest) { focusSearchIfRequested() }
             .onAppear {
