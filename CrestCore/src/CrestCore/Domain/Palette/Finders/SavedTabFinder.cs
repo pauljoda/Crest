@@ -3,8 +3,9 @@ using CrestCore.Contracts;
 namespace CrestCore.Domain;
 
 /// The Space's pinned and saved tabs that match, by their saved address,
-/// ranked as open tabs are, with being kept in place of being open. One that
-/// starts with the text may lead.
+/// ranked as open tabs are, with being kept in place of being open. One whose
+/// title, address or the site name its title ends with starts with the text
+/// may lead.
 internal sealed class SavedTabFinder : PaletteFinder {
     #region Variables
 

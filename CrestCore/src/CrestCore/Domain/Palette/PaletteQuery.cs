@@ -17,6 +17,11 @@ public sealed class PaletteQuery {
     private const int SubsequencePoints = 150;
     private static readonly Rune FinalSigma = new('ς');
     private static readonly Rune Sigma = new('σ');
+    /// What a title puts before the name of the site it belongs to, as in
+    /// "Inbox (3) – Mail" or "#general | Chat".
+    private static readonly string[] SiteNameSeparators = [" - ", " – ", " — ", " | ", " · "];
+    /// The fewest characters of one word that may name a title's site.
+    private const int MinimumSiteNameLength = 3;
 
     #endregion
 
@@ -27,6 +32,10 @@ public sealed class PaletteQuery {
 
     /// Nothing but whitespace was typed.
     public bool IsEmpty => terms.Length == 0;
+
+    /// One word of at least two characters with nothing typed after it,
+    /// which may name a place, such as a tab or a site, rather than a search.
+    public bool IsName { get; }
 
     private readonly Rune[][] terms;
 
@@ -49,6 +58,7 @@ public sealed class PaletteQuery {
         }
         if (current.Count > 0) found.Add([.. current]);
         terms = [.. found];
+        IsName = terms.Length == 1 && terms[0].Length >= 2 && typed.TrimStart().Length == Text.Length;
     }
 
     #endregion
@@ -96,6 +106,20 @@ public sealed class PaletteQuery {
             }
         }
         return true;
+    }
+
+    /// Whether one word of at least three characters starts the name of the
+    /// site `title` ends with, after its last separator: "mail" starts
+    /// "Inbox (3) – Mail", while a word elsewhere in the title does not.
+    public bool PrefixesSiteName(string title) {
+        ArgumentNullException.ThrowIfNull(title);
+        if (terms.Length != 1 || terms[0].Length < MinimumSiteNameLength) return false;
+        int start = -1;
+        foreach (var separator in SiteNameSeparators) {
+            int found = title.LastIndexOf(separator, StringComparison.Ordinal);
+            if (found >= 0) start = Math.Max(start, found + separator.Length);
+        }
+        return start > 0 && Prefixes(title[start..].TrimStart());
     }
 
     /// How well one typed word abbreviates `title`: as the initials of its

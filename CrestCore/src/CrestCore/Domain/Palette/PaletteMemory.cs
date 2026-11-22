@@ -198,6 +198,13 @@ public sealed class PaletteMemory {
         return host + port + path + uri.Query;
     }
 
+    /// The site a place key names: its host and port, without its path or query.
+    public static string Site(string place) {
+        ArgumentNullException.ThrowIfNull(place);
+        int end = place.IndexOfAny(['/', '?']);
+        return end < 0 ? place : place[..end];
+    }
+
     /// `host` without a leading `www.`.
     public static string WithoutWww(string host) => host.StartsWith("www.", StringComparison.Ordinal) ? host[4..] : host;
 

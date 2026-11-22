@@ -72,7 +72,8 @@ internal sealed class PaletteContext {
 
     /// What ranking reads of a place whose row `row` shows `title` at `url`,
     /// for `query`: how well the text matches it and whether it starts the
-    /// title or the address, how much the page was used, when its tab was,
+    /// title or the address, or for an open or kept tab the name of the site
+    /// its title ends with, how much the page was used, when its tab was,
     /// whether it is open or kept, and what earlier picks add. Null when the
     /// text matches neither; with nothing typed, as when the person narrowed
     /// the palette to a kind, every place matches with no text points.
@@ -84,16 +85,17 @@ internal sealed class PaletteContext {
         int? score = query.IsEmpty ? 0 : query.Score(title, address);
         if (prefixes) score = Math.Max(score ?? 0, TextMatch.TextStart.Points);
         if (score is not { } matched) return null;
+        bool prefixesSiteName = (isOpen || isKept) && query.PrefixesSiteName(title);
         entry ??= url is not null && new WebAddress(url).Normalized is { } normalized ? History?.Entry(normalized) : null;
         double frecency = url is null ? 0 : Memory.Frecency(url, entry, Now);
-        return new(matched, prefixes, prefixesTitle, frecency, lastUsed, isOpen, isKept, Learned(query, row));
+        return new(matched, prefixes, prefixesTitle, prefixesSiteName, frecency, lastUsed, isOpen, isKept, Learned(query, row));
     }
 
     /// What ranking reads of a row that matched with `score` and is no
     /// place: only the match and what earlier picks add.
     public PaletteEvidence Matched(PaletteQuery query, PaletteRow row, int score) =>
-        new(score, Prefixes: false, PrefixesTitle: query.Prefixes(row.Title), Frecency: 0, LastUsed: null, IsOpen: false, IsKept: false,
-            Learned(query, row));
+        new(score, Prefixes: false, PrefixesTitle: query.Prefixes(row.Title), PrefixesSiteName: false, Frecency: 0, LastUsed: null,
+            IsOpen: false, IsKept: false, Learned(query, row));
 
     /// What the person's earlier picks for what was typed add to `row`.
     public double Learned(PaletteQuery query, PaletteRow row) =>
@@ -149,8 +151,9 @@ internal sealed class PaletteContext {
 }
 
 /// What ranking reads of one row: how well the text matched it, whether the
-/// text starts its title or address, how much its page was used, when its tab
-/// was last used, whether it is open or kept, and what the person's earlier
-/// picks for the same text add.
-internal sealed record PaletteEvidence(int Match, bool Prefixes, bool PrefixesTitle, double Frecency, DateTimeOffset? LastUsed, bool IsOpen,
-    bool IsKept, double Learned);
+/// text starts its title or address, whether it starts the name of the site
+/// an open or kept tab's title ends with, how much its page was used, when
+/// its tab was last used, whether it is open or kept, and what the person's
+/// earlier picks for the same text add.
+internal sealed record PaletteEvidence(int Match, bool Prefixes, bool PrefixesTitle, bool PrefixesSiteName, double Frecency,
+    DateTimeOffset? LastUsed, bool IsOpen, bool IsKept, double Learned);

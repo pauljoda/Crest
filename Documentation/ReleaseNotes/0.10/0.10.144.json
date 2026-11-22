@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "palette-word-leads-to-open-tab-or-site",
+      "category": "fixed",
+      "message": "In the command palette, typing the start of an open or pinned tab's name or site, or of a site you use, puts it first again, so Return goes there instead of searching. Phrases still search first."
+    }
+  ]
+}

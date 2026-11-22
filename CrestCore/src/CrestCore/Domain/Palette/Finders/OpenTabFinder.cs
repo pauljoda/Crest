@@ -4,8 +4,9 @@ namespace CrestCore.Domain;
 
 /// The Space's open tabs that match, other than the one the window shows,
 /// ranked by how well they match, how often their page and how recently the
-/// tab was used, and whether the person prefers open tabs. One that starts
-/// with the text and was used enough may lead.
+/// tab was used, and whether the person prefers open tabs. One whose title,
+/// address or the site name its title ends with starts with the text, and
+/// that was used enough, may lead.
 internal sealed class OpenTabFinder : PaletteFinder {
     #region Variables
 
