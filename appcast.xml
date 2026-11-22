@@ -6,44 +6,42 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.34</title>
-            <pubDate>Thu, 19 Nov 2026 18:52:59 +0000</pubDate>
+            <title>0.10.138</title>
+            <pubDate>Sun, 22 Nov 2026 17:28:13 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1652</sparkle:version>
-            <sparkle:shortVersionString>0.10.34</sparkle:shortVersionString>
+            <sparkle:version>1683</sparkle:version>
+            <sparkle:shortVersionString>0.10.138</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.1</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
-
-- Setting up Crest is now a short walkthrough beside a live preview of the window you're building: bring tabs from another browser, choose your first Space's name, colors and icon, then add more Spaces. Close, move or file tabs in the preview and those changes carry into Crest when you start browsing.
-- Setup lists each Space with its Sub-Spaces and lets you add a Sub-Space to any Space before you start browsing.
+Showing the 12 most recent highlights from 61 user-facing changes.
 
 ### Improved
 
-- A Space's look is now a Background and an Accent, each one color or a gradient of up to three, chosen on a color wheel with brightness and texture or taken from a palette. Crests and sidebar patterns sit under More Customization, replacing the Heraldic, Modern and Simple styles.
-- Dragging a Space's colors stays smooth while the window redraws to show them, in setup and in Settings.
-- On iPhone and iPad, tabs and folders you close, move or file in setup's preview now stay that way in Crest when you start browsing, as they do on the Mac.
-- Return in the command palette now searches anything that isn't an address, such as crest browser or a single word, with matching tabs, sites and history still listed below. An address such as github.com or localhost:3000 still opens, and the field completes one as you type it.
-- History results in the command palette now show their site's icon with a small clock badge, so results from different sites are easy to tell apart.
-
-### Fixed
-
-- Search provider chips in the command palette now show their text in white or black, whichever reads better on the chip's color.
-- Saved, pinned, reopened and imported tabs whose address holds characters such as { or [ return to the exact page they were saved at, instead of a broken search, and no longer show as moved away from their saved address.
-- An address you type or paste in the command palette now opens at the #section you gave it, even on a page you've visited before, and changing only the #section of the page you're on moves within that page.
+- Saved passwords and Space choices in Settings show each Space in its own accent colour.
+- In the command palette, the Pinned & Saved search and the rows for pinned, saved and open tabs wear the same filled symbols as their sections in the sidebar.
+- Translation, the emoji picker, the viewport preview and the sidebar width preview use Crest blue instead of the Mac's system accent colour.
+- The downloads badge, and on iPhone and iPad the private browsing button, take the Space's accent colour, so they stand out from the sidebar behind them.
+- The sample page in the zoom and appearance settings is ink on Crest's warm paper, and the globe engine mark on tabs and in the site engine menu is Crest blue.
+- Extension badges are Crest's red with slightly larger text, and pinned extension buttons use the same hover highlight as Crest's other toolbar buttons.
+- Search fields in Settings, the sidebar's lists, folder previews and the icon and symbol pickers share one look, show a focus ring while you type, and have a clear button that highlights under the pointer.
+- The developer toolbar's buttons, the extension side panel's close button and the engine choices in Settings highlight under the pointer like Crest's other controls, and disclosure arrows in site settings and Privacy point the right way in right-to-left languages.
+- The sidebar's update and Now Playing cards, the translation bar and the symbol and emoji pickers use Crest's standard buttons, with the same hover and press highlights as the rest of Crest.
+- Reviewing a password import shows the Space's crest and lays the totals, accounts, warnings and rejected rows out in Settings-style groups, with each row number tagged in its warning or error colour.
+- Renaming a Space in place shows Crest's field with a focus ring, and its pencil highlights under the pointer.
+- Link routes in Settings sit directly in their group instead of a box inside it, the URL pattern uses Crest's field with a focus ring, and the route actions button highlights under the pointer.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[View all changes](https://github.com/pauljoda/Crest/compare/0f3dc204d036d202431b465eff60857a493a4092...9762b7554ba2ca2709321785e53980d3859d970e) · [Download the installer](https://github.com/pauljoda/Crest/releases/download/nightly-0.10.34-2026-11-19-1652-r652.1/Installer-Crest-0.10.34-nightly-2026-11-19-9762b75-arm64.dmg)
+[Release notes](https://crestbrowser.com/releases/mac/nightly/0.10.138/) · [View all changes](https://github.com/crest-browser/Crest/compare/9762b7554ba2ca2709321785e53980d3859d970e...4167974c2481e04f319c947dbae70be0de7e663b) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/nightly-0.10.138-2026-11-22-1683-r683.1/Installer-Crest-0.10.138-nightly-2026-11-22-4167974-arm64.dmg)
 
-[Browse Nightly releases](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
+[Browse Nightly releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/pauljoda/Crest/releases/download/nightly-0.10.34-2026-11-19-1652-r652.1/Installer-Crest-0.10.34-nightly-2026-11-19-9762b75-arm64.dmg" length="221300862" type="application/octet-stream" sparkle:edSignature="NpUgHqRh4V0uMFa0r8LuJJW3GXQ0dl+ojRW1Ghi0tl24EcqeyJc/Qh8pX40FGyQAYdfZVFRShYKMXQKqV6JkAQ=="/>
+            <enclosure url="https://github.com/crest-browser/Crest/releases/download/nightly-0.10.138-2026-11-22-1683-r683.1/Installer-Crest-0.10.138-nightly-2026-11-22-4167974-arm64.dmg" length="241486979" type="application/octet-stream" sparkle:edSignature="z+nJI+sgEXKN8hSjIgsZ2NmLYQmlSDVxDIaHCJSOY+uj/vfQghV9gmnMjwf0UAfBkjaHfgLy3wNfvs9f2nvNDg=="/>
         </item>
         <item>
             <title>0.10.24</title>
@@ -129,6 +127,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 1dZGO86AUETeR/5wnfX4skY03kjKUVrYrmtWLNkzpRAk8bJ90Ckj5ZCVQnX3j9/Xv/JsUwoHpet9WwjJYNu1Bw==
-length: 10923
+edSignature: yhmDPylCdaK6PJGYP4DEHMFWzyLTUV6kIwbDWOmLBiSomavqxvncB7jDYJGMAgaOAsIt5TUFS3lauxpMFYP9Bw==
+length: 11155
 -->
