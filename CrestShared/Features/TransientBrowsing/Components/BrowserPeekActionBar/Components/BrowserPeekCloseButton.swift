@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Closes a Peek: an X on a disc of Liquid Glass, as tall as the controls
-/// beside it.
+/// Closes a Peek: an X on a disc of glass, as tall as the controls beside it.
 struct BrowserPeekCloseButton: View {
     let accessibilityLabel: LocalizedStringKey
     let help: LocalizedStringKey
@@ -17,7 +16,7 @@ struct BrowserPeekCloseButton: View {
                 .contentShape(.circle)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .circle)
+        .crestGlass(in: .circle)
         .keyboardShortcut("w", modifiers: .command)
         .accessibilityLabel(Text(accessibilityLabel))
         .accessibilityIdentifier("peek-close-control")

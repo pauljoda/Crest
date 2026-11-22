@@ -122,7 +122,7 @@ The same Spaces, shaped for each screen. iPad keeps the sidebar beside your page
 
 | Platform | Install |
 | --- | --- |
-| Mac · Apple silicon · macOS 26.1+ | [Signed, notarized download](https://github.com/crest-browser/Crest/releases/latest) with built-in Sparkle updates.<br><br>Or install via Homebrew:<br>`brew install --cask crest-browser` |
+| Mac · Apple silicon · macOS 15+ | [Signed, notarized download](https://github.com/crest-browser/Crest/releases/latest) with built-in Sparkle updates.<br><br>Or install via Homebrew:<br>`brew install --cask crest-browser` |
 | iPhone · iOS 26.1+ | [App Store](https://apps.apple.com/us/app/crest-browser/id6797335023) |
 | iPad · iPadOS 26.1+ | [App Store](https://apps.apple.com/us/app/crest-browser/id6797335023) |
 | iPhone & iPad beta | [TestFlight](https://testflight.apple.com/join/vV1CM49Q) |
@@ -147,7 +147,7 @@ Read [the architecture overview](Documentation/ARCHITECTURE.md) for Space isolat
 Requirements:
 
 - Apple silicon Mac
-- Xcode with macOS and iOS SDKs supporting the 26.1 deployment targets
+- Xcode with SDKs supporting the macOS 15.0 and iOS 26.1 deployment targets
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen)
 - .NET SDK pinned by `CrestCore/global.json`, installable with `Scripts/control-plane/install-dotnet.sh`
 
@@ -166,7 +166,7 @@ Xcode builds and embeds the self-contained .NET core for Mac, iOS, and Simulator
 
 The [Crest 0.10 release notes](https://crestbrowser.com/releases/mac/stable/0.10.8/) describe three
 styles, the address bar above the page on Mac, and new sidebar and color
-settings. Crest requires Apple silicon and macOS 26.1 or later on Mac; iPhone
+settings. Crest requires Apple silicon and macOS 15 or later on Mac; iPhone
 and iPad use WebKit.
 
 When updating from a WebKit-only release, your Spaces, tabs, history, and Crest

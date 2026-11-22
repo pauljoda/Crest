@@ -33,7 +33,7 @@ struct BrowserTranslationActions: View {
             Button("Show Original", systemImage: "arrow.uturn.backward", action: translation.showOriginal)
         }
         Divider()
-        if !translation.sourceID.isEmpty {
+        if !translation.sourceID.isEmpty, BrowserPageTranslation.canTranslateAutomatically {
             Toggle(isOn: automaticallyTranslatesSource) {
                 Label(
                     "Always Translate \(translation.languageName(translation.sourceID))",

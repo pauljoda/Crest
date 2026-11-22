@@ -14,11 +14,7 @@ struct BrowserChromeAppearancePersistence: ViewModifier {
         content
             .environment(\.browserWindowCornerRadius, isWindowFullScreen ? nil : windowCornerRadius)
             #if os(macOS)
-                // The window's corners change shape with its chrome, so the
-                // radius is read live rather than assumed.
-                .onGeometryChange(for: CGFloat?.self) { proxy in
-                    BrowserChromeAppearance.windowCornerRadius(from: proxy.containerCornerInsets)
-                } action: { radius in
+                .readsWindowCornerRadius { radius in
                     windowCornerRadius = radius
                 }
                 // A full-screen window keeps reporting the corners it has as a
@@ -29,3 +25,25 @@ struct BrowserChromeAppearancePersistence: ViewModifier {
             #endif
     }
 }
+
+#if os(macOS)
+    extension View {
+        /// Reports the corner radius of the window the view fills. The
+        /// window's corners change shape with its chrome, so the radius is
+        /// read live rather than assumed. Before macOS 26 a view can't read
+        /// its window's corners, so nothing is reported and the page keeps
+        /// Crest's own radius.
+        @ViewBuilder
+        fileprivate func readsWindowCornerRadius(_ action: @escaping (CGFloat?) -> Void) -> some View {
+            if #available(macOS 26, *) {
+                onGeometryChange(for: CGFloat?.self) { proxy in
+                    BrowserChromeAppearance.windowCornerRadius(from: proxy.containerCornerInsets)
+                } action: { radius in
+                    action(radius)
+                }
+            } else {
+                self
+            }
+        }
+    }
+#endif
