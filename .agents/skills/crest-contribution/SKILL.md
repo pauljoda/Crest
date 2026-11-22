@@ -104,6 +104,11 @@ type you touch. The rules that matter most:
   cards. Every interactive control has hover and pressed states from the
   system. Search `CrestShared/DesignSystem` before writing any new fill or
   control.
+- **Dark backgrounds are black, not blue.** In dark mode a page or window
+  ground is `CrestBrandTheme.canvas`, the warm near-black Settings uses, and
+  a raised card or panel on it is `surface` or `flyout`, charcoal. Never fill
+  a dark background with Crest's blues (`ink`, `slate`) or a navy of one's
+  own; the blues are for text, marks and the accent.
 - **Things that appear in place grow from `CrestMotion.entranceScale`.** A
   card, preview, fan or control that appears beside the row or button it
   belongs to starts at that scale, 80% of its size, and grows the rest of the
