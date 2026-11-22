@@ -1,0 +1,36 @@
+{
+  "entries": [
+    {
+      "id": "recent-tab-switcher-close-highlighted-tab",
+      "category": "new",
+      "message": "Control-W closes the highlighted tab while the recent tab switcher is open, keeping saved and pinned tabs and respecting unsaved changes.",
+      "platforms": [
+        "mac"
+      ]
+    },
+    {
+      "id": "recent-tab-switcher-stays-open-while-closing",
+      "category": "fixed",
+      "message": "Closing a tab in the recent tab switcher highlights the next preview. When the final preview closes, the window stays open and can return to an older tab.",
+      "platforms": [
+        "mac"
+      ]
+    },
+    {
+      "id": "recent-tab-switcher-delayed-close-keeps-current-selection",
+      "category": "fixed",
+      "message": "The recent tab switcher skips tabs closed while a confirmation is pending and preserves a newer tab selection when the final preview closes.",
+      "platforms": [
+        "mac"
+      ]
+    },
+    {
+      "id": "recent-tab-switcher-preserves-confirmation-focus",
+      "category": "fixed",
+      "message": "The recent tab switcher stays open while a page asks whether to discard unsaved changes, and resumes after the answer.",
+      "platforms": [
+        "mac"
+      ]
+    }
+  ]
+}

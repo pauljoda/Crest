@@ -28,23 +28,19 @@ struct RecentTabSwitcherCloseAction {
         }
         let assignment = BrowserTabRuntimeAssignment(
             tabID: item.focusedTabID, spaceID: space.spaceID, profileID: space.profileID)
-        let selectedTabIDAtRequest = browser.selectedTabID(in: space.spaceID)
         return browser.performPageDismissal(of: [assignment], completion: completion) {
             guard browser.selectedUnlockedSpace(matching: space, accessController: spaceAccess) != nil else {
                 return false
             }
-            let shouldClearSelection =
-                clearsSelection && browser.selectedTabID(in: space.spaceID) == selectedTabIDAtRequest
-            // A sole Start Page stays in the core, but this window can
-            // leave it unselected instead of closing the window itself.
-            let keepsStartPage =
-                clearsSelection
-                && browser.closingLeavesOnlyTheWindow(assignment.tabID, in: assignment.spaceID)
-            guard keepsStartPage || browser.closeSessionTab(assignment.tabID, in: assignment.spaceID) else {
-                return false
+            // Only the sole Start Page needs special handling. A normal close
+            // lets the core select a fallback, even outside the five previews.
+            if clearsSelection && browser.closingLeavesOnlyTheWindow(assignment.tabID, in: assignment.spaceID) {
+                if browser.selectedTabID(in: space.spaceID) == assignment.tabID {
+                    browser.clearPresentedTabSelection(in: space.spaceID)
+                }
+                return true
             }
-            if shouldClearSelection { browser.clearPresentedTabSelection(in: space.spaceID) }
-            return true
+            return browser.closeSessionTab(assignment.tabID, in: assignment.spaceID)
         }
     }
 }
