@@ -1,9 +1,10 @@
 {
   "entries": [
     {
-      "id": "input-keyed-hit-targets",
+      "id": "update-feeds-at-crestbrowser",
       "category": "internal",
-      "message": "Controls size their targets from the input Crest accepts, a pointer or a finger, rather than from the platform."
+      "message": "Crest for Mac checks for updates at updates.crestbrowser.com, which serves the same signed feeds it read before.",
+      "platforms": ["mac"]
     }
   ]
 }

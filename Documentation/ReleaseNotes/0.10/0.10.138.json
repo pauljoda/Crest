@@ -1,9 +1,9 @@
 {
   "entries": [
     {
-      "id": "unread-brand-tokens-removed",
+      "id": "roadmap-at-crest-browser",
       "category": "internal",
-      "message": "Crest's brand colors and opacities no longer carry roles that nothing draws with."
+      "message": "The Roadmap link in Settings › About and the project docs open Crest's roadmap at its new home in the crest-browser organization, and Xcode Cloud builds now accept only the crest-browser repository address."
     }
   ]
 }

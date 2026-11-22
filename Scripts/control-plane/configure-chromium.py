@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Select a reproducible configuration in an existing, idle Chromium output."""
+"""Select a reproducible configuration in an idle Chromium output.
+
+Each architecture the engine ships builds in its own output directory of the
+same prepared source, as source.lock.json's `architectures` names it. The
+arm64 output is the one preparation generates; another architecture's output
+is created beside it the first time it is configured.
+"""
 
 import argparse
 import hashlib
@@ -17,18 +23,27 @@ def main():
     parser.add_argument("--source", required=True, type=Path)
     parser.add_argument("--configuration", required=True, choices=["development", "performance"])
     parser.add_argument("--sdk", type=Path, help="Compatible macOS SDK; required for performance builds")
-    parser.add_argument("--pgo-profile", type=Path, help="Pinned mac-arm profile; required for performance builds")
+    parser.add_argument("--pgo-profile", type=Path,
+                        help="The architecture's pinned profile; required for performance builds")
+    parser.add_argument("--cpu", default="arm64", help="The architecture to configure, as the lock names it")
     args = parser.parse_args()
     source = args.source.resolve()
     if source == REPO or REPO in source.parents:
         parser.error("Chromium sources and products must be outside Crest")
-    output = source / "out/CrestBaseline"
-    arguments = output / "args.gn"
-    gn = output / "gn"
-    if not arguments.is_file() or not gn.is_file():
-        parser.error("Prepare the pinned source before configuring it")
     lock = json.loads((REPO / "CrestEngines/Chromium/source.lock.json").read_text())
-    settings = {**lock["buildArguments"], **lock[f"{args.configuration}BuildArguments"]}
+    if args.cpu not in lock["architectures"]:
+        parser.error(f"The lock builds {', '.join(lock['architectures'])}, not {args.cpu}")
+    architecture = lock["architectures"][args.cpu]
+    output = source / architecture["output"]
+    arguments = output / "args.gn"
+    # Preparation bootstraps GN and installs it where DEPS would.
+    gn = source / "buildtools/mac/gn"
+    if not gn.is_file() or not (source / "out/CrestBaseline/args.gn").is_file():
+        parser.error("Prepare the pinned source before configuring it")
+    if not arguments.is_file():
+        output.mkdir(parents=True, exist_ok=True)
+        arguments.write_text("")
+    settings = {"target_cpu": args.cpu, **lock["buildArguments"], **lock[f"{args.configuration}BuildArguments"]}
     if args.configuration == "performance":
         if args.sdk is None or args.pgo_profile is None:
             parser.error("Performance builds require --sdk and --pgo-profile")
@@ -40,12 +55,12 @@ def main():
         expected = lock["performanceInputs"]
         if json.loads(sdk_settings.read_text())["Version"] != expected["macSDKVersion"]:
             parser.error(f"Use the compatible macOS {expected['macSDKVersion']} SDK")
-        profile_name = (source / "chrome/build/mac-arm.pgo.txt").read_text().strip()
-        if profile_name != expected["pgoProfile"] or profile.name != profile_name:
+        profile_name = (source / architecture["pgoProfileFile"]).read_text().strip()
+        if profile_name != architecture["pgoProfile"] or profile.name != profile_name:
             parser.error("PGO profile does not match the pinned Chromium source")
         with profile.open("rb") as stream:
             checksum = hashlib.file_digest(stream, "sha256").hexdigest()
-        if checksum != expected["pgoSHA256"]:
+        if checksum != architecture["pgoSHA256"]:
             parser.error("PGO profile checksum does not match the lock")
         if not (source / "v8/tools/builtins-pgo/profiles/x64.profile").is_file():
             parser.error("V8 builtin optimization profile is missing")
@@ -68,7 +83,7 @@ def main():
     # Replace only the lock's scalar arguments, including prior duplicates.
     # Keep independent flags a contributor added for a local build.
     owned = set(lock["buildArguments"]) | set(lock["developmentBuildArguments"]) | set(lock["performanceBuildArguments"])
-    owned.update(["mac_sdk_path", "pgo_data_path"])
+    owned.update(["target_cpu", "mac_sdk_path", "pgo_data_path"])
     previous = arguments.read_text()
     retained = []
     for line in previous.splitlines():
@@ -78,14 +93,14 @@ def main():
     configured = "\n".join(retained).rstrip() + "\n\n"
     configured += "\n".join(f"{key}={json.dumps(value)}" for key, value in settings.items()) + "\n"
     arguments.write_text(configured)
-    command = [str(gn), "gen", "out/CrestBaseline", "--fail-on-unused-args"]
+    command = [str(gn), "gen", architecture["output"], "--fail-on-unused-args"]
     try:
         subprocess.run(command, cwd=source, check=True)
     except subprocess.CalledProcessError:
         arguments.write_text(previous)
         subprocess.run(command, cwd=source, check=True)
         raise
-    print(f"Configured {args.configuration}; rebuild chrome in the same output directory.")
+    print(f"Configured {args.configuration} {args.cpu} in {architecture['output']}; rebuild chrome there.")
 
 
 if __name__ == "__main__":

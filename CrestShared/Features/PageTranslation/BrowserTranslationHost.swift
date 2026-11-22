@@ -15,7 +15,9 @@ struct BrowserTranslationHost: ViewModifier {
     @State private var hostID = UUID()
     @Environment(\.scenePhase) private var scenePhase
     private var preferences: AppPreferences { BrowserAppPreferenceStore.shared.preferences }
-    private var automaticallyTranslates: Bool { preferences.automaticallyTranslates }
+    private var automaticallyTranslates: Bool {
+        BrowserPageTranslation.canTranslateAutomatically && preferences.automaticallyTranslates
+    }
     private var offersTranslation: Bool { preferences.offersTranslation }
     private var languageRules: [TranslationRule] { preferences.translationRules }
 

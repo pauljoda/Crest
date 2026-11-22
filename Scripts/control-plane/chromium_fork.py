@@ -10,6 +10,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import platform
 import plistlib
 import re
 import selectors
@@ -35,6 +36,13 @@ VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+")
 # A prepared source directory is named by its preparation key's first 20 hex digits.
 SOURCE_NAME = re.compile(r"[0-9a-f]{20}")
 PREPARATION_FIELDS = ("chromium", "dependencies", "cipd", "crestPatches")
+# Where the architectures' browsers merge into the one universal engine a
+# release packages.
+UNIVERSAL_OUTPUT = "out/CrestUniversal"
+# The macOS name of each architecture the lock names by its GN `target_cpu`.
+MACHINES = {"arm64": "arm64", "x64": "x86_64"}
+# The first bytes of a universal, 64-bit or 32-bit Mach-O file.
+MACH_O_MAGIC = (bytes.fromhex("cafebabe"), bytes.fromhex("cffaedfe"), bytes.fromhex("cefaedfe"))
 # Present while a tree is being moved to a new release in place.
 ADVANCING = "advancing.json"
 ARCHIVE = "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-{version}-lite.tar.xz"
@@ -189,7 +197,8 @@ def exclusive_workspace(root):
 
 def prune_downloads(root, lock):
     """Remove cached source archives and PGO profiles that `lock` doesn't name, returning their names."""
-    keep = {Path(lock["chromium"]["sourceArchive"]).name, lock["performanceInputs"]["pgoProfile"]}
+    keep = {Path(lock["chromium"]["sourceArchive"]).name}
+    keep |= {architecture["pgoProfile"] for architecture in lock["architectures"].values()}
     stale = [path for pattern in ("downloads/chromium-*-lite.tar.xz", "profiles/*.profdata")
              for path in sorted(root.glob(pattern)) if path.name not in keep]
     # A running build reads its PGO profile in every compile command.
@@ -291,23 +300,31 @@ class Workspace:
             self.prepare()
         with timed(timings, "host"):
             self.apply_host()
+        # Each architecture builds in its own output of the one prepared source.
+        architectures = self.lock["architectures"]
         with timed(timings, "configure"):
-            profile = download_profile(self.root, self.lock["performanceInputs"])
-            if performance_configuration_matches(self.source, self.lock, sdk):
-                # Preserve equivalent absolute paths in an adopted build. Rewriting its
-                # PGO path alone invalidates every compile command in Ninja.
-                run(self.source / "out/CrestBaseline/gn", "gen", "out/CrestBaseline", "--fail-on-unused-args", cwd=self.source)
-            else:
-                self.script("configure-chromium.py", "--source", self.source, "--configuration", "performance",
-                            "--sdk", sdk, "--pgo-profile", profile)
-            if not performance_configuration_matches(self.source, self.lock, sdk):
-                raise ValueError("GN arguments contain unpinned overrides; review args.gn before building a published engine")
-            require_overlay_compiled(self.repo, self.source, ninja)
-        with timed(timings, "compile"):
-            self.script("build-chromium-baseline.py", "--source", self.source, "--ninja", ninja,
-                        "--jobs", jobs, "--min-free-gib", reserve)
+            for cpu, architecture in architectures.items():
+                profile = download_profile(self.root, architecture)
+                if performance_configuration_matches(self.source, self.lock, sdk, cpu):
+                    # Preserve equivalent absolute paths in an adopted build. Rewriting its
+                    # PGO path alone invalidates every compile command in Ninja.
+                    run(self.source / "buildtools/mac/gn", "gen", architecture["output"], "--fail-on-unused-args",
+                        cwd=self.source)
+                else:
+                    self.script("configure-chromium.py", "--source", self.source, "--configuration", "performance",
+                                "--cpu", cpu, "--sdk", sdk, "--pgo-profile", profile)
+                if not performance_configuration_matches(self.source, self.lock, sdk, cpu):
+                    raise ValueError(f"{architecture['output']}/args.gn contains unpinned overrides; review it before "
+                                     "building a published engine")
+                require_overlay_compiled(self.repo, self.source, ninja, architecture["output"])
+        for cpu, architecture in architectures.items():
+            with timed(timings, f"compile-{cpu}"):
+                self.script("build-chromium-baseline.py", "--source", self.source, "--ninja", ninja,
+                            "--jobs", jobs, "--min-free-gib", reserve, "--output", architecture["output"])
+        with timed(timings, "universal"):
+            browser = universal_engine(self.source, self.lock)
         with timed(timings, "smoke"):
-            smoke_engine(self.source, self.root, self.lock["chromium"]["version"])
+            smoke_engine(browser, self.root, self.lock)
         return timings
 
     def advance(self, target, previous_archive):
@@ -424,22 +441,63 @@ class Workspace:
         return {"changed": len(changed), "removed": len(removed)}
 
 
-def smoke_engine(source, workspace, version):
-    browser = source / "out/CrestBaseline/Chromium.app/Contents/MacOS/Chromium"
-    with (browser.parent.parent / "Info.plist").open("rb") as stream:
+def universal_engine(source, lock):
+    """Merge each architecture's browser into one universal `Chromium.app`,
+    with the universalizer Chromium ships for its own universal builds, and
+    answer it. Every executable must then hold every architecture."""
+    browsers = [source / architecture["output"] / "Chromium.app" for architecture in lock["architectures"].values()]
+    merged = source / UNIVERSAL_OUTPUT / "Chromium.app"
+    if merged.exists():
+        shutil.rmtree(merged)
+    merged.parent.mkdir(parents=True, exist_ok=True)
+    run(sys.executable, source / "chrome/installer/mac/universalizer.py", *browsers, merged, cwd=source)
+    require_universal(merged, lock)
+    return merged
+
+
+def require_universal(browser, lock):
+    """Refuse a browser in which any executable or library lacks one of the
+    lock's architectures."""
+    machines = {MACHINES[cpu] for cpu in lock["architectures"]}
+    for path in sorted(browser.rglob("*")):
+        if path.is_file() and not path.is_symlink() and is_mach_o(path):
+            held = set(subprocess.run(["lipo", "-archs", str(path)], capture_output=True, text=True).stdout.split())
+            if missing := machines - held:
+                raise ValueError(f"{path.relative_to(browser)} lacks {', '.join(sorted(missing))}")
+
+
+def is_mach_o(path):
+    """Whether `path` is a Mach-O file, thin or universal."""
+    with path.open("rb") as stream:
+        return stream.read(4) in MACH_O_MAGIC
+
+
+def smoke_engine(browser, workspace, lock):
+    """Require the universal `browser` to report the pinned version and to
+    render a page as each of the lock's architectures, the others through
+    Rosetta."""
+    with (browser / "Contents/Info.plist").open("rb") as stream:
         actual = plistlib.load(stream)["CFBundleShortVersionString"]
-    if version != actual:
+    if lock["chromium"]["version"] != actual:
         raise ValueError(f"Built engine reports an unexpected version: {actual}")
     scratch = workspace / "scratch"
     scratch.mkdir(exist_ok=True)
-    check_renders_page(browser, scratch)
+    native = platform.machine()
+    for cpu in lock["architectures"]:
+        # Rosetta translates the whole framework on a fresh build's first
+        # launch, about 35 s on the build Mac, before the page runs.
+        machine = MACHINES[cpu]
+        timeout = 30 if machine == native else 180
+        check_renders_page(browser / "Contents/MacOS/Chromium", scratch, timeout=timeout, machine=machine)
 
 
-def check_renders_page(browser, scratch, timeout=30):
-    """Require `browser`, run headless in a throwaway profile, to run a page's JavaScript."""
+def check_renders_page(browser, scratch, timeout=30, machine=None):
+    """Require `browser`, run headless in a throwaway profile, to run a page's
+    JavaScript, as `machine` (an `arch` name) where one is given."""
     with tempfile.TemporaryDirectory(prefix="smoke-", dir=scratch) as profile:
         page = "data:text/html,<script>document.title='crest-'+(6*7)</script>"
-        process = subprocess.Popen([str(browser), "--headless", "--disable-gpu", "--disable-background-networking",
+        launcher = ["arch", f"-{machine}"] if machine else []
+        process = subprocess.Popen([*launcher, str(browser), "--headless", "--disable-gpu", "--disable-background-networking",
             "--no-first-run", "--no-default-browser-check", "--use-mock-keychain", "--timeout=10000",
             f"--user-data-dir={profile}", "--dump-dom", page], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, start_new_session=True)
@@ -476,7 +534,7 @@ def check_renders_page(browser, scratch, timeout=30):
                     process.wait()
 
 
-def require_overlay_compiled(repo, source, ninja):
+def require_overlay_compiled(repo, source, ninja, output="out/CrestBaseline"):
     """Refuse a build whose browser target compiles none of an overlay source.
 
     Chromium sometimes folds the target Crest's host sources sit in into
@@ -484,7 +542,6 @@ def require_overlay_compiled(repo, source, ninja):
     overlay source must be an input of the `chrome` target the build makes,
     not merely of some target in the graph, before hours are spent compiling.
     """
-    output = "out/CrestBaseline"
     listing = run(ninja, "-C", source / output, "-t", "inputs", "chrome", capture=True)
     inputs = {os.path.normpath(os.path.join(output, line)) for line in listing.splitlines() if line}
     overlay = repo / ENGINE / "Overlay"
@@ -495,7 +552,9 @@ def require_overlay_compiled(repo, source, ninja):
                          + ", ".join(missing))
 
 
-def performance_configuration_matches(source, lock, sdk=None):
+def performance_configuration_matches(source, lock, sdk=None, cpu="arm64"):
+    """Whether `cpu`'s output is configured exactly as the lock pins it: its
+    arguments, the SDK and its architecture's PGO profile."""
     def assignments(text):
         values = {}
         for line in text.splitlines():
@@ -507,11 +566,12 @@ def performance_configuration_matches(source, lock, sdk=None):
             values[match[1]] = json.loads(match[2])
         return values
 
+    architecture = lock["architectures"][cpu]
     try:
-        values = assignments((source / "out/CrestBaseline/args.gn").read_text())
+        values = assignments((source / architecture["output"] / "args.gn").read_text())
     except (ValueError, OSError):
         return False
-    expected_flags = {**lock["buildArguments"], **lock["performanceBuildArguments"]}
+    expected_flags = {"target_cpu": cpu, **lock["buildArguments"], **lock["performanceBuildArguments"]}
     actual_flags = {name: value for name, value in values.items() if name not in ("mac_sdk_path", "pgo_data_path")}
     if actual_flags != expected_flags:
         return False
@@ -525,9 +585,9 @@ def performance_configuration_matches(source, lock, sdk=None):
     if not (sdk_path / "SDKSettings.json").is_file() or read_json(sdk_path / "SDKSettings.json")["Version"] != expected["macSDKVersion"]:
         return False
     profile = Path(values.get("pgo_data_path", ""))
-    return (profile.is_file() and profile.name == expected["pgoProfile"]
-            and sha256(profile) == expected["pgoSHA256"]
-            and (source / "chrome/build/mac-arm.pgo.txt").read_text().strip() == profile.name)
+    return (profile.is_file() and profile.name == architecture["pgoProfile"]
+            and sha256(profile) == architecture["pgoSHA256"]
+            and (source / architecture["pgoProfileFile"]).read_text().strip() == profile.name)
 
 
 def download(url, destination):
@@ -705,8 +765,8 @@ def candidate_lock(repo, root, version):
             raise ValueError("Chromium source archive does not match its published manifest")
     # The archive's own DEPS names the CIPD tool versions and the PGO profile.
     deps = ("src/", "src/third_party/dawn/", "src/third_party/devtools-frontend/src/")
-    profile_file = "src/chrome/build/mac-arm.pgo.txt"
-    found = archive_files(archive, version, [directory + "DEPS" for directory in deps] + [profile_file])
+    profile_files = {cpu: "src/" + architecture["pgoProfileFile"] for cpu, architecture in lock["architectures"].items()}
+    found = archive_files(archive, version, [directory + "DEPS" for directory in deps] + list(profile_files.values()))
     packages = {}
     for directory in deps:
         for path, entries in deps_cipd(found[directory + "DEPS"], directory).items():
@@ -726,9 +786,10 @@ def candidate_lock(repo, root, version):
         if (package, package_version) != (pinned["package"], pinned["version"]):
             lock["cipd"][path] = {"package": package, "version": package_version,
                                   "sha256": resolve_cipd(package, package_version)}
-    profile_name = found[profile_file].strip()
-    profile = download_profile(root, {"pgoProfile": profile_name})
-    lock["performanceInputs"].update(pgoProfile=profile_name, pgoSHA256=sha256(profile))
+    for cpu, profile_file in profile_files.items():
+        profile_name = found[profile_file].strip()
+        profile = download_profile(root, {"pgoProfile": profile_name})
+        lock["architectures"][cpu].update(pgoProfile=profile_name, pgoSHA256=sha256(profile))
     return lock
 
 
@@ -951,7 +1012,8 @@ def plan_update(repo, root, version, allow_major=False, report=None):
     plan = {
         "current": current, "version": version, "milestone": milestone,
         "path": "fresh" if reasons else "advance", "reasons": reasons,
-        "pgoChanged": candidate["performanceInputs"]["pgoProfile"] != lock["performanceInputs"]["pgoProfile"],
+        "pgoChanged": any(candidate["architectures"][cpu]["pgoProfile"] != architecture["pgoProfile"]
+                          for cpu, architecture in lock["architectures"].items()),
         "patches": {status: sorted(f"{name}: {path}" for name, files in patches.items()
                                    for path, value in files.items() if value == status)
                     for status in ("applies", "rebased", "upstream", "conflict", "missing")},

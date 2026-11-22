@@ -97,7 +97,7 @@ Platform roots compose scenes, supply persistence and system services, host the 
 
 Split large views at responsibilities such as a widget deck, media controls, or an import workflow. Keep related local helpers with their owner, reuse components wherever behavior repeats, and name interaction thresholds and design metrics where they are owned. Comments explain constraints and lifecycle decisions that the code cannot state directly.
 
-The application supports Apple silicon only.
+The Mac app is universal, for arm64 and x86_64. The iPhone and iPad apps are arm64.
 
 ## Validation
 

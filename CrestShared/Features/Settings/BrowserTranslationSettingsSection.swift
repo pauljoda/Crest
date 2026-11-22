@@ -8,7 +8,9 @@ struct BrowserTranslationSettingsSection: View {
     @Environment(\.scenePhase) private var scenePhase
 
     private var rules: [TranslationRule] { preferences.preferences.translationRules }
-    private var automaticallyTranslates: Bool { preferences.automaticallyTranslates }
+    private var automaticallyTranslates: Bool {
+        BrowserPageTranslation.canTranslateAutomatically && preferences.automaticallyTranslates
+    }
     private var sourceIDs: [String] {
         let installed = catalog.installedIDs
         let saved = rules.map(\.sourceLanguage).filter { saved in
@@ -23,8 +25,10 @@ struct BrowserTranslationSettingsSection: View {
     var body: some View {
         Section("Translation") {
             Toggle("Offer to translate pages", isOn: $preferences.offersTranslation)
-            Toggle("Translate automatically", isOn: $preferences.automaticallyTranslates)
-                .accessibilityIdentifier("automatic-translation-toggle")
+            if BrowserPageTranslation.canTranslateAutomatically {
+                Toggle("Translate automatically", isOn: $preferences.automaticallyTranslates)
+                    .accessibilityIdentifier("automatic-translation-toggle")
+            }
         }
         if automaticallyTranslates {
             languagesSection

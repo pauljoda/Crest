@@ -155,7 +155,7 @@ struct BrowserCrestForgeStage: View {
                 .disabled(!canUndo)
                 .accessibilityIdentifier("space-forge-undo")
         }
-        .buttonStyle(.glass)
+        .crestGlassButtonStyle()
         .controlSize(.small)
         .padding(12)
     }

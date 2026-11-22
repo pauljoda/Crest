@@ -75,13 +75,8 @@ case "$xcode_build" in
 esac
 
 repository_url="$(git -C "$repository_path" remote get-url origin 2>/dev/null || true)"
-# Crest moved from pauljoda to the crest-browser organization. Xcode Cloud
-# reports the old address until its repository connection is changed, so both
-# are accepted until then.
 case "$repository_url" in
     http://github.com/crest-browser/Crest.git|https://github.com/crest-browser/Crest.git|git@github.com:crest-browser/Crest.git|http://*@github.com/crest-browser/Crest.git|https://*@github.com/crest-browser/Crest.git)
-        ;;
-    http://github.com/pauljoda/Crest.git|https://github.com/pauljoda/Crest.git|git@github.com:pauljoda/Crest.git|http://*@github.com/pauljoda/Crest.git|https://*@github.com/pauljoda/Crest.git)
         ;;
     *)
         fail "The Crest workflow must use https://github.com/crest-browser/Crest.git as its primary repository; received '${repository_url:-unset}'."

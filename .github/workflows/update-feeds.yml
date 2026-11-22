@@ -1,0 +1,59 @@
+name: Publish update feeds
+
+# Installed Macs read their appcasts from the updates branch: older builds
+# through raw.githubusercontent.com, newer ones through updates.crestbrowser.com,
+# which is this repository's Pages site. The release workflows push the feeds
+# with the workflow token, and such pushes never start a Pages build, so this
+# republishes the branch after each release run.
+on:
+  workflow_run:
+    workflows: ["Publish macOS release", "Publish experimental macOS release"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Each run publishes the whole branch as it is, so runs wait their turn
+# rather than cancel one another.
+concurrency:
+  group: crest-update-feeds
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # A skipped release, such as a closed pull request that never merged,
+    # pushed nothing. A failed or cancelled one may have, and publishing the
+    # branch again is harmless.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion != 'skipped'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: updates
+          path: feeds
+
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: feeds
+
+  # Publishing runs as its own job: deploy-pages can look up an artifact the
+  # same job finalized a moment earlier and find nothing.
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Publish the update feeds
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

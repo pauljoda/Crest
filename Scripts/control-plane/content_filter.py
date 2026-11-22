@@ -37,13 +37,18 @@ INPUTS = (
 LIBRARY = "libcrest_content_filter.a"
 HEADER = "include/crest_content_filter.h"
 # The core's runtime identifiers, each with the Rust target that builds it and
-# the variable that sets its minimum OS, which matches project.yml.
+# the variable that sets its minimum OS.
 TARGETS = {
     "osx-arm64": ("aarch64-apple-darwin", "MACOSX_DEPLOYMENT_TARGET"),
+    "osx-x64": ("x86_64-apple-darwin", "MACOSX_DEPLOYMENT_TARGET"),
     "ios-arm64": ("aarch64-apple-ios", "IPHONEOS_DEPLOYMENT_TARGET"),
     "iossimulator-arm64": ("aarch64-apple-ios-sim", "IPHONEOS_DEPLOYMENT_TARGET"),
 }
-DEPLOYMENT_TARGET = "26.1"
+# Each platform's minimum OS, which matches project.yml.
+DEPLOYMENT_TARGETS = {
+    "MACOSX_DEPLOYMENT_TARGET": "15.0",
+    "IPHONEOS_DEPLOYMENT_TARGET": "26.1",
+}
 # Every member gets the same timestamp and mode, so an archive's bytes depend
 # only on what it holds.
 MEMBER_DATE = (1980, 1, 1, 0, 0, 0)
@@ -93,6 +98,14 @@ def toolchain(repo: Path = REPOSITORY) -> str:
     return re.search(r'^channel\s*=\s*"([^"]+)"', text, re.MULTILINE).group(1)
 
 
+def target_directory(repo: Path = REPOSITORY) -> Path:
+    """Where cargo builds. Cargo keeps what it compiled when a minimum OS
+    changes, so each set of minimums builds in a directory of its own."""
+    minimums = "-".join(f"{variable.split('_')[0].lower()}{version}"
+                        for variable, version in sorted(DEPLOYMENT_TARGETS.items()))
+    return repo / CRATE / "target" / minimums
+
+
 def cargo_environment(repo: Path = REPOSITORY) -> dict:
     """The environment every build of the crate uses, so the libraries do not
     depend on where the checkout or the Cargo home is."""
@@ -101,8 +114,8 @@ def cargo_environment(repo: Path = REPOSITORY) -> dict:
     environment["PATH"] = f"{cargo_home / 'bin'}{os.pathsep}{environment.get('PATH', '')}"
     environment["RUSTFLAGS"] = (f"--remap-path-prefix={cargo_home}=/cargo "
                                 f"--remap-path-prefix={(repo / CRATE).resolve()}=/crest-content-filter")
-    for _, variable in TARGETS.values():
-        environment[variable] = DEPLOYMENT_TARGET
+    environment.update(DEPLOYMENT_TARGETS)
+    environment["CARGO_TARGET_DIR"] = str(target_directory(repo))
     return environment
 
 
@@ -129,7 +142,7 @@ def compile_library(target, repo: Path = REPOSITORY) -> Path:
                        cwd=crate, env=environment, check=True, stdout=subprocess.DEVNULL)
     command = [executable, "build", "--release", "--locked"] + (["--target", target] if target else [])
     subprocess.run(command, cwd=crate, env=environment, check=True)
-    return crate / "target" / (target or "") / "release"
+    return target_directory(repo) / (target or "") / "release"
 
 
 def build(repo: Path, output: Path) -> dict:

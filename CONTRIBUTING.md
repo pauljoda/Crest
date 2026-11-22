@@ -26,7 +26,7 @@ r/CrestBrowser and Discord.
 
 ## Local setup
 
-1. Install Xcode with SDKs supporting the macOS 26.1 and iOS 26.1 deployment targets.
+1. Install Xcode with SDKs supporting the macOS 15.0 and iOS 26.1 deployment targets.
 2. Install [XcodeGen](https://github.com/yonaskolb/XcodeGen).
 3. Install the .NET SDK pinned by `CrestCore/global.json`, for example with
    `Scripts/control-plane/install-dotnet.sh`.
@@ -74,7 +74,7 @@ Run `Scripts/audit-licenses.py` whenever a package, website dependency, copied
 source file, font, or other third-party asset changes. New runtime dependencies
 must have a redistributable license and a preserved notice before they land.
 
-The project supports Apple silicon only. Keep new targets, destinations, and scripts arm64-native.
+Mac builds are universal: arm64 and x86_64, built on Apple silicon. New Mac targets, destinations, and scripts build both.
 
 ## Community and planning
 
@@ -82,7 +82,7 @@ Use [r/CrestBrowser](https://www.reddit.com/r/CrestBrowser) to discuss early
 ideas, user questions, and compatibility experiences before they become
 actionable engineering work. Use GitHub Issues for reproducible bugs and
 concrete outcomes. The public
-[Crest Roadmap project](https://github.com/users/pauljoda/projects/3) and
+[Crest Roadmap project](https://github.com/orgs/crest-browser/projects/1) and
 release milestones summarize planned work. Only the maintainer adds items to
 them: opening an issue or a pull request doesn't put it on the roadmap or
 commit to building it. [The roadmap](Documentation/ROADMAP.md)

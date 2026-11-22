@@ -2,7 +2,7 @@
 
 This file summarizes public release outcomes and work that is still outstanding
 or intentionally deferred. The live
-[Crest Roadmap project](https://github.com/users/pauljoda/projects/3) shows
+[Crest Roadmap project](https://github.com/orgs/crest-browser/projects/1) shows
 status; release milestones hold the actionable issue descriptions.
 
 ## Published releases

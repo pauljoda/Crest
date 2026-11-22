@@ -301,8 +301,10 @@ class UpdatePlanTests(unittest.TestCase):
             (root / "sources" / ("b" * 20)).mkdir()
             (root / "profiles").mkdir()
             (root / "profiles/old.profdata").write_text("")
+            (root / "profiles/new-x64.profdata").write_text("")
             lock = {"chromium": {"sourceArchive": "https://example.invalid/new.tar.xz"},
-                    "performanceInputs": {"pgoProfile": "new.profdata"}}
+                    "architectures": {"arm64": {"pgoProfile": "new.profdata"},
+                                      "x64": {"pgoProfile": "new-x64.profdata"}}}
             with mock.patch.object(chromium_fork, "building", return_value=True):
                 with self.assertRaises(ValueError):
                     prune_sources(root, {"a" * 20})
@@ -313,6 +315,7 @@ class UpdatePlanTests(unittest.TestCase):
             with mock.patch.object(chromium_fork, "building", return_value=False):
                 self.assertEqual(prune_sources(root, {"a" * 20}), ["b" * 20])
                 self.assertEqual(prune_downloads(root, lock), ["old.profdata"])
+            self.assertTrue((root / "profiles/new-x64.profdata").exists())
 
 
 class PublicationTests(unittest.TestCase):

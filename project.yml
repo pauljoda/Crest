@@ -9,16 +9,18 @@ options:
   bundleIdPrefix: com.pauldavis
   deploymentTarget:
     iOS: "26.1"
-    macOS: "26.1"
+    macOS: "15.0"
   xcodeVersion: "27.0"
 settings:
   base:
+    # The Mac app is universal; iPhone and iPad are arm64.
     ARCHS: arm64
+    "ARCHS[sdk=macosx*]": "arm64 x86_64"
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: 3U2R97HLXF
     DEVELOPMENT_LANGUAGE: en
     ENABLE_HARDENED_RUNTIME: YES
-    MACOSX_DEPLOYMENT_TARGET: "26.1"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_EMIT_LOC_STRINGS: YES
     SWIFT_STRICT_CONCURRENCY: complete
@@ -231,7 +233,8 @@ targets:
         CREST_DEFAULT_UPDATE_CHANNEL: development
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) CREST_REVIEW_BUILD"
         SWIFT_INCLUDE_PATHS: "$(PROJECT_DIR)/CrestContracts/include"
-        CREST_CORE_LIBRARY_DIR: "$(PROJECT_DIR)/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish"
+        # Scripts/control-plane/mac_core.py publishes it here.
+        CREST_CORE_LIBRARY_DIR: "$(PROJECT_DIR)/CrestCore/artifacts/mac-core"
         OTHER_LDFLAGS: '$(inherited) "$(CREST_CORE_LIBRARY_DIR)/CrestCore.Native.dylib"'
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
         SWIFT_EMIT_LOC_STRINGS: NO

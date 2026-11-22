@@ -1,9 +1,9 @@
 {
   "entries": [
     {
-      "id": "text-roles-follow-text-size",
+      "id": "dark-backgrounds-black-like-settings",
       "category": "improved",
-      "message": "Text buttons, Space chips and setup's welcome line on iPhone and iPad now grow with your text size, and the iPhone welcome line matches the iPad's."
+      "message": "In dark mode, the space behind pages, Getting Started, the command palette and Crest's other screens is black, as in Settings, instead of navy."
     }
   ]
 }

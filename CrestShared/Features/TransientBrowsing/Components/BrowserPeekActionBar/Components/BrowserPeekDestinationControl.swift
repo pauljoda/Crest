@@ -50,10 +50,7 @@ struct BrowserPeekDestinationControl: View {
         .frame(height: style.height)
         .browserReadableForeground(over: spaceTint)
         .contentShape(style.shape)
-        .glassEffect(
-            .regular.tint(spaceTint).interactive(),
-            in: style.shape
-        )
+        .crestGlass(tint: spaceTint, in: style.shape)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("peek-space-control")
     }
