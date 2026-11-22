@@ -61,9 +61,14 @@ for the enforced contracts and current exact exemptions.
 **Build Crest** runs on pull requests and pushes to `main`, and can also be
 dispatched manually. It checks source, core tests and analyzers, architecture,
 scripts, Swift formatting, native contracts, macOS and iOS builds, and the Help
-Center. Release publication calls the same workflow for the exact source SHA
-and waits for it to pass. Run the relevant local validation before opening a
-pull request; builds do not replace native app acceptance checks.
+Center. The macOS and iOS builds run once per change: a draft pull request
+waits until it is marked ready for review, and the push to `main` that merges
+a pull request runs only the checks, since the branch was already built. A
+direct push to `main` builds everything. Release publication calls the same
+workflow's checks for the exact source SHA and waits for them to pass, then
+builds the Mac product while signing it. Run the relevant local validation
+before opening a pull request; builds do not replace native app acceptance
+checks.
 
 Run `Scripts/audit-licenses.py` whenever a package, website dependency, copied
 source file, font, or other third-party asset changes. New runtime dependencies

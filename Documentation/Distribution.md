@@ -157,9 +157,11 @@ contract tests locally for the exact commit, following the
 [repository guardrails](RepositoryGuardrails.md). The production workflow follows
 these steps:
 
-1. validate the exact source SHA through the reusable **Build Crest** workflow
-   and find the Chromium engine for its engine key, building it on the registered
-   Mac when it is missing and that builder is enabled. Signing waits for both;
+1. validate the exact source SHA through the checks of the reusable
+   **Build Crest** workflow (the signing job builds the Mac product itself, so
+   the workflow's app builds are skipped here) and find the Chromium engine for
+   its engine key, building it on the registered Mac when it is missing and
+   that builder is enabled. Signing waits for both;
 2. regenerate the project and check version metadata, product identity, and
    cache hygiene;
 3. import the Developer ID identity into a temporary keychain and install the

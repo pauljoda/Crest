@@ -219,8 +219,10 @@ jobs:
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
+      pull-requests: read
     with:
       source_sha: ${{ needs.preflight.outputs.source_sha }}
+      skip_apple_builds: true
 
   engine:
     name: Prepare Chromium engine

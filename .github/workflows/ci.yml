@@ -2,6 +2,7 @@ name: Build Crest
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
   workflow_dispatch:
@@ -11,6 +12,11 @@ on:
         description: Exact source revision to validate before publication
         required: true
         type: string
+      skip_apple_builds:
+        description: Run only the checks; the release's signing job builds the Mac product itself
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -95,9 +101,12 @@ jobs:
     name: Changed areas
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
-      mac: ${{ steps.areas.outputs.mac }}
-      ios: ${{ steps.areas.outputs.ios }}
+      mac: ${{ steps.apple.outputs.build == 'true' && steps.areas.outputs.mac || 'false' }}
+      ios: ${{ steps.apple.outputs.build == 'true' && steps.areas.outputs.ios || 'false' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -112,6 +121,31 @@ jobs:
           SOURCE_SHA: ${{ inputs.source_sha }}
           BEFORE_SHA: ${{ github.event.before }}
         run: python3 Scripts/ci-changed-areas.py >> "$GITHUB_OUTPUT"
+
+      # The Apple builds are the expensive part, so they run once per change.
+      # A draft pull request waits until it is ready for review. A push to main
+      # from a merged pull request was built on its branch, and the release
+      # builds the merge commit again. The release's own validation skips them
+      # because its signing job builds the Mac product. A direct push to main
+      # has no other check, so it builds.
+      - name: Decide whether this run builds the Apple apps
+        id: apple
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+          SKIP: ${{ inputs.skip_apple_builds }}
+        run: |
+          build=true
+          if [[ "$SKIP" == true || ( "$EVENT_NAME" == pull_request && "$DRAFT" == true ) ]]; then
+            build=false
+          elif [[ "$EVENT_NAME" == push ]]; then
+            merged=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
+              --jq '[.[] | select(.merged_at != null)] | length' || echo 0)
+            if [[ "$merged" -gt 0 ]]; then build=false; fi
+          fi
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+          echo "Apple builds: $build" >&2
 
   # The three app builds run side by side on separate runners.
   chromium-host:

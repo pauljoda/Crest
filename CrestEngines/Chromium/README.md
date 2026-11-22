@@ -572,8 +572,10 @@ host restores its core-managed Spaces directly, without Chrome's profile picker.
 ## Releasing
 
 The release workflow calls `Build Crest` for the exact source SHA and waits for
-its core tests, generated-contract and architecture checks, script tests,
-native ABI checks, and product builds before publication. Building the
+its core tests, generated-contract and architecture checks, and script tests
+before publication, then builds the products in its signing job. The native
+ABI checks and app builds run on the pull request, or on a direct push to
+`main`. Building the
 Chromium host directly also builds its current native core into the same
 Xcode products directory.
 
