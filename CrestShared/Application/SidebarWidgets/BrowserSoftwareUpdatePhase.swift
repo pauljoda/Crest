@@ -131,14 +131,14 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
         })
     static let upToDate = BrowserSoftwareUpdatePhase(
         name: "upToDate", title: "Crest Is Up to Date", statusLabel: "Up to date",
-        symbol: settledSymbol, tone: .success, cardActions: settledCardActions, windowButtons: settledWindowButtons)
+        symbol: settledSymbol, cardActions: settledCardActions, windowButtons: settledWindowButtons)
     static let failed = BrowserSoftwareUpdatePhase(
         name: "failed", title: "Update Check Failed", statusLabel: "Update error",
-        symbol: "exclamationmark.triangle.fill", tone: .warning, cardActions: settledCardActions,
+        symbol: "exclamationmark.triangle.fill", cardActions: settledCardActions,
         windowButtons: settledWindowButtons)
     static let installed = BrowserSoftwareUpdatePhase(
         name: "installed", title: "Update Installed", statusLabel: "Installed",
-        symbol: settledSymbol, tone: .success, cardActions: settledCardActions, windowButtons: settledWindowButtons)
+        symbol: settledSymbol, cardActions: settledCardActions, windowButtons: settledWindowButtons)
     /// Updates can't run in this build at all.
     static let unavailable = BrowserSoftwareUpdatePhase(
         name: "unavailable", title: "Software Update Unavailable", statusLabel: "Unavailable")
@@ -165,9 +165,6 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
     let informationOnlyStatusLabel: LocalizedStringResource?
 
     let symbol: String
-    /// How the phase reads: info while an update is under way or waits, and
-    /// the settled outcome's tone once it ends.
-    let tone: CrestStatusTone
 
     /// Whether the card shows the update's message under the phase. A phase
     /// whose progress says enough leaves it out.
@@ -199,8 +196,8 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
     private init(
         name: String, title: LocalizedStringResource, statusLabel: LocalizedStringResource,
         informationOnlyStatusLabel: LocalizedStringResource? = nil, isTitledByUpdate: Bool = false,
-        symbol: String = BrowserSoftwareUpdatePhase.waitingSymbol, tone: CrestStatusTone = .info,
-        showsMessage: Bool = true, isTransferring: Bool = false, isWorking: Bool = false, isHideable: Bool = false,
+        symbol: String = BrowserSoftwareUpdatePhase.waitingSymbol, showsMessage: Bool = true,
+        isTransferring: Bool = false, isWorking: Bool = false, isHideable: Bool = false,
         cardActions: @escaping CardOffer = { _ in [] },
         windowButtons: @escaping WindowOffer = { _ in nil }
     ) {
@@ -210,7 +207,6 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
         self.statusLabel = statusLabel
         self.informationOnlyStatusLabel = informationOnlyStatusLabel
         self.symbol = symbol
-        self.tone = tone
         self.showsMessage = showsMessage
         self.isTransferring = isTransferring
         self.isWorking = isWorking

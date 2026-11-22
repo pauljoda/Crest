@@ -73,7 +73,7 @@ struct BrowserDefaultBrowserSection<Header: View>: View {
                 defaultBrowser.status.title,
                 systemImage: defaultBrowser.status.symbol
             )
-            .foregroundStyle(defaultBrowser.status.tone?.color ?? .secondary)
+            .foregroundStyle(CrestStatusTone(defaultBrowser.status.tone)?.color ?? .secondary)
             .accessibilityIdentifier("default-browser-status")
         }
     }
