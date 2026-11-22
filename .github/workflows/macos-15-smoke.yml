@@ -2,8 +2,9 @@ name: macOS 15 smoke
 
 # Builds the WebKit review app on the Xcode 27 runner and launches it on
 # GitHub's macOS 15 runner, the oldest macOS Crest supports. The app has to
-# reach its main window and load a page, and the screenshots show what macOS 15
-# draws where macOS 26 draws Liquid Glass. It takes two macOS runners, so it
+# reach its main window and open a link in a Quick Window. The runner hides
+# window titles and a window capture leaves out the page, so the screenshots
+# show what macOS 15 draws where macOS 26 draws Liquid Glass, not the page. It takes two macOS runners, so it
 # runs on request: add the macos-15-smoke label to a pull request, or run it
 # from the Actions tab.
 on:
@@ -142,7 +143,7 @@ jobs:
           if grep -q "Example Domain" "$shots/windows.txt"; then
             echo "The page loaded."
           else
-            echo "::warning::Window titles are hidden here; check quick-window.png for the page."
+            echo "::warning::Window titles are hidden here, so the page load is not checked."
           fi
           kill "$pid"
 
