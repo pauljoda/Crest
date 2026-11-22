@@ -11,7 +11,7 @@ Crest for Mac requires Apple silicon and macOS 26.1 or later. It is distributed 
 
 ## Install the latest Mac release
 
-1. Open the [latest stable Crest release](https://github.com/pauljoda/Crest/releases/latest).
+1. Open the [latest stable Crest release](https://github.com/crest-browser/Crest/releases/latest).
 2. Download its `Installer-….dmg` file.
 3. Open the disk image, then drag Crest into **Applications**.
 4. Eject the disk image and open Crest from Applications.

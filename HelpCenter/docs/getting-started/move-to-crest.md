@@ -19,7 +19,7 @@ Choose a detected browser, then review each source Space, profile, or window. De
 | Browsers built on Chromium | Profiles, bookmarks, open tabs, tab groups, split views, extensions, and supported passwords (not from a browser found by **Scan for more**) |
 | Other browsers | Windows, open tabs, and pinned tabs, plus bookmarks, profiles, workspaces (each profile's as one Sub-Space group), folders, split views, tab groups, icons, and colors where Crest can read them |
 
-If your browser isn't listed, choose **Scan for more** and Crest looks for other browsers built on Chromium. Not every browser can be found this way; you can [request support for one](https://github.com/pauljoda/Crest/issues/new?template=feature_request.yml&title=Import%20from%20).
+If your browser isn't listed, choose **Scan for more** and Crest looks for other browsers built on Chromium. Not every browser can be found this way; you can [request support for one](https://github.com/crest-browser/Crest/issues/new?template=feature_request.yml&title=Import%20from%20).
 
 In the review, each Space shows the Chrome Web Store extensions it brings under its address bar. Turn off any you don't want, and Crest installs the rest once the import finishes, without asking about each one.
 

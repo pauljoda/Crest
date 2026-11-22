@@ -31,7 +31,7 @@ enum BrowserAboutLinks {
     }
 
     static var issues: URL {
-        url("https://github.com/pauljoda/Crest/issues/new/choose")
+        url("https://github.com/crest-browser/Crest/issues/new/choose")
     }
 
     static var roadmap: URL {

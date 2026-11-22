@@ -119,7 +119,7 @@ internal sealed class FilterLibrary {
     private const string ResourcesName = "resources";
     internal static readonly Guid ResourcesId = new("6f0b8c52-3d1e-4f7a-9a51-7c2d4e8b1f30");
     public const string PublishedResourcesUrl =
-        "https://github.com/pauljoda/Crest/releases/download/" + ResourcesRelease + "/ublock-resources.json";
+        "https://github.com/crest-browser/Crest/releases/download/" + ResourcesRelease + "/ublock-resources.json";
 
     /// AdGuard's URL Tracking filter, in its build for uBlock Origin, and how
     /// it is named on the device and on the wire. The device keeps it while

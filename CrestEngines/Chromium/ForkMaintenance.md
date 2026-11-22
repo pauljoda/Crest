@@ -291,14 +291,18 @@ Disney+, Max and Prime Video, whose sites open in WebKit from the start.
 
 ## GitHub Actions
 
-Install the repository-scoped runner on the build Mac:
+Install the runner on the build Mac:
 
 ```sh
+gh auth refresh -h github.com -s admin:org
 python Scripts/control-plane/install-chromium-runner.py
 ```
 
 This verifies GitHub's runner archive checksum and installs a user LaunchAgent
-with the `crest-chromium` label. It starts at login; the Mac must remain awake and
+with the `crest-chromium` label. The runner registers with the `crest-browser`
+organization in the `chromium-builders` runner group, which admits only Crest
+and only `chromium.yml` and `chromium-engine.yml` on `main`. A job from any
+other workflow or ref, including a pull request, can't reach the Mac. It starts at login; the Mac must remain awake and
 online to accept builds. Use `~/Dev/CrestChromium/runner/svc.sh stop` and `start`
 from that directory to control it. Signing keys stay in the existing release
 environment. The maintenance workflow has no pull-request trigger; never run

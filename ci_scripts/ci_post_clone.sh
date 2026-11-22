@@ -75,7 +75,7 @@ case "$xcode_build" in
 esac
 
 repository_url="$(git -C "$repository_path" remote get-url origin 2>/dev/null || true)"
-# Crest is moving from pauljoda to the crest-browser organization. Xcode Cloud
+# Crest moved from pauljoda to the crest-browser organization. Xcode Cloud
 # reports the old address until its repository connection is changed, so both
 # are accepted until then.
 case "$repository_url" in

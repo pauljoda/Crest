@@ -19,13 +19,13 @@ history, personal messages, and other sensitive information before posting.
 
 ## Reproducible bugs and planned work
 
-Use [GitHub Issues](https://github.com/pauljoda/Crest/issues/new/choose) when a
+Use [GitHub Issues](https://github.com/crest-browser/Crest/issues/new/choose) when a
 report has a Crest version, Apple platform, repeatable steps, expected result,
 and actual result. Search existing issues first and add sanitized evidence only
 when it changes what another person can reproduce.
 
 The [Crest Roadmap project](https://github.com/users/pauljoda/projects/3) and
-the [release milestones](https://github.com/pauljoda/Crest/milestones) are the
+the [release milestones](https://github.com/crest-browser/Crest/milestones) are the
 public view of currently planned outcomes. Only the maintainer adds items to
 them, so opening an issue doesn't put it on the roadmap. Scope may evolve as
 engine and physical-device validation clarify the correct behavior.
@@ -33,7 +33,7 @@ engine and physical-device validation clarify the correct behavior.
 ## Security vulnerabilities
 
 Use GitHub's
-[private vulnerability report](https://github.com/pauljoda/Crest/security/advisories/new).
+[private vulnerability report](https://github.com/crest-browser/Crest/security/advisories/new).
 Do not post suspected vulnerabilities on Reddit or in a public issue. See
 [SECURITY.md](SECURITY.md) for scope and reporting guidance.
 

@@ -38,9 +38,9 @@ release before signing.
 | Development | PR merged into `main`, or manual workflow dispatch | New `development-<version>-<date>-<build>-r<run>.<attempt>` prerelease | `development` |
 | Experimental | Manual dispatch of **Publish experimental macOS release** for a branch | New `experimental-<version>-<branch>-<date>-<build>-r<run>.<attempt>` prerelease | `experimental` |
 
-Browse [Stable](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse),
-[Nightly](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22), or
-[Development](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22).
+Browse [Stable](https://github.com/crest-browser/Crest/releases?q=prerelease%3Afalse),
+[Nightly](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22), or
+[Development](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22).
 The README links to every channel, and each release's notes link to its own
 channel. GitHub's
 [release search](https://docs.github.com/en/repositories/releasing-projects-on-github/searching-a-repositorys-releases)
@@ -67,12 +67,12 @@ so retries and delayed runs cannot publish an update that Sparkle considers olde
 
 The appcast is hosted at:
 
-`https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast.xml`
+`https://raw.githubusercontent.com/crest-browser/Crest/updates/appcast.xml`
 
 Development builds use a separate signed feed so frequent commits cannot prune
 stable or nightly entries:
 
-`https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-development.xml`
+`https://raw.githubusercontent.com/crest-browser/Crest/updates/appcast-development.xml`
 
 Experimental builds use `appcast-experimental.xml`. Each feed also has a
 `-webkit` twin, such as `appcast-webkit.xml`, which WebKit-only builds of Crest

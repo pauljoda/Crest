@@ -581,7 +581,7 @@ def brand_button(source: Source) -> str:
 def page_html(document: dict, contributors: Optional[list[Contributor]], by_tier: dict[str, list[Supporter]], tiers: list[Tier], images: Images) -> str:
     community = tuple(person for person in map(Person.read, document.get("community", [])) if person)
     roles = read_roles(document)
-    repository = str(document.get("contributors", {}).get("repository", "pauljoda/Crest"))
+    repository = str(document.get("contributors", {}).get("repository", "crest-browser/Crest"))
     role_sections = "".join(
         people_section(f"role-{index}", role.title, role.symbol, "var(--coral)", role.people, images)
         for index, role in enumerate(roles)
@@ -702,7 +702,7 @@ def main() -> int:
     output = (arguments.output or root / "Website" / "credits").resolve()
     document = json.loads((root / CREDITS_PATH).read_text(encoding="utf-8"))
     settings = document.get("contributors", {})
-    repository = str(settings.get("repository", "pauljoda/Crest"))
+    repository = str(settings.get("repository", "crest-browser/Crest"))
     exclude = {str(login).casefold() for login in settings.get("exclude", [])}
     contributors = github_contributors(repository, exclude, os.environ.get("GITHUB_TOKEN"))
     patreon_token = os.environ.get("PATREON_ACCESS_TOKEN")

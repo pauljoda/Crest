@@ -7,7 +7,7 @@ final class BrowserSoftwareUpdateTests: XCTestCase {
     func testApplicationRequiresSignedSparkleUpdatesFromTheOfficialFeed() throws {
         XCTAssertEqual(
             Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") as? String,
-            "https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast.xml"
+            "https://raw.githubusercontent.com/crest-browser/Crest/updates/appcast.xml"
         )
         XCTAssertEqual(
             Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") as? String,

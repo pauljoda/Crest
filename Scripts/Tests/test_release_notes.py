@@ -64,7 +64,7 @@ class ReleaseNotesTests(unittest.TestCase):
             "--repository-root",
             str(self.repository),
             "--repository",
-            "pauljoda/Crest",
+            "crest-browser/Crest",
             "--channel",
             channel,
             "--current-ref",
@@ -95,7 +95,7 @@ class ReleaseNotesTests(unittest.TestCase):
                     else f"prerelease%3Atrue+%22{channel.title()}+builds%22"
                 )
                 self.assertIn(
-                    f"[Browse {channel.title()} releases](https://github.com/pauljoda/Crest/releases?q={query})",
+                    f"[Browse {channel.title()} releases](https://github.com/crest-browser/Crest/releases?q={query})",
                     result.stdout,
                 )
 

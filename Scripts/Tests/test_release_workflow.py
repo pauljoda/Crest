@@ -86,7 +86,7 @@ class ReleasePreflightTests(unittest.TestCase):
             "GITHUB_EVENT_NAME": "schedule",
             "GITHUB_REF_TYPE": "branch",
             "GITHUB_REF_NAME": "main",
-            "GITHUB_REPOSITORY": "pauljoda/Crest",
+            "GITHUB_REPOSITORY": "crest-browser/Crest",
             "GITHUB_SHA": self.current_commit,
             "GITHUB_RUN_NUMBER": "61",
             "GITHUB_RUN_ATTEMPT": "1",
@@ -110,7 +110,7 @@ class ReleasePreflightTests(unittest.TestCase):
             '<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">'
             f"<channel><item><sparkle:channel>{channel}</sparkle:channel>"
             f"<sparkle:version>{build}</sparkle:version>"
-            f'<enclosure url="https://github.com/pauljoda/Crest/releases/download/{tag}/'
+            f'<enclosure url="https://github.com/crest-browser/Crest/releases/download/{tag}/'
             f'Installer-Crest-0.5.25-{channel}-2026-09-03-{commit[:7]}-arm64.dmg" />'
             "</item></channel></rss>"
         )
