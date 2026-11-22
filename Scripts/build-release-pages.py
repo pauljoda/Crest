@@ -102,7 +102,8 @@ class Release:
     notes: list[Note]
 
     @classmethod
-    def from_document(cls, channel: Channel, document: dict) -> "Release":
+    def from_document(cls, channel: Channel, document: dict, notes: dict[str, list[Note]]) -> "Release":
+        """A release from the history, with the notes of the versions it covers."""
         write_up = document["writeUp"]
         return cls(
             channel,
@@ -114,7 +115,7 @@ class Release:
             )
             if write_up is not None
             else None,
-            [Note(note["id"], note["category"], note["message"], note["version"]) for note in document["notes"]],
+            [note for version in document["covers"] for note in notes.get(version, ())],
         )
 
     @property
@@ -195,12 +196,16 @@ def read_history(path: pathlib.Path) -> dict[tuple[str, str], list[Release]]:
         raise SystemExit(f"{path} is release history schema {document.get('schema')}; this site reads {HISTORY_SCHEMA}.")
     channels = {(channel.platform, channel.slug): channel for platform in PLATFORMS for channel in platform.channels}
     releases: dict[tuple[str, str], list[Release]] = {key: [] for key in channels}
-    for platform, platform_channels in document["platforms"].items():
-        for slug, items in platform_channels.items():
+    for platform, section in document["platforms"].items():
+        notes = {
+            version: [Note(note["id"], note["category"], note["message"], version) for note in items]
+            for version, items in section["notes"].items()
+        }
+        for slug, items in section["channels"].items():
             channel = channels.get((platform, slug))
             if channel is None:
                 raise SystemExit(f"{path} has releases for {platform}/{slug}, a channel the site doesn't show yet.")
-            releases[(platform, slug)] = [Release.from_document(channel, item) for item in items]
+            releases[(platform, slug)] = [Release.from_document(channel, item, notes) for item in items]
     return releases
 
 

@@ -8,26 +8,33 @@ branch, and `Documentation/ReleaseNotes/`, then writes one file:
       "schema": 1,
       "platforms": {
         "mac": {
-          "stable": [
-            {
-              "version": "0.10.24",
-              "date": "2026-11-17",
-              "writeUp": { "summary": "...", "sections": [{ "kind": "added", "items": ["..."] }] },
-              "notes": [{ "id": "...", "category": "fixed", "message": "...", "version": "0.10.24" }]
-            }
-          ],
-          "nightly": [...], "development": [...]
+          "notes": {
+            "0.10.24": [{ "id": "...", "category": "fixed", "message": "..." }]
+          },
+          "channels": {
+            "stable": [
+              {
+                "version": "0.10.24",
+                "date": "2026-11-17",
+                "covers": ["0.10.24", "0.10.23", "..."],
+                "writeUp": { "summary": "...", "sections": [{ "kind": "added", "items": ["..."] }] }
+              }
+            ],
+            "nightly": [...], "development": [...]
+          }
         },
-        "ios": { "app-store": [...], "testflight": [...] }
+        "ios": { "notes": {...}, "channels": { "app-store": [...], "testflight": [...] } }
       }
     }
 
-Each channel lists its releases newest first. A release covers the versions
-after the release before it, up to its own, and `notes` holds their public
-entries that reach the platform, newest version first. `writeUp` is the
-curated write-up of a Stable or App Store release, with only the items that
-reach the platform, and null everywhere else. `date` is null when no tag or
-version history gives one.
+`notes` holds each version's public entries that reach the platform, once, in
+the order they were written; a version with none is left out. Each channel
+lists its releases newest first. A release covers the versions after the
+release before it, up to its own, and `covers` names them newest first, so its
+changes are those versions' notes in that order. `writeUp` is the curated
+write-up of a Stable or App Store release, with only the items that reach the
+platform, and null everywhere else. `date` is null when no tag or version
+history gives one.
 
 A channel's releases come from its tags: `v<version>` for Mac Stable,
 `nightly-<version>-<date>-…` and `development-<version>-<date>-…` for the Mac
@@ -84,30 +91,20 @@ class Release:
     write_up: Optional[ReleaseWriteUp]
 
     def document(self) -> dict:
-        platform = self.channel.platform
         write_up = None
         if self.write_up is not None:
             write_up = {
                 "summary": self.write_up.summary,
                 "sections": [
                     {"kind": section, "items": items}
-                    for section, items in self.write_up.sections_for(platform)
+                    for section, items in self.write_up.sections_for(self.channel.platform)
                 ],
             }
         return {
             "version": str(self.version),
             "date": self.date,
+            "covers": [str(notes.version) for notes in reversed(self.covered)],
             "writeUp": write_up,
-            "notes": [
-                {
-                    "id": entry.identifier,
-                    "category": entry.category,
-                    "message": entry.message,
-                    "version": str(entry.version),
-                }
-                for notes in reversed(self.covered)
-                for entry in notes.public_entries(platform)
-            ],
         }
 
 
@@ -207,14 +204,29 @@ def channel_releases(
     return list(reversed(releases))
 
 
+def platform_notes(catalog: ReleaseNoteCatalog, platform: str) -> dict[str, list[dict]]:
+    """Each version's public entries that reach `platform`, oldest version first."""
+    notes: dict[str, list[dict]] = {}
+    for version_notes in catalog.versions:
+        entries = version_notes.public_entries(platform)
+        if entries:
+            notes[str(version_notes.version)] = [
+                {"id": entry.identifier, "category": entry.category, "message": entry.message}
+                for entry in entries
+            ]
+    return notes
+
+
 def release_history(repository_root: pathlib.Path) -> dict:
     catalog = read_catalog(repository_root / CATALOG_DIRECTORY)
     tags = release_tags(repository_root)
     dates = version_dates(repository_root)
-    platforms: dict[str, dict[str, list[dict]]] = {}
+    platforms: dict[str, dict] = {}
     for channel in CHANNELS:
+        if channel.platform not in platforms:
+            platforms[channel.platform] = {"notes": platform_notes(catalog, channel.platform), "channels": {}}
         releases = channel_releases(channel, catalog, tags, dates)
-        platforms.setdefault(channel.platform, {})[channel.slug] = [release.document() for release in releases]
+        platforms[channel.platform]["channels"][channel.slug] = [release.document() for release in releases]
     return {"schema": SCHEMA, "platforms": platforms}
 
 
@@ -240,8 +252,8 @@ def main() -> int:
     arguments.output.write_text(json.dumps(history, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     counts = ", ".join(
         f"{platform}/{channel} {len(releases)}"
-        for platform, channels in history["platforms"].items()
-        for channel, releases in channels.items()
+        for platform, section in history["platforms"].items()
+        for channel, releases in section["channels"].items()
     )
     print(f"Wrote the release history to {arguments.output} ({counts}).")
     return 0
