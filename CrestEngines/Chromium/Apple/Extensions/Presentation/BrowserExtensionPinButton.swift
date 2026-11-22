@@ -4,6 +4,7 @@ struct BrowserExtensionPinButton: View {
     // MARK: - Static Variables
 
     private static let size: CGFloat = 14
+    private static let glyphSize: CGFloat = 8
 
     // MARK: - Variables
 
@@ -13,7 +14,7 @@ struct BrowserExtensionPinButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: isPinned ? "pin.slash.fill" : "pin.fill")
-                .font(.system(size: 8, weight: .semibold))
+                .font(CrestTypography.sans(Self.glyphSize, weight: .semibold))
         }
         .buttonStyle(
             CrestChromeButtonStyle(

@@ -73,7 +73,7 @@ struct BrowserDefaultBrowserSection<Header: View>: View {
                 defaultBrowser.status.title,
                 systemImage: defaultBrowser.status.symbol
             )
-            .foregroundStyle(statusStyle)
+            .foregroundStyle(defaultBrowser.status.tone?.color ?? .secondary)
             .accessibilityIdentifier("default-browser-status")
         }
     }
@@ -101,14 +101,6 @@ struct BrowserDefaultBrowserSection<Header: View>: View {
             }
             .disabled(style.waitsForRequest && defaultBrowser.isWorking)
             .accessibilityIdentifier(style.buttonIdentifier)
-        }
-    }
-
-    private var statusStyle: AnyShapeStyle {
-        switch defaultBrowser.status.tone {
-        case .quiet: AnyShapeStyle(.secondary)
-        case .success: AnyShapeStyle(CrestColor.success)
-        case .warning: AnyShapeStyle(CrestColor.warning)
         }
     }
 

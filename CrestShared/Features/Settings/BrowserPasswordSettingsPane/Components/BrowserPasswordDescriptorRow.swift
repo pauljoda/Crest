@@ -106,6 +106,12 @@ struct BrowserPasswordDescriptorRow: View {
         }
     }
 
+    /// The Accent of the Space the password belongs to, or Crest blue for a
+    /// password no Space holds.
+    private var spaceAccent: Color {
+        space?.branding.primaryColor.color ?? CrestBrandTheme.accent
+    }
+
     @ViewBuilder
     private var leadingIcon: some View {
         if isSelectionActive {
@@ -113,13 +119,13 @@ struct BrowserPasswordDescriptorRow: View {
                 .font(.title3)
                 .foregroundStyle(
                     isSelected
-                        ? (space?.accent.tint.color ?? CrestBrandTheme.accent)
+                        ? spaceAccent
                         : .secondary
                 )
                 .accessibilityHidden(true)
         } else {
             Image(systemName: "key.fill")
-                .foregroundStyle(space?.accent.tint.color ?? CrestBrandTheme.accent)
+                .foregroundStyle(spaceAccent)
                 .frame(width: 22)
                 .accessibilityHidden(true)
         }

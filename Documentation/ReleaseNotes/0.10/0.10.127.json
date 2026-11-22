@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "crest-blue-replaces-system-accent",
+      "category": "improved",
+      "message": "Translation, the emoji picker, the viewport preview and the sidebar width preview use Crest blue instead of the Mac's system accent colour.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "download-badge-space-accent",
+      "category": "improved",
+      "message": "The downloads badge, and on iPhone and iPad the private browsing button, take the Space's accent colour, so they stand out from the sidebar behind them."
+    }
+  ]
+}

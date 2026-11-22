@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x6a, 0x19, 0xe0, 0x22, 0x67, 0x19, 0xb7, 0x14, 0xb5, 0xfe, 0xdb, 0x44, 0x32, 0x13, 0xa5, 0x28, 0xc8, 0x66, 0x3c, 0x22, 0xcc, 0xd5, 0x5b, 0x97, 0xab, 0xf7, 0x20, 0xb8, 0xdd, 0x5a, 0xc7, 0x5d
+        0x65, 0x79, 0x7e, 0xf7, 0x57, 0xc6, 0x6f, 0x5e, 0x66, 0x6b, 0xde, 0xa9, 0x00, 0x98, 0xfa, 0xba, 0xc8, 0xa1, 0xdb, 0xc7, 0x4e, 0xd7, 0xa5, 0xe5, 0xf0, 0x2e, 0x9c, 0xa8, 0x13, 0x31, 0x47, 0x96
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -28464,20 +28464,6 @@ extension SystemPasswordWriteThroughAvailability {
     }
 }
 
-extension SystemTint {
-    init(from reader: inout WireReader) throws(WireError) {
-        let rawValue = try reader.readEnum()
-        guard let value = SystemTint(rawValue: rawValue) else {
-            throw WireError.malformed("Unknown SystemTint \(rawValue)")
-        }
-        self = value
-    }
-
-    func encode(into writer: inout WireWriter) {
-        writer.writeEnum(rawValue)
-    }
-}
-
 extension TabSavedImageChange {
     init(from reader: inout WireReader) throws(WireError) {
         let rawValue = try reader.readEnum()
@@ -30205,6 +30191,20 @@ extension StartupBehavior {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown StartupBehavior \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension StatusTone {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown StatusTone \(tag)")
         }
         self = Self.all[tag]
     }

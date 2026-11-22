@@ -17,7 +17,7 @@ struct BrowserSyncSettingsView: View {
 
                 CrestSettingsStatusRow("Status") {
                     Label(cloudSync.phase.title, systemImage: cloudSync.phase.symbol)
-                        .foregroundStyle(cloudSync.phase.tint?.color ?? .secondary)
+                        .foregroundStyle(CrestStatusTone(cloudSync.phase.tone)?.color ?? .secondary)
                 }
                 CrestSettingsStatusRow("iCloud account") {
                     Text(cloudSync.accountState.title)

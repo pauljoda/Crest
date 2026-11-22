@@ -26,10 +26,7 @@ struct BrowserPinnedExtensionActionButton: View {
                 guard state.allSatisfy({ $0 }) else { return }
                 performAction()
             }
-            .background(
-                .quaternary.opacity(isHovering ? 1 : 0),
-                in: .rect(cornerRadius: 7)
-            )
+            .crestInteractiveSurface(isSelected: false, isHovering: isHovering, cornerRadius: CrestRadius.compact)
             .contentShape(.rect)
             .onHover(perform: hoverChanged)
     }

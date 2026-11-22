@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "sync-and-archive-status-colors",
+      "category": "improved",
+      "message": "iCloud sync status and the archive list use Crest's own colours: work under way in Crest blue, up to date in green, waiting on you in amber, and trouble or deleted tabs in red, while tabs you closed read quietly."
+    },
+    {
+      "id": "space-choices-in-space-accent",
+      "category": "improved",
+      "message": "Saved passwords and Space choices in Settings show each Space in its own accent colour."
+    }
+  ]
+}

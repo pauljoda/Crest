@@ -9,7 +9,7 @@ struct BrowserTranslationMenu: View {
                 .crestMenuActionLabelStyle()
         } label: {
             Image(systemName: "translate")
-                .foregroundStyle(translation.isTranslated ? Color.accentColor : .primary)
+                .foregroundStyle(translation.isTranslated ? CrestBrandTheme.accent : .primary)
                 .overlay(alignment: .topTrailing) {
                     if translation.isWorking {
                         ProgressView().controlSize(.mini).offset(x: 6, y: -5)
@@ -17,7 +17,7 @@ struct BrowserTranslationMenu: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 10, weight: .semibold))
                             .symbolRenderingMode(.palette)
-                            .foregroundStyle(.white, Color.accentColor)
+                            .foregroundStyle(.white, CrestBrandTheme.accent)
                             .offset(x: 6, y: -5)
                             .accessibilityHidden(true)
                     }
@@ -194,7 +194,7 @@ struct BrowserTranslationToolbar: View {
         HStack(spacing: 5) {
             Image(systemName: "translate")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(translation.isTranslated ? Color.accentColor : .primary)
+                .foregroundStyle(translation.isTranslated ? CrestBrandTheme.accent : .primary)
                 .frame(width: controlHeight, height: controlHeight)
                 .accessibilityHidden(true)
             toolbarDivider
@@ -368,9 +368,9 @@ private struct BrowserTranslationToolbarControlStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundStyle(isProminent ? Color.accentColor : .primary)
+            .foregroundStyle(isProminent ? CrestBrandTheme.accentText : .primary)
             .background(
-                (isProminent ? Color.accentColor : Color.primary)
+                (isProminent ? CrestBrandTheme.accent : Color.primary)
                     .opacity(configuration.isPressed ? 0.18 : isHovered ? 0.12 : isGrouped ? 0.07 : 0),
                 in: .rect(cornerRadius: 7, style: .continuous)
             )

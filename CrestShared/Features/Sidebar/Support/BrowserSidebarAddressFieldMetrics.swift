@@ -101,7 +101,7 @@ struct BrowserSidebarAddressFieldMetrics: Equatable, Sendable {
         horizontalPadding: 12,
         height: 44,
         growsWithContent: true,
-        editingRingColor: Color.accentColor.opacity(0.7),
+        editingRingColor: CrestBrandTheme.accent.opacity(0.7),
         editingRingWidth: 1,
         leadingGlyphFont: .system(size: 13, weight: .medium),
         leadingGlyphSlot: nil,
