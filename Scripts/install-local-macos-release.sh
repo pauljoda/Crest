@@ -202,9 +202,9 @@ fi
 
 # --- Crest: the native core and interface framework, packaged with the
 # engine. ---
-(cd CrestCore && "$dotnet" publish src/CrestCore.Native -c Release -r osx-arm64 --nologo -v quiet)
-core_library="$PWD/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish/CrestCore.Native.dylib"
-[[ -f "$core_library" ]]
+CREST_DOTNET="$dotnet" python3 Scripts/control-plane/mac_core.py >/dev/null
+core_library="$PWD/CrestCore/artifacts/mac-core/CrestCore.Native.dylib"
+for arch in arm64 x86_64; do lipo "$core_library" -verify_arch "$arch"; done
 
 xcodebuild build \
   -quiet \

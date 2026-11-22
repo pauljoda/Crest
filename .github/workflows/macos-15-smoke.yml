@@ -1,10 +1,13 @@
 name: macOS 15 smoke
 
-# Builds the WebKit review app on the Xcode 27 runner and launches it on
-# GitHub's macOS 15 runner, the oldest macOS Crest supports. The app has to
-# reach its main window and open a link in a Quick Window. The runner hides
-# window titles and a window capture leaves out the page, so the screenshots
-# show what macOS 15 draws where macOS 26 draws Liquid Glass, not the page. It takes two macOS runners, so it
+# Builds the universal WebKit review app on the Xcode 27 runner and launches
+# it on GitHub's macOS 15 runner, the oldest macOS Crest supports, natively
+# and as Intel code under Rosetta. GitHub's Intel runners are virtual machines
+# whose GPU Metal can't drive, and SwiftUI's renderer stops any app there. The
+# app has to reach its main window and open a link in a Quick Window. The
+# runner hides window titles and a window capture leaves out the page, so the
+# screenshots show what macOS 15 draws where macOS 26 draws Liquid Glass, not
+# the page. It takes two macOS runners, so it
 # runs on request: add the macos-15-smoke label to a pull request, or run it
 # from the Actions tab.
 on:
@@ -35,7 +38,7 @@ jobs:
       - uses: ./.github/actions/prepare-apple-build
 
       - name: Build the native core
-        run: (cd CrestCore && "$HOME/.dotnet/dotnet" publish src/CrestCore.Native -c Release -r osx-arm64 --nologo)
+        run: CREST_DOTNET="$HOME/.dotnet/dotnet" python3 Scripts/control-plane/mac_core.py
 
       # Ad-hoc signed without entitlements, under a bundle ID of its own, so
       # it needs no signing secrets and the launch can mark setup as done.
@@ -45,8 +48,9 @@ jobs:
             -project Crest.xcodeproj \
             -scheme CrestNativeCore \
             -configuration Debug \
-            -destination 'platform=macOS,arch=arm64' \
+            -destination 'generic/platform=macOS' \
             -derivedDataPath "$RUNNER_TEMP/crest-smoke-derived-data" \
+            ONLY_ACTIVE_ARCH=NO \
             CREST_NATIVE_CORE_BUNDLE_IDENTIFIER=com.pauldavis.crest.smoke \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY=- \
@@ -55,6 +59,7 @@ jobs:
             CODE_SIGN_ENTITLEMENTS=
           app="$RUNNER_TEMP/crest-smoke-derived-data/Build/Products/Debug/CrestNativeCore.app"
           test "$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$app/Contents/Info.plist")" = 15.0
+          for arch in arm64 x86_64; do lipo "$app/Contents/MacOS/CrestNativeCore" -verify_arch "$arch"; done
           ditto -c -k --keepParent "$app" "$RUNNER_TEMP/CrestSmoke.zip"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -68,8 +73,16 @@ jobs:
         run: find "$RUNNER_TEMP/crest-smoke-derived-data" -depth -delete 2>/dev/null || true
 
   launch:
-    name: Launch on macOS 15
+    name: Launch on macOS 15 (${{ matrix.machine }})
     needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - machine: Apple silicon
+            architecture: arm64
+          - machine: Intel code under Rosetta
+            architecture: x86_64
     runs-on: macos-15
     timeout-minutes: 20
     steps:
@@ -118,7 +131,8 @@ jobs:
 
           # An isolated session that counts setup as done opens the main window.
           defaults write com.pauldavis.crest.isolated.smoke crest.onboarding.completed -bool YES
-          open -n --env CREST_ISOLATED_SESSION=1 --env CREST_ISOLATED_PERSISTENCE_ID=smoke \
+          open -n --arch "${{ matrix.architecture }}" --stdout "$shots/stdout.txt" --stderr "$shots/stderr.txt" \
+            --env CREST_ISOLATED_SESSION=1 --env CREST_ISOLATED_PERSISTENCE_ID=smoke \
             --env CREST_USE_IN_MEMORY_CREDENTIALS=1 "$app" --args -ApplePersistenceIgnoreState YES
           for _ in $(seq 30); do
             pid=$(pgrep -f "$app/Contents/MacOS/CrestNativeCore" || true)
@@ -128,6 +142,8 @@ jobs:
           [[ -n "$pid" ]] || { echo "::error::Crest did not start"; exit 1; }
 
           wait_for_windows 1
+          lsappinfo info -only arch -app com.pauldavis.crest.smoke | tee "$shots/architecture.txt"
+          grep -qi "${{ matrix.architecture }}" "$shots/architecture.txt"
           sleep 10
           main=$(windows | awk 'NR == 1 { print $1 }')
           screencapture -x -o -l "$main" "$shots/main-window.png"
@@ -147,13 +163,26 @@ jobs:
           fi
           kill "$pid"
 
-      - name: Keep crash reports
+      # A crash report takes a few seconds to appear after the app quits.
+      - name: Keep crash reports and the system log
         if: failure()
-        run: cp ~/Library/Logs/DiagnosticReports/CrestNativeCore* "$RUNNER_TEMP/screenshots/" 2>/dev/null || true
+        run: |
+          sleep 15
+          cp ~/Library/Logs/DiagnosticReports/*CrestNativeCore* "$RUNNER_TEMP/screenshots/" 2>/dev/null || true
+          log show --style compact --last 5m \
+            --predicate 'process == "CrestNativeCore" OR eventMessage CONTAINS "CrestNativeCore"' \
+            > "$RUNNER_TEMP/screenshots/system-log.txt" 2>&1 || true
+          # Launch it again under the debugger for every thread's backtrace where it stops.
+          app="$RUNNER_TEMP/smoke/CrestNativeCore.app"
+          perl -e 'alarm 120; exec @ARGV' lldb --batch --arch "${{ matrix.architecture }}" \
+            -o "process launch --environment CREST_ISOLATED_SESSION=1 --environment CREST_ISOLATED_PERSISTENCE_ID=smoke --environment CREST_USE_IN_MEMORY_CREDENTIALS=1" \
+            -k "thread backtrace all" -k "quit 1" \
+            -- "$app/Contents/MacOS/CrestNativeCore" -ApplePersistenceIgnoreState YES \
+            > "$RUNNER_TEMP/screenshots/lldb.txt" 2>&1 || true
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: macos-15-screenshots
+          name: macos-15-screenshots-${{ matrix.architecture }}
           path: ${{ runner.temp }}/screenshots
           retention-days: 14

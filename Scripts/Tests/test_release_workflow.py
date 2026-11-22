@@ -111,7 +111,7 @@ class ReleasePreflightTests(unittest.TestCase):
             f"<channel><item><sparkle:channel>{channel}</sparkle:channel>"
             f"<sparkle:version>{build}</sparkle:version>"
             f'<enclosure url="https://github.com/crest-browser/Crest/releases/download/{tag}/'
-            f'Installer-Crest-0.5.25-{channel}-2026-09-03-{commit[:7]}-arm64.dmg" />'
+            f'Installer-Crest-0.5.25-{channel}-2026-09-03-{commit[:7]}.dmg" />'
             "</item></channel></rss>"
         )
         self.git("add", filename)
