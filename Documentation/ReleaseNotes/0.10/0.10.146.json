@@ -1,9 +1,9 @@
 {
   "entries": [
     {
-      "id": "shared-elevation-shadows",
+      "id": "disabled-glyphs-match",
       "category": "improved",
-      "message": "Panels, notices, drag previews, Peeks and setup's windows now cast one consistent set of shadows, so surfaces at the same height look the same everywhere."
+      "message": "Disabled glyph buttons, such as reload and the round glass buttons, now fade to the same strength as every other disabled glyph."
     }
   ]
 }

@@ -6,10 +6,11 @@ namespace CrestCore.Domain;
 
 /// What deciding the palette's best match reads for typed text: the query,
 /// the address the field completes, the row the person picked before for the
-/// same text, every row ranked, and whether the field may complete now, which
-/// it never may for text that names no address.
+/// same text, every row ranked, whether the field may complete now, which for
+/// text that names no address it may only while that text is one word, and
+/// whether the text names no address, so it searches unless a place leads.
 internal sealed record PaletteLeading(PaletteQuery Query, AddressMatch? Completion, PaletteDestination? Habit,
-    IReadOnlyList<PaletteCandidate> Ranked, bool Completes);
+    IReadOnlyList<PaletteCandidate> Ranked, bool Completes, bool Searches);
 
 #endregion
 
@@ -17,10 +18,14 @@ internal sealed record PaletteLeading(PaletteQuery Query, AddressMatch? Completi
 /// it. The rules are asked in order and the first that names a row leads:
 /// a calculation, the address the field completes, what the person picked at
 /// least twice for this text, then a strongly used place whose title or
-/// address starts with the text. While the field may not complete, as for
-/// text that names no address or after the person deleted a completion, only
-/// a calculation leads, so Return runs what they typed: its search, or the
-/// address it names.
+/// address starts with the text. A word that names no address leads only
+/// with a place it names: a site the field completes, as the tab that shows
+/// it, or a tab whose title, the site name its title ends with, or the page
+/// title behind a name the person gave it, starts with it, never a page only
+/// history holds. While the field may not
+/// complete, as for a phrase, a single letter, a word followed by a space,
+/// or after the person deleted a completion, only a calculation leads, so
+/// Return runs what they typed: its search, or the address it names.
 internal sealed class PaletteLeadRule {
     #region Static Variables
 
@@ -31,13 +36,20 @@ internal sealed class PaletteLeadRule {
                 int.MaxValue, Place: null, MayLead: true)
             : null);
 
-    /// The address the field completes, as its open tab when the person
-    /// prefers open tabs and one shows it.
+    /// The address the field completes, as the tab that shows it when the
+    /// person prefers open tabs and one does: an open tab before a pinned or
+    /// saved one, then the strongest. For a word that names no address, the
+    /// person names the site, so any tab on that site shows it.
     public static readonly PaletteLeadRule Completion = new((context, leading) => {
         if (!leading.Completes || leading.Completion is not { } completion) return null;
         string? place = PaletteMemory.Place(completion.Opens);
+        string? site = place is null ? null : PaletteMemory.Site(place);
+        bool Shows(PaletteCandidate entry) => entry.Place is { } shown
+            && (leading.Searches ? PaletteMemory.Site(shown) == site : shown == place);
         if (context.Preferences.PrefersOpenTabs
-            && leading.Ranked.FirstOrDefault(entry => entry.Place == place && entry.Row.TabId is not null) is { } open)
+            && leading.Ranked.Where(entry => entry.Row.TabId is not null && Shows(entry))
+                .OrderByDescending(entry => entry.Source == PaletteSource.OpenTabs).ThenByDescending(entry => entry.Score)
+                .FirstOrDefault() is { } open)
             return open with { Row = open.Row with { Reason = PaletteReason.Completion } };
         string host = completion.Text.Contains("://", StringComparison.Ordinal) ? completion.Text : completion.Text.TrimEnd('/');
         return new(PaletteRow.Of(PaletteRowKind.OpenAddress, $"Open {host}", completion.Opens, address: completion.Opens,
@@ -52,10 +64,11 @@ internal sealed class PaletteLeadRule {
             : null);
 
     /// The strongest row that may lead, once two letters are typed and the
-    /// person shows a Top Hit.
+    /// person shows a Top Hit; for a word that names no address, only a tab,
+    /// once three letters are typed.
     public static readonly PaletteLeadRule StrongPlace = new((context, leading) =>
-        leading.Completes && context.Preferences.ShowsTopHit && leading.Query.Text.Length >= 2
-            ? leading.Ranked.Where(entry => entry.MayLead).MaxBy(entry => entry.Score)
+        leading.Completes && context.Preferences.ShowsTopHit && leading.Query.Text.Length >= (leading.Searches ? 3 : 2)
+            ? leading.Ranked.Where(entry => entry.MayLead && (!leading.Searches || entry.Row.TabId is not null)).MaxBy(entry => entry.Score)
             : null);
 
     /// The rules, in the order the palette asks them.

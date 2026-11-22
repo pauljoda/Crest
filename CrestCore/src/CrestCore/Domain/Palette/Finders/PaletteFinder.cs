@@ -57,14 +57,15 @@ internal abstract class PaletteFinder {
         PaletteReason? fallback) {
         int score = Bias + Signals.Sum(signal => signal.Points(evidence, context));
         var reason = Signals.Select(signal => signal.Names(evidence, context)).FirstOrDefault(named => named is not null) ?? fallback;
-        bool leads = MayLead && evidence.Prefixes && Signals.Any(signal => signal.Leads(evidence, context));
+        bool leads = MayLead && (evidence.Prefixes || evidence.PrefixesName) && Signals.Any(signal => signal.Leads(evidence, context));
         return new(row with { Reason = reason }, source, score, place, leads);
     }
 
     /// The reason a place gives when no signal names one: that the text
-    /// starts its title, else that it matches its address.
+    /// starts its title or another name its tab goes by, else that it
+    /// matches its address.
     protected static PaletteReason Matching(PaletteEvidence evidence) =>
-        evidence.PrefixesTitle ? PaletteReason.TitleMatch : PaletteReason.AddressMatch;
+        evidence.PrefixesTitle || evidence.PrefixesName ? PaletteReason.TitleMatch : PaletteReason.AddressMatch;
 
     #endregion
 

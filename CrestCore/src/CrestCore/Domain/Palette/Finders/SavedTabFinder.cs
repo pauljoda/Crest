@@ -3,8 +3,9 @@ using CrestCore.Contracts;
 namespace CrestCore.Domain;
 
 /// The Space's pinned and saved tabs that match, by their saved address,
-/// ranked as open tabs are, with being kept in place of being open. One that
-/// starts with the text may lead.
+/// ranked and matched as open tabs are, with being kept in place of being
+/// open. One whose title, address or the site name its title ends with starts
+/// with the text may lead.
 internal sealed class SavedTabFinder : PaletteFinder {
     #region Variables
 
@@ -24,7 +25,8 @@ internal sealed class SavedTabFinder : PaletteFinder {
         foreach (var tab in space.Tabs.Where(tab => tab.Placement.IsDurable)) {
             string? address = tab.SavedAddress ?? tab.Url;
             var row = PaletteRow.Of(tab.Placement.PaletteRow, tab.DisplayTitle, Subtitle(tab, tree), tab: tab.Id);
-            if (context.Evidence(query, row, tab.DisplayTitle, address, tab.LastActivatedAt, isKept: true) is not { } evidence) continue;
+            if (context.Evidence(query, row, tab.DisplayTitle, address, tab.LastActivatedAt, isKept: true,
+                pageTitle: tab.DisplayTitle == tab.Title ? null : tab.Title) is not { } evidence) continue;
             yield return Scored(context, source, row, evidence, address is null ? null : PaletteMemory.Place(address), Matching(evidence));
         }
     }
