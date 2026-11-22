@@ -42,7 +42,9 @@ extension BrowserPage {
         } else if let themeColor, themeColor.alphaComponent > 0 {
             webKitView.underPageBackgroundColor = themeColor
         } else {
-            webKitView.underPageBackgroundColor = .windowBackgroundColor
+            webKitView.effectiveAppearance.performAsCurrentDrawingAppearance {
+                webKitView.underPageBackgroundColor = .windowBackgroundColor
+            }
         }
     }
 

@@ -31,6 +31,12 @@ final class BrowserDesktopWebView: WKWebView {
         }
     }
 
+    /// Refreshes the under-page background, which WebKit stores as a fixed color, for the new appearance.
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        menuHost?.updateUnderPageBackground()
+    }
+
     override func becomeFirstResponder() -> Bool {
         guard focusRestoration?.allowsNativeFocusAcquisition != false else {
             return false
