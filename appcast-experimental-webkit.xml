@@ -6,6 +6,49 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
+            <title>0.10.131</title>
+            <pubDate>Sun, 22 Nov 2026 16:57:13 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:channel>experimental</sparkle:channel>
+            <sparkle:version>1680</sparkle:version>
+            <sparkle:shortVersionString>0.10.131</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+Showing the 12 most recent highlights from 482 user-facing changes.
+
+### New
+
+- Crest for Mac now runs on macOS 15 Sequoia and later. On macOS 15, controls that stand on Liquid Glass on macOS 26 stand on Crest's own material instead, and pages translate when you choose Translate rather than automatically.
+
+### Improved
+
+- The selected tab is now a sheet of translucent white, and a selected pin shows its site's color through the white. In Settings › Appearance › More Customization you can set how opaque the white is, turn off the pin's tint, or choose Material to bring back the earlier look in your material color.
+- Settings in dark mode are drawn in black and charcoal, like Crest's pop-up panels, instead of navy.
+- Sidebar preview cards and the lists fan now start at 80% of their size and grow the rest of the way as they fade in, instead of growing out of a point. Buttons and controls that appear in place, such as the reset buttons and the gradient controls in the color picker, grow by the same amount.
+- iCloud sync status and the archive list use Crest's own colours: work under way in Crest blue, up to date in green, waiting on you in amber, and trouble or deleted tabs in red, while tabs you closed read quietly.
+- Saved passwords and Space choices in Settings show each Space in its own accent colour.
+- In the command palette, the Pinned & Saved search and the rows for pinned, saved and open tabs wear the same filled symbols as their sections in the sidebar.
+- Translation, the emoji picker, the viewport preview and the sidebar width preview use Crest blue instead of the Mac's system accent colour.
+- The downloads badge, and on iPhone and iPad the private browsing button, take the Space's accent colour, so they stand out from the sidebar behind them.
+- The sample page in the zoom and appearance settings is ink on Crest's warm paper, and the globe engine mark on tabs and in the site engine menu is Crest blue.
+- Extension badges are Crest's red with slightly larger text, and pinned extension buttons use the same hover highlight as Crest's other toolbar buttons.
+
+### Fixed
+
+- A custom search engine on localhost or a .local name written with a trailing or full-width dot is refused, as it already was without one.
+
+---
+
+This is the final experimental update. Installing it switches updates to Development, where future releases continue after this branch merges into main.
+
+[Release notes](https://crestbrowser.com/releases/mac/experimental/0.10.131/) · [View source](https://github.com/crest-browser/Crest/commit/e13d22269e801023e30d2ffae4440b03559cf23e) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/experimental-0.10.131-978-universal-mac-experimental-2026-11-22-1680-r22.1/Installer-Crest-0.10.131-experimental-2026-11-22-e13d222.dmg)
+
+[Browse Experimental releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Experimental+builds%22)
+]]></description>
+            <enclosure url="https://github.com/crest-browser/Crest/releases/download/experimental-0.10.131-978-universal-mac-experimental-2026-11-22-1680-r22.1/Installer-Crest-0.10.131-experimental-2026-11-22-e13d222.dmg" length="401309688" type="application/octet-stream" sparkle:edSignature="a4g6qROSzqW6QfUqSjmM1Wb5WeyNF/rfLRedI0ce5F4AHk4fhcBjgZbxCHViB6hkMYZwj6s2DiZYGe8rhY5ZDQ=="/>
+        </item>
+        <item>
             <title>0.6.459</title>
             <pubDate>Tue, 29 Sep 2026 23:30:52 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
@@ -48,6 +91,6 @@ This is the final experimental update. Installing it switches updates to Develop
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: bBd07Jr4VCXTTD+R9lpOQhsapX/rXRCjZj3Bn+758DUo4LEKiRKqijtu+kDmsw2MQMh3f9FbfR9sTDXqs+51BA==
-length: 3046
+edSignature: h7tPvJlYb3nuXP+krumS0MIuD87iMzQOBXbTRulmmv46KjHVpM4AI3ZFHUjYOLWPOOHjHd0czhMMXNfqE/TyAg==
+length: 6917
 -->
