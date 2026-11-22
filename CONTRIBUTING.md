@@ -74,7 +74,7 @@ Run `Scripts/audit-licenses.py` whenever a package, website dependency, copied
 source file, font, or other third-party asset changes. New runtime dependencies
 must have a redistributable license and a preserved notice before they land.
 
-The project supports Apple silicon only. Keep new targets, destinations, and scripts arm64-native.
+Mac builds are universal: arm64 and x86_64, built on Apple silicon. New Mac targets, destinations, and scripts build both.
 
 ## Community and planning
 
