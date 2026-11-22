@@ -80,17 +80,29 @@ LLD, and profile-guided V8 builtins. It keeps debug checks disabled and preserve
 Chromium's normal sandbox and accessibility behavior. This is a build
 configuration, not a claim of distribution readiness or measured parity.
 
-Retrieve the exact mac-arm profile named by `performanceInputs` in the lock from
-Chromium's `chromium-optimization-profiles/pgo_profiles` Google Storage bucket
-(also named in `chrome/build/mac-arm.pgo.txt`). With the build stopped, run:
+The engine is universal. Each architecture in the lock's `architectures` builds
+in its own output directory of the same prepared source: arm64 in
+`out/CrestBaseline`, the one preparation generates, and x64 in
+`out/CrestBaseline-x64`, cross-compiled on the same Apple silicon Mac. Each
+architecture has its own PGO profile, named by its `pgoProfile` in the lock and
+by its `pgoProfileFile` in the source (`chrome/build/mac-arm.pgo.txt` and
+`chrome/build/mac.pgo.txt`). Retrieve them from Chromium's
+`chromium-optimization-profiles/pgo_profiles` Google Storage bucket. With the
+build stopped, configure and build each architecture:
 
 ```sh
 python Scripts/control-plane/configure-chromium.py \
-  --source /absolute/chromium/src --configuration performance \
-  --sdk /absolute/MacOSX26.5.sdk --pgo-profile /absolute/pinned-profile.profdata
+  --source /absolute/chromium/src --configuration performance --cpu x64 \
+  --sdk /absolute/MacOSX26.5.sdk --pgo-profile /absolute/pinned-x64-profile.profdata
 python Scripts/control-plane/build-chromium-baseline.py \
-  --source /absolute/chromium/src --jobs 12 --min-free-gib 15
+  --source /absolute/chromium/src --output out/CrestBaseline-x64 --jobs 12 --min-free-gib 15
 ```
+
+`chromium-fork.py build` does this for every architecture, then merges the
+browsers into `out/CrestUniversal/Chromium.app` with Chromium's own
+`chrome/installer/mac/universalizer.py` and smoke-tests it as each architecture,
+the others through Rosetta. A second architecture adds a full compile and about
+as much disk as the first output directory.
 
 The configuration helper verifies the SDK version and PGO checksum before GN
 generation. Check the generated compile and link commands for profile use and
@@ -593,7 +605,9 @@ App signing jobs download the published engine and build Crest's UI.
 `Scripts/control-plane/chromium_engine.py` names it by a key over every engine
 input: the source lock, the host patch and its input hashes, the overlay, the
 host header and the scripts that prepare, configure and build it. After
-changing any of them, apply the host, build, and publish from the build Mac:
+changing any of them, apply the host, build every architecture, and publish the
+universal engine from the build Mac. The publisher merges the current builds
+again and refuses an executable that lacks an architecture:
 
 ```
 python3 Scripts/control-plane/publish-chromium-engine.py \
