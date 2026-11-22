@@ -9,6 +9,7 @@ on:
       - "Website/**"
       - "Documentation/ReleaseNotes/**"
       - "Documentation/Credits.json"
+      - "Scripts/export-release-history.py"
       - "Scripts/build-release-pages.py"
       - "Scripts/build-credits-page.py"
       - "Scripts/release_note_catalog.py"
@@ -63,8 +64,11 @@ jobs:
           # marketing version for the day each version landed.
           fetch-depth: 0
 
+      - name: Export the release history
+        run: python3 Scripts/export-release-history.py --output "$RUNNER_TEMP/release-history.json"
+
       - name: Build the release notes pages
-        run: python3 Scripts/build-release-pages.py
+        run: python3 Scripts/build-release-pages.py --history "$RUNNER_TEMP/release-history.json"
 
       - name: Build the credits page
         env:
