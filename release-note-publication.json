@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "extension-toolbar-crest-styles",
+    "development": "roadmap-at-crest-browser",
     "nightly": "roadmap-at-crest-browser"
   }
 }
