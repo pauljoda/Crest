@@ -39,7 +39,9 @@ final class BrowserPagePoolTests: XCTestCase {
 
         XCTAssertFalse(firstStore.isPersistent)
         XCTAssertNil(firstStore.identifier)
-        XCTAssertNil(firstPage.webView.configuration.webExtensionController)
+        if #available(macOS 15.4, *) {
+            XCTAssertNil(firstPage.webView.configuration.webExtensionController)
+        }
         // The order the page installs its scripts in is not the contract.
         XCTAssertEqual(
             firstPage.webView.configuration.userContentController.userScripts

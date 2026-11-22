@@ -64,6 +64,7 @@ struct BrowserChromeAppearance: Equatable {
     /// The window's corner radius, read from the container corner insets of a
     /// view that reaches the bottom of the window. The bottom corners stand for
     /// the window: the top leading one also makes room for the window controls.
+    @available(macOS 26, *)
     static func windowCornerRadius(from insets: RectangleCornerInsets) -> CGFloat? {
         let radius = max(
             min(insets.bottomLeading.width, insets.bottomLeading.height),

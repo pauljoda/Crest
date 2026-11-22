@@ -119,6 +119,15 @@ type you touch. The rules that matter most:
   does. Apply `crestMenuActionLabelStyle()` inside each `Menu` and
   `contextMenu` builder, submenus included; applied to the control that opens
   the menu, it does not reach the rows.
+- **macOS 15 is the Mac minimum; macOS 26 keeps everything.** iOS and
+  iPadOS stay at 26.1. On the Mac, an API newer than macOS 15 goes behind
+  `if #available(macOS 26, *)`, or the version it needs, with a fallback for
+  older systems. Never take something away from macOS 26 to match an older
+  system. Liquid Glass goes through `crestGlass(tint:in:)`, `CrestGlassGroup`
+  and `crestGlassButtonStyle()`, which draw glass on macOS 26 and iOS and the
+  device's material before macOS 26. Shared and Mac code never calls
+  `glassEffect`, `GlassEffectContainer` or `.buttonStyle(.glass)` directly;
+  iOS-only code may.
 - **Every popover uses `crestPopover`.** Present popovers with
   `crestPopover(isPresented:)` or `crestPopover(item:)`, never SwiftUI's
   `popover`. A popover inherits the Space's ink or a forced scheme from the

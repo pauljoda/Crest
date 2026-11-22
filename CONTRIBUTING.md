@@ -26,7 +26,7 @@ r/CrestBrowser and Discord.
 
 ## Local setup
 
-1. Install Xcode with SDKs supporting the macOS 26.1 and iOS 26.1 deployment targets.
+1. Install Xcode with SDKs supporting the macOS 15.0 and iOS 26.1 deployment targets.
 2. Install [XcodeGen](https://github.com/yonaskolb/XcodeGen).
 3. Install the .NET SDK pinned by `CrestCore/global.json`, for example with
    `Scripts/control-plane/install-dotnet.sh`.

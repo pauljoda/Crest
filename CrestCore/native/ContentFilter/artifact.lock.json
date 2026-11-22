@@ -1,11 +1,12 @@
 {
-  "key": "902cd23e83555ee3eddf31346dd0939fdea38d6a131a3e809a4c22be80ae0f33",
-  "archive": "Crest-Content-Filter-902cd23e83555ee3.zip",
-  "sha256": "7b8e0c15098834bc654f439245b587e15b181ac6080d058deb0d453826746240",
+  "key": "deb255c29d4e0c1aa519188cc662c6681482b86a55638f20ac94f647b139f41a",
+  "archive": "Crest-Content-Filter-deb255c29d4e0c1a.zip",
+  "sha256": "79f1272422091291b04df5a7a6eff2bcc421a17cd79e96f126e68fe638ed3e01",
   "files": {
     "include/crest_content_filter.h": "3441a762b17722dce9684ca1b4846ed55db5ff0a1be592bcc9d64820b9aaf63b",
     "ios-arm64/libcrest_content_filter.a": "aee558432209297dfb8a1676bc629f97ff55af8184831ddb5038772742beaae3",
     "iossimulator-arm64/libcrest_content_filter.a": "b9fd0df42537ee751cf6c98dd2b19a7263e030bde2698bfd36e157ecf987ed0c",
-    "osx-arm64/libcrest_content_filter.a": "96247710283974958c681ce527c8059fd330acef2f9c255db79345ecea2138cd"
+    "osx-arm64/libcrest_content_filter.a": "f429db0fddde140e9f0c9f15e09bedd6dbe55437d0bb565777445541fc7f3e95",
+    "osx-x64/libcrest_content_filter.a": "5f7dc05bf6677f89493a1935349a4319e1d5428600916b9a79e9f135398332ea"
   }
 }

@@ -23,7 +23,7 @@ struct BrowserUtilitySearchToolbar: View {
                     .foregroundStyle(.secondary)
                     .accessibilityHidden(true)
 
-                TextField(surface.searchPrompt, text: $searchText)
+                TextField(String(localized: surface.searchPrompt), text: $searchText)
                     .textFieldStyle(.plain)
                     .focused($isSearchFocused)
                     .onChange(of: focusRequest) { focusSearchIfRequested() }
