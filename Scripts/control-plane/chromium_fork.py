@@ -10,6 +10,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import platform
 import plistlib
 import re
 import selectors
@@ -481,8 +482,13 @@ def smoke_engine(browser, workspace, lock):
         raise ValueError(f"Built engine reports an unexpected version: {actual}")
     scratch = workspace / "scratch"
     scratch.mkdir(exist_ok=True)
+    native = platform.machine()
     for cpu in lock["architectures"]:
-        check_renders_page(browser / "Contents/MacOS/Chromium", scratch, machine=MACHINES[cpu])
+        # Rosetta translates the whole framework on a fresh build's first
+        # launch, about 35 s on the build Mac, before the page runs.
+        machine = MACHINES[cpu]
+        timeout = 30 if machine == native else 180
+        check_renders_page(browser / "Contents/MacOS/Chromium", scratch, timeout=timeout, machine=machine)
 
 
 def check_renders_page(browser, scratch, timeout=30, machine=None):
