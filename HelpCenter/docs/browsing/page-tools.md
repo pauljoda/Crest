@@ -19,7 +19,7 @@ On Mac, open the translation toolbar with **Shift-Command-L**. On iPhone and iPa
 
 Choose **Detect Language** or a source language, pick a target language, then translate. **Show Original** restores the page’s original text. Language availability depends on Apple’s support; Apple asks before downloading a language that is needed.
 
-**Automatically Translate** is off by default. When enabled, Crest uses your preferred device language and languages already downloaded. Showing the original keeps that page untranslated until you navigate or reload.
+**Automatically Translate** is off by default, and on Mac it needs macOS 26 or later. When enabled, Crest uses your preferred device language and languages already downloaded. Showing the original keeps that page untranslated until you navigate or reload.
 
 Downloaded language packs are shared with other apps and remain on the device after Private Browsing ends.
 
