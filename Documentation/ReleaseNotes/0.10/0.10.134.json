@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "password-import-review-settings-layout",
+      "category": "improved",
+      "message": "Reviewing a password import shows the Space's crest and lays the totals, accounts, warnings and rejected rows out in Settings-style groups, with each row number tagged in its warning or error colour."
+    }
+  ]
+}

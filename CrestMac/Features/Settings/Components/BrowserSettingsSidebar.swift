@@ -18,7 +18,6 @@ struct BrowserSettingsSidebar: View {
     let openSpace: BrowserSettingsOpenSpaceAction
     let addSpace: () -> Void
     let addSubSpace: (UUID) -> Void
-    @FocusState private var isSearchFocused: Bool
 
     private var navigation: BrowserSettingsNavigationState { tabState.navigation }
     private var state: CoreState { browser.core.state }
@@ -51,21 +50,10 @@ struct BrowserSettingsSidebar: View {
     }
 
     private var searchField: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
-            TextField("Search settings", text: $tabState.navigation.searchText)
-                .textFieldStyle(.plain).focused($isSearchFocused)
-            if !navigation.searchText.isEmpty {
-                Button("Clear search", systemImage: "xmark.circle.fill") { tabState.navigation.searchText = "" }
-                    .labelStyle(.iconOnly).buttonStyle(.plain).foregroundStyle(.secondary)
-            }
-        }
-        .padding(.horizontal, 8)
-        .frame(height: 28)
-        .background(.quaternary.opacity(0.6), in: .rect(cornerRadius: 7))
-        .padding(.horizontal, 10)
-        .padding(.top, 12)
-        .padding(.bottom, 4)
+        CrestSearchField("Search settings", text: $tabState.navigation.searchText)
+            .padding(.horizontal, 10)
+            .padding(.top, 12)
+            .padding(.bottom, 4)
     }
 
     // MARK: - Destinations

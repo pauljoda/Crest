@@ -37,17 +37,8 @@ private struct BrowserSystemSymbolCatalogPicker: View {
                 Spacer()
                 Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
             }
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Search symbols", text: $query)
-                    .textFieldStyle(.plain).focused($searchFocused)
-                    .autocorrectionDisabled()
-                if !query.isEmpty {
-                    Button("Clear Search", systemImage: "xmark.circle.fill") { query = "" }
-                        .labelStyle(.iconOnly).buttonStyle(.plain).foregroundStyle(.secondary)
-                }
-            }
-            .crestFieldSurface(isFocused: searchFocused)
+            CrestSearchField("Search symbols", text: $query, isFocused: $searchFocused)
+                .autocorrectionDisabled()
             BrowserSystemSymbolCatalogGrid(selection: selection, query: query, loadNames: loadNames) { name in
                 selection = name
                 dismiss()

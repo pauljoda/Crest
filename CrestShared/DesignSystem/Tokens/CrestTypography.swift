@@ -11,6 +11,9 @@ enum CrestTypography {
     static let controlTitle = Font.body.weight(.medium)
     /// A button's title: rounded and bold.
     static var buttonTitle: Font { display(.body, weight: .bold) }
+    /// A compact button's title, as on a card in the sidebar: rounded and
+    /// bold, a size down.
+    static var compactButtonTitle: Font { display(.subheadline, weight: .bold) }
     /// A page's one large call to action: rounded and heavy.
     static var largeButtonTitle: Font { display(.title3, weight: .heavy) }
     /// A small caps label over a section or a group, in rounded heavy; set
@@ -19,6 +22,9 @@ enum CrestTypography {
     /// A settings or setup section's title: rounded heavy, at the size the
     /// platform gives section headers.
     static var sectionHeading: Font { display(.headline, weight: .heavy) }
+    /// A glyph alone on a control a finger presses, as on the phone's and
+    /// iPad's chrome.
+    static let touchControlGlyph = Font.system(size: 17, weight: .medium)
     static let metadata = Font.caption
     static let compactMetadata = Font.caption2
     static let badge = Font.caption2.monospaced().weight(.semibold)

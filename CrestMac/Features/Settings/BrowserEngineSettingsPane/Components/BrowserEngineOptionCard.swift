@@ -43,9 +43,8 @@ struct BrowserEngineOptionCard: View {
                     .accessibilityHidden(true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.crestFormRow)
         .disabled(!isAvailable)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityIdentifier("default-engine-\(option.engine.name)")

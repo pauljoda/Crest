@@ -100,7 +100,7 @@ struct BrowserSetupSpacesPage: View {
             .padding(.leading, isSubSpace ? BrowserSidebarMetrics.subSpaceIndent - CrestSpacing.large : 0)
             .contentShape(.rect)
         }
-        .buttonStyle(.browserSetupRow)
+        .buttonStyle(.crestFormRow)
         .accessibilityLabel(isSubSpace ? Text("\(space.name), Sub-Space") : Text(space.name))
         .contextMenu { arrangeMenu(for: space.id, isSubSpace: isSubSpace) }
     }

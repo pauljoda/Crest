@@ -5,20 +5,35 @@ import SwiftUI
 /// any spill past its edge. As a toolbar item it is a plain label the bar
 /// draws itself, and lists by its title once it folds into the overflow menu.
 struct MobileSpaceUtilityButtonLabel: View {
+    // MARK: - Static Variables
+
+    /// The narrowest a glyph gets in a capsule pressed for room.
+    static let narrowestWidth: CGFloat = 32
+    /// The design system's chrome surface under each glyph of a capsule,
+    /// rounded to the capsule's own ends.
+    static let capsuleButtonStyle = CrestChromeButtonStyle(
+        controlSize: nil, cornerRadius: CrestLayout.minimumHitTarget / 2)
+
+    // MARK: - Variables
+
     let title: LocalizedStringKey
     let systemImage: String
 
     @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
+
+    // MARK: - Actions - Drawing
 
     var body: some View {
         if controlPlacement.movesControlsToToolbar {
             Label(title, systemImage: systemImage)
         } else {
             Image(systemName: systemImage)
-                .font(.system(size: 17, weight: .medium))
-                .frame(minWidth: 32, idealWidth: 44, maxWidth: 44)
-                .frame(height: 44)
-                .contentShape(.rect)
+                .font(CrestTypography.touchControlGlyph)
+                .frame(
+                    minWidth: Self.narrowestWidth, idealWidth: CrestLayout.minimumHitTarget,
+                    maxWidth: CrestLayout.minimumHitTarget
+                )
+                .frame(height: CrestLayout.minimumHitTarget)
         }
     }
 }

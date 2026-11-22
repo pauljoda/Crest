@@ -69,7 +69,7 @@ struct BrowserSetupSourcePage: View {
             }
             .contentShape(.rect)
         }
-        .buttonStyle(.browserSetupRow)
+        .buttonStyle(.crestFormRow)
         .accessibilityAddTraits(shownSpaceID == shownID ? .isSelected : [])
     }
 

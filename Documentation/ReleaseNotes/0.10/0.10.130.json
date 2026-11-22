@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "one-search-field",
+      "category": "improved",
+      "message": "Search fields in Settings, the sidebar's lists, folder previews and the icon and symbol pickers share one look, show a focus ring while you type, and have a clear button that highlights under the pointer."
+    }
+  ]
+}

@@ -6,23 +6,14 @@ struct BrowserIconSearchField: View {
     let commitEmoji: () -> Void
 
     var body: some View {
-        HStack(spacing: CrestSpacing.small) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-
+        CrestSearchField(text: $query) {
             if mode == .emoji {
                 BrowserPlatformEmojiEntryField(text: $query, commit: commitEmoji)
             } else {
                 TextField("Search Icons", text: $query)
-                    .textFieldStyle(.plain)
                     .accessibilityIdentifier("browser-icon-search-field")
             }
         }
-        .padding(.leading, CrestSpacing.small)
-        .padding(.trailing, CrestSpacing.extraSmall)
-        .frame(minHeight: CrestLayout.minimumHitTarget)
-        .background(.quaternary, in: .rect(cornerRadius: CrestRadius.control))
         .onChange(of: mode) { _, _ in query = "" }
     }
 }

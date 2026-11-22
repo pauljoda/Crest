@@ -44,6 +44,8 @@ enum CrestColor {
         dark: CrestColorComponents(red: 134, green: 196, blue: 142))
     /// The wash under a row or tag that needs the person.
     static let warningFill = warning.opacity(CrestOpacity.statusFill)
+    /// The wash under a row or tag that failed or was refused.
+    static let dangerFill = danger.opacity(CrestOpacity.statusFill)
 
     private static func status(light: CrestColorComponents, dark: CrestColorComponents) -> Color {
         CrestPlatformDynamicColor.make(light: light, lightOpacity: 1, dark: dark, darkOpacity: 1)

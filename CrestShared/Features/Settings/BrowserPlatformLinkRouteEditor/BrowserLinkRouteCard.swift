@@ -1,8 +1,17 @@
 import SwiftUI
 
-/// A route reads as a condition followed by its destination. The pattern always
-/// gets a usable editing width; narrow containers stack the destination below it.
+/// A route reads as a condition followed by its destination, in the form row
+/// that holds it. The pattern always gets a usable editing width; narrow
+/// containers stack the destination below it.
 struct BrowserLinkRouteCard: View {
+    // MARK: - Static Variables
+
+    static let patternMinimumWidth: CGFloat = 200
+    static let destinationWidth: CGFloat = 220
+    static let destinationMinimumHeight: CGFloat = 36
+
+    // MARK: - Variables
+
     let route: LinkRoute
     let spaces: [SpaceModel]
     let canMoveUp: Bool
@@ -12,39 +21,41 @@ struct BrowserLinkRouteCard: View {
     let moveUp: () -> Void
     let moveDown: () -> Void
 
+    @FocusState private var isPatternFocused: Bool
+
+    // MARK: - Actions - Drawing
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: CrestSpacing.large) {
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) {
+                HStack(spacing: CrestSpacing.medium) {
                     condition
-                    Spacer(minLength: 12)
+                    Spacer(minLength: CrestSpacing.medium)
                     actions
                 }
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: CrestSpacing.medium) {
                     condition
                     actions
                 }
             }
             ViewThatFits(in: .horizontal) {
-                HStack(alignment: .bottom, spacing: 20) {
-                    pattern.frame(minWidth: 200)
-                    destination.frame(width: 220)
+                HStack(alignment: .bottom, spacing: CrestSpacing.extraLarge) {
+                    pattern.frame(minWidth: Self.patternMinimumWidth)
+                    destination.frame(width: Self.destinationWidth)
                 }
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: CrestSpacing.large) {
                     pattern
                     destination
                 }
             }
         }
-        .padding(16)
-        .background(.primary.opacity(0.025), in: .rect(cornerRadius: 10))
-        .overlay { RoundedRectangle(cornerRadius: 10).strokeBorder(.primary.opacity(0.08)) }
+        .padding(.vertical, CrestSpacing.small)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("link-route-\(route.id.uuidString.lowercased())")
     }
 
     private var condition: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: CrestSpacing.small) {
             Text("When URL").fontWeight(.medium)
             Picker("Match", selection: binding(route.match, field: BrowserLinkRouteFieldUpdate.match)) {
                 ForEach(LinkRouteMatch.all, id: \.self) { Text($0.title).tag($0) }
@@ -54,7 +65,7 @@ struct BrowserLinkRouteCard: View {
     }
 
     private var actions: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: CrestSpacing.medium) {
             Toggle("Enabled", isOn: binding(route.isEnabled, field: BrowserLinkRouteFieldUpdate.isEnabled))
                 .toggleStyle(.switch).fixedSize()
             Menu {
@@ -66,17 +77,19 @@ struct BrowserLinkRouteCard: View {
                 }
                 .crestMenuActionLabelStyle()
             } label: {
-                Image(systemName: "ellipsis").frame(width: 28, height: 28).contentShape(.rect)
+                Image(systemName: "ellipsis")
             }
+            .menuStyle(.button)
+            .buttonStyle(CrestChromeButtonStyle())
             .menuIndicator(.hidden).fixedSize()
             .accessibilityLabel("Route actions")
         }
     }
 
     private var pattern: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: CrestSpacing.small) {
             Text("URL or text").font(.caption).foregroundStyle(.secondary)
-            HStack(spacing: 8) {
+            HStack(spacing: CrestSpacing.small) {
                 Image(systemName: "link").foregroundStyle(.secondary)
                 // A grouped form shows a field's title as a row label beside
                 // it, so the example is a prompt and the label stays hidden.
@@ -86,29 +99,30 @@ struct BrowserLinkRouteCard: View {
                 )
                 .labelsHidden()
                 .textFieldStyle(.plain)
+                .focused($isPatternFocused)
                 .autocorrectionDisabled()
                 #if !os(macOS)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.URL)
                 #endif
             }
-            .padding(10)
-            .background(BrowserSettingsCanvas.background, in: .rect(cornerRadius: 8))
-            .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(.primary.opacity(0.12)) }
+            .crestFieldSurface(isFocused: isPatternFocused)
         }
     }
 
     private var destination: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: CrestSpacing.small) {
             Text("Open in Space").font(.caption).foregroundStyle(.secondary)
             CrestSpaceMenuPicker(
                 "Destination",
                 selection: binding(route.destinationSpaceID, field: BrowserLinkRouteFieldUpdate.destinationSpaceID),
                 spaces: CrestSpaceIdentity.list(spaces), labelsHidden: true
             )
-            .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: Self.destinationMinimumHeight, alignment: .leading)
         }
     }
+
+    // MARK: - Actions - Bindings
 
     private func binding<Value>(_ value: Value, field: @escaping (Value) -> BrowserLinkRouteFieldUpdate) -> Binding<
         Value

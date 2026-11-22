@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "iphone-feature-tour-crest-buttons",
+      "category": "improved",
+      "message": "The iPhone feature tour sits on Crest's paper and uses Crest's own buttons, matching setup.",
+      "platforms": ["ios"]
+    }
+  ]
+}

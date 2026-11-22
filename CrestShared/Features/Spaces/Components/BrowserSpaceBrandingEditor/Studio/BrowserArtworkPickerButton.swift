@@ -1,58 +1,44 @@
 import SwiftUI
 
-/// Shared sizing and presentation for the symbol and emoji library buttons.
+/// Shared sizing and presentation for the symbol and emoji library buttons:
+/// a compact card of the design system's that opens the library.
 struct BrowserArtworkPickerButton<Artwork: View>: View {
+    // MARK: - Static Variables
+
+    static var artworkSize: CGFloat { 36 }
+    static var minimumContentHeight: CGFloat { 40 }
+
+    // MARK: - Variables
+
     let title: LocalizedStringKey
     let detail: Text
     let action: () -> Void
     @ViewBuilder var artwork: () -> Artwork
 
+    // MARK: - Actions - Drawing
+
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
+            HStack(spacing: CrestSpacing.medium) {
                 artwork()
                     .font(.title2)
                     .foregroundStyle(.tint)
-                    .frame(width: 36, height: 36)
+                    .frame(width: Self.artworkSize, height: Self.artworkSize)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
                     Text(title).font(.body.weight(.medium))
                     detail.font(.caption).foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-                    .accessibilityHidden(true)
+                CrestFormDisclosureChevron()
             }
-            .frame(minHeight: 40)
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(.rect(cornerRadius: 12))
-        }
-        .buttonStyle(ArtworkPickerStyle())
-    }
-}
-
-private struct ArtworkPickerStyle: ButtonStyle {
-    @Environment(\.colorSchemeContrast) private var contrast
-    @Environment(\.isEnabled) private var isEnabled
-    @State private var isHovered = false
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
             .foregroundStyle(.primary)
-            .background(
-                .primary.opacity(configuration.isPressed ? 0.10 : isHovered ? 0.07 : 0.035),
-                in: .rect(cornerRadius: 12)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(.primary.opacity(contrast == .increased ? 0.4 : isHovered ? 0.18 : 0.09))
-                    .allowsHitTesting(false)
-            }
-            .opacity(isEnabled ? 1 : 0.5)
-            .onHover { isHovered = $0 }
+            .frame(minHeight: Self.minimumContentHeight)
+            // The card's own compact inset, and a little more, so the
+            // artwork has room.
+            .padding(CrestSpacing.extraSmall)
+        }
+        .buttonStyle(CrestSelectableCardStyle(isSelected: false, density: .compact))
     }
 }

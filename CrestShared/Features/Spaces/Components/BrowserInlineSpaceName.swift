@@ -3,6 +3,16 @@ import SwiftUI
 /// A title that becomes a plain text editor in place. The binding is live;
 /// finishing editing only dismisses focus and never gates saving the name.
 struct BrowserInlineSpaceName: View {
+    // MARK: - Static Variables
+
+    /// The pencil's target where a finger may press it, and where only a
+    /// pointer aims at it beside a small name or a large one.
+    static let touchPencilSize = CGSize(width: 44, height: 44)
+    static let smallPencilSize = CGSize(width: 24, height: 32)
+    static let largePencilSize = CGSize(width: 32, height: 32)
+
+    // MARK: - Variables
+
     @Binding var name: String
     var size: CGFloat = 30
     var titleFont: Font? = nil
@@ -13,13 +23,18 @@ struct BrowserInlineSpaceName: View {
     @State private var isHovering = false
     @FocusState private var isFocused: Bool
 
-    private var usesTouch: Bool {
-        #if os(iOS)
-            true
-        #else
-            false
-        #endif
+    @Environment(\.browserInteractionCapabilities) private var capabilities
+
+    /// Whether a finger may press the name, which keeps its pencil showing
+    /// rather than waiting for the pointer.
+    private var usesTouch: Bool { capabilities.supportsTouch }
+
+    private var pencilSize: CGSize {
+        if usesTouch { return Self.touchPencilSize }
+        return size <= 18 ? Self.smallPencilSize : Self.largePencilSize
     }
+
+    // MARK: - Actions - Drawing
 
     var body: some View {
         HStack(spacing: size <= 18 ? 6 : 10) {
@@ -81,10 +96,9 @@ struct BrowserInlineSpaceName: View {
                 Image(systemName: "pencil")
                     .font(.system(size: size <= 18 ? 14 : 18, weight: .medium))
                     .foregroundStyle(.secondary)
-                    .frame(width: usesTouch ? 44 : size <= 18 ? 24 : 32, height: usesTouch ? 44 : 32)
                     .opacity(!isEditing && (usesTouch || isHovering) ? 1 : 0)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(CrestChromeButtonStyle(controlSize: pencilSize))
             .disabled(isEditing)
             .accessibilityHidden(isEditing)
             .accessibilityLabel("Edit Space name")
@@ -93,13 +107,15 @@ struct BrowserInlineSpaceName: View {
         .frame(minHeight: size <= 18 ? 32 : 44)
         .padding(.horizontal, size <= 18 ? 4 : 10)
         .padding(.vertical, 4)
-        .background(
-            Color.primary.opacity(isEditing ? 0.08 : isHovering ? 0.045 : 0),
-            in: .rect(cornerRadius: 10)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 10).strokeBorder(
-                Color.primary.opacity(isEditing ? 0.18 : isHovering ? 0.12 : 0))
+        .background {
+            // A field while the name is edited, with its focus ring, and the
+            // design system's hover surface under the pointer otherwise.
+            if isEditing {
+                Color.clear.crestFieldSurface(isFocused: isFocused, minHeight: 0)
+            } else {
+                Color.clear.crestInteractiveSurface(
+                    isSelected: false, isHovering: isHovering, cornerRadius: CrestFieldMetrics.cornerRadius)
+            }
         }
         .onHover { isHovering = $0 }
         .onChange(of: isFocused) { _, focused in if !focused { isEditing = false } }
@@ -113,11 +129,14 @@ struct BrowserInlineSpaceName: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    // MARK: - Actions - Editing
+
     private func edit() {
         draftName = name
         isEditing = true
         isFocused = true
     }
+
     private func finish() {
         isFocused = false
         isEditing = false

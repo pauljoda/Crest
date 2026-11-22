@@ -132,7 +132,7 @@ struct MobileBrowserSidebarBottomChrome: View {
         HStack(spacing: 0) {
             leadingButtons
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MobileSpaceUtilityButtonLabel.capsuleButtonStyle)
         .controlSize(.large)
         .padding(4)
         .glassEffect(.regular, in: .capsule)

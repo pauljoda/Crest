@@ -17,7 +17,7 @@ struct BrowserSystemPrivacySettingsPane: View {
                             openSpace(space.id, tab: .privacy)
                         } label: {
                             LabeledContent {
-                                Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+                                CrestFormDisclosureChevron()
                             } label: {
                                 Label {
                                     Text(space.settings.name)
