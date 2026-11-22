@@ -30,6 +30,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored static let lifecycleSignposter = DiagnosticLog.webKitLifecycle.signposter
     /// How long Share waits before it shows the sharing picker over the page.
     @ObservationIgnored private static let sharePickerDelay: Duration = .milliseconds(100)
+    /// How long after its first commit a page waits to paint content of its
+    /// own before its surface shows it anyway.
+    @ObservationIgnored private static let firstPaintWaitLimit: Duration = .milliseconds(1500)
 
     // MARK: - Variables
 
@@ -73,9 +76,23 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored private var isContentFullscreenStorage = false
     var faviconData: Data?
     var themeColor: NSColor?
-    /// Documents the page committed and finished, which reveal its surface.
-    var committedNavigationCount = 0
+    /// Documents the page committed and finished.
+    var committedNavigationCount = 0 {
+        didSet {
+            if oldValue == 0, committedNavigationCount > 0 { awaitFirstPaint() }
+        }
+    }
     var completedNavigationCount = 0
+    /// Whether the page has painted content of its own since its first
+    /// commit, or waited long enough for it. Until then its engine shows only
+    /// the page's bare background, white before the page's styles apply, so
+    /// its surface keeps the loading screen in front of it. An engine can say
+    /// a load finished before the page painted, so a finished load is no sign.
+    var hasPaintedContent: Bool {
+        get { observed(\.hasPaintedContentStorage, as: \.hasPaintedContent) }
+        set { publish(newValue, into: \.hasPaintedContentStorage, as: \.hasPaintedContent) }
+    }
+    @ObservationIgnored private var hasPaintedContentStorage = false
     @ObservationIgnored var hasCommittedNavigationAwaitingCompletion = false
     var blockedPopupState = BrowserBlockedPopupPageState()
     var engineInfoBars: [BrowserEngineInfoBar] = []
@@ -396,6 +413,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             }
         }
         if let scripting = pageEngine.contentScripting {
+            _ = scripting.install(BrowserFirstPaintContentBridge.script) { [weak self] message in
+                guard message.frame.isMainFrame else { return }
+                self?.receive(BrowserPageContentPainted())
+            }
             cosmeticFilters = BrowserCosmeticFilterSession(
                 core: downloadCenter.core, spaceID: spaceID, picker: elementPicker,
                 siteURL: { [weak self] in self?.pageEngine.currentURL ?? self?.live.documentURL },
@@ -1176,6 +1197,17 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         // never opened — a page that cancelled the event to draw its own —
         // must not survive into the next document.
         linkContextCapture.clear()
+    }
+
+    /// Shows the page once it has had a while to paint after its first
+    /// commit, whether or not its document said it painted: one that never
+    /// paints text or an image of its own still shows.
+    private func awaitFirstPaint() {
+        guard !hasPaintedContent else { return }
+        Task { [weak self] in
+            try? await Task.sleep(for: Self.firstPaintWaitLimit)
+            self?.hasPaintedContent = true
+        }
     }
 
     // MARK: - Actions - Engine observations

@@ -162,6 +162,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
         if ownsUserContentController {
             BrowserLinkHoverContentBridge.install(in: controller)
             BrowserLinkDragContentBridge.install(in: controller)
+            BrowserFirstPaintContentBridge.install(in: controller)
             linkContextMessageProxy = BrowserLinkContextContentBridge.install(in: controller) { [weak page] message in
                 page?.receiveLinkContextMessage(message)
             }

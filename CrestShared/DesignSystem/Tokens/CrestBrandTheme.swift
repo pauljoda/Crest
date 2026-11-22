@@ -8,9 +8,10 @@ import SwiftUI
 /// Crest-authored chrome can adopt the brand without hardcoding an appearance.
 ///
 /// Dark variants keep the light hue and lift luminance only as far as legibility
-/// demands: cream and ink trade places, paper's surface becomes slate, and
-/// Crest blue is lifted so it stays readable on ink without reading as a
-/// different colour. Every pair below clears WCAG AA for text (4.5:1) or
+/// demands: cream gives way to cinder, the warm near-black, and paper's
+/// surface to charcoal, so dark grounds read in black and white rather than
+/// Crest's blues, and Crest blue is lifted so it stays readable on cinder
+/// without reading as a different colour. Every pair below clears WCAG AA for text (4.5:1) or
 /// non-text (3:1) in both schemes.
 enum CrestBrandTheme {
     // MARK: - Static Variables
@@ -18,7 +19,7 @@ enum CrestBrandTheme {
     // Component pairs
 
     /// Crest blue, the color of anything a person can press or select, lifted
-    /// for dark: the same hue with enough luminance to sit on ink.
+    /// for dark: the same hue with enough luminance to sit on cinder.
     static let accentLightComponents = CrestBrandPalette.crestBlueComponents
     static let accentDarkComponents = CrestColorComponents(red: 79, green: 142, blue: 224)
 
@@ -28,29 +29,29 @@ enum CrestBrandTheme {
     /// or a glyph needs. A text-only control — `CrestButtonStyle`'s `.tertiary` and
     /// `.destructive` roles, or a selected palette row's action — is text, and has to
     /// clear 4.5:1 against `canvas`, `surface` and a selected row's accent wash. In
-    /// light that takes Crest blue a shade deeper (about 5.3:1 on the wash); on ink it
-    /// is lifted further than the tint.
+    /// light that takes Crest blue a shade deeper (about 5.3:1 on the wash); on cinder
+    /// it is lifted further than the tint.
     static let accentTextLightComponents = CrestColorComponents(red: 34, green: 92, blue: 172)
     static let accentTextDarkComponents = CrestColorComponents(red: 122, green: 170, blue: 235)
 
     /// The fill of the one action that leads on, under white text: Crest blue
     /// in both schemes, which holds that text at about 5.2:1 and still clears
-    /// 3:1 against ink. The lifted `accent` would leave white text short of
-    /// 4.5:1 on ink.
+    /// 3:1 against cinder. The lifted `accent` would leave white text short of
+    /// 4.5:1 on it.
     static let actionComponents = CrestBrandPalette.crestBlueComponents
 
     static let canvasLightComponents = CrestBrandPalette.creamComponents
-    static let canvasDarkComponents = CrestBrandPalette.inkComponents
+    static let canvasDarkComponents = CrestBrandPalette.cinderComponents
 
     static let surfaceLightComponents = CrestBrandPalette.paperComponents
-    static let surfaceDarkComponents = CrestBrandPalette.slateComponents
+    static let surfaceDarkComponents = CrestBrandPalette.charcoalComponents
 
-    /// Small caps labels: gold on cream (4.6:1), butter on ink.
+    /// Small caps labels: gold on cream (4.6:1), butter on cinder.
     static let labelLightComponents = CrestBrandPalette.goldComponents
     static let labelDarkComponents = CrestBrandPalette.butterComponents
 
     /// The ground under a control's choices, such as a segmented picker's
-    /// track: parchment on cream, a wash of paper on ink.
+    /// track: parchment on cream, a wash of paper on cinder.
     static let trackLightComponents = CrestBrandPalette.parchmentComponents
     static let trackDarkComponents = CrestBrandPalette.paperComponents
     static let trackDarkOpacity = 0.08
@@ -58,15 +59,15 @@ enum CrestBrandTheme {
     static let textDisplayLightComponents = CrestBrandPalette.inkComponents
     static let textDisplayDarkComponents = CrestBrandPalette.paperComponents
     /// Display text held back for supporting copy. Ink at 0.7 keeps 5.4:1 or
-    /// more on paper and parchment; paper at 0.6 keeps 5.2:1 or more on ink
-    /// and its soft surface.
+    /// more on paper and parchment; paper at 0.6 keeps 6.5:1 or more on
+    /// cinder and charcoal.
     static let textSecondaryLightOpacity = 0.7
     static let textSecondaryDarkOpacity = 0.6
 
     static let lineLightComponents = CrestBrandPalette.hairlineComponents
     static let lineDarkComponents = CrestBrandPalette.paperComponents
     /// The warm hairline on cream; the dark hairline is paper at a fifth,
-    /// because paper on ink loses definition faster than ink on paper.
+    /// because paper on cinder loses definition faster than ink on paper.
     static let lineLightOpacity = 1.0
     static let lineDarkOpacity = 0.22
 
@@ -86,17 +87,14 @@ enum CrestBrandTheme {
         light: accentTextLightComponents,
         dark: accentTextDarkComponents
     )
-    /// The page the content sits on.
+    /// The page the content sits on: cream in the light, and in the dark the
+    /// warm near-black under charcoal panels, never Crest's blues.
     static let canvas = dynamic(light: canvasLightComponents, dark: canvasDarkComponents)
-    /// A raised card or panel on the canvas.
+    /// A raised card or panel on the canvas: paper, or charcoal in the dark.
     static let surface = dynamic(light: surfaceLightComponents, dark: surfaceDarkComponents)
     /// A flyout floating over a page or the window: paper in the light,
     /// charcoal in the dark, opaque so nothing behind it shows through.
     static let flyout = dynamic(light: surfaceLightComponents, dark: CrestBrandPalette.charcoalComponents)
-    /// A page in Crest's neutrals rather than its blues: the cream canvas in
-    /// the light, and in the dark the warm near-black under charcoal panels,
-    /// so the page and the flyouts over it read in black and white.
-    static let neutralCanvas = dynamic(light: canvasLightComponents, dark: CrestBrandPalette.cinderComponents)
     /// Display and body text on `canvas` or `surface`.
     static let textDisplay = dynamic(
         light: textDisplayLightComponents,
