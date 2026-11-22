@@ -65,14 +65,20 @@ subsequent published update newer than the prior build. Preflight also reads
 every signed appcast and raises the build number above every published build,
 so retries and delayed runs cannot publish an update that Sparkle considers older.
 
-The appcast is hosted at:
+The release workflows write the appcasts to the `updates` branch, and the
+**Publish update feeds** workflow publishes that branch to this repository's
+Pages site after every release run. Crest reads the appcast at:
 
-`https://raw.githubusercontent.com/crest-browser/Crest/updates/appcast.xml`
+`https://updates.crestbrowser.com/appcast.xml`
 
 Development builds use a separate signed feed so frequent commits cannot prune
 stable or nightly entries:
 
-`https://raw.githubusercontent.com/crest-browser/Crest/updates/appcast-development.xml`
+`https://updates.crestbrowser.com/appcast-development.xml`
+
+Builds older than 0.10.141 read the same files straight from the branch, at
+`https://raw.githubusercontent.com/crest-browser/Crest/updates/`, so the
+`updates` branch keeps every feed current for them.
 
 Experimental builds use `appcast-experimental.xml`. Each feed also has a
 `-webkit` twin, such as `appcast-webkit.xml`, which WebKit-only builds of Crest
