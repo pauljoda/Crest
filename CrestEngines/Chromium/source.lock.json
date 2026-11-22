@@ -68,7 +68,6 @@
     "use_unofficial_version_number": false
   },
   "developmentBuildArguments": {
-    "target_cpu": "arm64",
     "is_official_build": false,
     "is_debug": false,
     "dcheck_always_on": false,
@@ -82,7 +81,6 @@
     "enable_precompiled_headers": false
   },
   "performanceBuildArguments": {
-    "target_cpu": "arm64",
     "is_official_build": true,
     "is_debug": false,
     "dcheck_always_on": false,
@@ -98,8 +96,20 @@
     "v8_enable_builtins_optimization": true
   },
   "performanceInputs": {
-    "macSDKVersion": "26.5",
-    "pgoProfile": "chrome-mac-arm-8103-1794339562-84ddfc7d1c5fe7fc113e444ab916130f0f2bfbbe-daac8bae4a27dc53b769aa796473fc6a5ddd8cdd.profdata",
-    "pgoSHA256": "d06b4421e1b0b3d4fc7f6609c8d79aa4df3745380eb7c4c5d5fbc0c8e8330b9f"
+    "macSDKVersion": "26.5"
+  },
+  "architectures": {
+    "arm64": {
+      "output": "out/CrestBaseline",
+      "pgoProfileFile": "chrome/build/mac-arm.pgo.txt",
+      "pgoProfile": "chrome-mac-arm-8103-1794339562-84ddfc7d1c5fe7fc113e444ab916130f0f2bfbbe-daac8bae4a27dc53b769aa796473fc6a5ddd8cdd.profdata",
+      "pgoSHA256": "d06b4421e1b0b3d4fc7f6609c8d79aa4df3745380eb7c4c5d5fbc0c8e8330b9f"
+    },
+    "x64": {
+      "output": "out/CrestBaseline-x64",
+      "pgoProfileFile": "chrome/build/mac.pgo.txt",
+      "pgoProfile": "chrome-mac-8103-1794332022-41983ad5b7801167ab1d707db37f3ac7a4bbe43c-f2eda314b26bd7c82178f9124a277c90e271f8c5.profdata",
+      "pgoSHA256": "a98301652bc30b58cca16345fffd1b47674eb16df87d1794d97e9e1a7ed19f25"
+    }
   }
 }
