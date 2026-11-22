@@ -3,6 +3,7 @@ import CoreGraphics
 /// Shared measurements for Space chips and their rail.
 enum CrestSpaceChipMetrics {
     static let baseHeight: CGFloat = 42
+    /// A chip's least height; at the largest text sizes its name grows it.
     static var height: CGFloat { max(baseHeight, CrestLayout.minimumHitTarget) }
     static let cornerRadius: CGFloat = CrestRadius.control
     static let horizontalPadding: CGFloat = CrestSpacing.medium

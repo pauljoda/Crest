@@ -20,7 +20,7 @@ struct CrestSpaceAddChipSurface<LabelContent: View>: View {
             .font(CrestTypography.label)
             .foregroundStyle(tint)
             .padding(.horizontal, CrestSpaceChipMetrics.horizontalPadding)
-            .frame(height: CrestSpaceChipMetrics.height)
+            .frame(minHeight: CrestSpaceChipMetrics.height)
             .background(
                 tint.opacity(
                     isPressed

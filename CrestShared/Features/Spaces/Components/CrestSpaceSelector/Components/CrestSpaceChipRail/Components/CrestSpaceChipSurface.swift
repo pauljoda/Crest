@@ -21,7 +21,7 @@ struct CrestSpaceChipSurface<LabelContent: View>: View {
             .font(CrestTypography.label.weight(isSelected ? .bold : .medium))
             .foregroundStyle(CrestBrandTheme.textDisplay)
             .padding(.horizontal, CrestSpaceChipMetrics.horizontalPadding)
-            .frame(height: CrestSpaceChipMetrics.height)
+            .frame(minHeight: CrestSpaceChipMetrics.height)
             .background(fill, in: shape)
             .overlay {
                 shape.strokeBorder(

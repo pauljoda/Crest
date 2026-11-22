@@ -134,19 +134,27 @@ struct MobileSetupSteps: View {
                 otherWayIn
             }
         } else {
-            BrowserSetupLanding(steps: walk.steps, welcome: welcome, open: welcomeOpener) {
-                otherWayIn
-            } forward: {
-                continueButton
-            }
-            .overlay(alignment: .bottom) {
-                if let errorMessage {
-                    Text(errorMessage)
-                        .font(.callout)
-                        .foregroundStyle(CrestColor.danger)
-                        .multilineTextAlignment(.center)
-                        .padding(MobileSetupStepsMetrics.footerInset)
+            // At the largest text sizes the welcome can outgrow the screen,
+            // so it scrolls rather than hide the way in.
+            GeometryReader { geometry in
+                ScrollView {
+                    BrowserSetupLanding(steps: walk.steps, welcome: welcome, open: welcomeOpener) {
+                        otherWayIn
+                    } forward: {
+                        continueButton
+                    }
+                    .overlay(alignment: .bottom) {
+                        if let errorMessage {
+                            Text(errorMessage)
+                                .font(.callout)
+                                .foregroundStyle(CrestColor.danger)
+                                .multilineTextAlignment(.center)
+                                .padding(MobileSetupStepsMetrics.footerInset)
+                        }
+                    }
+                    .frame(minHeight: geometry.size.height)
                 }
+                .scrollBounceBehavior(.basedOnSize)
             }
         }
     }
