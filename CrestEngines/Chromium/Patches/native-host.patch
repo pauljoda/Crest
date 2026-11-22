@@ -1466,7 +1466,7 @@
    // TODO(crbug.com/385170155): Consider whether to pass actual_navigation_start
    // through this path as well, which may involve a lot of plumbing.
 +  scoped_refptr<base::RefCountedData<base::OnceClosure>> crest_download_fallback;
-+  if (params->crest_link_modifiers && params->disposition == WindowOpenDisposition::SAVE_TO_DISK &&
++  if (params->crest_link_modifiers && params->disposition == WindowOpenDisposition::kSaveToDisk &&
 +      validated_url.SchemeIsHTTPOrHTTPS()) {
 +    auto download = blink::mojom::DownloadURLParams::New();
 +    download->url = validated_url;
