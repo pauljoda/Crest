@@ -226,7 +226,8 @@ Before publishing a stable tag:
 1. confirm the version's write-up in `Documentation/ReleaseNotes` and the
    marketing version are ready;
 2. complete local app and release-script tests for the commit being published;
-3. confirm **Build Crest** passed on the intended `main` commit and the latest
+3. confirm **Build Crest** passed on the intended `main` commit, the latest
+   **Refresh crestbrowser.com** run in Crest is green, and the latest
    **Deploy crestbrowser.com** run in `crest-browser/crestbrowser.com` is green.
    The stable release will validate its exact source again;
 4. confirm the commit's Chromium engine is published:
