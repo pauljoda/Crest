@@ -77,9 +77,15 @@ notes directly with:
 python3 Scripts/release_note_catalog.py
 ```
 
-`Scripts/build-release-pages.py` turns the notes and the release tags into the
-site's `/releases/` pages when the site deploys. Run it locally to preview them
-in `Website/releases/`, which is not committed.
+When the site deploys, `Scripts/export-release-history.py` turns the notes, the
+release tags and the version history into one JSON file, and
+`Scripts/build-release-pages.py` renders the site's `/releases/` pages from it.
+Preview them locally in `Website/releases/`, which is not committed:
+
+```sh
+python3 Scripts/export-release-history.py --output build/release-history.json
+python3 Scripts/build-release-pages.py --history build/release-history.json
+```
 
 ## Architecture and Xcode 27 compatibility
 
