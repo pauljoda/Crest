@@ -53,8 +53,8 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(SiteControlTopActions.Default.Actions, TopActions(reset.Send(launch)));
     }
 
-    /// The last action stays, and iPhone and iPad never hold an action only
-    /// the Mac offers: placing one changes nothing, and one kept from
+    /// The last action stays, and a device never holds an action only another
+    /// kind of device offers: placing one changes nothing, and one kept from
     /// elsewhere is left out.
     [Fact]
     public void TheLastActionStaysAndAnActionTheDeviceDoesNotOfferNeverSitsOnTop() {
@@ -64,6 +64,11 @@ public sealed partial class BrowserContractsTests {
             SiteControlTopActions.Default.Placing(SiteAction.CapturePage, 0, DevicePlatform.Mobile));
         Assert.Same(SiteControlTopActions.Default,
             SiteControlTopActions.Default.Moving(SiteAction.CapturePage, 0, DevicePlatform.Mobile));
+        // And the Mac never holds one only a phone or tablet offers.
+        Assert.Same(SiteControlTopActions.Default,
+            SiteControlTopActions.Default.Placing(SiteAction.AddToHomeScreen, 0, DevicePlatform.Desktop));
+        Assert.Equal([SiteAction.HideToolbar, SiteAction.CopyLink],
+            SiteControlTopActions.Default.Moving(SiteAction.HideToolbar, 0, DevicePlatform.Mobile).Actions.Take(2));
         Assert.Equal([SiteAction.ReloadPage],
             SiteControlTopActions.Restored(
                 [SiteAction.CapturePage, SiteAction.ReloadPage, SiteAction.ReloadPage, SiteAction.ToggleConsole],

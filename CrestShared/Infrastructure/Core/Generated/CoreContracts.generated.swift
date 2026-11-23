@@ -24602,6 +24602,40 @@ struct SiteControlAction: Hashable, Sendable {
         keepsSiteControlsOpen: true,
         showsOnlyWhenAvailable: true
     )
+    static let addToHomeScreen = SiteControlAction(
+        tag: 31,
+        name: "addToHomeScreen",
+        group: SiteControlActionGroup.shareAndExport,
+        title: LocalizedStringResource("Add to Home Screen"),
+        shortTitle: LocalizedStringResource("Home Screen"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "plus.app",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: nil,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let hideToolbar = SiteControlAction(
+        tag: 32,
+        name: "hideToolbar",
+        group: SiteControlActionGroup.page,
+        title: LocalizedStringResource("Hide Toolbar"),
+        shortTitle: LocalizedStringResource("Hide Toolbar"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "chevron.down",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: nil,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
 
     static let all: [SiteControlAction] = [
         copyLink,
@@ -24634,7 +24668,9 @@ struct SiteControlAction: Hashable, Sendable {
         inspectElement,
         toggleConsole,
         toggleNetworkPanel,
-        clearCookiesAndReload
+        clearCookiesAndReload,
+        addToHomeScreen,
+        hideToolbar
     ]
 
     static func named(_ name: String?) -> SiteControlAction? {

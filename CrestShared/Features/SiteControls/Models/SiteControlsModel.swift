@@ -420,10 +420,24 @@ final class SiteControlsModel {
         core.state.downloads.filter { $0.profileID == page.profileID }
     }
 
-    /// What the Downloads row says: how many are under way, or nothing.
+    /// What the Downloads row says: how many are under way, else how many
+    /// the person has not seen yet, or nothing.
     var downloadsSummary: String? {
         let live = downloads.filter(\.phase.isTransferring).count
-        return live > 0 ? String(localized: "\(live) in progress") : nil
+        if live > 0 { return String(localized: "\(live) in progress") }
+        let unseen = platform.newDownloadCount
+        return unseen > 0 ? String(localized: "\(unseen) new downloads") : nil
+    }
+
+    /// Opens the downloads: the device's own list where it has one, after
+    /// Site Controls go away, or else the Downloads page.
+    func openDownloads() {
+        guard let showsDownloads = platform.showsDownloads else {
+            open(.downloads)
+            return
+        }
+        platform.dismiss()
+        showsDownloads()
     }
 
     // MARK: - Actions - Zoom

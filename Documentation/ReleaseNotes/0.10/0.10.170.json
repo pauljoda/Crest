@@ -1,0 +1,36 @@
+{
+  "entries": [
+    {
+      "id": "ios-site-controls-sheet",
+      "category": "new",
+      "message": "Site Controls replace the page actions menu on iPhone and iPad, as a sheet that rises from the bottom edge or a popover in a wide iPad window.",
+      "platforms": [
+        "ios"
+      ]
+    },
+    {
+      "id": "ios-site-controls-choose-top-actions",
+      "category": "new",
+      "message": "Touch and hold an action in Edit to drag it into, along or out of the row on top of Site Controls.",
+      "platforms": [
+        "ios"
+      ]
+    },
+    {
+      "id": "ios-site-controls-permission-requests",
+      "category": "improved",
+      "message": "A site's permission request waits in Site Controls, which open on their own and close once you answer.",
+      "platforms": [
+        "ios"
+      ]
+    },
+    {
+      "id": "ios-copy-title-save-tab-private-commands",
+      "category": "new",
+      "message": "Copy Page Title, Save Tab and Open in Private Browsing are in the command palette on iPhone and iPad.",
+      "platforms": [
+        "ios"
+      ]
+    }
+  ]
+}

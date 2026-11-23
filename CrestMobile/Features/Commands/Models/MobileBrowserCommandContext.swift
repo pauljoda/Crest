@@ -87,4 +87,13 @@ struct MobileBrowserCommandContext {
     let presentHistory: () -> Void
     let presentArchive: () -> Void
     let presentDownloads: () -> Void
+    /// Whether the shown tab can move between Saved Tabs and Current Tabs.
+    let canSaveSelectedTab: Bool
+    let toggleSelectedTabSaved: () -> Void
+    let copyPageTitle: () -> Void
+    /// Opens the active page's address in private browsing.
+    let openPageInPrivateBrowsing: () -> Void
+    /// Opens the active page's address as a new tab in another Space of the
+    /// window, unlocking it first.
+    let openPageInSpace: (UUID) -> Void
 }

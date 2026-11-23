@@ -60,7 +60,9 @@ struct SiteControlsActionsPage: View {
             }
         }
         .disabled(!item.state.isAvailable)
-        .accessibilityIdentifier("site-control-more-\(action.name)")
+        .accessibilityIdentifier(
+            action == .addToHomeScreen
+                ? BrowserMobileAccessibilityID.pageActionsAddToHomeScreen : "site-control-more-\(action.name)")
     }
 
     // MARK: - Editing

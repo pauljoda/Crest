@@ -209,6 +209,7 @@ extension MobileBrowserRootContent {
                 sidebarPresentation: navigation.regularSidebarPresentation
             ),
             togglePrivateBrowsing: togglePrivateBrowsing,
+            openInPrivateBrowsing: { url in openInPrivateBrowsing?(url) },
             openNewTab: beginNewTab,
             openLocation: openLocation,
             prepareForSelectionSynchronization: dismissAddressFocus,

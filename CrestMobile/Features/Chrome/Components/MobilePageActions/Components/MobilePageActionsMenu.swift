@@ -1,5 +1,11 @@
 import SwiftUI
 
+/// The control that opens Site Controls for the page the window shows: a
+/// sheet on iPhone and in a narrow iPad window, a popover in a wide one. A
+/// permission request opens them on its own, where it waits, and once it is
+/// answered they close again unless the person opened them; closing them over
+/// a waiting request dismisses it. The control wears a dot while a pop-up
+/// waits on the person, and the new downloads badge.
 struct MobilePageActionsMenu: View {
     /// The dot that says a pop-up was blocked, at the glyph's top trailing
     /// corner.
@@ -21,6 +27,12 @@ struct MobilePageActionsMenu: View {
 
     /// Where the menu's control sits in the window.
     @State private var frame: CGRect?
+    @State private var showsSiteControls = false
+    /// Whether a permission request opened Site Controls, rather than the
+    /// person.
+    @State private var opensForRequest = false
+    @Environment(\.mobileBrowserCommandContext) private var commands
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
         if isToolbarItem {
@@ -40,17 +52,20 @@ struct MobilePageActionsMenu: View {
     }
 
     private func menu(@ViewBuilder label: () -> some View) -> some View {
-        Menu {
-            MobilePageActionsContent(
-                browser: browser,
-                pages: pages,
-                downloadsAccess: downloadsAccess,
-                hideToolbar: hideToolbar,
-                source: frame
-            )
-            .crestMenuActionLabelStyle()
+        Button {
+            showsSiteControls = pages.activePage != nil
         } label: {
             label()
+        }
+        .disabled(pages.activePage == nil)
+        .crestPopover(isPresented: presentation, arrowEdge: .top) {
+            if let page = pages.activePage {
+                MobileSiteControlsContent(
+                    browser: browser, pages: pages, page: page, commands: commands, source: frame,
+                    hideToolbar: hideToolbar, downloadsAccess: downloadsAccess,
+                    usesSheet: horizontalSizeClass != .regular,
+                    dismiss: { presentation.wrappedValue = false })
+            }
         }
         .onGeometryChange(for: CGRect.self) { proxy in
             proxy.frame(in: .global)
@@ -61,19 +76,30 @@ struct MobilePageActionsMenu: View {
         .accessibilityHint(accessibilityHint)
         .accessibilityIdentifier(BrowserMobileAccessibilityID.pageActionsMenu)
         .pagePermissionHost(pages.activePage?.sitePermissionRequests)
-        .crestPopover(
-            item: Binding {
-                pages.activePage?.sitePermissionRequests.current
-            } set: { request in
-                if request == nil && pages.activePage?.sitePermissionRequests.current != nil {
-                    pages.activePage?.sitePermissionRequests.cancelAll()
-                }
+        .preference(key: MobileSiteControlsHoldsSidebarKey.self, value: showsSiteControls)
+        .onChange(of: pages.activePage?.sitePermissionRequests.current?.id, initial: true) { _, request in
+            if request != nil {
+                guard !showsSiteControls else { return }
+                opensForRequest = true
+                showsSiteControls = true
+            } else if opensForRequest {
+                opensForRequest = false
+                showsSiteControls = false
             }
-        ) { request in
-            if let controller = pages.activePage?.sitePermissionRequests {
-                BrowserPagePermissionPrompt(request: request, controller: controller)
-                    .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    /// Whether Site Controls show. Closing them over a waiting request
+    /// dismisses the request.
+    private var presentation: Binding<Bool> {
+        Binding {
+            showsSiteControls
+        } set: { isPresented in
+            if !isPresented, let requests = pages.activePage?.sitePermissionRequests, requests.current != nil {
+                requests.cancelAll()
             }
+            if !isPresented { opensForRequest = false }
+            showsSiteControls = isPresented
         }
     }
 
@@ -129,13 +155,6 @@ struct MobileDownloadsMenuAccess {
     let newItemCount: Int
     let activeProgress: Double?
     let open: @MainActor () -> Void
-
-    var rowTitle: String {
-        guard newItemCount > 0 else {
-            return String(localized: "Downloads")
-        }
-        return String(localized: "Downloads (\(newItemCount))")
-    }
 
     var unreadAccessibilityValue: String {
         String(localized: "\(newItemCount) new downloads")

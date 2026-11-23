@@ -98,11 +98,20 @@ public sealed class SiteControlAction {
         symbol: "arrow.clockwise.circle", platforms: [DevicePlatform.Desktop], showsOnlyWhenAvailable: true,
         keepsSiteControlsOpen: true);
 
+    // A phone or tablet adds the page to its Home Screen, and hides the
+    // toolbar where it has one to hide.
+    public static readonly SiteControlAction AddToHomeScreen = new(name: "addToHomeScreen",
+        SiteControlActionGroup.ShareAndExport, title: "Add to Home Screen", shortTitle: "Home Screen", symbol: "plus.app",
+        platforms: [DevicePlatform.Mobile]);
+    public static readonly SiteControlAction HideToolbar = new(name: "hideToolbar", SiteControlActionGroup.Page,
+        title: "Hide Toolbar", shortTitle: "Hide Toolbar", symbol: "chevron.down", platforms: [DevicePlatform.Mobile]);
+
     public static IReadOnlyList<SiteControlAction> All { get; } = [
         CopyLink, CopyLinkAsMarkdown, CopyTitle, ShowQRCode, Share, CapturePage, Print, ExportPDF, SaveWebArchive, PinTab,
         SaveTab, DuplicateTab, SplitWithNextTab, OpenInPrivateWindow, ArchiveTab, FindInPage, ReloadPage, ReloadIgnoringCache,
         OpenInOtherEngine, ShowTranslationControls, Downloads, ShowHistory, BlockElement, ShowBlockedElements, ClearCookies, ClearCache,
-        ShowDeveloperToolbar, InspectElement, ToggleConsole, ToggleNetworkPanel, ClearCookiesAndReload
+        ShowDeveloperToolbar, InspectElement, ToggleConsole, ToggleNetworkPanel, ClearCookiesAndReload, AddToHomeScreen,
+        HideToolbar
     ];
 
     #endregion

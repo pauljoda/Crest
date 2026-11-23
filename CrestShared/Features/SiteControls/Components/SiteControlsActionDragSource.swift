@@ -3,7 +3,7 @@ import SwiftUI
 /// Lets the person pick an action up and carry it within Site Controls. A
 /// pointer that moves a few points lifts the action `pickUp` names at the
 /// point it started from; a finger first holds it a moment, so a swipe still
-/// scrolls. Site Controls then draw it as its tile under the pointer, and
+/// scrolls the list and moves the sheet. Site Controls then draw it as its tile under the pointer, and
 /// letting go lands it.
 struct SiteControlsActionDragSource: ViewModifier {
     // MARK: - Static Variables
@@ -17,6 +17,9 @@ struct SiteControlsActionDragSource: ViewModifier {
     // MARK: - Variables
 
     let model: SiteControlsModel
+    /// Whether the view lifts anything; its subviews' own gestures work
+    /// either way.
+    var isEnabled = true
     /// The drag that starts at a point, in ``SiteControlsModel/space``, with
     /// the pointer now at the second; nil where nothing lifts.
     let pickUp: (_ start: CGPoint, _ location: CGPoint) -> SiteControlsModel.ActionDrag?
@@ -27,23 +30,26 @@ struct SiteControlsActionDragSource: ViewModifier {
 
     // MARK: - Actions - Drawing
 
+    @ViewBuilder
     func body(content: Content) -> some View {
         #if os(iOS)
-            content.simultaneousGesture(
-                LongPressGesture(minimumDuration: Self.holdDuration)
-                    .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: SiteControlsModel.space))
-                    .onChanged { value in
-                        guard case .second(true, let drag?) = value else { return }
-                        moved(start: drag.startLocation, location: drag.location)
+            // UIKit's hold, which gives way to a scroll or the sheet's own
+            // drag that moves first, and once it holds keeps the finger.
+            content.modifier(
+                SiteControlsHoldToDrag(isEnabled: isEnabled, holdDuration: Self.holdDuration) { phase, location in
+                    switch phase {
+                    case .began, .changed: moved(start: location, location: location)
+                    case .ended: model.endDrag()
+                    case .cancelled: model.cancelDrag()
                     }
-                    .onEnded { _ in model.endDrag() })
+                })
         #else
             content
                 .simultaneousGesture(
                     DragGesture(minimumDistance: Self.liftDistance, coordinateSpace: SiteControlsModel.space)
                         .updating($isDragging) { _, isDragging, _ in isDragging = true }
                         .onChanged { moved(start: $0.startLocation, location: $0.location) }
-                        .onEnded { _ in model.endDrag() }
+                        .onEnded { _ in model.endDrag() }, including: isEnabled ? .all : .subviews
                 )
                 .onChange(of: isDragging) { _, isDragging in
                     // A drag that ended lands first; only one cut off is
@@ -70,10 +76,10 @@ extension View {
     /// Lets the person pick up the action `pickUp` names where a drag starts
     /// and carry it within Site Controls.
     func siteControlsActionDragSource(
-        _ model: SiteControlsModel,
+        _ model: SiteControlsModel, isEnabled: Bool = true,
         pickUp: @escaping (_ start: CGPoint, _ location: CGPoint) -> SiteControlsModel.ActionDrag?
     ) -> some View {
-        modifier(SiteControlsActionDragSource(model: model, pickUp: pickUp))
+        modifier(SiteControlsActionDragSource(model: model, isEnabled: isEnabled, pickUp: pickUp))
     }
 }
 

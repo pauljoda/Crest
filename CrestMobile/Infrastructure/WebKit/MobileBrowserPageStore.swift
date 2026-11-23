@@ -583,6 +583,15 @@ final class MobileBrowserPageStore:
         return true
     }
 
+    /// Copies the active page's title, saying so.
+    @discardableResult
+    func copyPageTitle() -> Bool {
+        guard let title = activePage?.live.title, !title.isEmpty else { return false }
+        UIPasteboard.general.string = title
+        notices.show(.copied)
+        return true
+    }
+
     func exportPDF(to destination: MobileBrowserFileExportDestination) {
         activePage?.exportPDF(to: destination)
     }

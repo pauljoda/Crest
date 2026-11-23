@@ -1,4 +1,4 @@
-import Foundation
+import UIKit
 
 @MainActor
 struct MobileSelectedPageActionPort {
@@ -67,22 +67,12 @@ struct MobileSelectedPageActionPort {
         activePage?.forwardHistory ?? []
     }
 
-    var preferredContentModeActionTitle: LocalizedStringResource {
-        activePage?.isRequestingDesktopSite == true
-            ? "Request Mobile Website"
-            : "Request Desktop Website"
-    }
-
     var readerModeActionTitle: LocalizedStringResource {
         readerModeState.actionTitle
     }
 
     var readerModeState: BrowserReaderModeState {
         activePage?.readerModeState ?? .unavailable
-    }
-
-    var pageZoomLabel: String {
-        (activePage?.pageZoom ?? 1).pageZoomPercentage
     }
 
     var blockedPopupNotice: BrowserBlockedPopupNotice? {
@@ -173,6 +163,21 @@ struct MobileSelectedPageActionPort {
     func copyPageLinkAsMarkdown() -> Bool {
         guard isAvailable else { return false }
         return pages.copyPageLinkAsMarkdown()
+    }
+
+    @discardableResult
+    func copyPageTitle() -> Bool {
+        guard isAvailable else { return false }
+        return pages.copyPageTitle()
+    }
+
+    /// Shares the active page's link from the share sheet, which points at
+    /// `source`, a frame in the window, where it shows as a popover.
+    func sharePage(from source: CGRect?) {
+        guard let link = activePage?.linkToCopy else { return }
+        MobileBrowserDialogPresenter.present(
+            UIActivityViewController(activityItems: [link.url], applicationActivities: nil), from: source,
+            fallback: {})
     }
 
     func printPage() {

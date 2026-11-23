@@ -107,4 +107,16 @@ protocol SiteControlsPlatform: AnyObject {
     func openSettings(_ destination: BrowserSettingsDestination)
     /// Puts Site Controls away.
     func dismiss()
+    /// Shows the device's own downloads list in place of the Downloads page,
+    /// where the platform has one that also marks new downloads seen; nil for
+    /// the page.
+    var showsDownloads: (@MainActor () -> Void)? { get }
+    /// How many downloads of the page's Space the person has not seen yet,
+    /// which the Downloads row names while none is under way.
+    var newDownloadCount: Int { get }
+}
+
+extension SiteControlsPlatform {
+    var showsDownloads: (@MainActor () -> Void)? { nil }
+    var newDownloadCount: Int { 0 }
 }

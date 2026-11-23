@@ -11,11 +11,19 @@ struct SiteControlsActionSlots: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             SiteControlsActionRow(model: model, isEditing: true)
-            Text("Drag actions in, out and along the row, or choose a slot and then an action.")
+            hint
                 .font(metrics.detailFont)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 2)
         }
+    }
+
+    private var hint: Text {
+        #if os(iOS)
+            Text("Touch and hold an action to drag it in, out and along the row, or choose a slot and then an action.")
+        #else
+            Text("Drag actions in, out and along the row, or choose a slot and then an action.")
+        #endif
     }
 }
