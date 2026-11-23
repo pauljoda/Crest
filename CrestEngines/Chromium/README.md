@@ -224,21 +224,13 @@ That `main` is Crest's own, `Overlay/chrome/app/crest_exe_main_mac.cc`, which
 packaged experiment without an explicit `--user-data-dir`, and runs Crest's
 native host before it opens the framework with `dlopen`, so WebKit-only browsing
 never loads Chromium. Upstream's entry point links the framework and calls
-`ChromeMain` at once, so none of this can run there. Three checks keep an
-upstream build change from dropping it silently:
-
-- The build's library check for `chrome_app` allows only `libSystem`, so an
-  executable that links the framework fails to build.
-- The engine build, after merging the architectures, and the packager refuse a
-  browser executable that lacks the `crest-browser-launch` marker string in any
-  architecture or links the framework.
-- A `--distribution` package launches a copy of itself as a product bundle with
-  no `--user-data-dir` and a temporary `HOME`, and requires the browser to print
-  `$HOME/Library/Application Support/Crest/Chromium` for
-  `--crest-print-user-data-dir`, and Chromium's default folder to hold no
-  `Crest-*` profile. It launches a review copy without `--user-data-dir` and
-  requires it to refuse. In the framework, a Crest browser started without a
-  usable `--user-data-dir` stops before any profile is read.
+`ChromeMain` at once, so none of this can run there. The build's library check
+for `chrome_app` allows only `libSystem`, so an executable that links the
+framework fails to build. In the framework, a Crest browser started without a
+usable `--user-data-dir` stops before any profile is read. Every engine build and
+every `--distribution` package also launch the engine with no profile folder and
+open a profile an earlier engine made, as "Engine testing" in
+`ForkMaintenance.md` describes.
 
 Moving directories runs before the framework is loaded and has no JSON reader.
 The browser process finishes the recorded metadata edits in
@@ -624,6 +616,13 @@ ABI checks and app builds run on the pull request, or on a direct push to
 `main`. Building the
 Chromium host directly also builds its current native core into the same
 Xcode products directory.
+
+Every engine change, not only stable promotion, needs the engine testing in
+`ForkMaintenance.md` before its engine is published. The engine build and
+`--distribution` packaging launch it with no profile folder and open a profile
+the newest stable release's engine made, and refuse it if either fails. The
+manual upgrade check, with Spaces, open tabs, a sign-in and a Chrome Web Store
+extension, is required too, on Apple silicon and under Rosetta.
 
 Stable promotion still needs a signed upgrade from each supported previous
 composition, a restart that preserves profiles and session data, and the

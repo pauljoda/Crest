@@ -14,7 +14,9 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from chromium_engine import ENGINE_HELPER_KINDS, ENGINE_HELPER_NAME, unknown_engine_helpers  # noqa: E402
+import chromium_engine  # noqa: E402
 import chromium_fork  # noqa: E402
+from repository import REPOSITORY  # noqa: E402
 
 
 # Chromium's browser-process device access (chrome/app/app-entitlements.plist);
@@ -36,12 +38,6 @@ MACHO_MAGICS = {b"\xcf\xfa\xed\xfe", b"\xce\xfa\xed\xfe", b"\xca\xfe\xba\xbe", b
 ENGINE_ALERTS_HELPER_SUFFIX = "Alerts).app"
 # How the engine's localized InfoPlist.strings spell its product name.
 ENGINE_PRODUCT_NAMES = ("Chromium", "क्रोमियम")
-# The resources Crest's entry point reads to decide how a launch starts.
-HOST_MARKERS = ("Crest-App-Owned-Host", "Crest-Native-Host", "Crest-Isolated-Experiment")
-# The status Crest's entry point exits with when an experiment names no profile folder.
-EXPERIMENT_REFUSED = 64
-LSREGISTER = ("/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework"
-              "/Support/lsregister")
 
 
 def is_macho(path):
@@ -84,7 +80,7 @@ def probe_copy(output, probe, identity, markers=()):
     preferences. Only the outer app is re-sealed, so the executable, the
     framework and the helpers are exactly the ones that ship."""
     subprocess.run(["ditto", str(output), str(probe)], check=True)
-    for marker in HOST_MARKERS:
+    for marker in chromium_fork.HOST_MARKERS:
         (probe / "Contents/Resources" / marker).unlink(missing_ok=True)
     for marker in markers:
         (probe / "Contents/Resources" / marker).write_text("Package probe.\n")
@@ -98,12 +94,6 @@ def probe_copy(output, probe, identity, markers=()):
     subprocess.run(["codesign", "--force", "--options", "runtime", "--sign", identity, str(probe)], check=True)
 
 
-def forget_probe(probe):
-    """Unregister a probe copy before its temporary directory goes, so macOS
-    never hands a link or a later launch to a copy that no longer exists."""
-    subprocess.run([LSREGISTER, "-u", str(probe)], capture_output=True)
-
-
 def require_package_renders_pages(output, identity):
     """Run the signed package's own helpers and require a page's JavaScript to run.
 
@@ -111,70 +101,43 @@ def require_package_renders_pages(output, identity):
     the check that a release can load pages at all. It runs a clone of the
     package with its host markers removed, which makes it plain headless
     Chromium."""
-    with tempfile.TemporaryDirectory(prefix="crest-package-probe-") as temporary:
-        # Resolved, because the temporary directory is reached through the /var
-        # symlink and Chromium's sandbox refuses extensions for symlinked paths.
-        root = Path(temporary).resolve()
+    # Resolved, because the temporary directory is reached through the /var
+    # symlink and Chromium's sandbox refuses extensions for symlinked paths.
+    with chromium_fork.launch_directory("crest-package-probe-") as root:
         probe = root / "Probe.app"
         probe_copy(output, probe, identity)
-        try:
-            chromium_fork.check_renders_page(probe / "Contents/MacOS/Chromium", root, timeout=180)
-        finally:
-            forget_probe(probe)
+        chromium_fork.check_renders_page(probe / "Contents/MacOS/Chromium", root, timeout=180)
     print("The signed package loaded a page.")
 
 
-def launch_without_profile_folder(output, root, identity, marker):
-    """Run a copy of the package that carries only the host `marker`, in a
-    new temporary `HOME`, with no profile folder named. Answers the finished
-    launch and that `HOME`'s Application Support folder."""
-    name = marker.removeprefix("Crest-")
-    home = root / f"{name}-home"
-    home.mkdir()
-    probe = root / f"{name}.app"
-    probe_copy(output, probe, identity, (marker,))
-    try:
-        # Only the switch that makes the browser report its folder, and the mock
-        # keychain, so the launch never reaches a real keychain item.
-        launch = subprocess.run([str(probe / "Contents/MacOS/Chromium"), "--crest-print-user-data-dir",
-                                 "--use-mock-keychain"], capture_output=True, text=True, timeout=180,
-                                env={**os.environ, "HOME": str(home), "CFFIXED_USER_HOME": str(home)})
-    except subprocess.TimeoutExpired:
-        raise SystemExit(f"A launch with only {marker} kept running instead of reporting its profile folder; "
-                         "the engine lacks Crest's launch checks") from None
-    finally:
-        forget_probe(probe)
-    support = home / "Library/Application Support"
-    if strays := sorted(path.name for path in (support / "Chromium").glob("Crest-*")):
-        raise SystemExit("A launch without a profile folder made engine profiles in Chromium's default folder: "
-                         + ", ".join(strays))
-    return launch, support
-
-
 def require_package_opens_crest_profile_folder(output, identity):
-    """Launch the signed package as people do, with no profile folder, and
-    require the browser to open Crest's own.
-
-    Finder, the Dock, a login item, the default-browser role and an update's
-    relaunch start Crest with no switches, while every harness and review
-    launch names a `--user-data-dir`. Without the folder Crest's entry point
-    names, Chromium opens its default one, which every other Chromium shares,
-    and every Space starts empty. A product copy prints the folder its browser
-    settled on, before any profile is read; a review copy must refuse to
-    start."""
-    with tempfile.TemporaryDirectory(prefix="crest-package-launch-") as temporary:
-        root = Path(temporary).resolve()
-        launch, support = launch_without_profile_folder(output, root, identity, "Crest-Native-Host")
-        expected = str(support / "Crest/Chromium")
-        reported = launch.stdout.strip().rpartition("\n")[2] if launch.returncode == 0 else "nothing"
-        if reported != expected:
-            raise SystemExit(f"A product launch without a profile folder opened {reported} instead of {expected} "
-                             f"(exit {launch.returncode}): {launch.stderr[-2000:]}")
-        launch, support = launch_without_profile_folder(output, root, identity, "Crest-Isolated-Experiment")
-        if launch.returncode != EXPERIMENT_REFUSED or (support / "Chromium").exists() or (support / "Crest").exists():
-            raise SystemExit(f"A review copy started without a profile folder (exit {launch.returncode}): "
-                             f"{launch.stderr[-2000:]}")
+    """Launch the signed package as people do, with no profile folder: a
+    product copy must open Crest's own folder and a review copy must refuse.
+    The copies keep the executable and framework that ship."""
+    with chromium_fork.launch_directory("crest-package-launch-") as root:
+        product, experiment = root / "Product.app", root / "Experiment.app"
+        probe_copy(output, product, identity, (chromium_fork.PRODUCT_HOST,))
+        probe_copy(output, experiment, identity, (chromium_fork.EXPERIMENT_HOST,))
+        chromium_fork.check_launches_without_profile_folder(product, experiment, root)
     print("Launched without a profile folder, the package opened Crest's own; a review copy refused.")
+
+
+def require_package_opens_previous_profiles(output, identity, repo):
+    """Require the signed package's engine to open, unchanged, a profile the
+    newest stable release's engine made in Crest's folder: still signed in to
+    a local site, with no tracked setting reset."""
+    repository = os.environ.get("GITHUB_REPOSITORY") or REPOSITORY
+    key = chromium_fork.stable_engine_key(repo, repository)
+    if key == chromium_engine.engine_key(repo):
+        print("This is the stable release's engine; there is no earlier profile to open.")
+        return
+    with chromium_fork.launch_directory("crest-package-upgrade-") as root:
+        previous = chromium_fork.published_engine(key, root / "previous", repository)
+        probe = root / "Probe.app"
+        probe_copy(output, probe, identity)
+        chromium_fork.check_profile_upgrade(probe / "Contents/MacOS/Chromium", previous / "Contents/MacOS/Chromium",
+                                            root)
+    print(f"The package opened {chromium_engine.release_tag(key)}'s profile signed in, with no setting reset.")
 
 
 def remove_engine_alerts_helper(frameworks):
@@ -552,8 +515,12 @@ def main():
     subprocess.run(["codesign", "--verify", "--deep", "--strict", str(output)], check=True)
     if args.distribution and not args.baseline:
         require_helper_entitlements(frameworks)
-        require_package_renders_pages(output, args.signing_identity)
-        require_package_opens_crest_profile_folder(output, args.signing_identity)
+        try:
+            require_package_renders_pages(output, args.signing_identity)
+            require_package_opens_crest_profile_folder(output, args.signing_identity)
+            require_package_opens_previous_profiles(output, args.signing_identity, repo)
+        except ValueError as error:
+            raise SystemExit(str(error)) from None
     if args.product:
         print(f"Packaged {output} with Crest's product identity. It launches without switches and registers "
               "for HTTP, HTTPS and HTML documents once it is installed and its signature is accepted. "
