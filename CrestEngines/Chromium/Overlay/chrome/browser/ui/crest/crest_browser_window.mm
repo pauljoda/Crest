@@ -30,7 +30,6 @@ static_assert(!std::is_abstract_v<CrestBrowserWindow>);
 #include "chrome/browser/ui/unload_controller.h"
 #include "chrome/browser/ui/views/bubble_anchor_util_views.h"
 #include "components/input/native_web_keyboard_event.h"
-#include "components/sharing_message/sharing_dialog_data.h"
 #include "components/web_modal/modal_dialog_host.h"
 #include "content/public/browser/keyboard_event_processing_result.h"
 #include "ui/base/mojom/window_show_state.mojom.h"

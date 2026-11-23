@@ -1,9 +1,9 @@
 {
   "entries": [
     {
-      "id": "arabic-pin-tabs-plural",
-      "category": "improved",
-      "message": "In Arabic, the Pin row of the tab selection menu reads in Arabic for any number of tabs."
+      "id": "default-browser-status-core-tone",
+      "category": "internal",
+      "message": "The default browser status carries the core's status tone, and the update phase no longer keeps a tone nothing draws."
     }
   ]
 }

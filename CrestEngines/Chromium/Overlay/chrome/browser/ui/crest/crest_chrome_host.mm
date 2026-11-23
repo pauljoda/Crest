@@ -52,6 +52,7 @@
 #include "extensions/browser/management_policy.h"
 #include "extensions/browser/disable_reason.h"
 #include "extensions/browser/uninstall_reason.h"
+#include "extensions/common/event_args.h"
 #include "extensions/common/manifest_handlers/icons_handler.h"
 #include "extensions/common/manifest_handlers/options_page_info.h"
 #include "extensions/common/permissions/permissions_data.h"
@@ -769,8 +770,8 @@ ui::Accelerator ShortcutAccelerator(NSEvent* event) {
 // permission first so the extension can act on the page it was invoked over.
 void DeliverExtensionCommand(Profile* profile, const extensions::Extension& extension,
                              const std::string& command, content::WebContents* contents) {
-  base::ListValue args;
-  args.Append(command);
+  auto args = base::MakeRefCounted<extensions::EventArgs>();
+  args->data.Append(command);
   base::Value tab;
   if (contents) {
     if (auto* granter = extensions::ActiveTabPermissionGranter::FromWebContents(contents))
@@ -780,7 +781,7 @@ void DeliverExtensionCommand(Profile* profile, const extensions::Extension& exte
         &extension, extensions::mojom::ContextType::kPrivilegedExtension, contents);
     tab = base::Value(extensions::ExtensionTabUtil::CreateTabObject(contents, scrub, &extension).ToValue());
   }
-  args.Append(std::move(tab));
+  args->data.Append(std::move(tab));
   auto event = std::make_unique<extensions::Event>(
       extensions::events::COMMANDS_ON_COMMAND, "commands.onCommand", std::move(args), profile);
   event->user_gesture = extensions::EventRouter::UserGestureState::kEnabled;

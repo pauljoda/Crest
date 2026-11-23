@@ -2,10 +2,10 @@
   "schemaVersion": 2,
   "status": "source-preparation",
   "chromium": {
-    "version": "157.0.8103.81",
-    "sourceArchive": "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-157.0.8103.81-lite.tar.xz",
-    "hashManifest": "md5  121bbc537854a5b81f629d9f3c2d99d3  chromium-157.0.8103.81-lite.tar.xz\nsha1  c2c560658d50c5b9c02e85d95dfb767c278b70b3  chromium-157.0.8103.81-lite.tar.xz\nsha224  67d3474348620ad27c354191ce79de9cbcb4a97044a61407e036bf2e  chromium-157.0.8103.81-lite.tar.xz\nsha256  28fefc80b75dff542ed8907ed67c148d0b8451d9655eb9a3449d2f8c6c0f24e9  chromium-157.0.8103.81-lite.tar.xz\nsha384  158e573a580ef1fa978b2acf45de9f98e67fbcc9a3d53b38d7ae2d2ff2d56b016d7f24d68b7850a7e94bcc9d59c362fc  chromium-157.0.8103.81-lite.tar.xz\nsha512  e3b45b56bce8903fe8564ed5ae5c0d0c141db1fb0cd81293633b4f80f3e40a247a52c49fb0e09919bddeaccfc2fda22f15f135932339e2c4f16e6297f114192c  chromium-157.0.8103.81-lite.tar.xz\n",
-    "sourceArchiveSha256": "28fefc80b75dff542ed8907ed67c148d0b8451d9655eb9a3449d2f8c6c0f24e9"
+    "version": "158.0.8127.37",
+    "sourceArchive": "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-158.0.8127.37-lite.tar.xz",
+    "hashManifest": "md5  d9dd6b457803f0f15a81a27b254634a9  chromium-158.0.8127.37-lite.tar.xz\nsha1  1bf1c63200b4ca787d34a0e242fef920674c1803  chromium-158.0.8127.37-lite.tar.xz\nsha224  11f1c1a732a70eafdd5cfecfc3b36aa6c3669bbab9df41ce961ce1ef  chromium-158.0.8127.37-lite.tar.xz\nsha256  d1b5866ce5e5d0b5c689c5f8416e3615aed299282253d03b45f55c4d2e9d79f6  chromium-158.0.8127.37-lite.tar.xz\nsha384  519b3d65587d48b5c6e741fd5c06f766cc7a599f6c1e0022b456a2fe3a229fcee4dce10dbc01e9754dd0d3c1ee0be7c4  chromium-158.0.8127.37-lite.tar.xz\nsha512  beec7aedfe2872e689a755b69b36231c6ed97dbeca163aa6f8d124d73df51dbccabd965548bb0307a75fb15df9887589a6ba2693307be288a6c71b78f218e827  chromium-158.0.8127.37-lite.tar.xz\n",
+    "sourceArchiveSha256": "d1b5866ce5e5d0b5c689c5f8416e3615aed299282253d03b45f55c4d2e9d79f6"
   },
   "dependencies": [
     "src/third_party/llvm-build/Release+Asserts",
@@ -102,14 +102,14 @@
     "arm64": {
       "output": "out/CrestBaseline",
       "pgoProfileFile": "chrome/build/mac-arm.pgo.txt",
-      "pgoProfile": "chrome-mac-arm-8103-1794339562-84ddfc7d1c5fe7fc113e444ab916130f0f2bfbbe-daac8bae4a27dc53b769aa796473fc6a5ddd8cdd.profdata",
-      "pgoSHA256": "d06b4421e1b0b3d4fc7f6609c8d79aa4df3745380eb7c4c5d5fbc0c8e8330b9f"
+      "pgoProfile": "chrome-mac-arm-8127-1794355046-b82a3291b4e601ca7bb3204990dee47813d1054d-a059438ae17f35f9bd8a169ce1d97ef2ed8d5029.profdata",
+      "pgoSHA256": "7e57c60838e577ccf1e27993bfc320844892b1f990499342d36a22471b34ce2c"
     },
     "x64": {
       "output": "out/CrestBaseline-x64",
       "pgoProfileFile": "chrome/build/mac.pgo.txt",
-      "pgoProfile": "chrome-mac-8103-1794332022-41983ad5b7801167ab1d707db37f3ac7a4bbe43c-f2eda314b26bd7c82178f9124a277c90e271f8c5.profdata",
-      "pgoSHA256": "a98301652bc30b58cca16345fffd1b47674eb16df87d1794d97e9e1a7ed19f25"
+      "pgoProfile": "chrome-mac-8127-1794332994-233cfe33b8e5b98243490df2fc1fa976fcefbba0-f2bd4d376eb6b6f39598e14e7b2d83aa5f5e4578.profdata",
+      "pgoSHA256": "37fcf24941f785f99c7fcab05320a50c450812d111be189c9ce18ac6e1dd2100"
     }
   }
 }

@@ -1,9 +1,10 @@
 {
   "entries": [
     {
-      "id": "common-lists-menu-icons",
+      "id": "mac-menu-icons-about-getting-started-paste-viewport",
       "category": "improved",
-      "message": "The menu of the Archive, History and Downloads button beside the Space switcher shows each list's icon."
+      "message": "About Crest, Getting Started with Crest, Paste and Match Style and the developer toolbar's viewport sizes show icons in their menus.",
+      "platforms": ["mac"]
     }
   ]
 }

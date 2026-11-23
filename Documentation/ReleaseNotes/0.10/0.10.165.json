@@ -1,9 +1,9 @@
 {
   "entries": [
     {
-      "id": "default-browser-status-core-tone",
-      "category": "internal",
-      "message": "The default browser status carries the core's status tone, and the update phase no longer keeps a tone nothing draws."
+      "id": "counted-copy-plural-rules",
+      "category": "improved",
+      "message": "Counts such as selected tabs, passwords, import warnings, Sub-Spaces and downloads in progress follow each language's plural rules, and the password count and deletion message in Passwords settings can be translated."
     }
   ]
 }

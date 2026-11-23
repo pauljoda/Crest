@@ -805,8 +805,8 @@ bool EngineBinding::FollowModifiedLink(content::WebContents* contents, content::
       // The engine opens the tab, which it offers to the core. Its first
       // load is no plain click's, so it never turns into a Peek.
       params.disposition = answer->decision == engine::LinkNavigationDecision::kForegroundTab
-                               ? WindowOpenDisposition::NEW_FOREGROUND_TAB
-                               : WindowOpenDisposition::NEW_BACKGROUND_TAB;
+                               ? WindowOpenDisposition::kNewForegroundTab
+                               : WindowOpenDisposition::kNewBackgroundTab;
       params.crest_download_fallback = nullptr;
       if (routed_tabs_.empty()) {
         base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
@@ -1727,7 +1727,7 @@ bool RouteModifiedLink(content::WebContents* source, content::OpenURLParams& par
   if (EngineBinding::Get().FollowModifiedLink(source, params)) {
     return true;
   }
-  if (params.disposition == WindowOpenDisposition::SAVE_TO_DISK && params.crest_download_fallback &&
+  if (params.disposition == WindowOpenDisposition::kSaveToDisk && params.crest_download_fallback &&
       params.crest_download_fallback->data) {
     std::move(params.crest_download_fallback->data).Run();
     return true;
