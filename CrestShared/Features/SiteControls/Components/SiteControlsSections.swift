@@ -42,7 +42,7 @@ struct SiteControlsBlockingTile: View {
                         Image(systemName: blocks ? "checkmark.shield" : "shield.slash")
                             .font(.system(size: metrics.glyphSize * 0.75, weight: .semibold))
                             .foregroundStyle(blocks ? Color.white : .primary)
-                            .frame(width: 22, height: 22)
+                            .frame(width: metrics.toggleSymbolSize, height: metrics.toggleSymbolSize)
                             .background(blocks ? CrestBrandTheme.accent : CrestColor.chromeSurface, in: .circle)
                         VStack(alignment: .leading, spacing: 0) {
                             Text("Ads and trackers")
@@ -56,7 +56,7 @@ struct SiteControlsBlockingTile: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .padding(.leading, CrestSpacing.small)
-                    .frame(maxWidth: .infinity, minHeight: metrics.toggleHeight)
+                    .frame(maxWidth: .infinity, minHeight: metrics.blockingHeight)
                     .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
@@ -75,12 +75,12 @@ struct SiteControlsBlockingTile: View {
                     .accessibilityIdentifier("site-content-blocking-switch")
                 }
                 Divider()
-                    .frame(height: metrics.toggleHeight * 0.55)
+                    .frame(height: metrics.blockingHeight * 0.55)
                 Button {
                     model.open(.blocking)
                 } label: {
                     CrestFormDisclosureChevron()
-                        .frame(width: 26, height: metrics.toggleHeight)
+                        .frame(width: 26, height: metrics.blockingHeight)
                         .contentShape(.rect)
                 }
                 .buttonStyle(CrestChromeButtonStyle(controlSize: nil, cornerRadius: CrestRadius.compact))
@@ -213,50 +213,94 @@ private struct SiteControlsToggleTile: View {
     @Environment(\.siteControlsMetrics) private var metrics
 
     var body: some View {
-        HStack(spacing: 0) {
-            Button(action: toggle) {
-                HStack(spacing: CrestSpacing.small) {
-                    Image(systemName: symbol)
-                        .font(.system(size: metrics.glyphSize * 0.75, weight: .semibold))
-                        .foregroundStyle(isOn ? Color.white : .primary)
-                        .frame(width: 22, height: 22)
-                        .background(isOn ? CrestBrandTheme.accent : CrestColor.chromeSurface, in: .circle)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(title)
-                            .font(metrics.rowFont.weight(.semibold))
-                        Text(state)
-                            .font(metrics.tileFont)
-                            .foregroundStyle(isOn ? CrestBrandTheme.accentText : .secondary)
-                            .lineLimit(1)
+        Group {
+            if metrics.stacksToggleTiles {
+                // A finger's tile: the symbol over the title and state, as
+                // the Control Center's are, with the options chevron in its
+                // corner.
+                ZStack(alignment: .topTrailing) {
+                    toggleButton {
+                        VStack(alignment: .leading, spacing: 2) {
+                            symbolCircle
+                            Spacer(minLength: CrestSpacing.small)
+                            titles
+                        }
+                        .padding(CrestSpacing.small + 2)
+                        .frame(maxWidth: .infinity, minHeight: metrics.toggleHeight, alignment: .leading)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    if let more {
+                        moreButton(more)
+                            .frame(width: 40, height: 40)
+                    }
                 }
-                .padding(.horizontal, CrestSpacing.small)
-                .frame(maxWidth: .infinity, minHeight: metrics.toggleHeight)
-                .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .disabled(!isEnabled)
-            .accessibilityLabel(Text(title))
-            .accessibilityValue(Text(state))
-            .accessibilityAddTraits(isOn ? .isSelected : [])
-            .accessibilityIdentifier(identifier)
-            if let more {
-                Divider()
-                    .frame(height: metrics.toggleHeight * 0.55)
-                Button(action: more) {
-                    CrestFormDisclosureChevron()
-                        .frame(width: 26, height: metrics.toggleHeight)
-                        .contentShape(.rect)
+            } else {
+                HStack(spacing: 0) {
+                    toggleButton {
+                        HStack(spacing: CrestSpacing.small) {
+                            symbolCircle
+                            titles
+                        }
+                        .padding(.horizontal, CrestSpacing.small)
+                        .frame(maxWidth: .infinity, minHeight: metrics.toggleHeight)
+                    }
+                    if let more {
+                        Divider()
+                            .frame(height: metrics.toggleHeight * 0.55)
+                        moreButton(more)
+                            .frame(width: 26, height: metrics.toggleHeight)
+                    }
                 }
-                .buttonStyle(CrestChromeButtonStyle(controlSize: nil, cornerRadius: CrestRadius.compact))
-                .accessibilityLabel(Text("\(String(localized: title)) Options"))
-                .accessibilityIdentifier("\(identifier)-options")
             }
         }
         .opacity(isEnabled ? 1 : CrestOpacity.disabledControl + 0.13)
         .crestHoverSurface(
             isSelected: isOn, cornerRadius: CrestRadius.compact, showsRestingSurface: true)
+    }
+
+    private var symbolCircle: some View {
+        Image(systemName: symbol)
+            .font(.system(size: metrics.glyphSize * 0.75, weight: .semibold))
+            .foregroundStyle(isOn ? Color.white : .primary)
+            .frame(width: metrics.toggleSymbolSize, height: metrics.toggleSymbolSize)
+            .background(isOn ? CrestBrandTheme.accent : CrestColor.chromeSurface, in: .circle)
+    }
+
+    private var titles: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title)
+                .font(metrics.rowFont.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text(state)
+                .font(metrics.tileFont)
+                .foregroundStyle(isOn ? CrestBrandTheme.accentText : .secondary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func toggleButton(@ViewBuilder label: () -> some View) -> some View {
+        Button(action: toggle) {
+            label()
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityLabel(Text(title))
+        .accessibilityValue(Text(state))
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+        .accessibilityIdentifier(identifier)
+    }
+
+    private func moreButton(_ more: @escaping () -> Void) -> some View {
+        Button(action: more) {
+            CrestFormDisclosureChevron()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(.rect)
+        }
+        .buttonStyle(CrestChromeButtonStyle(controlSize: nil, cornerRadius: CrestRadius.compact))
+        .accessibilityLabel(Text("\(String(localized: title)) Options"))
+        .accessibilityIdentifier("\(identifier)-options")
     }
 }
 
@@ -337,9 +381,9 @@ struct SiteControlsValueRows: View {
                     .accessibilityIdentifier("site-control-site-data")
             }
             SiteControlsRow("Downloads", symbol: "arrow.down.circle", value: model.downloadsSummary) {
-                model.open(.downloads)
+                model.openDownloads()
             }
-            .accessibilityIdentifier("site-control-downloads")
+            .accessibilityIdentifier(downloadsIdentifier)
             SiteControlsRow("More Actions", symbol: "ellipsis.circle", value: "\(model.moreActions.count)") {
                 model.isEditingActions = false
                 model.open(.actions)
@@ -347,6 +391,16 @@ struct SiteControlsValueRows: View {
             .accessibilityIdentifier("site-control-more-actions")
         }
         .padding(.horizontal, CrestFormRowButtonStyle.reach)
+    }
+
+    /// The Downloads row's identifier, the one iPhone and iPad gave the
+    /// menu's Downloads item before Site Controls.
+    private var downloadsIdentifier: String {
+        #if os(iOS)
+            BrowserMobileAccessibilityID.pageActionsDownloads
+        #else
+            "site-control-downloads"
+        #endif
     }
 }
 

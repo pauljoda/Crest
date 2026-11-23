@@ -22,6 +22,8 @@ struct MobileBrowserCommand {
         .reloadFromOrigin, isEnabled: { $0.hasActivePage }, run: { $0.reloadFromOrigin() })
     static let toggleSelectedTabPinned = MobileBrowserCommand(
         .toggleSelectedTabPinned, isEnabled: { $0.hasSelectedTab }, run: { $0.toggleSelectedTabPinned() })
+    static let toggleSelectedTabSaved = MobileBrowserCommand(
+        .toggleSelectedTabSaved, isEnabled: { $0.canSaveSelectedTab }, run: { $0.toggleSelectedTabSaved() })
     static let duplicateTab = MobileBrowserCommand(
         .duplicateTab, isEnabled: { $0.canDuplicateSelectedTab }, run: { $0.duplicateSelectedTab() })
     static let reopenClosedTab = MobileBrowserCommand(
@@ -75,6 +77,12 @@ struct MobileBrowserCommand {
         .copyPageLink, isEnabled: { $0.hasActivePage }, run: { $0.copyPageLink() })
     static let copyPageLinkAsMarkdown = MobileBrowserCommand(
         .copyPageLinkAsMarkdown, isEnabled: { $0.hasActivePage }, run: { $0.copyPageLinkAsMarkdown() })
+    static let copyPageTitle = MobileBrowserCommand(
+        .copyPageTitle, isEnabled: { $0.hasActivePage }, run: { $0.copyPageTitle() })
+    static let openPageInPrivateWindow = MobileBrowserCommand(
+        .openPageInPrivateWindow, menuTitle: { _ in "Open in Private Browsing" },
+        isAvailable: { !$0.isPrivateBrowsing }, isEnabled: { $0.hasActivePage && !$0.isPrivateBrowsing },
+        run: { $0.openPageInPrivateBrowsing() })
     static let printPage = MobileBrowserCommand(.printPage, isEnabled: { $0.hasActivePage }, run: { $0.printPage() })
     static let clearSiteCookies = MobileBrowserCommand(
         .clearSiteCookies, isEnabled: { $0.showsSite }, run: { $0.beginClearingSiteData(.siteData) })
@@ -96,7 +104,7 @@ struct MobileBrowserCommand {
     /// The commands the platform runs, in the order the palette offers them.
     static let all = [
         closeTabOrWindow, back, forward, reloadPage, stopLoading, reloadFromOrigin, toggleSelectedTabPinned,
-        duplicateTab,
+        toggleSelectedTabSaved, duplicateTab,
         reopenClosedTab, clearOtherTabs, clearAllTabs, archiveTab, previousTab, nextTab, mostRecentTab,
         mostRecentTabBackward,
         splitWithNextTab, focusNextSplitCard,
@@ -105,7 +113,8 @@ struct MobileBrowserCommand {
         nextSpace, toggleReaderMode, toggleContentBlocking, blockElement, showBlockedElements,
         findInPage, zoomIn, zoomOut, actualSize,
         copyPageLink,
-        copyPageLinkAsMarkdown, printPage, clearSiteCookies, clearSiteCache, toggleSidebar, collapseAllFolders,
+        copyPageLinkAsMarkdown, copyPageTitle, openPageInPrivateWindow, printPage, clearSiteCookies, clearSiteCache,
+        toggleSidebar, collapseAllFolders,
         toggleTranslationToolbar,
         showHistory, showArchive,
         showDownloads,

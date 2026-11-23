@@ -151,6 +151,18 @@ final class MobileBrowserWindowSceneModel {
         return .private
     }
 
+    /// Opens `url` as a new tab in private browsing, switching to it.
+    func openInPrivateBrowsing(_ url: URL, from mode: WorkspaceKind) -> WorkspaceKind {
+        let destination = mode.isPrivate ? mode : togglePrivateBrowsing(from: mode)
+        if let space = privateBrowser.shownSpace ?? privateBrowser.spaceModels.first,
+            privateBrowser.openNewTab(url: url, matching: BrowserSpaceRuntimeAssignment(space: space)) != nil
+        {
+            privatePages.selectAndNavigate(to: url.absoluteString)
+            privateNavigation.selectTab()
+        }
+        return destination
+    }
+
     func closePrivateBrowsing() -> WorkspaceKind {
         let closingSpaces = privateBrowser.spaceModels.map(BrowserSpaceRuntimeAssignment.init(space:))
         cancelPrivateDownloadConfirmations()

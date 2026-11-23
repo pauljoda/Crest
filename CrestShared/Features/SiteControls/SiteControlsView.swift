@@ -24,10 +24,16 @@ struct SiteControlsView<ExtensionTiles: View, ExtensionsPage: View>: View {
                     .frame(height: metrics.keepsRootHeight ? model.rootHeight : nil, alignment: .top)
                     .transition(transition(edge: .trailing))
                     .id(page)
-            } else {
+            } else if metrics.keepsRootHeight {
                 SiteControlsRoot(model: model, extensionTiles: extensionTiles)
                     .onGeometryChange(for: CGFloat.self, of: \.size.height) { model.rootHeight = $0 }
                     .transition(transition(edge: .leading))
+            } else {
+                // A sheet shows what fits its height and scrolls to the rest.
+                ScrollView {
+                    SiteControlsRoot(model: model, extensionTiles: extensionTiles)
+                }
+                .transition(transition(edge: .leading))
             }
         }
         .frame(width: metrics.width, alignment: .top)

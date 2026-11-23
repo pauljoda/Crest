@@ -54,8 +54,30 @@ struct SiteControlsActionRow: View {
             guard isEditing == (model.shownPage != nil) else { return }
             model.actionRowFrame = frame
         }
-        .siteControlsActionDragSource(model) { start, location in pickUp(at: start, pointer: location) }
+        .siteControlsActionDragSource(model, isEnabled: dragsTiles) { start, location in
+            pickUp(at: start, pointer: location)
+        }
         .animation(CrestMotion.dragSource.unlessReducingMotion(reduceMotion), value: places.map(\.id))
+    }
+
+    /// Whether a tile lifts when dragged. A finger's hold opens a tile's
+    /// menu on the root, so there a tile moves only in the editor.
+    private var dragsTiles: Bool {
+        #if os(iOS)
+            isEditing
+        #else
+            true
+        #endif
+    }
+
+    /// Whether a tile offers its menu. In the editor a finger's hold lifts
+    /// the tile instead, and the editor offers all the menu does.
+    private var offersTileMenu: Bool {
+        #if os(iOS)
+            !isEditing
+        #else
+            true
+        #endif
     }
 
     // MARK: - Actions - Places
@@ -110,7 +132,7 @@ struct SiteControlsActionRow: View {
             guard !model.suppressesActivation, model.drag == nil else { return }
             if isEditing { model.selectedSlot = slot } else { model.run(item.action) }
         }
-        .contextMenu { SiteControlsTileMenu(model: model, slot: slot) }
+        .modifier(SiteControlsTileMenuModifier(model: model, slot: slot, isEnabled: offersTileMenu))
         .accessibilityLabel(
             isEditing ? Text("Slot \(slot + 1), \(String(localized: item.title))") : Text(item.title)
         )
@@ -160,5 +182,20 @@ struct SiteControlsActionRow: View {
         let target = slot + offset
         guard model.topActions.indices.contains(target) else { return }
         model.move(action, to: target)
+    }
+}
+
+/// A tile's menu, where the row offers one.
+private struct SiteControlsTileMenuModifier: ViewModifier {
+    let model: SiteControlsModel
+    let slot: Int
+    let isEnabled: Bool
+
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content.contextMenu { SiteControlsTileMenu(model: model, slot: slot) }
+        } else {
+            content
+        }
     }
 }

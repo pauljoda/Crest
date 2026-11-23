@@ -674,7 +674,26 @@
 
     },
     "%lld allowed" : {
-
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld allowed"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld allowed"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld archived tabs" : {
       "localizations" : {
@@ -699,7 +718,26 @@
       }
     },
     "%lld blocked" : {
-
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld blocked"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld blocked"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld days ago" : {
       "localizations" : {
@@ -862,7 +900,26 @@
       }
     },
     "%lld in progress" : {
-
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld in progress"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld in progress"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld items selected" : {
       "localizations" : {
@@ -7075,6 +7132,9 @@
         }
       }
     },
+    "Home Screen" : {
+
+    },
     "Horizontal" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -9171,6 +9231,9 @@
 
     },
     "Open in Other Space" : {
+
+    },
+    "Open in Private Browsing" : {
 
     },
     "Open in Private Window" : {
@@ -14795,6 +14858,9 @@
           }
         }
       }
+    },
+    "Touch and hold an action to drag it in, out and along the row, or choose a slot and then an action." : {
+
     },
     "Touch and hold for options to reorder Spaces" : {
 

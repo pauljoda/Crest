@@ -37,24 +37,10 @@ struct MobileBrowserSidebarTopChrome: View {
                 .padding(.bottom, CrestSpacing.extraSmall)
                 .transition(.opacity.combined(with: .move(edge: .trailing)))
             } else {
-                BrowserSidebarAddressField(
-                    configuration: addressConfiguration,
-                    fieldContextMenu: {
-                        if let pageActions = selectedPageActions,
-                            pageActions.isAvailable,
-                            !configuration.isAddressEditing.wrappedValue
-                        {
-                            MobilePageActionsContent(
-                                browser: configuration.context.browser,
-                                pages: pageActions
-                            )
-                            .tint(.primary)
-                        }
-                    }
-                )
-                .modifier(SurfaceToneAppearance())
-                .padding(.horizontal, BrowserSidebarMetrics.layerInset)
-                .padding(.bottom, CrestSpacing.extraSmall)
+                BrowserSidebarAddressField(configuration: addressConfiguration)
+                    .modifier(SurfaceToneAppearance())
+                    .padding(.horizontal, BrowserSidebarMetrics.layerInset)
+                    .padding(.bottom, CrestSpacing.extraSmall)
             }
         }
     }

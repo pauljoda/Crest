@@ -19,10 +19,13 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
     @Environment(\.accessibilityReduceMotion) var reduceMotion
     @Environment(\.accessibilityReduceTransparency) var reduceTransparency
     @Environment(\.layoutDirection) var layoutDirection
+    @Environment(\.mobileOpenInPrivateBrowsing) var openInPrivateBrowsing
     @State private var spacePagerPresentation = SpacePagerPresentation()
     /// The tab preview of the sidebar that floats over a phone's page.
     @State private var floatingSidebarPreview = BrowserTabPreviewState()
     @State var isAddressEditing = false
+    /// Whether Site Controls show from the sidebar, which keeps it up.
+    @State private var siteControlsHoldSidebar = false
     @State var addressFocusRequest = 0
     @State var commandPaletteMode: BrowserCommandPaletteMode?
     @State var presentedListSheet: MobileBrowserSidebarSpaceSheet?
@@ -384,6 +387,7 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
             \.mobileBrowserCommandContext,
             commandContext
         )
+        .environment(\.mobileBrowserCommandContext, commandContext)
         .sheet(isPresented: settingsSheet(overPage: false)) { settingsSheetContent }
         .onChange(of: model.selectionSnapshot, initial: true) { _, _ in
             model.settings.reconcile()
@@ -414,10 +418,13 @@ struct MobileBrowserRootContent: View, BrowserChromeAnimating {
         .onChange(of: allowsFloatingSidebar, initial: true) { _, allows in
             navigation.allowsCompactFloatingSidebar = allows
         }
-        // A card a sidebar shows keeps that sidebar up while it is read.
+        // A card a sidebar shows keeps that sidebar up while it is read, and
+        // so do Site Controls opened from it.
+        .onPreferenceChange(MobileSiteControlsHoldsSidebarKey.self) { siteControlsHoldSidebar = $0 }
         .onChange(
             of: isAddressEditing || sidebarInteraction.sidebarReorderState.isDragging
-                || sidebarInteraction.tabPreview.shown != nil || floatingSidebarPreview.shown != nil,
+                || sidebarInteraction.tabPreview.shown != nil || floatingSidebarPreview.shown != nil
+                || siteControlsHoldSidebar,
             initial: true
         ) { _, keepsSidebarVisible in
             navigation.setTransientSidebarDismissalPaused(keepsSidebarVisible)
