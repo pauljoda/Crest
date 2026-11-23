@@ -5941,6 +5941,10 @@
     "windows-delete-lock-spaces": {
       "category": "internal",
       "message": "Spaces on Windows can be deleted with their data, handing a group to a Sub-Space, and locked behind Windows Hello, locking again when Crest goes to the background"
+    },
+    "windows-space-group-changes": {
+      "category": "internal",
+      "message": "A Space's settings page on Windows shows its group's crests and can start a Sub-Space, make a Space a Sub-Space of another group, or separate it, each after the Mac's question"
     }
   }
 }

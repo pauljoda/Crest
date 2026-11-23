@@ -1793,3 +1793,62 @@ button.forge-swatch.selected {
 .settings-unlock:disabled {
   opacity: 0.5;
 }
+
+/* BrowserSpaceGroupCrestRow: the group's crests in a well, the page's Space
+   selected, and + beside it, between the header and the tabs. */
+.settings-group-crests {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px 10px;
+  border-bottom: 1px solid var(--settings-hairline);
+}
+
+.settings-group-well {
+  display: flex;
+  padding: 2px;
+  border-radius: 10px;
+  background: rgb(var(--settings-primary) / 0.06);
+}
+
+.settings-group-crest {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 30px;
+  border-radius: 8px;
+  transition: background 100ms ease-in-out;
+}
+
+.settings-group-crest:hover {
+  background: rgb(var(--settings-primary) / 0.06);
+}
+
+.settings-group-crest.selected {
+  background: rgb(var(--settings-primary) / 0.14);
+}
+
+.settings-group-add {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: var(--settings-secondary);
+  transition: background 100ms ease-in-out, color 100ms ease-in-out;
+}
+
+.settings-group-add:hover:not(:disabled) {
+  background: rgb(var(--settings-primary) / 0.07);
+  color: var(--settings-ink);
+}
+
+.settings-group-add:disabled {
+  opacity: 0.4;
+}
+
+/* The page's divider runs under the crest row, which stands between the header and the tabs. */
+.settings-page-header.space:has(+ .settings-group-crests) {
+  border-bottom: 0;
+}

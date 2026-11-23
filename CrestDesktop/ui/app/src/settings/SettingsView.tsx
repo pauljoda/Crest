@@ -213,6 +213,7 @@ export function SettingsView({ session, tabId, spaces, shownSpace }: {
           </>
         ) : selectedSpace ? (
           <SpacePage session={session} space={selectedSpace} spaces={spaces} scrolls={kept.scrolls} tab={spaceTab}
+            onOpenSpace={(spaceId) => setSelection({ kind: "space", spaceId })}
             onTab={(next) => {
               kept.spaceTab = next;
               chooseSpaceTab(next);

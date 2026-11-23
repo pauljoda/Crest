@@ -26,6 +26,17 @@ import {
   type SpaceDeletionPlan,
   type SpaceDeletionRequest,
 } from "../spaces/space-deletion";
+import {
+  addSubSpace,
+  applyGroupChange,
+  canJoinGroup,
+  joinableGroups,
+  joining,
+  offersSubSpace,
+  primaryOf,
+  separating,
+  type SpaceGroupChange,
+} from "../spaces/space-groups";
 import { failureMessages, isAuthenticating, isLocked, setSpaceLock, unlockSpace, useAccessFailure } from "../spaces/space-access";
 import { startingLook } from "../spaces/space-look";
 import { SpaceIdentityIcon } from "../spaces/SpaceIdentity";
@@ -46,12 +57,14 @@ export type SpacePageTab = "appearance" | "browsing" | "privacy" | "extensions";
  * shares pinned tabs; Privacy, what it keeps and clearing what it holds;
  * and Extensions.
  */
-export function SpacePage({ session, space, spaces, tab, onTab, scrolls }: {
+export function SpacePage({ session, space, spaces, tab, onTab, onOpenSpace, scrolls }: {
   session: Session;
   space: SpaceState;
   spaces: readonly SpaceState[];
   tab: SpacePageTab;
   onTab: (tab: SpacePageTab) => void;
+  /** Shows another Space's page in this Settings tab, as a crest of the group row does. */
+  onOpenSpace: (spaceId: string) => void;
   /** Where each of the Settings tab's pages was scrolled. */
   scrolls: Map<string, number>;
 }) {
@@ -60,6 +73,8 @@ export function SpacePage({ session, space, spaces, tab, onTab, scrolls }: {
   const [showsCredits, setShowsCredits] = useState(false);
   const [deleting, setDeleting] = useState<SpaceDeletionRequest | null>(null);
   const plan = deleting ? deletionPlan(deleting, spaces) : null;
+  const [groupChange, setGroupChange] = useState<SpaceGroupChange | null>(null);
+  const isPrivate = session.core.state.workspaces.get(session.workspaceId)?.kind.isPrivate ?? false;
   const draft = name?.spaceId === space.id ? name.draft : space.settings.name;
   const commitName = () => {
     if (!name || name.spaceId !== space.id) return;
@@ -93,11 +108,16 @@ export function SpacePage({ session, space, spaces, tab, onTab, scrolls }: {
               editCrest: () => onTab("appearance"),
               showCredits: () => setShowsCredits(true),
               requestDeletion: setDeleting,
+              requestGroupChange: setGroupChange,
             }));
           }}>
           <Symbol name="ellipsis.circle" size={16} />
         </button>
       </header>
+      {!isPrivate && (
+        <GroupCrestRow session={session} space={space} spaces={spaces} onOpenSpace={onOpenSpace}
+          requestGroupChange={setGroupChange} requestDeletion={setDeleting} />
+      )}
       {/* A locked Space shows its settings only once it's unlocked, as the Mac's page does. */}
       {isLocked(session.core, space) ? <LockedSpaceSection session={session} space={space} /> : <>
       <div className="settings-space-tabs">
@@ -122,6 +142,20 @@ export function SpacePage({ session, space, spaces, tab, onTab, scrolls }: {
             </Sheet>
           </motion.div>
         )}
+        {groupChange && (
+          <motion.div key="group" className="sheet-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <Sheet title={groupChange.title} primary={groupChange.confirmation} secondary="Cancel"
+              onPrimary={() => {
+                const change = groupChange;
+                setGroupChange(null);
+                // The change redraws much of the window, so the question finishes closing first, as on the Mac.
+                setTimeout(() => void applyGroupChange(session, change), 140);
+              }}
+              onEscape={() => setGroupChange(null)}>
+              <p className="sheet-message">{groupChange.message}</p>
+            </Sheet>
+          </motion.div>
+        )}
         {plan && (
           <motion.div key="delete" className="sheet-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <DeletionSheet plan={plan} onCancel={() => setDeleting(null)} onDelete={(successor) => {
@@ -143,10 +177,11 @@ export function SpacePage({ session, space, spaces, tab, onTab, scrolls }: {
  * look the Space started from while it has moved from it, and Artwork
  * Credits. Lock Space stands before deleting: on, it asks Windows Hello
  * before the Space shows, as the Mac asks for Touch ID or the password; a
- * private window's Spaces can't lock. Windows has no joining or leaving
- * Space groups yet, which the Mac lists before Lock Space.
+ * private window's Spaces can't lock. The group's items stand before it:
+ * New Sub-Space, Separate from its primary, and Make Sub-Space of another
+ * group, each change after its question.
  */
-function spaceMenu({ session, space, spaces, rename, editCrest, showCredits, requestDeletion }: {
+function spaceMenu({ session, space, spaces, rename, editCrest, showCredits, requestDeletion, requestGroupChange }: {
   session: Session;
   space: SpaceState;
   spaces: readonly SpaceState[];
@@ -154,6 +189,7 @@ function spaceMenu({ session, space, spaces, rename, editCrest, showCredits, req
   editCrest: () => void;
   showCredits: () => void;
   requestDeletion: (request: SpaceDeletionRequest) => void;
+  requestGroupChange: (change: SpaceGroupChange) => void;
 }): MenuEntry[] {
   const reorder = (order: readonly string[] | null) => () => {
     if (order) void send(session, ReorderSpaces({ workspaceId: session.workspaceId, spaceIds: order }));
@@ -169,6 +205,8 @@ function spaceMenu({ session, space, spaces, rename, editCrest, showCredits, req
     { title: "Move Up", enabled: up !== null, run: reorder(up) },
     { title: "Move Down", enabled: down !== null, run: reorder(down) },
     "separator",
+    ...groupItems(session, space, spaces, requestGroupChange),
+    "separator",
     {
       title: "Lock Space", checked: space.settings.requiresAuthentication,
       enabled: !(session.core.state.workspaces.get(session.workspaceId)?.kind.isPrivate ?? false),
@@ -183,6 +221,91 @@ function spaceMenu({ session, space, spaces, rename, editCrest, showCredits, req
     },
     { title: "Artwork Credits", run: showCredits },
   ];
+}
+
+/**
+ * BrowserSpaceGroupMenuItems: New Sub-Space, which starts one after this
+ * Space; Separate from its primary, for a Sub-Space; and Make Sub-Space of,
+ * listing every other group by its primary, for a Space that may join one.
+ */
+function groupItems(session: Session, space: SpaceState, spaces: readonly SpaceState[],
+  request: (change: SpaceGroupChange) => void): MenuEntry[] {
+  const items: MenuEntry[] = [];
+  const isPrivate = session.core.state.workspaces.get(session.workspaceId)?.kind.isPrivate ?? false;
+  if (!isPrivate) items.push({ title: "New Sub-Space", enabled: offersSubSpace(session, space), run: () => void addSubSpace(session, space.id) });
+  const separation = separating(session, space, spaces);
+  if (separation) items.push({ title: `Separate from “${primaryOf(space, spaces).settings.name}”…`, run: () => request(separation) });
+  const groups = canJoinGroup(session, space, spaces) ? joinableGroups(session, space, spaces) : [];
+  if (groups.length > 0) {
+    items.push({
+      title: "Make Sub-Space of",
+      submenu: groups.map((group) => ({
+        title: group.settings.name,
+        run: () => {
+          const join = joining(session, space, group, spaces);
+          if (join) request(join);
+        },
+      })),
+    });
+  }
+  return items;
+}
+
+/**
+ * BrowserSpaceGroupCrestRow: the Spaces of the group the page edits, as a
+ * row of crests between the header and the tabs. Choosing a crest opens that
+ * Space's page, + starts another Sub-Space, and each crest's menu moves it
+ * within the group (a Sub-Space), moves it to another group, separates it or
+ * deletes it. A Space on its own shows its one crest and +, which is how its
+ * first Sub-Space starts, so the row never comes or goes. The Mac's crests
+ * also drag; here the menu moves them.
+ */
+function GroupCrestRow({ session, space, spaces, onOpenSpace, requestGroupChange, requestDeletion }: {
+  session: Session;
+  space: SpaceState;
+  spaces: readonly SpaceState[];
+  onOpenSpace: (spaceId: string) => void;
+  requestGroupChange: (change: SpaceGroupChange) => void;
+  requestDeletion: (request: SpaceDeletionRequest) => void;
+}) {
+  const members = groupMembers(space, spaces);
+  const last = members.at(-1) ?? space;
+  const menu = (member: SpaceState): MenuEntry[] => {
+    const entries: MenuEntry[] = [];
+    if (isSubSpace(member)) {
+      const left = movedOrder(spaces, member.id, -1);
+      const right = movedOrder(spaces, member.id, 1);
+      const reorder = (order: readonly string[] | null) => () => {
+        if (order) void send(session, ReorderSpaces({ workspaceId: session.workspaceId, spaceIds: order }));
+      };
+      entries.push({ title: "Move Left", enabled: left !== null, run: reorder(left) },
+        { title: "Move Right", enabled: right !== null, run: reorder(right) }, "separator");
+    }
+    return [...entries, ...groupItems(session, member, spaces, requestGroupChange), "separator",
+      ...deletionItems(session, member, spaces, requestDeletion)];
+  };
+  return (
+    <div className="settings-group-crests" role="group" aria-label="Sub-Spaces" data-testid="space-group-crests">
+      <div className="settings-group-well">
+        {members.map((member) => (
+          <button key={member.id} type="button" className={`settings-group-crest${member.id === space.id ? " selected" : ""}`}
+            title={member.settings.name} aria-label={member.settings.name} aria-current={member.id === space.id || undefined}
+            data-testid={`space-group-crest-${member.id}`}
+            onClick={() => onOpenSpace(member.id)}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              void showContextMenu(session.shell, { clientX: event.clientX, clientY: event.clientY }, menu(member));
+            }}>
+            <SpaceIdentityIcon symbol={member.settings.symbol} branding={member.settings.look} size={20} />
+          </button>
+        ))}
+      </div>
+      <button type="button" className="settings-group-add" title="New Sub-Space" aria-label="New Sub-Space"
+        data-testid="space-group-add-sub-space" disabled={!offersSubSpace(session, last)} onClick={() => void addSubSpace(session, last.id)}>
+        <Symbol name="plus" size={13} />
+      </button>
+    </div>
+  );
 }
 
 /**
