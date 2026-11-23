@@ -14,11 +14,7 @@ struct BrowserCommandPaletteCardEdge: ViewModifier {
                     .allowsHitTesting(false)
             }
             .background {
-                CrestLiftedSurfaceShadow(
-                    cornerRadius: cornerRadius,
-                    opacity: BrowserCommandPaletteMetrics.cardShadowOpacity,
-                    radius: BrowserCommandPaletteMetrics.cardShadowRadius,
-                    yOffset: BrowserCommandPaletteMetrics.cardShadowYOffset)
+                CrestLiftedSurfaceShadow(cornerRadius: cornerRadius, elevation: .panel)
             }
     }
 }

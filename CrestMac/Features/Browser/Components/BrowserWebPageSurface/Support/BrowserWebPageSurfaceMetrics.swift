@@ -16,8 +16,6 @@ enum BrowserWebPageSurfaceMetrics {
     static let sharePickerPadding: CGFloat = 14
     static let sharePickerSpacing = CrestSpacing.medium
     static let sharePickerStrokeWidth: CGFloat = 0.5
-    static let sharePickerShadowRadius: CGFloat = 14
-    static let sharePickerShadowOffset: CGFloat = 6
     static let sharePickerHeaderSpacing: CGFloat = 10
     static let sharePickerHeaderIconSize: CGFloat = 24
     static let sharePickerCloseControlSize: CGFloat = 28
@@ -39,9 +37,6 @@ enum BrowserWebPageSurfaceMetrics {
     static let feedbackZIndex: Double = 30
     static let feedbackHorizontalPadding: CGFloat = 14
     static let feedbackHeight: CGFloat = 38
-    static let feedbackShadowOpacity = 0.18
-    static let feedbackShadowRadius: CGFloat = 14
-    static let feedbackShadowY: CGFloat = 6
     static let feedbackTopPadding = CrestSpacing.medium
     /// The agent's pointer: its arrow, the tag beside it, the ripple of a
     /// press, how it glides between points and how long it stays once the

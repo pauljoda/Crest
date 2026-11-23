@@ -25,6 +25,15 @@ enum CrestTypography {
     /// A glyph alone on a control a finger presses, as on the phone's and
     /// iPad's chrome.
     static let touchControlGlyph = Font.system(size: 17, weight: .medium)
+    /// Supporting copy at reading size, such as a guide's paragraphs.
+    static var supportingBody: Font { sans(14, relativeTo: .body) }
+    /// A short label in the system face, semibold: a small heading over a
+    /// window, a choice's title, a text button or a Space chip.
+    static var label: Font { sans(13, relativeTo: .body, weight: .semibold) }
+    /// Small supporting copy: a note under a guide, a hint beside an action.
+    static var note: Font { sans(12, relativeTo: .footnote) }
+    /// The line under a page's hero title, as on setup's welcome.
+    static var lead: Font { sans(20, relativeTo: .title3, weight: .medium) }
     static let metadata = Font.caption
     static let compactMetadata = Font.caption2
     static let badge = Font.caption2.monospaced().weight(.semibold)
@@ -46,9 +55,26 @@ enum CrestTypography {
         CrestDisplayFace.allo.font(size: size, weight: .heavy)
     }
 
-    /// Body and supporting type in the system face.
+    /// System type at a fixed size, for an illustration composed at fixed
+    /// sizes, such as the Settings sample page or a window preview. Copy a
+    /// person reads takes a role, which follows their text size.
     static func sans(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
         .system(size: size, weight: weight)
+    }
+
+    /// System type at `size`, scaling with Dynamic Type as `style` does where
+    /// the platform has it.
+    private static func sans(
+        _ size: CGFloat,
+        relativeTo style: Font.TextStyle,
+        weight: Font.Weight = .regular
+    ) -> Font {
+        #if os(iOS)
+            let scaled = UIFontMetrics(forTextStyle: platformStyle(of: style)).scaledValue(for: size)
+            return .system(size: scaled, weight: weight)
+        #else
+            return .system(size: size, weight: weight)
+        #endif
     }
 
     /// Display type at the size `style` has now, which follows the person's

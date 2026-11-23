@@ -29,7 +29,7 @@ struct BrowserFolderDragPreview: View {
             shape.strokeBorder(folder.displayColor.color.opacity(0.35), lineWidth: 0.5)
         }
         .clipShape(shape)
-        .shadow(color: .black.opacity(0.22), radius: 10, y: 5)
+        .crestElevation(.dragged)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(folder.kind.spokenName(folder.shownTitle))
         .modifier(SurfaceToneAppearance())

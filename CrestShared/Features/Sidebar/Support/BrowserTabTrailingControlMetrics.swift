@@ -49,10 +49,10 @@ struct BrowserTabTrailingControlMetrics: Equatable, Sendable {
         usesChromeControlStyle: true
     )
 
-    /// A touch shell: a full 44pt target and a heavier glyph to read at that
+    /// A touch shell: a touch target and a heavier glyph to read at that
     /// size, always drawn because nothing can reveal it.
     static let touch = BrowserTabTrailingControlMetrics(
-        controlSize: CGSize(width: 44, height: 44),
+        controlSize: CGSize(width: CrestLayout.touchHitTarget, height: CrestLayout.touchHitTarget),
         glyphSize: 14,
         glyphWeight: .medium,
         isAlwaysVisible: true,

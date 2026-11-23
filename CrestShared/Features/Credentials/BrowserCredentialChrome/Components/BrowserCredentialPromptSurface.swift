@@ -14,8 +14,6 @@ struct BrowserCredentialPromptSurface<Content: View>: View {
     let metrics: BrowserCredentialPromptMetrics
     let content: Content
 
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
     init(
         accessibilityLabel: Text,
         accessibilityIdentifier: String,
@@ -41,11 +39,7 @@ struct BrowserCredentialPromptSurface<Content: View>: View {
             )
             .overlay(alignment: .bottom) { surfaceEdge }
             .crestFlyoutStyle(in: surfaceShape)
-            .shadow(
-                color: .black.opacity(shadowOpacity),
-                radius: BrowserCredentialPromptMetrics.shadowRadius,
-                y: BrowserCredentialPromptMetrics.shadowOffset
-            )
+            .crestElevation(.panel, scale: metrics.surfaceStyle == .panel ? 1 : 0)
             .accessibilityElement(children: .contain)
             .accessibilityLabel(accessibilityLabel)
             .accessibilityIdentifier(accessibilityIdentifier)
@@ -82,13 +76,6 @@ struct BrowserCredentialPromptSurface<Content: View>: View {
         case .band:
             Divider()
         }
-    }
-
-    private var shadowOpacity: Double {
-        guard metrics.surfaceStyle == .panel, !reduceTransparency else {
-            return 0
-        }
-        return BrowserCredentialPromptMetrics.shadowOpacity
     }
 
     private var minimumWidth: CGFloat? {

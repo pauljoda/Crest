@@ -55,10 +55,7 @@ struct BrowserTransientPageCard<WebContent: View>: View {
             }
         }
         .modifier(
-            BrowserTransientPageCardStyle(
-                arrangement: arrangement,
-                reduceTransparency: reduceTransparency
-            )
+            BrowserTransientPageCardStyle(arrangement: arrangement)
         )
     }
 
@@ -139,7 +136,6 @@ private struct BrowserTransientReleasedPageView: View {
 
 private struct BrowserTransientPageCardStyle: ViewModifier {
     let arrangement: BrowserTransientCardArrangement
-    let reduceTransparency: Bool
 
     func body(content: Content) -> some View {
         content
@@ -151,13 +147,7 @@ private struct BrowserTransientPageCardStyle: ViewModifier {
                         lineWidth: 0.5
                     )
             }
-            .shadow(
-                color: .black.opacity(
-                    reduceTransparency ? 0 : arrangement.cardShadowOpacity
-                ),
-                radius: arrangement.cardShadowRadius,
-                y: arrangement.cardShadowOffsetY
-            )
+            .crestElevation(arrangement.cardElevation)
     }
 
     private var cornerRadius: CGFloat {

@@ -18,15 +18,10 @@ struct CrestSpaceChipSurface<LabelContent: View>: View {
 
     var body: some View {
         label
-            .font(
-                CrestTypography.sans(
-                    CrestButtonMetrics.standardLabelSize,
-                    weight: isSelected ? .bold : .medium
-                )
-            )
+            .font(CrestTypography.label.weight(isSelected ? .bold : .medium))
             .foregroundStyle(CrestBrandTheme.textDisplay)
             .padding(.horizontal, CrestSpaceChipMetrics.horizontalPadding)
-            .frame(height: CrestSpaceChipMetrics.height)
+            .frame(minHeight: CrestSpaceChipMetrics.height)
             .background(fill, in: shape)
             .overlay {
                 shape.strokeBorder(

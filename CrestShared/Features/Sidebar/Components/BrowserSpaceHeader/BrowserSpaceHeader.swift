@@ -43,7 +43,7 @@ struct BrowserSpaceHeader: View {
             .padding(.trailing, CrestSpacing.extraSmall)
         )
         .crestHoverSurface(
-            cornerRadius: CrestLayout.sidebarControlCornerRadius
+            cornerRadius: CrestRadius.compact
         )
         .padding(.horizontal, CrestSpacing.small)
     }

@@ -75,18 +75,8 @@ private struct BrowserSidebarWidgetCardChrome: ViewModifier {
                     )
                     .allowsHitTesting(false)
             }
-            .shadow(
-                color: .black.opacity(
-                    BrowserSidebarWidgetDeckStyle.contactShadowOpacity * chromeScale
-                ),
-                radius: BrowserSidebarWidgetDeckStyle.contactShadowRadius,
-                y: BrowserSidebarWidgetDeckStyle.contactShadowOffset
-            )
-            .shadow(
-                color: .black.opacity(CrestOpacity.controlShadow * chromeScale),
-                radius: BrowserSidebarWidgetDeckStyle.ambientShadowRadius,
-                y: BrowserSidebarWidgetDeckStyle.ambientShadowOffset
-            )
+            .crestElevation(.control, scale: chromeScale)
+            .crestElevation(.card, scale: chromeScale)
     }
 
     private var chromeScale: Double {

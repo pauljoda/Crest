@@ -50,7 +50,7 @@ struct BrowserSetupLanding<Leading: View, Forward: View>: View {
                     ? "Your Spaces came in from iCloud, ready to use."
                     : "Bring your tabs over, then set up your Spaces."
             )
-            .font(CrestTypography.sans(BrowserSetupLandingMetrics.bodySize, weight: .medium))
+            .font(CrestTypography.lead)
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
             .frame(maxWidth: BrowserSetupLandingMetrics.bodyWidth)
@@ -72,7 +72,6 @@ enum BrowserSetupLandingMetrics {
     static let titleSize: CGFloat = 84
     /// Display type set tight, as Crest's headlines are.
     static let titleTracking: CGFloat = -1
-    static let bodySize: CGFloat = 20
     static let bodyWidth: CGFloat = 560
     static let inset: CGFloat = 48
 }

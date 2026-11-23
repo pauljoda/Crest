@@ -28,11 +28,11 @@ struct CrestButtonSurface: View {
 
     // MARK: - Actions - Sizing
 
-    /// The height of a primary button at its size, and of a secondary one.
-    private func height(isProminent: Bool) -> CGFloat {
+    /// The height of a primary or secondary button at its size.
+    private var height: CGFloat {
         if isLarge { return CrestButtonMetrics.largeHeight }
         if isCompact { return CrestButtonMetrics.compactHeight }
-        return isProminent ? CrestButtonMetrics.prominentHeight : CrestButtonMetrics.standardHeight
+        return CrestButtonMetrics.height
     }
 
     /// The room either side of a primary button's title at its size, and of
@@ -80,7 +80,7 @@ struct CrestButtonSurface: View {
             .font(titleFont)
             .foregroundStyle(fill.perceptualForeground(in: colorScheme))
             .padding(.horizontal, horizontalPadding(isProminent: true))
-            .frame(minHeight: height(isProminent: true))
+            .frame(minHeight: height)
             .background {
                 Capsule().fill(fill.opacity(primaryFillOpacity))
             }
@@ -92,10 +92,7 @@ struct CrestButtonSurface: View {
                     lineWidth: CrestButtonMetrics.strokeWidth
                 )
             }
-            .shadow(
-                color: .black.opacity(CrestButtonMetrics.primaryShadowOpacity),
-                radius: CrestButtonMetrics.primaryShadowRadius, y: 1
-            )
+            .crestElevation(.control)
             .crestCapsuleInteractionShape()
     }
 
@@ -106,7 +103,7 @@ struct CrestButtonSurface: View {
             .font(titleFont)
             .foregroundStyle(.primary)
             .padding(.horizontal, horizontalPadding(isProminent: false))
-            .frame(minHeight: height(isProminent: false))
+            .frame(minHeight: height)
             .background {
                 Capsule().fill(Color.primary.opacity(secondaryFillOpacity))
             }
@@ -132,15 +129,10 @@ struct CrestButtonSurface: View {
     private var destructive: some View {
         let tint = resolvedTint
         return configuration.label
-            .font(
-                CrestTypography.sans(
-                    CrestButtonMetrics.standardLabelSize,
-                    weight: .semibold
-                )
-            )
+            .font(CrestTypography.label)
             .foregroundStyle(resolvedTextTint)
             .padding(.horizontal, CrestButtonMetrics.standardHorizontalPadding)
-            .frame(minHeight: CrestButtonMetrics.standardHeight)
+            .frame(minHeight: CrestButtonMetrics.height)
             .background {
                 Capsule().fill(tint.opacity(tintedFillOpacity(isEmphasized: false)))
             }

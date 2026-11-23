@@ -124,18 +124,13 @@ struct BrowserSidebarNavigationControlMetrics: Equatable, Sendable {
         narrowing: nil
     )
 
-    /// A touch shell: full 44pt targets, a symmetric gutter, and a strip that
+    /// A touch shell: touch targets, a symmetric gutter, and a strip that
     /// grows with the reader's text.
-    ///
-    /// The targets are literals rather than `CrestLayout.minimumHitTarget`, for
-    /// the same reason the touch trailing control's are: this profile is
-    /// compared against from a suite hosted on macOS, where that token resolves
-    /// to the pointer shell's 28, and a touch control still has to be 44.
     static let touch = BrowserSidebarNavigationControlMetrics(
         controlSpacing: 2,
         leadingSpacerMinimum: 0,
-        controlSize: CGSize(width: 44, height: 44),
-        reloadMenuControlSize: CGSize(width: 28, height: 44),
+        controlSize: CGSize(width: CrestLayout.touchHitTarget, height: CrestLayout.touchHitTarget),
+        reloadMenuControlSize: CGSize(width: 28, height: CrestLayout.touchHitTarget),
         historySymbolFont: .system(size: 17, weight: .medium),
         reloadSymbolPointSize: BrowserChromeSymbolLabel.defaultPointSize,
         leadingInset: 14,

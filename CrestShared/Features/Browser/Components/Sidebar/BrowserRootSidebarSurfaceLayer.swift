@@ -139,15 +139,9 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
                     )
                     .allowsHitTesting(false)
             }
-            .shadow(
-                color: .black.opacity(
-                    reduceTransparency || !usesFloatingCardAppearance || !presentation.showsSidebar
-                        ? 0
-                        : BrowserRootMetrics.floatingSidebarShadowOpacity
-                ),
-                radius: BrowserRootMetrics.floatingSidebarShadowRadius,
-                x: BrowserRootMetrics.floatingSidebarShadowOffset,
-                y: BrowserRootMetrics.floatingSidebarShadowOffset
+            .crestElevation(
+                .floatingSidebar,
+                scale: reduceTransparency || !usesFloatingCardAppearance || !presentation.showsSidebar ? 0 : 1
             )
             .contentShape(.interaction, shape)
     }

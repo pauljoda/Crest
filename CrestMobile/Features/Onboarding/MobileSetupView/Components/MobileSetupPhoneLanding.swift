@@ -65,7 +65,7 @@ struct MobileSetupPhoneLanding<Forward: View, Other: View>: View {
                         ? "Your Spaces came in from iCloud, ready to use."
                         : "Bring your tabs over, then set up your Spaces."
                 )
-                .font(CrestTypography.sans(MobileSetupPhoneLandingMetrics.bodySize, weight: .medium))
+                .font(CrestTypography.lead)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -94,7 +94,6 @@ enum MobileSetupPhoneLandingMetrics {
     static let titleSize: CGFloat = 44
     /// Display type set tight, as Crest's headlines are.
     static let titleTracking: CGFloat = -0.5
-    static let bodySize: CGFloat = 18
     static let inset: CGFloat = 28
     static let footerInset = EdgeInsets(top: 12, leading: 24, bottom: 12, trailing: 24)
 }

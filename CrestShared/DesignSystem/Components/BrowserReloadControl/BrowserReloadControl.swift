@@ -89,7 +89,7 @@ struct BrowserReloadControl: View {
         .foregroundStyle(
             isEnabled
                 ? Color.secondary
-                : Color.secondary.opacity(CrestOpacity.controlDisabledForeground)
+                : Color.secondary.opacity(CrestOpacity.disabledGlyph)
         )
         .disabled(!isEnabled)
         .task(id: isLoading) {

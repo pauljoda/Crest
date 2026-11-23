@@ -59,14 +59,7 @@ struct BrowserRootContentSurface<Content: View>: View {
             .padding(seamWidth)
             .clipShape(outerShape, style: FillStyle(antialiased: true))
             .background {
-                CrestLiftedSurfaceShadow(
-                    cornerRadius: cornerRadius,
-                    opacity: showsBoundary
-                        ? CrestLiftedSurfaceShadow.pageShadowOpacity
-                        : 0,
-                    radius: CrestLiftedSurfaceShadow.pageShadowRadius,
-                    yOffset: CrestLiftedSurfaceShadow.pageShadowYOffset
-                )
+                CrestLiftedSurfaceShadow(cornerRadius: cornerRadius, elevation: showsBoundary ? .page : nil)
             }
             .overlay {
                 outerShape

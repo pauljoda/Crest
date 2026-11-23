@@ -89,7 +89,7 @@ struct CrestSpaceIconPicker<Space: BrowserSpaceIdentifying, SegmentContent: View
                 }
                 .offset(reorder.offset(for: space.id, ids: spaces.map(\.id), frames: frames))
                 .scaleEffect(lifted ? 1.08 : 1)
-                .shadow(color: .black.opacity(lifted ? 0.25 : 0), radius: 4, y: 2)
+                .crestElevation(.lifted, scale: lifted ? 1 : 0)
                 .animation(
                     reduceMotion || lifted ? nil : CrestMotion.dragSource,
                     value: reorder.targetID

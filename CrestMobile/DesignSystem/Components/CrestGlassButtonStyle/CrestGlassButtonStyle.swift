@@ -35,7 +35,7 @@ private struct CrestGlassButtonSurface: View {
     var body: some View {
         label
             .foregroundStyle(
-                isEnabled ? Color.primary : Color.secondary.opacity(CrestOpacity.controlDisabledForeground)
+                isEnabled ? Color.primary : Color.secondary.opacity(CrestOpacity.disabledGlyph)
             )
             .frame(width: diameter, height: diameter)
             .contentShape(.circle)

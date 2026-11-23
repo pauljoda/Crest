@@ -65,7 +65,7 @@ struct BrowserUtilityListRow: View {
             }
         }
         .crestHoverSurface(
-            cornerRadius: CrestLayout.sidebarControlCornerRadius
+            cornerRadius: CrestRadius.compact
         )
     }
 

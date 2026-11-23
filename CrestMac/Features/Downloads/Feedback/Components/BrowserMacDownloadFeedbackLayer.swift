@@ -117,7 +117,7 @@ private struct BrowserMacDownloadFlightDrawing: AnimatableModifier {
                 .foregroundStyle(.primary)
                 .frame(width: 42, height: 46)
                 .background { CrestSurfaceLayer(shape: .rect(cornerRadius: 8)) }
-                .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+                .crestElevation(.lifted)
                 .scaleEffect(path.scale(at: progress) * (0.55 + 0.45 * appearance))
                 .opacity(appearance * (1 - min(max((progress - 0.9) / 0.1, 0), 1)))
                 .position(path.point(at: progress))
