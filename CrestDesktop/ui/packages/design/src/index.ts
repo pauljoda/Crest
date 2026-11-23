@@ -143,8 +143,18 @@ export const motion = Object.freeze({
   sidebarDockApproach: smooth(0.16),
   /** The floating sidebar's short last step into its seat. */
   sidebarDockAttachment: smooth(0.12),
-  /** The floating sidebar going once the pointer leaves it. */
-  sidebarRetreat: smooth(0.22),
+  /**
+   * The floating sidebar coming out over the page as the pointer reaches the
+   * window's edge: the Mac's floating pane (0.18) at its default sidebar
+   * slide length, 160 ms of the 180 its sidebar motion is drawn at.
+   */
+  sidebarReveal: smooth(0.16),
+  /**
+   * The floating sidebar going once the pointer leaves it, as the Mac's
+   * recording measures it (D02: 90% in about 90 ms), quicker than the 0.22
+   * its source names.
+   */
+  sidebarRetreat: smooth(0.15),
   toolbar: snappy(0.18),
   feedbackPresentation: snappy(0.16),
   dismissal: { duration: 0.14, ease: "easeOut" } as const,
@@ -233,6 +243,12 @@ export function cssVariables(): Record<string, string> {
   variables["--crest-font-system"] = typography.system;
   variables["--crest-font-display"] = typography.display;
   variables["--crest-font-display-weight"] = `${typography.displayWeight}`;
+  // The floating sidebar's slides, which its stylesheet runs as transitions.
+  for (const [name, spring] of [["reveal", motion.sidebarReveal], ["retreat", motion.sidebarRetreat]] as const) {
+    const { duration, easing } = springEasing(spring);
+    variables[`--crest-sidebar-${name}-duration`] = `${duration}ms`;
+    variables[`--crest-sidebar-${name}-easing`] = easing;
+  }
   variables["--crest-opacity-hover"] = `${opacity.hover}`;
   variables["--crest-opacity-selection"] = `${opacity.selection}`;
   variables["--crest-opacity-border"] = `${opacity.border}`;

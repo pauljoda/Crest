@@ -854,12 +854,14 @@ button {
   border-radius: 18px;
   overflow: hidden;
   isolation: isolate;
-  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
+  /* Out over the page on the Mac's spring for it, and back on its retreat's
+     (D02). */
+  transition: transform var(--crest-sidebar-reveal-duration) var(--crest-sidebar-reveal-easing);
 }
 
 .sidebar-slot.collapsed {
   transform: translateX(calc(-100% - 21px));
-  transition-duration: 150ms;
+  transition: transform var(--crest-sidebar-retreat-duration) var(--crest-sidebar-retreat-easing);
 }
 
 /* The floating card's shadow, beside the card rather than on it, since the
@@ -878,13 +880,15 @@ button {
   pointer-events: none;
   -webkit-app-region: initial;
   will-change: transform, opacity;
-  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1), opacity 120ms ease-out;
+  transition: transform var(--crest-sidebar-reveal-duration) var(--crest-sidebar-reveal-easing),
+    opacity var(--crest-sidebar-reveal-duration) ease-out;
 }
 
 .sidebar-card-shadow.collapsed {
   transform: translateX(calc(-100% - 21px));
   opacity: 0;
-  transition-duration: 150ms;
+  transition: transform var(--crest-sidebar-retreat-duration) var(--crest-sidebar-retreat-easing),
+    opacity var(--crest-sidebar-retreat-duration) ease-out;
 }
 
 /* Leaving its seat, the sidebar becomes the card where it stands: the card's

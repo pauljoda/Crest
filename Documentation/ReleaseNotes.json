@@ -5953,6 +5953,10 @@
     "windows-space-swipe-smoothness": {
       "category": "internal",
       "message": "Swiping between Spaces on Windows starts without a stall, and a page a paused swipe carried partly off screen comes back whole instead of white"
+    },
+    "windows-floating-sidebar-pace": {
+      "category": "internal",
+      "message": "The floating sidebar on Windows comes out and goes on the Mac's springs"
     }
   }
 }
