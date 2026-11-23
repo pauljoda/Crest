@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "setup-window-outline-and-peek-scrim-roles",
+    "development": "chromium-upstream-158-0-8127-37",
     "nightly": "roadmap-at-crest-browser"
   }
 }
