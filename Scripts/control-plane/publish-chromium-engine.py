@@ -6,11 +6,16 @@ engine is only published when the external tree holds exactly this branch's
 host patch and overlay and its build output is current, so the release that
 downloads it by key compiles against the same engine it was published for.
 Publishing is idempotent: an engine already released under its key is left
-as it is.
+as it is, and publishing removes the engine's draft candidate.
+
+`--candidate` uploads the same verified engine to a draft release named by
+`chromium_engine.candidate_tag` instead, where a scheduled update leaves it for
+review. Release packaging never reads that release, and nothing publishes it.
 """
 import argparse
 from contextlib import nullcontext
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -33,6 +38,8 @@ def main():
     parser.add_argument("--ninja", required=True, type=Path)
     parser.add_argument("--repository", default=REPOSITORY)
     parser.add_argument("--dry-run", action="store_true", help="Verify and package without uploading")
+    parser.add_argument("--candidate", action="store_true",
+                        help="Upload to the engine's draft candidate release; publish nothing")
     args = parser.parse_args()
 
     source = args.source.resolve()
@@ -54,6 +61,7 @@ def publish(args):
     run(sys.executable, repo / "Scripts/control-plane/prepare-chromium.py", "--source", source, "--verify-only")
     key = chromium_engine.engine_key(repo)
     tag, asset = chromium_engine.release_tag(key), chromium_engine.asset_name(key)
+    candidate = chromium_engine.candidate_tag(key)
 
     # The tree must hold this branch's reviewed patch output and overlay.
     validation = run(sys.executable, repo / "Scripts/control-plane/apply-chromium-host.py",
@@ -94,8 +102,16 @@ def publish(args):
         names = {item["name"] for item in release["assets"]}
         if {asset, f"{asset}.sha256"} <= names and key in release["body"]:
             print(f"{tag} is already published.")
+            if not args.candidate and not args.dry_run:
+                remove_candidate(args.repository, candidate)
             return
         raise SystemExit("Published engine release is incomplete or has a different full key; refusing to overwrite it")
+    if args.candidate:
+        tag = candidate
+        existing = subprocess.run(["gh", "release", "view", tag, "--repo", args.repository, "--json", "isDraft"],
+                                  capture_output=True, text=True)
+        if existing.returncode == 0 and not json.loads(existing.stdout)["isDraft"]:
+            raise SystemExit(f"{tag} is published; a candidate must stay a draft")
 
     with tempfile.TemporaryDirectory(prefix="crest-engine-") as temporary:
         archive = Path(temporary) / asset
@@ -113,18 +129,37 @@ def publish(args):
             "pgoSHA256": {cpu: architecture["pgoSHA256"] for cpu, architecture in lock["architectures"].items()},
             "architectures": list(lock["architectures"]), "archiveSHA256": digest,
             "sourceCommit": run("git", "-C", repo, "rev-parse", "HEAD", capture_output=True).stdout.strip()}, indent=2) + "\n")
-        notes = (f"Chromium {lock['chromium']['version']} with Crest's native host, for release packaging.\n\n"
+        purpose = ("an unpublished candidate for review. Release packaging never reads it; a maintainer publishes "
+                   f"the engine as `{chromium_engine.release_tag(key)}`" if args.candidate else "for release packaging")
+        notes = (f"Chromium {lock['chromium']['version']} with Crest's native host, {purpose}.\n\n"
                  f"Engine key `{key}`, computed by `Scripts/control-plane/chromium_engine.py` over the "
                  f"engine inputs of commit `{run('git', '-C', repo, 'rev-parse', 'HEAD', capture_output=True).stdout.strip()}`.\n"
                  "This is not an installable browser; releases package it with Crest's UI and sign it.")
         if existing.returncode != 0:
+            title = f"Crest Chromium engine {'candidate ' if args.candidate else ''}{key[:16]}"
             run("gh", "release", "create", tag, "--repo", args.repository, "--draft", "--prerelease", "--latest=false",
-                "--title", f"Crest Chromium engine {key[:16]}", "--notes", notes)
+                "--title", title, "--notes", notes)
         # Only an unpublished draft can be resumed or replaced. The release becomes
         # visible to app packaging after all assets have uploaded successfully.
         run("gh", "release", "upload", tag, archive, checksum, provenance, "--repo", args.repository, "--clobber")
+        if args.candidate:
+            print(f"Uploaded the candidate engine to the draft {tag}.")
+            if output := os.environ.get("GITHUB_OUTPUT"):
+                with open(output, "a") as stream:
+                    stream.write(f"candidate={tag}\n")
+            return
         run("gh", "release", "edit", tag, "--repo", args.repository, "--draft=false", "--latest=false")
         print(f"Published {tag}.")
+        remove_candidate(args.repository, candidate)
+
+
+def remove_candidate(repository, candidate):
+    """Delete the engine's draft candidate, now that the engine is published."""
+    found = subprocess.run(["gh", "release", "view", candidate, "--repo", repository, "--json", "isDraft"],
+                           capture_output=True, text=True)
+    if found.returncode == 0 and json.loads(found.stdout)["isDraft"]:
+        run("gh", "release", "delete", candidate, "--repo", repository, "--yes")
+        print(f"Removed the draft candidate {candidate}.")
 
 
 if __name__ == "__main__":

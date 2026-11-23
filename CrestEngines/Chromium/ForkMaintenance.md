@@ -78,16 +78,28 @@ generator. The performance preset links with LLD and does not use them.
 Crest follows the upstream Stable channel for Mac; `fork.json` names the channel
 and the chromiumdash feed it is read from. A new milestone ships about every two
 weeks, with security fixes on the current one in between, so updating is routine
-work. Every update starts with
-a plan that changes nothing:
+work.
+
+chromiumdash lists early stable builds among its stable releases: a new
+milestone reaches a small share of people about a week before everyone. Google's
+release notes tell them apart by title. Only a "Stable Channel Update for
+Desktop" note promotes a milestone to full stable; "Early Stable Update for
+Desktop" and "Extended Stable Update for Desktop" notes never do. A release is
+eligible when it is newer than the pinned one and its milestone is no newer than
+the last one a full stable note promoted, which keeps respins that have no note
+of their own. A release of a newer milestone is reported as early stable. When
+the notes can't be read, only fixes on the pinned milestone are eligible.
+
+Every update starts with a plan that changes nothing:
 
 ```sh
 python Scripts/control-plane/chromium-fork.py check-upstream
 python Scripts/control-plane/chromium-fork.py plan --version 157.0.8103.80
 ```
 
-`check-upstream` names the newest release on the pinned milestone and the newest
-milestone, each with what Google's release notes say about it: how many security
+`check-upstream` names the newest release on the pinned milestone, the newest full
+stable milestone and the newest early stable release, each with what Google's
+release notes say about it: how many security
 fixes it carries, how many are Critical or High, whether one fixes a vulnerability
 exploited in the wild, and whether it is an early stable release, which reaches a
 small share of people about a week before everyone. A release with no note of its
@@ -167,7 +179,7 @@ isolated copy (`CREST_ISOLATED_SESSION=1`).
 | A fix on the pinned milestone | `plan`, `update`, open the PR while the `--distribution` package is tested | Development once a maintainer publishes the engine and merges, then stable with the next release |
 | A fix for a vulnerability exploited in the wild | The same, at once: other engine work in the workspace waits | Stable the same day, once Development is checked |
 | A toolchain change on the pinned milestone | `update` prepares a fresh source | As a fix |
-| A new milestone | Days ahead, `plan --allow-major` against its early stable release; rebase the patches it reports and review its requests. Once it is stable, `update --allow-major` | When its PR is reviewed and merged |
+| A new milestone | The schedule checks Crest's patches against its early stable release and opens a draft listing what a session must rebase and which requests to review. Once it is full stable, the schedule builds it, or opens a rebase draft when its patches still stop the build. By hand: `plan --allow-major`, then `update --allow-major` | When its PR is reviewed and merged |
 
 A milestone prepares its source beside the pinned one. Once its engine is
 published and its PR merged, run `chromium-fork.py prune` from the merged
@@ -311,20 +323,25 @@ Configure these repository variables:
 | `CHROMIUM_SDK` | Absolute path to the SDK pinned by the source lock |
 | `CHROMIUM_BUILD_JOBS` | Compiler parallelism, default 8 |
 | `CHROMIUM_CI_ENABLED` | `true` allows manual and scheduled engine builds |
-| `CHROMIUM_UPSTREAM_ENABLED` | `true` builds new fixes on the pinned milestone every six hours and opens a draft PR for each |
+| `CHROMIUM_UPSTREAM_ENABLED` | `true` checks every six hours, builds each new full stable release and opens a draft PR for it, and checks Crest's patches against each early stable milestone |
+| `CHROMIUM_UPDATE_REVIEWER` | The maintainer's GitHub login. Each draft is assigned to them with a review request, and a fix exploited in the wild mentions them |
 
 The workflow must be present on the default branch for its schedule to run. Its
 `fork.json` integration branch must also contain the maintenance scripts. Use the
 Actions UI or `gh workflow run chromium.yml --ref <workflow-branch> -f operation=check`
 to check upstream. `operation=build` builds and publishes the pinned engine;
-`operation=update` builds a released update and opens it as a draft PR.
-`upstream_version` can select a specific release, and `allow_major=true` allows
-a milestone. The repository must allow Actions to create pull requests.
+`operation=update` builds a released update and opens it as a draft PR;
+`operation=preflight` checks Crest's patches against the newest early stable
+release. `upstream_version` can select a specific release, and
+`allow_major=true` allows a milestone. The repository must allow Actions to
+create pull requests.
 
 An update PR contains the new pins, host hashes, a patch version increment, a
 release-note entry, and the plan's summary. Its engine is built in the workspace
-and not published: a maintainer tests it, publishes it with
-`publish-chromium-engine.py` and then merges. A release run that finds no engine
+and not published. It waits in a draft release, `chromium-engine-candidate-<key>`,
+which no release workflow or install script reads, since they ask only for
+`chromium-engine-<key>`. A maintainer tests it, publishes it with
+`publish-chromium-engine.py`, which removes the candidate, and then merges. A release run that finds no engine
 for its commit builds one on the Mac, so publish before merging. App release jobs
 consume only the artifact whose engine key matches their own source. No signing
 job reads a mutable local build directory.
@@ -352,13 +369,30 @@ experimental feed and its `-webkit` twin, which offers the same installer.
 Keep `CHROMIUM_UPSTREAM_ENABLED=false` during initial setup; manual updates can
 still build a candidate for review. The six-hour schedule runs from `chromium.yml`
 on the default branch, checks the integration branch named in `fork.json`, and
-reports the newest release with its release-note summary. Turning the variable on
-lets it build a new fix on the pinned milestone and open a draft PR with the plan,
-the release notes and how long each step took. While a session or another engine
-build holds the workspace lock or runs Ninja, a run leaves a notice and the next
-check tries again. A release gets one PR, and a closed PR stays closed; while one
-is open, the schedule waits for it. A new milestone is only reported, because its
-patches and requests need a review.
+reports the newest release with its release-note summary. With the variable on:
+
+- **A full stable release**, a fix or a new milestone, is planned on the build
+  Mac first. When every patch applies, the Mac builds it and opens a draft PR
+  with the plan, the release notes and how long each step took. When the plan
+  stops on Crest's patches, the Mac builds nothing and opens a draft that
+  carries the patches as the plan rebased them and lists what a session must
+  resolve. A milestone whose fresh source doesn't fit beside the pinned one
+  removes the pinned source first, once its engine is published; otherwise the
+  run stops and says how much space it needs.
+- **An early stable release** of a newer milestone is planned once, and a draft
+  lists the patches a session must rebase and the requests to review, or says
+  every patch applies. Nothing is built for it. The milestone's update closes it.
+- **Each draft** is assigned to `CHROMIUM_UPDATE_REVIEWER`, who is asked to
+  review it. When Google's notes say a release fixes a vulnerability exploited in
+  the wild, the draft's title and label say so, it mentions the reviewer, and the
+  run fails so that Actions emails about it.
+
+While a session or another engine build holds the workspace lock or runs Ninja,
+a build leaves a notice and the next check tries again; planning changes no
+source and runs anyway. A release gets one PR, and a closed PR stays closed;
+while one is open, including a pull request a session opened for the release,
+the schedule waits for it. Until Google publishes a release's source archive,
+a few hours after the release, the run notes it and the next check plans it.
 
 Nothing the schedule builds is published or merged without a maintainer. Turn
 `CHROMIUM_UPSTREAM_ENABLED=false` to stop scheduled builds, or

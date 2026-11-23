@@ -115,6 +115,12 @@ def release_tag(key: str) -> str:
     return f"chromium-engine-{key[:16]}"
 
 
+def candidate_tag(key: str) -> str:
+    """The draft release a built but unpublished engine waits in. Release
+    packaging asks only for `release_tag`, so it never reads one."""
+    return f"chromium-engine-candidate-{key[:16]}"
+
+
 def asset_name(key: str) -> str:
     return f"Crest-Chromium-Engine-{key[:16]}-universal.zip"
 

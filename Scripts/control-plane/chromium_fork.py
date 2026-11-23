@@ -26,6 +26,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+import chromium_artifact
 import chromium_engine
 
 REPO = Path(__file__).resolve().parents[2]
@@ -45,6 +46,8 @@ MACHINES = {"arm64": "arm64", "x64": "x86_64"}
 MACH_O_MAGIC = (bytes.fromhex("cafebabe"), bytes.fromhex("cffaedfe"), bytes.fromhex("cefaedfe"))
 # Present while a tree is being moved to a new release in place.
 ADVANCING = "advancing.json"
+# The free space a fresh source preparation requires.
+PREPARE_FREE_GIB = 50
 ARCHIVE = "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-{version}-lite.tar.xz"
 CIPD = "https://chrome-infra-packages.appspot.com/prpc/cipd.Repository/ResolveVersion"
 # What gclient sets for a source-archive checkout on this host, as
@@ -57,6 +60,9 @@ CIPD_PLATFORM = {"platform": "mac-arm64", "os": "mac", "arch": "arm64"}
 # Google's release notes, which say what each release fixes and whether it is an
 # early stable build that reaches only a small share of people first.
 RELEASE_NOTES = "https://chromereleases.googleblog.com/feeds/posts/default?alt=json&max-results=80"
+# The title of the note that promotes a desktop release to everyone on the
+# Stable channel. Early and Extended Stable notes have titles of their own.
+FULL_STABLE = "Stable Channel Update for Desktop"
 NOTED_VERSIONS = re.compile(r"\b(\d+\.\d+\.\d+\.)(\d+)((?:/\.\d+)*)")
 SEVERITY = re.compile(r"\b(Critical|High|Medium|Low)\s+(CVE-\d{4}-\d+)")
 # Upstream files an update reads to find what changed under Crest's overlay and packaging.
@@ -67,6 +73,10 @@ ANNOTATION = re.compile(r'<item id="([^"]+)"')
 PURE_VIRTUAL = re.compile(r"\bvirtual\s[^;{}]*?=\s*0\s*;")
 INCLUDE = re.compile(r'^\s*#\s*(?:include|import)\s+"([^"]+)"', re.MULTILINE)
 COMPILED = (".c", ".cc", ".cpp", ".m", ".mm")
+
+
+class ArchiveNotPublished(ValueError):
+    """Google publishes a release's source archive a few hours after the release."""
 
 
 def run(*args, cwd=None, capture=False):
@@ -96,19 +106,60 @@ def release_version(version):
     return tuple(map(int, version.split(".")))
 
 
-def select_update(current, releases, allow_major=False):
-    """The newest release to update to: a fix on the pinned milestone, or a new milestone when allowed."""
+def select_update(current, releases, allow_major=False, stable_milestone=None):
+    """The newest release to update to: a fix on the pinned milestone, or a new milestone when allowed.
+
+    chromiumdash lists early stable builds among stable releases. A release
+    past `stable_milestone`, the newest milestone Google's notes promote to
+    full stable, is one of those: never a candidate, and the newest is
+    reported as `earlyStable`. Without that milestone, only the pinned one is
+    eligible and no release is called early stable.
+    """
     current_version = release_version(current)
-    candidates = [version for version in releases
-                  if VERSION.fullmatch(version) and release_version(version) > current_version]
-    eligible = [version for version in candidates
-                if allow_major or release_version(version)[0] == current_version[0]]
+    newer = [version for version in releases
+             if VERSION.fullmatch(version) and release_version(version) > current_version]
+    checked = stable_milestone is not None
+    ceiling = stable_milestone if checked else current_version[0]
+    stable = [version for version in newer if release_version(version)[0] <= ceiling]
+    early = [version for version in newer if release_version(version)[0] > ceiling]
+    eligible = [version for version in stable if allow_major or release_version(version)[0] == current_version[0]]
+
+    def newest(versions):
+        return max(versions, key=release_version) if versions else None
+
     return {
         "current": current,
-        "candidate": max(eligible, key=release_version) if eligible else None,
-        "latest": max(candidates, key=release_version) if candidates else current,
-        "majorReviewRequired": any(release_version(version)[0] > current_version[0] for version in candidates),
+        "candidate": newest(eligible),
+        "latest": newest(stable) or current,
+        "earlyStable": newest(early) if checked else None,
+        "stableMilestone": stable_milestone,
+        "majorReviewRequired": any(release_version(version)[0] > current_version[0] for version in stable),
     }
+
+
+def release_feed():
+    """Google's release notes feed, or None when it can't be read."""
+    try:
+        with urllib.request.urlopen(RELEASE_NOTES, timeout=60) as response:
+            return json.load(response)
+    except (OSError, ValueError):
+        return None
+
+
+def stable_milestone(feed):
+    """The newest milestone Google's release notes promote to full stable on desktop, or None without notes.
+
+    Only a note titled "Stable Channel Update for Desktop" counts, and it names
+    its own release before any other version.
+    """
+    milestones = []
+    for entry in (feed or {}).get("feed", {}).get("entry", []):
+        if entry.get("title", {}).get("$t", "").strip() != FULL_STABLE:
+            continue
+        text = html.unescape(re.sub(r"<[^>]+>", " ", entry.get("content", {}).get("$t", "")))
+        if found := NOTED_VERSIONS.search(text):
+            milestones.append(release_version(found[1] + found[2])[0])
+    return max(milestones, default=None)
 
 
 def upstream_releases(policy):
@@ -266,8 +317,9 @@ class Workspace:
         elif self.source.exists() or self.source.with_name("src.partial").exists():
             raise ValueError(f"Incomplete preparation at {self.directory}. Inspect it before removing or resuming it.")
         else:
-            if shutil.disk_usage(self.directory).free < 50 * 1024**3:
-                raise ValueError("A fresh Chromium source preparation needs at least 50 GiB free; existing builds are retained")
+            if (free := shutil.disk_usage(self.directory).free) < PREPARE_FREE_GIB * 1024**3:
+                raise ValueError(f"A fresh Chromium source preparation needs at least {PREPARE_FREE_GIB} GiB free and "
+                                 f"{free // 1024**3} GiB is free; existing builds are retained")
             self.script("prepare-chromium.py", "--source", self.source, "--downloads", self.downloads)
             write_json(marker, {"preparationKey": self.key})
 
@@ -592,9 +644,12 @@ def performance_configuration_matches(source, lock, sdk=None, cpu="arm64"):
 
 def download(url, destination):
     destination.parent.mkdir(parents=True, exist_ok=True)
-    partial = destination.with_suffix(destination.suffix + ".partial")
+    # Planning downloads without the workspace lock, so each download writes
+    # its own file and installs it whole.
+    descriptor, name = tempfile.mkstemp(dir=destination.parent, prefix=destination.name + ".", suffix=".partial")
+    partial = Path(name)
     try:
-        with urllib.request.urlopen(url, timeout=120) as response, partial.open("wb") as output:
+        with os.fdopen(descriptor, "wb") as output, urllib.request.urlopen(url, timeout=120) as response:
             shutil.copyfileobj(response, output)
         partial.replace(destination)
     finally:
@@ -752,7 +807,7 @@ def candidate_lock(repo, root, version):
         with urllib.request.urlopen(url + ".hashes", timeout=120) as response:
             manifest = response.read().decode()
     except urllib.error.HTTPError as error:
-        raise ValueError(f"Chromium has not published the {version} source archive yet") from error
+        raise ArchiveNotPublished(f"Chromium has not published the {version} source archive yet") from error
     checksums = re.findall(r"^sha256\s+([a-f0-9]{64})\s+(\S+)\s*$", manifest, re.MULTILINE)
     if len(checksums) != 1 or checksums[0][1] != url.rsplit("/", 1)[1]:
         raise ValueError("Source manifest does not identify the requested archive")
@@ -1044,8 +1099,34 @@ def deps_dependencies(text):
         return {"src/" + path.removeprefix("src/"): value for path, value in module.deps_dependencies(Path(temporary)).items()}
 
 
-def prepare_update(repo, root, version, allow_major=False, timings=None):
-    """Plan the update, then prepare its source: the pinned tree advanced in place, or a fresh one."""
+def make_room_for_milestone(root, pinned, workspace, pinned_key, repository=None):
+    """Remove the pinned source when a new milestone's fresh source doesn't fit beside it.
+
+    Once Google promotes a milestone to full stable, the one before it gets no
+    more stable fixes, so its source only rebuilds an engine that isn't
+    published yet. An unpublished pinned engine keeps its source, and the
+    update stops saying how much space it needs.
+    """
+    free = shutil.disk_usage(root).free
+    if free >= PREPARE_FREE_GIB * 1024**3 or not pinned.directory.is_dir() or pinned.directory == workspace.directory:
+        return []
+    repository = repository or os.environ.get("GITHUB_REPOSITORY") or chromium_artifact.REPOSITORY
+    tag = chromium_engine.release_tag(pinned_key)
+    if not chromium_artifact.release_ready(chromium_artifact.published_release(repository, pinned_key), pinned_key):
+        version = workspace.lock["chromium"]["version"]
+        raise ValueError(f"A fresh Chromium {version} source needs {PREPARE_FREE_GIB} GiB free and "
+                         f"{free // 1024**3} GiB is free. The pinned engine {tag} isn't published, so its "
+                         "source stays: publish it or free the space, then run the update again.")
+    return prune_sources(root, {workspace.directory.name})
+
+
+def prepare_update(repo, root, version, allow_major=False, timings=None, replace_published_pinned=False):
+    """Plan the update, then prepare its source: the pinned tree advanced in place, or a fresh one.
+
+    With `replace_published_pinned`, a milestone whose fresh source doesn't fit
+    beside the pinned one removes the pinned source first, when its engine is
+    published.
+    """
     timings = {} if timings is None else timings
     with timed(timings, "plan"):
         plan, candidate = plan_update(repo, root, version, allow_major)
@@ -1055,6 +1136,9 @@ def prepare_update(repo, root, version, allow_major=False, timings=None):
     lock_path, host_path = repo / ENGINE / "source.lock.json", repo / ENGINE / "host-inputs.json"
     original_lock, original_host = lock_path.read_bytes(), host_path.read_bytes()
     pinned = Workspace(root, repo)
+    # The pinned engine, whose source a milestone may replace once it is published.
+    replace_pinned = replace_published_pinned and plan.get("milestone")
+    pinned_key = chromium_engine.engine_key(repo) if replace_pinned else None
     if (pinned.directory / ADVANCING).exists():
         raise ValueError(f"An advance to a new release stopped partway at {pinned.directory}. Inspect it before updating.")
     # Only a pinned tree that a build installed Crest's host in can be reversed and advanced.
@@ -1072,6 +1156,9 @@ def prepare_update(repo, root, version, allow_major=False, timings=None):
                 # which its branch still builds from, and this update's; any other is superseded.
                 for name in prune_sources(root, {pinned.directory.name, workspace.directory.name}):
                     print(f"Removed superseded Chromium source {name}", flush=True)
+                if replace_pinned:
+                    for name in make_room_for_milestone(root, pinned, workspace, pinned_key):
+                        print(f"Removed the pinned Chromium source {name}; its engine is published", flush=True)
                 workspace.prepare()
                 refresh_host_inputs(repo, workspace.source, workspace.directory / "host.json")
         return Workspace(root, repo), plan
