@@ -613,14 +613,17 @@ def launch_directory(prefix, parent=None):
     Services records each launched app, and the helper apps inside it, a moment
     after it starts; once the directory is gone, every app that was in it is
     unregistered, so no record outlives its copy."""
-    with tempfile.TemporaryDirectory(prefix=prefix, dir=parent) as temporary:
-        root = Path(temporary).resolve()
-        try:
-            yield root
-        finally:
-            apps = [path for path in root.rglob("*.app") if path.is_dir() and not path.is_symlink()]
-    for app in apps:
-        subprocess.run([LSREGISTER, "-u", str(app)], capture_output=True)
+    apps = []
+    try:
+        with tempfile.TemporaryDirectory(prefix=prefix, dir=parent) as temporary:
+            root = Path(temporary).resolve()
+            try:
+                yield root
+            finally:
+                apps = [path for path in root.rglob("*.app") if path.is_dir() and not path.is_symlink()]
+    finally:
+        for app in apps:
+            subprocess.run([LSREGISTER, "-u", str(app)], capture_output=True)
 
 
 def host_copy(browser, copy, marker):
@@ -781,6 +784,8 @@ def open_in_product_profile(executable, home, url, machine=None):
         finally:
             stop_process_group(process)
             stop_helpers(str(data))
+        if process.returncode != 0:
+            raise ValueError(f"{executable.name} exited with status {process.returncode} after loading {url}")
         output.seek(0)
         title = re.search(r"<title>([^<]*)</title>", output.read().decode(errors="replace"))
     return title[1] if title else None

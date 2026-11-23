@@ -218,7 +218,7 @@ this part stays manual. It is required before publishing any engine:
    `CREST_ISOLATED_SESSION=1` with a persistence ID, and `--use-mock-keychain`.
    Finish Setup, sign in to a local fixture site in two Spaces, leave tabs open
    in each, and install an extension from the Chrome Web Store in one. Quit
-   Crest.
+   Crest, and copy that `HOME` before anything opens it again.
 3. Open the new engine's copy the same way on that `HOME`, then quit and open
    it again. Each time, require:
    - the browser's helpers carry
@@ -228,9 +228,9 @@ this part stays manual. It is required before publishing any engine:
    - each Space reopens its tabs, still sends its own fixture cookie, and keeps
      the extension installed and running;
    - no profile's `Secure Preferences` gained a `prefs.preference_reset_time`.
-4. Repeat step 3 from a fresh copy of the step 2 `HOME`, running the copy's
-   executable with `arch -x86_64` and the same environment and switches, which
-   runs it under Rosetta.
+4. Repeat step 3 on the copy saved in step 2, which the new engine has not
+   opened yet, running the copy's executable with `arch -x86_64` and the same
+   environment and switches, which runs it under Rosetta.
 
 ### Deciding what ships
 
