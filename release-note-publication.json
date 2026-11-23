@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "dark-page-opens-without-white-flash",
+    "development": "palette-word-leads-to-open-tab-or-site",
     "nightly": "roadmap-at-crest-browser"
   }
 }
