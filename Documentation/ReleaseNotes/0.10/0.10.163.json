@@ -1,10 +1,9 @@
 {
   "entries": [
     {
-      "id": "getting-started-without-eyebrows",
+      "id": "common-lists-menu-icons",
       "category": "improved",
-      "message": "Getting Started no longer labels its lessons Try It or its practice pages Example Page and Split View Practice.",
-      "platforms": ["mac"]
+      "message": "The menu of the Archive, History and Downloads button beside the Space switcher shows each list's icon."
     }
   ]
 }

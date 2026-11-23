@@ -1,9 +1,9 @@
 {
   "entries": [
     {
-      "id": "file-open-failure-and-download-started-notices",
+      "id": "extension-action-menu-icons",
       "category": "improved",
-      "message": "When a page can't read files you chose, and when a download starts with the sidebar hidden or Reduce Motion on, Crest says so in the notice at the top of the window instead of an alert or a box in the corner.",
+      "message": "Every row of an extension's action menu now shows an icon.",
       "platforms": ["mac"]
     }
   ]

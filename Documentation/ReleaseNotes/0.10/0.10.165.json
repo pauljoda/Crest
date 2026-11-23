@@ -1,9 +1,10 @@
 {
   "entries": [
     {
-      "id": "counted-copy-plural-rules",
+      "id": "settings-destinations-name-and-icon",
       "category": "improved",
-      "message": "Counts such as selected tabs, passwords, import warnings, Sub-Spaces and downloads in progress follow each language's plural rules, and the password count and deletion message in Passwords settings can be translated."
+      "message": "The list of Settings pages on iPhone and iPad shows each page's icon and name without a line of description under it.",
+      "platforms": ["ios"]
     }
   ]
 }

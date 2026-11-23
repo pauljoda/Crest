@@ -1,9 +1,9 @@
 {
   "entries": [
     {
-      "id": "extension-action-menu-icons",
-      "category": "improved",
-      "message": "Every row of an extension's action menu now shows an icon.",
+      "id": "chromium-spaces-keep-profiles-after-158",
+      "category": "fixed",
+      "message": "After updating to Chromium 158, every Space opens with its own extensions, sign-ins and sessions again instead of starting empty.",
       "platforms": ["mac"]
     }
   ]

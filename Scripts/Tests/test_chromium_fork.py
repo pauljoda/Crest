@@ -17,23 +17,76 @@ sys.path.insert(0, str(SCRIPTS))
 import chromium_fork
 from chromium_fork import (ADVANCING, ENGINE, Workspace, advance_obstacles, check_build_patches, prepare_update,
                            prune_downloads, prune_sources, rebase_patches, refresh_host_inputs, restore_host_base,
-                           select_update, sha256)
+                           select_update, sha256, stable_milestone)
 from chromium_artifact import release_ready
 from chromium_engine import asset_name, host_patch
 
 spec = importlib.util.spec_from_file_location("publish_chromium_update", SCRIPTS / "publish-chromium-update.py")
 publication = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(publication)
+spec = importlib.util.spec_from_file_location("resolve_chromium_upstream", SCRIPTS / "resolve-chromium-upstream.py")
+resolution = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(resolution)
+
+
+def note(title, text):
+    return {"title": {"$t": title}, "content": {"$t": f"<p>{text}</p>"}, "published": {"$t": "2026-11-17T11:12:07Z"}}
+
+
+# Google's notes as they read when 158 was promoted and 159 began early stable.
+FEED = {"feed": {"entry": [
+    note("Early Stable Update for Desktop", "The Stable channel has been updated to 159.0.8154.13/.14 for Windows, "
+         "Mac as part of our early stable release to a small percentage of users."),
+    note("Chrome Beta for Desktop Update", "The Beta channel has been updated to 159.0.8154.13 for Windows, Mac and Linux."),
+    note("Stable Channel Update for ChromeOS / ChromeOS Flex", "Browser version 158.0.8127.65 for most ChromeOS devices."),
+    note("Stable Channel Update for Desktop", "The Chrome team is delighted to announce the promotion of Chrome 158 to "
+         "the stable channel. Chrome 158.0.8127.36 (Linux) 158.0.8127.36/.37 (Windows, Mac) contains a number of "
+         "fixes. Critical CVE-2026-1000001: Use after free. Fixed in 159.0.8154.2."),
+    note("Extended Stable Update for Desktop", "The Extended Stable channel has been updated to 156.0.8078.108/.109."),
+]}}
 
 
 class UpstreamSelectionTests(unittest.TestCase):
     def test_patch_releases_stay_eligible_after_the_next_milestone_ships(self):
         releases = ["157.0.8103.26", "156.0.8078.80", "156.0.8078.47", "unrecognized"]
-        result = select_update("156.0.8078.47", releases)
+        result = select_update("156.0.8078.47", releases, stable_milestone=157)
         self.assertEqual(result["candidate"], "156.0.8078.80")
         self.assertEqual(result["latest"], "157.0.8103.26")
         self.assertTrue(result["majorReviewRequired"])
-        self.assertEqual(select_update("156.0.8078.47", releases, True)["candidate"], "157.0.8103.26")
+        self.assertEqual(select_update("156.0.8078.47", releases, True, 157)["candidate"], "157.0.8103.26")
+
+    def test_only_a_full_stable_desktop_note_promotes_a_milestone(self):
+        self.assertEqual(stable_milestone(FEED), 158)
+        self.assertIsNone(stable_milestone(None))
+        # chromiumdash lists 159's early stable build among stable releases.
+        releases = ["159.0.8154.13", "157.0.8103.81", "158.0.8127.37", "158.0.8127.36", "157.0.8103.80"]
+        result = select_update("157.0.8103.80", releases, True, stable_milestone(FEED))
+        self.assertEqual((result["candidate"], result["earlyStable"]), ("158.0.8127.37", "159.0.8154.13"))
+        # A respin without a note of its own stays a fix on the pinned milestone.
+        self.assertEqual(select_update("157.0.8103.80", releases, False, 158)["candidate"], "157.0.8103.81")
+        # Without the notes, nothing past the pinned milestone is trusted to be full stable.
+        unchecked = select_update("157.0.8103.80", releases, True, None)
+        self.assertEqual((unchecked["candidate"], unchecked["earlyStable"]), ("157.0.8103.81", None))
+
+    def test_a_schedule_takes_a_full_stable_milestone_and_checks_early_stable_once(self):
+        releases = ["159.0.8154.13", "158.0.8127.37", "157.0.8103.81"]
+        inputs = dict(event="schedule", operation="check", requested="", allow_major=False, upstream_enabled=True,
+                      build_enabled=True, current="157.0.8103.81", releases=releases, feed=FEED, reviews=[])
+        with mock.patch.object(resolution, "release_notes", return_value={"exploited": False}):
+            outputs, _, _ = resolution.resolve(**inputs)
+            self.assertEqual((outputs["operation"], outputs["version"], outputs["major"], outputs["preflight"]),
+                             ("update", "158.0.8127.37", "true", "159.0.8154.13"))
+            checked = [{"headRefName": "codex/chromium-preflight-159.0.8154.13-abc", "state": "CLOSED", "url": "u"},
+                       {"headRefName": "chromium-158", "state": "OPEN", "url": "v",
+                        "title": "Update Chromium to 158.0.8127.37"}]
+            outputs, _, _ = resolution.resolve(**inputs | {"reviews": checked})
+            self.assertEqual((outputs["operation"], outputs["preflight"]), ("check", ""))
+            outputs, _, _ = resolution.resolve(**inputs | {"current": "158.0.8127.37"})
+            self.assertEqual((outputs["operation"], outputs["preflight"]), ("check", "159.0.8154.13"))
+            # Asking for the early stable release by name doesn't get it built.
+            with self.assertRaisesRegex(SystemExit, "full stable milestone 158"):
+                resolution.resolve(**inputs | {"event": "workflow_dispatch", "operation": "update",
+                                               "requested": "159.0.8154.13", "allow_major": True})
 
     def test_updates_advance_but_downgrades_and_equal_versions_do_not(self):
         releases = ["156.0.8078.80", "156.0.8078.79"]
@@ -293,6 +346,28 @@ class UpdatePlanTests(unittest.TestCase):
             (overlay / "crest_elsewhere.cc").write_text("")
             with self.assertRaises(ValueError):
                 chromium_fork.require_overlay_compiled(root / "repo", root / "src", ninja)
+
+    def test_a_milestone_replaces_the_pinned_source_only_once_its_engine_is_published(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            pinned_directory, release_directory = root / "sources" / ("a" * 20), root / "sources" / ("b" * 20)
+            pinned_directory.mkdir(parents=True)
+            pinned = mock.Mock(directory=pinned_directory)
+            release = mock.Mock(directory=release_directory, lock={"chromium": {"version": "158.0.8127.37"}})
+            full = mock.Mock(free=20 * 1024**3)
+            with mock.patch.object(chromium_fork.shutil, "disk_usage", return_value=full), \
+                    mock.patch.object(chromium_fork, "building", return_value=False), \
+                    mock.patch.object(chromium_fork.chromium_artifact, "published_release", return_value=None):
+                with self.assertRaisesRegex(ValueError, "needs 50 GiB free and 20 GiB is free"):
+                    chromium_fork.make_room_for_milestone(root, pinned, release, "k" * 64, "owner/repo")
+                self.assertTrue(pinned_directory.is_dir())
+            with mock.patch.object(chromium_fork.shutil, "disk_usage", return_value=full), \
+                    mock.patch.object(chromium_fork, "building", return_value=False), \
+                    mock.patch.object(chromium_fork.chromium_artifact, "release_ready", return_value=True), \
+                    mock.patch.object(chromium_fork.chromium_artifact, "published_release", return_value={}):
+                self.assertEqual(chromium_fork.make_room_for_milestone(root, pinned, release, "k" * 64, "owner/repo"),
+                                 ["a" * 20])
+            self.assertFalse(pinned_directory.exists())
 
     def test_pruning_waits_for_a_running_build(self):
         with tempfile.TemporaryDirectory() as temporary:

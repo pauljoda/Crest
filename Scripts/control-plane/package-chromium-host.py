@@ -14,7 +14,9 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from chromium_engine import ENGINE_HELPER_KINDS, ENGINE_HELPER_NAME, unknown_engine_helpers  # noqa: E402
+import chromium_engine  # noqa: E402
 import chromium_fork  # noqa: E402
+from repository import REPOSITORY  # noqa: E402
 
 
 # Chromium's browser-process device access (chrome/app/app-entitlements.plist);
@@ -72,33 +74,70 @@ def require_helper_entitlements(frameworks):
             raise SystemExit(f"{helper.name} is signed {'with' if has_jit else 'without'} the JIT entitlement")
 
 
+def probe_copy(output, probe, identity, markers=()):
+    """Clone the signed package to `probe` with only the host `markers` given,
+    under its own identity, so it never reads the installed Crest's
+    preferences. Only the outer app is re-sealed, so the executable, the
+    framework and the helpers are exactly the ones that ship."""
+    subprocess.run(["ditto", str(output), str(probe)], check=True)
+    for marker in chromium_fork.HOST_MARKERS:
+        (probe / "Contents/Resources" / marker).unlink(missing_ok=True)
+    for marker in markers:
+        (probe / "Contents/Resources" / marker).write_text("Package probe.\n")
+    (probe / "Contents/embedded.provisionprofile").unlink(missing_ok=True)
+    info_path = probe / "Contents/Info.plist"
+    with info_path.open("rb") as stream:
+        info = plistlib.load(stream)
+    info["CFBundleIdentifier"] += ".package-probe"
+    with info_path.open("wb") as stream:
+        plistlib.dump(info, stream)
+    subprocess.run(["codesign", "--force", "--options", "runtime", "--sign", identity, str(probe)], check=True)
+
+
 def require_package_renders_pages(output, identity):
     """Run the signed package's own helpers and require a page's JavaScript to run.
 
     Unsigned builds pass everything a hardened signature can break, so this is
     the check that a release can load pages at all. It runs a clone of the
     package with its host markers removed, which makes it plain headless
-    Chromium; only the outer app is re-sealed, so the helpers are exactly the
-    ones that ship."""
-    with tempfile.TemporaryDirectory(prefix="crest-package-probe-") as temporary:
-        # Resolved, because the temporary directory is reached through the /var
-        # symlink and Chromium's sandbox refuses extensions for symlinked paths.
-        root = Path(temporary).resolve()
+    Chromium."""
+    # Resolved, because the temporary directory is reached through the /var
+    # symlink and Chromium's sandbox refuses extensions for symlinked paths.
+    with chromium_fork.launch_directory("crest-package-probe-") as root:
         probe = root / "Probe.app"
-        subprocess.run(["ditto", str(output), str(probe)], check=True)
-        for marker in ("Crest-App-Owned-Host", "Crest-Native-Host", "Crest-Isolated-Experiment"):
-            (probe / "Contents/Resources" / marker).unlink(missing_ok=True)
-        (probe / "Contents/embedded.provisionprofile").unlink(missing_ok=True)
-        info_path = probe / "Contents/Info.plist"
-        with info_path.open("rb") as stream:
-            info = plistlib.load(stream)
-        # Its own identity, so it never reads the installed Crest's preferences.
-        info["CFBundleIdentifier"] += ".package-probe"
-        with info_path.open("wb") as stream:
-            plistlib.dump(info, stream)
-        subprocess.run(["codesign", "--force", "--options", "runtime", "--sign", identity, str(probe)], check=True)
+        probe_copy(output, probe, identity)
         chromium_fork.check_renders_page(probe / "Contents/MacOS/Chromium", root, timeout=180)
     print("The signed package loaded a page.")
+
+
+def require_package_opens_crest_profile_folder(output, identity):
+    """Launch the signed package as people do, with no profile folder: a
+    product copy must open Crest's own folder and a review copy must refuse.
+    The copies keep the executable and framework that ship."""
+    with chromium_fork.launch_directory("crest-package-launch-") as root:
+        product, experiment = root / "Product.app", root / "Experiment.app"
+        probe_copy(output, product, identity, (chromium_fork.PRODUCT_HOST,))
+        probe_copy(output, experiment, identity, (chromium_fork.EXPERIMENT_HOST,))
+        chromium_fork.check_launches_without_profile_folder(product, experiment, root)
+    print("Launched without a profile folder, the package opened Crest's own; a review copy refused.")
+
+
+def require_package_opens_previous_profiles(output, identity, repo):
+    """Require the signed package's engine to open, unchanged, a profile the
+    newest stable release's engine made in Crest's folder: still signed in to
+    a local site, with no tracked setting reset."""
+    repository = os.environ.get("GITHUB_REPOSITORY") or REPOSITORY
+    key = chromium_fork.stable_engine_key(repo, repository)
+    if key == chromium_engine.engine_key(repo):
+        print("This is the stable release's engine; there is no earlier profile to open.")
+        return
+    with chromium_fork.launch_directory("crest-package-upgrade-") as root:
+        previous = chromium_fork.published_engine(key, root / "previous", repository)
+        probe = root / "Probe.app"
+        probe_copy(output, probe, identity)
+        chromium_fork.check_profile_upgrade(probe / "Contents/MacOS/Chromium", previous / "Contents/MacOS/Chromium",
+                                            root)
+    print(f"The package opened {chromium_engine.release_tag(key)}'s profile signed in, with no setting reset.")
 
 
 def remove_engine_alerts_helper(frameworks):
@@ -261,6 +300,11 @@ def main():
         parser.error("Entitlements belong to the product identity; review packages preserve the existing signature")
     if not (browser / "Contents/Info.plist").is_file():
         parser.error("Provide a built Chromium app")
+    if not args.baseline:
+        try:
+            chromium_fork.require_crest_launch(browser)
+        except ValueError as error:
+            parser.error(str(error))
     if not args.baseline and (ui is None or core is None or not core.is_file()
                               or not (ui / "Resources/Info.plist").is_file()):
         parser.error("Provide the linked browser, native UI framework, and NativeAOT library")
@@ -471,7 +515,12 @@ def main():
     subprocess.run(["codesign", "--verify", "--deep", "--strict", str(output)], check=True)
     if args.distribution and not args.baseline:
         require_helper_entitlements(frameworks)
-        require_package_renders_pages(output, args.signing_identity)
+        try:
+            require_package_renders_pages(output, args.signing_identity)
+            require_package_opens_crest_profile_folder(output, args.signing_identity)
+            require_package_opens_previous_profiles(output, args.signing_identity, repo)
+        except ValueError as error:
+            raise SystemExit(str(error)) from None
     if args.product:
         print(f"Packaged {output} with Crest's product identity. It launches without switches and registers "
               "for HTTP, HTTPS and HTML documents once it is installed and its signature is accepted. "

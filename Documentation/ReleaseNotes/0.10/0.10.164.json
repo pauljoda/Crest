@@ -1,10 +1,10 @@
 {
   "entries": [
     {
-      "id": "settings-destinations-name-and-icon",
+      "id": "getting-started-without-eyebrows",
       "category": "improved",
-      "message": "The list of Settings pages on iPhone and iPad shows each page's icon and name without a line of description under it.",
-      "platforms": ["ios"]
+      "message": "Getting Started no longer labels its lessons Try It or its practice pages Example Page and Split View Practice.",
+      "platforms": ["mac"]
     }
   ]
 }
