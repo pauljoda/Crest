@@ -34,7 +34,12 @@ export function SpaceSwitcher({ spaces, selectedId, onSelect, leading, trailing 
   const overflows = contentWidth > viewport;
   const laneWidth = Math.max(0, viewport - (overflows ? 2 * overflowButtonWidth : 0));
   const geometry: TrackGeometry = { ...style, count: spaces.length, offset: Math.max(0, (laneWidth - contentWidth) / 2) };
-  const position = pickerPosition(frame, spaces, selectedId);
+  // At rest, the Space the strip shows: a swipe settles before the window
+  // takes the Space it settled on, and the selection stays where it landed
+  // rather than going back for the moment between.
+  const restingId = frame.phase === "idle" && frame.originId && spaces.some((space) => space.id === frame.originId)
+    ? frame.originId : selectedId;
+  const position = pickerPosition(frame, spaces, restingId);
   const lane = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState({ previous: null as number | null, next: null as number | null });
 
@@ -46,6 +51,13 @@ export function SpaceSwitcher({ spaces, selectedId, onSelect, leading, trailing 
     if (centred.current === position && element.dataset.width === `${laneWidth}`) return;
     centred.current = position;
     element.dataset.width = `${laneWidth}`;
+    // A lane its Spaces fit stays where it is. Scrolling it, or reading where
+    // it stands, would lay the window out again in the middle of each frame
+    // the pager moves.
+    if (!overflows) {
+      setEdges((current) => (current.previous === null && current.next === null ? current : { previous: null, next: null }));
+      return;
+    }
     const at = segmentFrame(geometry, position);
     if (at) element.scrollLeft = Math.max(0, at.x + at.width / 2 - laneWidth / 2);
     setEdges(overflowEdges(element, geometry));
@@ -85,8 +97,8 @@ export function SpaceSwitcher({ spaces, selectedId, onSelect, leading, trailing 
             }}>
             {!showsDots && <Highlight spaces={spaces} geometry={geometry} position={position} />}
             {spaces.map((space) => (
-              <Segment key={space.id} space={space} selected={space.id === selectedId} width={style.segmentWidth} height={style.segmentHeight}
-                scale={scale} showsDots={showsDots} dotOpacity={showsDots ? dotOpacity(space, spaces, frame, selectedId) : 1}
+              <Segment key={space.id} space={space} selected={space.id === restingId} width={style.segmentWidth} height={style.segmentHeight}
+                scale={scale} showsDots={showsDots} dotOpacity={showsDots ? dotOpacity(space, spaces, frame, restingId) : 1}
                 onSelect={() => onSelect(space.id)} />
             ))}
           </div>

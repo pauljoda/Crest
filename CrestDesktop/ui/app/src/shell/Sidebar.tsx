@@ -24,7 +24,7 @@ import {
   TabSurface,
 } from "@crest/contracts";
 import { motion as tokens } from "@crest/design";
-import { AnimatePresence, LayoutGroup, motion } from "motion/react";
+import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -794,6 +794,7 @@ export function Sidebar({
       {/* An open utility list's search stands where the address field stood, as on the Mac. */}
       {!practice && !utility && <div className="address-area">
         <AddressField
+          space={space.id}
           address={shownLocked ? "" : live?.address ?? live?.url ?? tabs.get(shownTabId ?? "")?.url ?? ""}
           // A live site's controls: its lock, which opens its certificate, and Site Controls.
           site={siteControlPage && !shownLocked ? {
@@ -1308,9 +1309,12 @@ export function addressPresentation(text: string): { domain: string; route: stri
  * lock in the leading slot and Site Controls in the trailing one; a tab
  * holding a page without one shows the lock or the search glyph instead.
  * While the page loads, the Space's accent fills the field from its leading
- * edge, the window's only loading indicator.
+ * edge, the window's only loading indicator. Showing another Space, its
+ * parts pop out and the new Space's pop in, as the Mac's BrowserAddressSwap.
  */
-function AddressField({ address, site, secure, resident, loading, accent }: {
+function AddressField({ space, address, site, secure, resident, loading, accent }: {
+  /** The Space the field shows, whose change swaps its parts. */
+  space: string;
   address: string;
   site: {
     readonly secure: boolean;
@@ -1329,24 +1333,57 @@ function AddressField({ address, site, secure, resident, loading, accent }: {
   // The field fades out while the palette that grew out of it is open, keeping its place.
   const handedOff = useFieldHandedOff();
   const { domain, route } = addressPresentation(address);
+  // A Space showing only the prompt swaps nothing with another that does.
+  const swap = address ? space : null;
   return (
     <div className={`address-field${handedOff ? " handed-off" : ""}${loading ? " loading" : ""}`}
       style={{ "--field-accent": accent } as CSSProperties}>
       <span className="address-progress" aria-hidden />
-      {site
-        ? <AddressSecurityButton secure={site.secure} certificate={site.certificate} onReview={site.reviewCertificate} />
-        : resident && address && (
-          <span className="address-glyph" aria-hidden>
-            <Symbol name={secure ? "lock.fill" : "magnifyingglass"} size={10} strokeWidth={2.5} />
-          </span>
-        )}
+      <AddressSwap swap={swap}>
+        {site
+          ? <AddressSecurityButton secure={site.secure} certificate={site.certificate} onReview={site.reviewCertificate} />
+          : resident && address && (
+            <span className="address-glyph" aria-hidden>
+              <Symbol name={secure ? "lock.fill" : "magnifyingglass"} size={10} strokeWidth={2.5} />
+            </span>
+          )}
+      </AddressSwap>
       <button type="button" className="address-summary" aria-label={address ? `Address, ${address}` : "Address and search"}
         aria-description="Opens the command palette" onClick={() => openPalette("editLocation")}>
-        <span className={`address-domain${address ? "" : " placeholder"}`}>{domain}</span>
-        {route && <span className="address-route">{route}</span>}
+        <AddressSwap swap={swap}>
+          <span className={`address-domain${address ? "" : " placeholder"}`}>{domain}</span>
+          {route && <span className="address-route">{route}</span>}
+        </AddressSwap>
       </button>
-      {site && <SiteControlTrigger open={site.open} notice={site.notice} onToggle={site.toggle} />}
+      <AddressSwap swap={swap}>
+        {site && <SiteControlTrigger open={site.open} notice={site.notice} onToggle={site.toggle} />}
+      </AddressSwap>
     </div>
+  );
+}
+
+/**
+ * BrowserAddressSwap: a part of the address field that pops out as the field
+ * shows another Space, shrinking to 0.8 as it fades, with the new Space's
+ * popping in from 0.8 in its place once the old is nearly out; the field
+ * itself stays put. A part that comes or goes on its own, as Site Controls
+ * once a page is live, pops the same way.
+ */
+function AddressSwap({ swap, children }: { swap: string | null; children: ReactNode }) {
+  const reduce = useReducedMotion() ?? false;
+  const shows = children !== null && children !== false && children !== undefined && children !== "";
+  return (
+    // The part going leaves the layout to the one coming, in its place.
+    <AnimatePresence initial={false} mode="popLayout">
+      {shows && (
+        <motion.span key={swap ?? "prompt"} className="address-swap"
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1, transition: reduce ? { duration: 0 } : tokens.addressSwapIn }}
+          exit={{ scale: 0.8, opacity: 0, transition: reduce ? { duration: 0 } : tokens.addressSwapOut }}>
+          {children}
+        </motion.span>
+      )}
+    </AnimatePresence>
   );
 }
 

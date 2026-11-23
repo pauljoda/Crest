@@ -1,7 +1,8 @@
 import type { SpaceState } from "@crest/contracts";
+import type { ShellTransport } from "@crest/core-client";
 import { type Spring, springCurve, motion as tokens } from "@crest/design";
 import { type ReactNode, type RefObject, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { flushSync } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 
 import { isMenuOpen } from "../menus";
 import { holdCards } from "./cards-snap";
@@ -21,6 +22,36 @@ export type SidebarPresentation = "docked" | "floating" | "collapsed";
 const revealDelay = 200;
 /** How far past the card toward the page the pointer may go before the card retreats. */
 const retreatMargin = 30;
+/**
+ * How far above or below the window a pointer leaving it may cross the line
+ * of its sidebar edge and still count as leaving through that edge, as the
+ * Mac's edgeSlack.
+ */
+const edgeSlack = 24;
+/**
+ * How long the card stays once a hold on it ends, as the Mac's
+ * holdReleaseDelay: a pointer back over the page from beyond the window's
+ * edge lets it go after this.
+ */
+const holdReleaseDelay = 150;
+/** How long a card the pointer brought out stays before the pointer can let it go: its slide at the Mac's default length. */
+const revealHold = tokens.sidebarReveal.visualDuration * 1000;
+
+/** A point in the window, in CSS pixels. */
+interface Point { readonly x: number; readonly y: number }
+
+/**
+ * Whether a pointer that left the window went out through its leading edge:
+ * the line from where it was last seen inside to where it is now meets that
+ * edge beside the window, give or take the slack, as the Mac's
+ * hasPointerLeftThroughStripEdge decides.
+ */
+function leftThroughLeadingEdge(from: Point | null, to: Point): boolean {
+  if (to.x >= 0) return false;
+  const start = from ?? to;
+  const crossing = start.x === to.x ? to.y : start.y + ((0 - start.x) / (to.x - start.x)) * (to.y - start.y);
+  return crossing >= -edgeSlack && crossing <= innerHeight + edgeSlack;
+}
 
 /** A floating card's distance from the window's edges, as the Mac's floatingCardInset. */
 const cardInset = 7;
@@ -85,11 +116,19 @@ function devicePixels(length: number): number {
 /**
  * Holds the sidebar where its presentation puts it. While collapsed, a strip
  * along the window's leading edge brings it out as a floating card when the
- * pointer rests there or clicks it; the card retreats once the pointer leaves
- * it for the page, unless a menu or one of its fields is in use. Docked or
- * floating, its edge beside the page resizes it.
+ * pointer moves onto it and stays a moment, or clicks it, and a pointer that
+ * leaves the window through that edge brings it out at once, as the Mac's
+ * BrowserCollapsedSidebarHoverTrackingView does; only the active window's
+ * comes out, and a pointer resting where the strip appears waits until it
+ * moves. The card stays until it has come all the way out, and while the
+ * pointer is out past the window's leading edge; it retreats once the
+ * pointer leaves it and the margin beside it for the page, or leaves the
+ * window through another edge, or the window stops being active, unless a
+ * menu or one of its fields is in use (BrowserSidebarHoverTrackingView).
+ * Docked or floating, its edge beside the page resizes it.
  */
-export function SidebarSlot({ presentation, onPresentation, morph, width, onResize, onResizeEnded, spaceId, spaces, children }: {
+export function SidebarSlot({ presentation, onPresentation, morph, width, onResize, onResizeEnded, spaceId, spaces, shell, edgeHost,
+  children }: {
   presentation: SidebarPresentation;
   onPresentation: (presentation: SidebarPresentation) => void;
   /** Where the window reaches the sidebar's toggle. */
@@ -102,18 +141,39 @@ export function SidebarSlot({ presentation, onPresentation, morph, width, onResi
   spaceId: string;
   /** The window's Spaces, whose banners the card blends between as the Space pager moves. */
   spaces: readonly SpaceState[];
+  /** The window's shell, which says whether the window is the active one; none in a development browser. */
+  shell: ShellTransport | null;
+  /**
+   * Where the window's leading edge takes the pointer: a layer after the page
+   * area, since Chromium lays each box's drag area over those before it, and
+   * the page area's margin moves the window.
+   */
+  edgeHost: HTMLElement | null;
   children: ReactNode;
 }) {
   const slot = useRef<HTMLDivElement>(null);
   const margin = useRef<HTMLDivElement>(null);
   const grip = useRef<HTMLDivElement>(null);
   const shadow = useRef<HTMLDivElement>(null);
+  const strip = useRef<HTMLDivElement>(null);
+  const inset = useRef<HTMLDivElement>(null);
   const reveal = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const letGo = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Where the window last saw the pointer, and whether it has since left the
+  // window through its leading edge, which keeps a card out until it's back.
+  const pointer = useRef<Point | null>(null);
+  const outside = useRef(false);
+  const returned = useRef(0);
+  // Until when a card the pointer brought out stays regardless.
+  const revealing = useRef(0);
+  // Where the pointer rested as the strip appeared, until it moves.
+  const resting = useRef<Point | null>(null);
   const running = useRef<Morph | null>(null);
   const cardsHeld = useRef<(() => void) | null>(null);
   const liveResize = useRef<(() => void) | null>(null);
   useEffect(() => () => {
     clearTimeout(reveal.current);
+    clearTimeout(letGo.current);
     if (running.current) cancelAnimationFrame(running.current.frame);
     cardsHeld.current?.();
     liveResize.current?.();
@@ -121,20 +181,109 @@ export function SidebarSlot({ presentation, onPresentation, morph, width, onResi
   const shown = useRef(presentation);
   shown.current = presentation;
 
-  // The card goes once the pointer leaves it and a margin beside it on the
-  // page's side, unless a menu or one of its fields is in use; leaving the
-  // window on the sidebar's side keeps it. A morph under way keeps it too.
-  const retreat = () => {
+  const isActive = () => (shell ? shell.frame.active : document.hasFocus());
+  // A menu or one of the card's own fields in use holds it out.
+  const held = () => {
     const active = document.activeElement;
-    const editing = active instanceof HTMLInputElement && slot.current?.contains(active);
-    if (isMenuOpen() || editing || running.current) return;
+    return isMenuOpen() || (active instanceof HTMLInputElement && !!slot.current?.contains(active));
+  };
+  // The pointer on the card's region: the card, its leading inset, its edge, and the margin beside it.
+  const onCard = () => [slot, margin, grip, inset].some((part) => part.current?.matches(":hover"));
+  const keepsCard = () => held() || onCard() || outside.current;
+
+  // The card goes once the pointer has left it, unless something holds it: a
+  // menu or one of its fields in use, a morph under way, the slide that
+  // brought it out, or the pointer just back from beyond the leading edge,
+  // which lets it go after the hold's delay.
+  const retreat = () => {
+    if (held() || running.current || shown.current !== "floating") return;
+    const wait = Math.max(revealing.current, returned.current + holdReleaseDelay) - performance.now();
+    if (wait > 0) {
+      if (letGo.current === undefined) {
+        letGo.current = setTimeout(() => {
+          letGo.current = undefined;
+          if (!keepsCard() && !running.current && shown.current === "floating") onPresentation("collapsed");
+        }, wait);
+      }
+      return;
+    }
     onPresentation("collapsed");
   };
-  const keepsCard = () => {
-    const active = document.activeElement;
-    const editing = active instanceof HTMLInputElement && !!slot.current?.contains(active);
-    return isMenuOpen() || editing || [slot, margin, grip].some((part) => part.current?.matches(":hover"));
+  // Out over the page as the pointer reached for it, held until it's all the way out.
+  const revealByPointer = () => {
+    clearTimeout(reveal.current);
+    reveal.current = undefined;
+    if (shown.current !== "collapsed" || running.current) return;
+    revealing.current = performance.now() + revealHold;
+    onPresentation("floating");
   };
+  // A pointer moving onto the strip, or along it, brings the card out once it
+  // has stayed there the moment the Mac waits; one resting where the strip
+  // appeared waits until it moves.
+  const reach = (event: React.MouseEvent) => {
+    const at = { x: event.clientX, y: event.clientY };
+    if (resting.current) {
+      if (resting.current.x === at.x && resting.current.y === at.y) return;
+      resting.current = null;
+    }
+    if (reveal.current !== undefined || !isActive()) return;
+    reveal.current = setTimeout(() => {
+      reveal.current = undefined;
+      if (strip.current?.matches(":hover") || outside.current) revealByPointer();
+    }, revealDelay);
+  };
+
+  // The window follows the pointer for the edge: where it last was inside,
+  // and where it went as it left. Out through the leading edge, a hidden
+  // sidebar comes out at once and a card stays for as long as the pointer is
+  // out; through any other edge, the card goes. An inactive window keeps no
+  // card out.
+  useEffect(() => {
+    const moved = (event: MouseEvent) => {
+      pointer.current = { x: event.clientX, y: event.clientY };
+      if (!outside.current) return;
+      outside.current = false;
+      returned.current = performance.now();
+    };
+    const leftWindow = (event: MouseEvent) => {
+      const through = leftThroughLeadingEdge(pointer.current, { x: event.clientX, y: event.clientY });
+      pointer.current = null;
+      if (through && isActive()) {
+        outside.current = true;
+        clearTimeout(letGo.current);
+        letGo.current = undefined;
+        if (shown.current === "collapsed") revealByPointer();
+        return;
+      }
+      clearTimeout(reveal.current);
+      reveal.current = undefined;
+      retreat();
+    };
+    const root = document.documentElement;
+    document.addEventListener("mousemove", moved, true);
+    root.addEventListener("mouseleave", leftWindow);
+    const stopFrame = shell?.subscribeFrame(() => {
+      if (shell.frame.active) return;
+      outside.current = false;
+      retreat();
+    });
+    return () => {
+      document.removeEventListener("mousemove", moved, true);
+      root.removeEventListener("mouseleave", leftWindow);
+      stopFrame?.();
+    };
+    // The handlers read the slot's state through refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shell]);
+  // The strip appears under a pointer resting at the edge, as the sidebar it
+  // put away slides off, and the pointer hasn't reached for it again.
+  useEffect(() => {
+    if (presentation === "collapsed") resting.current = pointer.current;
+    if (presentation !== "floating") {
+      clearTimeout(letGo.current);
+      letGo.current = undefined;
+    }
+  }, [presentation]);
 
   // Taking its seat and leaving it at the toggle, the sidebar moves as a
   // drawer, as the Mac's page moves with it: the page's edge stays beside
@@ -337,13 +486,42 @@ export function SidebarSlot({ presentation, onPresentation, morph, width, onResi
   }, [dressing]);
   const dressingClass = dressing ? ` dressing-${dressing}` : "";
   const left = (event: React.MouseEvent) => {
-    if (presentation !== "floating" || event.clientX < 0) return;
+    // Out of the window, where it went decides.
+    if (presentation !== "floating" || event.relatedTarget === null) return;
     setTimeout(() => {
       // The card's resize handle, riding its edge, counts as the card.
-      if ([slot, margin, grip].some((part) => part.current?.matches(":hover"))) return;
-      retreat();
+      if (!onCard()) retreat();
     }, 0);
   };
+  // The strip along the leading edge, and beside a card the inset between
+  // it and the window's edge, which counts as the card.
+  const edge = presentation === "collapsed" && !morphing ? (
+    <div
+      ref={strip}
+      className="sidebar-edge"
+      onMouseEnter={reach}
+      onMouseMove={reach}
+      // Out of the window, where it went decides.
+      onMouseLeave={(event) => {
+        if (event.relatedTarget === null) return;
+        clearTimeout(reveal.current);
+        reveal.current = undefined;
+      }}
+      onClick={() => {
+        clearTimeout(reveal.current);
+        reveal.current = undefined;
+        onPresentation("floating");
+      }}
+    />
+  ) : presentation === "floating" ? (
+    <>
+      {/* The card's whole region takes the pointer: the window's drag area
+          would otherwise lie over its padding and the page's margin beside
+          it, and a pointer there would have left the window. */}
+      <div className="sidebar-card-region" style={{ width: cardInset + width + retreatMargin }} aria-hidden />
+      <div ref={inset} className="sidebar-edge inset" style={{ width: cardInset }} onMouseLeave={left} />
+    </>
+  ) : null;
 
   return (
     <>
@@ -360,17 +538,7 @@ export function SidebarSlot({ presentation, onPresentation, morph, width, onResi
           onLeave={left}
         />
       )}
-      {presentation === "collapsed" && !morphing && (
-        <div
-          className="sidebar-edge"
-          onMouseEnter={() => {
-            clearTimeout(reveal.current);
-            reveal.current = setTimeout(() => onPresentation("floating"), revealDelay);
-          }}
-          onMouseLeave={() => clearTimeout(reveal.current)}
-          onClick={() => onPresentation("floating")}
-        />
-      )}
+      {edge && (edgeHost ? createPortal(edge, edgeHost) : edge)}
       {presentation === "floating" && (
         <>
           <div ref={margin} className="sidebar-retreat-margin" style={{ width: retreatMargin }} onMouseLeave={left} />

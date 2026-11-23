@@ -42,6 +42,7 @@ import { CommandPalette } from "../palette/CommandPalette";
 import { PaletteModel, type PaletteMode } from "../palette/palette-model";
 import { commandForKey, keyCapture, keyCode, WindowShortcuts } from "../shortcuts";
 import { setSpaceStepper, spacePager, useSpacePager } from "../spaces/space-pager";
+import { useChromeLook } from "../spaces/look-blend";
 import { SpaceContentStrip } from "../spaces/SpaceContentStrip";
 import { RecentTabSwitcher, releasesHold, type SwitcherControls, type SwitcherHold, type SwitcherStart } from "../switcher/RecentTabSwitcher";
 import { pageStills } from "../spaces/page-stills";
@@ -325,6 +326,10 @@ export function BrowserWindow({ session }: { session: Session }) {
   // button floats it over the page or docks it, as on the Mac. The window
   // keeps whether it is shown, and its width, on this device.
   const sidebarMorph = useRef<SidebarMorph | null>(null);
+  const [edgeHost, setEdgeHost] = useState<HTMLDivElement | null>(null);
+  const windowRoot = useRef<HTMLDivElement>(null);
+  // The window's chrome takes the look the Space pager stands at, as it moves.
+  useChromeLook(windowRoot, spaces);
   const [sidebar, setSidebar] = useState<SidebarPresentation>(
     () => (initialSidebarIsPresented(session.windowId) ? "docked" : "collapsed"));
   const [sidebarWidth, setSidebarWidth] = useState(() => initialSidebarWidth(session.windowId));
@@ -618,11 +623,12 @@ export function BrowserWindow({ session }: { session: Session }) {
       .then(() => byPointer && requestAnimationFrame(focusShownPage));
   };
   return (
-    <div className={`browser-window ${shell ? "with-title-bar" : ""} ${readsLight(branding) ? "reads-light" : "reads-dark"} sidebar-${sidebar}${cornerless ? " cornerless" : ""}`}
+    <div ref={windowRoot}
+      className={`browser-window ${shell ? "with-title-bar" : ""} ${readsLight(branding) ? "reads-light" : "reads-dark"} sidebar-${sidebar}${cornerless ? " cornerless" : ""}`}
       style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}>
       <SpaceBanner spaces={spaces} spaceId={space.id} />
       <SidebarSlot presentation={sidebar} onPresentation={setSidebar} morph={sidebarMorph} width={sidebarWidth} onResize={setSidebarWidth}
-        onResizeEnded={commitSidebarWidth} spaceId={space.id} spaces={spaces}>
+        onResizeEnded={commitSidebarWidth} spaceId={space.id} spaces={spaces} shell={shell} edgeHost={edgeHost}>
         <Sidebar
           session={session}
           browsing={browsing}
@@ -686,6 +692,9 @@ export function BrowserWindow({ session }: { session: Session }) {
           )}
         </AnimatePresence>
       </SpaceContentStrip>
+      {/* The sidebar's edge comes after the page area, whose margin moves the
+          window: Chromium lays each box's drag area over those before it. */}
+      <div ref={setEdgeHost} className="sidebar-edge-host" />
       <AnimatePresence>
         {palette && <CommandPalette key="palette" model={palette} bindings={bindings ?? []} tabs={space.tabs} />}
       </AnimatePresence>

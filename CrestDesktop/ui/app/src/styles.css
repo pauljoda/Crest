@@ -177,7 +177,11 @@ button {
   mix-blend-mode: soft-light;
 }
 
-.browser-window.reads-light {
+/* A Space's look: the window's, and each sidebar page's and card's own, which
+   slide in their own Space's look as the pager moves between two. */
+.browser-window.reads-light,
+.space-page.reads-light,
+.space-content-page.reads-light {
   /* The Mac's primary colour over the Space's look: white text, or black. */
   --primary-rgb: 255 255 255;
   --fg: rgb(255 255 255 / 0.94);
@@ -193,7 +197,9 @@ button {
   --sidebar-glass-hover: rgb(74 74 76 / 0.56);
 }
 
-.browser-window.reads-dark {
+.browser-window.reads-dark,
+.space-page.reads-dark,
+.space-content-page.reads-dark {
   --primary-rgb: 0 0 0;
   --fg: rgb(23 34 56 / 0.94);
   --fg-secondary: rgb(23 34 56 / 0.6);
@@ -1044,6 +1050,24 @@ button {
 }
 
 /* Resting the pointer here, or clicking, brings a collapsed sidebar out. */
+/* The layer after the page area that holds the sidebar's edge, so its drag
+   area doesn't lie over the edge's; it draws no box of its own. */
+.sidebar-edge-host {
+  display: contents;
+}
+
+/* A floating card's region, which only says it takes the pointer: Chromium
+   lays each box's drag area over those before it, and the page area's would
+   make the card's padding a handle that moves the window. */
+.sidebar-card-region {
+  position: absolute;
+  top: var(--title-bar-height, 0px);
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  -webkit-app-region: no-drag;
+}
+
 .sidebar-edge {
   position: absolute;
   z-index: 5;
@@ -1266,6 +1290,7 @@ button {
 /* The site centred over the rest of its address, a point closer than their
    lines, as the Mac's two-line address. */
 .address-summary {
+  position: relative;
   flex: 1;
   min-width: 0;
   height: 100%;
@@ -1275,6 +1300,23 @@ button {
   justify-content: center;
   text-align: center;
   outline: none;
+}
+
+/* A part of the field that pops out as it shows another Space, the new
+   Space's popping in in its place (BrowserAddressSwap): the address, the
+   lock or glyph before it, and Site Controls after it. */
+.address-swap {
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+
+.address-summary > .address-swap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .address-domain,
@@ -2359,6 +2401,8 @@ button {
 .space-strip-utilities {
   position: absolute;
   inset: 0;
+  /* The look the pager stands at (look-blend.ts). */
+  color: var(--fg);
   display: flex;
   align-items: center;
   gap: 2px;
@@ -2738,9 +2782,18 @@ button {
 }
 
 /* A permission request, below the address field. */
+/* The window's chrome following the Space pager's look takes it frame by
+   frame, without its colors' own easing (look-blend.ts). */
+.look-following,
+.look-following * {
+  transition-property: none !important;
+}
+
 .address-area {
   position: relative;
   z-index: 3;
+  /* The look the pager stands at (look-blend.ts). */
+  color: var(--fg);
 }
 
 .permission-prompt {
@@ -3569,8 +3622,8 @@ embed.page-frame {
    takes the Space look's scheme, over the window or on a Start Page. What a
    person selects or presses there is Crest blue, the brand's accent, lifted
    on the dark scheme; the accent as text is a shade further from the ground. */
-.browser-window.reads-light .start-page,
-.browser-window.reads-light .palette-layer {
+.browser-window.reads-light,
+.space-content-page.reads-light {
   --pal-accent: rgb(var(--crest-accent-dark));
   --pal-accent-text: rgb(var(--crest-accent-text-dark));
   /* The Mac's regular glass as it reads over a dark page: #2d2d2d. */
@@ -3583,8 +3636,8 @@ embed.page-frame {
   --pal-edge: rgb(255 255 255 / 0.14);
 }
 
-.browser-window.reads-dark .start-page,
-.browser-window.reads-dark .palette-layer {
+.browser-window.reads-dark,
+.space-content-page.reads-dark {
   --pal-accent: rgb(var(--crest-accent-light));
   --pal-accent-text: rgb(var(--crest-accent-text-light));
   --pal-surface: rgb(248 248 250 / 0.88);
@@ -4275,7 +4328,8 @@ embed.page-frame {
 }
 
 /* The system colours an archive reason wears, as the sidebar's scheme reads them. */
-.browser-window.reads-dark {
+.browser-window.reads-dark,
+.space-page.reads-dark {
   --system-red: rgb(255 59 48);
   --system-orange: rgb(255 149 0);
   --system-purple: rgb(175 82 222);
@@ -4287,7 +4341,8 @@ embed.page-frame {
   --danger: rgb(255 59 48);
 }
 
-.browser-window.reads-light {
+.browser-window.reads-light,
+.space-page.reads-light {
   --system-red: rgb(255 69 58);
   --system-orange: rgb(255 159 10);
   --system-purple: rgb(191 90 242);

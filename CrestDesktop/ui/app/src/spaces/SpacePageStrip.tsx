@@ -1,6 +1,7 @@
 import type { SpaceState } from "@crest/contracts";
 import { type ReactElement, type RefObject, useEffect, useLayoutEffect, useRef } from "react";
 
+import { readsLight } from "../branding";
 import {
   animateSettle, applyLeafStyle, type LeafStyle, type PagerFrame, placedIndex, spacePager, SpaceSwipe, stopSettle, touchpadPhases,
   useSpacePager,
@@ -77,7 +78,8 @@ export function SpacePageStrip({ spaces, liveId, gestureArea, render }: {
               if (element) pages.current.set(space.id, element);
               else pages.current.delete(space.id);
             }}
-            className="space-page"
+            // Each page wears its own Space's look, as it slides past the others.
+            className={`space-page ${readsLight(space.settings.look) ? "reads-light" : "reads-dark"}`}
             data-space-page={space.id}
             // A page takes input only at rest, and only the shown Space's.
             inert={!live || moving}

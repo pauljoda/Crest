@@ -5957,6 +5957,10 @@
     "windows-floating-sidebar-pace": {
       "category": "internal",
       "message": "The floating sidebar on Windows comes out and goes on the Mac's springs"
+    },
+    "windows-sidebar-edge-and-space-look": {
+      "category": "internal",
+      "message": "The hidden sidebar on Windows comes out at its edge and as the pointer leaves the window there, and a change of Space carries each Space's look through the slide"
     }
   }
 }

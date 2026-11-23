@@ -1,6 +1,7 @@
 import type { SpaceState } from "@crest/contracts";
 import { createContext, type ReactElement, type ReactNode, useLayoutEffect, useRef, useState } from "react";
 
+import { readsLight } from "../branding";
 import {
   animateSettle, applyLeafStyle, type LeafStyle, type PagerFrame, placedIndex, spacePager, stopSettle, useSpacePager,
 } from "./space-pager";
@@ -156,7 +157,9 @@ export function SpaceContentStrip({ spaces, liveId, shownPins, embedsPages, onRe
           <div
             key={space.id}
             ref={cardRef(space.id)}
-            className={`space-content-page${live ? " live" : ""}${space.id === leaving ? " dissolving" : ""}`}
+            // Each card wears its own Space's look, a Start Page's palette among it.
+            className={`space-content-page ${readsLight(space.settings.look) ? "reads-light" : "reads-dark"}${live ? " live" : ""}${
+              space.id === leaving ? " dissolving" : ""}`}
             data-space-content={space.id}
             inert={!live || moving}
             aria-hidden={!live || undefined}

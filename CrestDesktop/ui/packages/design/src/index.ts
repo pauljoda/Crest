@@ -170,6 +170,10 @@ export const motion = Object.freeze({
   palette: { duration: 0.14, ease: "easeInOut" } as const,
   /** Contents showing on a surface as it arrives, or clearing as it goes. */
   contentReveal: { duration: 0.12, ease: "easeOut" } as const,
+  /** The old Space's address and site controls popping out of the address field. */
+  addressSwapOut: { duration: 0.1, ease: "easeIn" } as const,
+  /** The new Space's popping in, starting as the old ones finish: spring(0.28, bounce 0.25) after 0.07. */
+  addressSwapIn: { type: "spring", visualDuration: 0.28, bounce: 0.25, delay: 0.07 } as const,
   /** Snappy with a little extra bounce. */
   contentNavigation: { type: "spring", visualDuration: 0.3, bounce: 0.19 } as const,
   /** The archive, history and downloads destinations coming out of the lists button. */
