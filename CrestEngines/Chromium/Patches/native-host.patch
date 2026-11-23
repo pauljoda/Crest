@@ -230,7 +230,56 @@
        // If the web authentication request is still pending, remove it from the
 --- a/chrome/BUILD.gn
 +++ b/chrome/BUILD.gn
-@@ -1680,6 +1680,12 @@
+@@ -550,23 +550,24 @@
+       "CHROMIUM_CREATOR=$chrome_mac_creator_code",
+     ]
+ 
+-    sources = [ "app/chrome_exe_main_mac.c" ]
++    # Crest's entry point decides the profile folder, the experiment guard and
++    # the app-owned host before it loads the framework, which it opens with
++    # `dlopen` rather than linking. The framework itself is copied into the
++    # bundle by `:chrome_versioned_bundle_data` in `bundle_deps`.
++    sources = [
++      "app/crest_exe_main_mac.cc",
++      "app/crest_user_data_dir.h",
++    ]
+ 
+     deps = [
+       "//base:compiler_specific",
++      "//base/allocator:early_zone_registration_apple",
+       "//build:branding_buildflags",
+       "//build/config/compiler:compiler_buildflags",
+       "//chrome/common:buildflags",
+-      "//content/public/app:aperitif",
++      "//chrome/common:version_header",
+     ]
+ 
+-    # Links the framework's shared library directly, after libaperitif, so
+-    # that the framework's load command follows libaperitif's. `+link` can't
+-    # be used: it adds the framework as `-framework`, which the Apple link
+-    # rule places before all shared libraries. The framework itself is copied
+-    # into the bundle by `:chrome_versioned_bundle_data` in `bundle_deps`.
+-    deps += [ ":chrome_framework+link_nested" ]
+-
+     bundle_deps = [
+       ":chrome_app_strings_bundle_data",
+       ":chrome_resources",
+@@ -621,12 +622,8 @@
+         rebase_path(inputs[0], root_out_dir),
+         "--exact-match",
+ 
+-        # Do not --allow more libraries here without consulting with the
+-        # security team (security-dev@chromium.org).
+-        "--allow",
+-        "@executable_path/../Frameworks/$chrome_framework_name.framework/Versions/$chrome_framework_version/Libraries/libaperitif.dylib",
+-        "--allow",
+-        "@executable_path/../Frameworks/$chrome_framework_name.framework/Versions/$chrome_framework_version/$chrome_framework_name",
++        # Crest's entry point loads the framework only when Chromium is
++        # needed, so linking it, or anything else, fails the build.
+         "--allow",
+         "/usr/lib/libSystem.B.dylib",
+       ]
+@@ -1686,6 +1683,12 @@
      public_deps += [ "//printing" ]
    }
  
@@ -355,108 +404,6 @@
  
    // Create the HttpAuthCacheStatus to start observing resource load
    // completions.
---- a/chrome/app/chrome_exe_main_mac.cc
-+++ b/chrome/app/chrome_exe_main_mac.cc
-@@ -19,6 +19,13 @@
- #include <unistd.h>
- 
- #include <memory>
-+#include <string>
-+#include <string_view>
-+#include <vector>
-+
-+#if !defined(HELPER_EXECUTABLE)
-+#include "chrome/app/crest_user_data_dir.h"
-+#endif
- 
- #include "base/allocator/early_zone_registration_apple.h"
- #include "base/compiler_specific.h"
-@@ -161,6 +168,85 @@
-   if (rv != 0) {
-     FatalError("_NSGetExecutablePath: get path failed.");
-   }
-+
-+#if !defined(HELPER_EXECUTABLE)
-+  const std::string executable(exec_path.get());
-+  const auto directory = executable.substr(0, executable.find_last_of('/'));
-+  bool named_profile_root = false;
-+  bool crest_host = false;
-+  for (int i = 1; i < argc; ++i) {
-+    const std::string_view argument(UNSAFE_TODO(argv[i]));
-+    if (argument.starts_with("--user-data-dir=/") &&
-+        argument.size() > std::string_view("--user-data-dir=/").size()) {
-+      named_profile_root = true;
-+    }
-+    crest_host |= argument == "--crest-control-plane";
-+  }
-+
-+  // Packaged Crest experiments must never fall back to Chromium's default
-+  // user profile when Finder or an automation tool launches without arguments.
-+  // This runs before loading the framework or creating any browser services.
-+  const auto marker = directory + "/../Resources/Crest-Isolated-Experiment";
-+  if (access(marker.c_str(), F_OK) == 0) {
-+    const auto host_framework =
-+        directory + "/../Frameworks/CrestChromiumUI.framework";
-+    if (!named_profile_root ||
-+        (access(host_framework.c_str(), F_OK) == 0 && !crest_host)) {
-+      fprintf(stderr, "Crest experiment requires an explicit absolute "
-+                      "--user-data-dir and its host mode.\n");
-+      return 64;
-+    }
-+  }
-+
-+  // A product bundle is launched with no switches at all — Finder, a login
-+  // item, the default-browser role, Dock reopen — so it names its own engine
-+  // profile root here instead of opening the directory every other Chromium on
-+  // this machine also opens by default. Adoption of the engine profiles an
-+  // earlier build left there happens in the same step, before the framework is
-+  // loaded and therefore before any profile is read.
-+  std::string product_user_data_switch;
-+  std::vector<char*> product_argv;
-+  const auto product_marker = directory + "/../Resources/Crest-Native-Host";
-+  const char* home = getenv("HOME");
-+  if (!named_profile_root && home && *home &&
-+      access(product_marker.c_str(), F_OK) == 0) {
-+    product_user_data_switch =
-+        "--user-data-dir=" + crest::AdoptProductUserDataDirectory(home);
-+    for (int i = 0; i < argc; ++i) {
-+      product_argv.push_back(UNSAFE_TODO(argv[i]));
-+    }
-+    product_argv.push_back(product_user_data_switch.data());
-+    product_argv.push_back(nullptr);
-+    argc = static_cast<int>(product_argv.size()) - 1;
-+    argv = product_argv.data();
-+  }
-+
-+  // Crest owns AppKit and its core before Chromium is needed. Its launch loop
-+  // returns one only when a page or an explicit engine feature needs Chromium;
-+  // WebKit-only browsing never loads the Chromium framework below.
-+  std::vector<char*> native_argv;
-+  std::string native_switch = "--crest-app-owned-host";
-+  if (access((directory + "/../Resources/Crest-App-Owned-Host").c_str(), F_OK) == 0) {
-+    void* ui = nullptr;
-+    for (const char* name : {"CrestChromiumUI", "CrestChromiumUIProduct"}) {
-+      const std::string path = directory + "/../Frameworks/" + name + ".framework/" + name;
-+      if (access(path.c_str(), F_OK) != 0) continue;
-+      ui = dlopen(path.c_str(), RTLD_LAZY | RTLD_LOCAL | RTLD_FIRST);
-+      if (!ui) FatalError("dlopen %s: %s.", path.c_str(), dlerror());
-+      break;
-+    }
-+    if (!ui) FatalError("Crest's native host framework is missing.");
-+    using NativeHostRun = int (*)();
-+    const auto run = reinterpret_cast<NativeHostRun>(dlsym(ui, "crest_native_host_run"));
-+    if (!run) FatalError("Crest's native host entry point is missing: %s.", dlerror());
-+    if (run() != 1) return 0;
-+    for (int i = 0; i < argc; ++i) native_argv.push_back(UNSAFE_TODO(argv[i]));
-+    native_argv.push_back(native_switch.data());
-+    native_argv.push_back(nullptr);
-+    argc = static_cast<int>(native_argv.size()) - 1;
-+    argv = native_argv.data();
-+  }
-+#endif
- 
- #if defined(HELPER_EXECUTABLE)
-   sandbox::SeatbeltExecServer::CreateFromArgumentsResult seatbelt =
 --- a/chrome/browser/ui/startup/startup_browser_creator.cc
 +++ b/chrome/browser/ui/startup/startup_browser_creator.cc
 @@ -36,6 +36,9 @@
@@ -1797,7 +1744,7 @@
  #include "chrome/browser/mac/code_sign_clone_manager.h"
  #include "chrome/browser/mac/relauncher.h"
  #include "components/crash/core/common/objc_zombie.h"
-@@ -1190,6 +1192,20 @@
+@@ -1192,6 +1194,20 @@
  }
  
  std::optional<int> ChromeMainDelegate::BasicStartupComplete() {
@@ -1818,27 +1765,52 @@
    crash_reporter::InitializeCrashKeys();
  
  #if BUILDFLAG(IS_CHROMEOS)
-@@ -1584,6 +1600,20 @@
+@@ -1587,7 +1603,45 @@
+   // Initialize the user data dir for any process type that needs it.
+   if (chrome::ProcessNeedsProfileDir(process_type)) {
      InitializeUserDataDir(base::CommandLine::ForCurrentProcess());
-   }
- 
-+#if BUILDFLAG(IS_MAC)
-+  // Finish the engine profile adoption the executable's `main` recorded, if it
-+  // recorded one. Moving the directories is all that step could do without the
-+  // framework; registering an adopted profile in `Local State` and retiring its
-+  // encrypted tracked-preference validators are JSON edits and belong here.
-+  // This is the first point at which the user data directory is settled and
-+  // `base` is usable, and it is still before the local-state `PrefService` is
-+  // built, let alone `ProfileManager`.
-+  if (process_type.empty()) {
-+    crest::CompleteProfileAdoption(
-+        base::PathService::CheckedGet(chrome::DIR_USER_DATA));
 +  }
-+#endif
 +
++#if BUILDFLAG(IS_MAC)
++  if (process_type.empty()) {
++    // A Crest browser opens the engine profile folder its launch named: the
++    // product's own, which the browser executable resolves in `main`, or an
++    // experiment's explicit one. Chromium's default folder is shared with
++    // every other Chromium on this Mac, and opening it would start every Space
++    // empty, so a launch that named none, or one Chromium could not use, stops
++    // here, before any profile is read.
++    if (crest::IsEnabled() &&
++        (!command_line.GetSwitchValuePath(switches::kUserDataDir)
++              .IsAbsolute() ||
++         !chrome::GetInvalidSpecifiedUserDataDir().empty())) {
++      fprintf(stderr,
++              "Crest: the browser has no usable engine profile folder and "
++              "does not open Chromium's default one.\n");
++      exit(EXIT_FAILURE);
++    }
++    // Finish the engine profile adoption the executable's `main` recorded, if
++    // it recorded one. Moving the directories is all that step could do
++    // without the framework; registering an adopted profile in `Local State`
++    // and retiring its encrypted tracked-preference validators are JSON edits
++    // and belong here. This is the first point at which the user data
++    // directory is settled and `base` is usable, and it is still before the
++    // local-state `PrefService` is built, let alone `ProfileManager`.
++    const base::FilePath user_data_dir =
++        base::PathService::CheckedGet(chrome::DIR_USER_DATA);
++    crest::CompleteProfileAdoption(user_data_dir);
++    // Packaging launches a product bundle with this switch and no profile
++    // folder, and compares the folder it prints with the one Crest's launch
++    // must choose. Nothing is read from a profile before it stops.
++    if (command_line.HasSwitch("crest-print-user-data-dir")) {
++      printf("%s\n", user_data_dir.value().c_str());
++      fflush(stdout);
++      exit(EXIT_SUCCESS);
++    }
+   }
++#endif
+ 
    // Register component_updater PathProvider after DIR_USER_DATA overridden by
    // command line flags. Maybe move the chrome PathProvider down here also?
-   component_updater::RegisterPathProvider(chrome::DIR_COMPONENTS,
 --- a/chrome/browser/webauthn/chrome_authenticator_request_delegate.cc
 +++ b/chrome/browser/webauthn/chrome_authenticator_request_delegate.cc
 @@ -17,6 +17,7 @@
@@ -3612,3 +3584,40 @@
    auto* control = browser_view->toolbar_button_provider()->GetAppMenuControl();
    views::BubbleAnchor anchor =
        control ? control->GetAnchor() : views::BubbleAnchor();
+--- a/chrome/browser/browser_process_impl.cc
++++ b/chrome/browser/browser_process_impl.cc
+@@ -289,6 +289,7 @@
+ 
+ #if BUILDFLAG(IS_MAC)
+ #include "base/types/expected.h"
++#include "chrome/app/crest_user_data_dir.h"
+ #include "chrome/common/chrome_paths_internal.h"
+ #include "components/os_crypt/async/browser/key_provider.h"
+ #include "components/os_crypt/async/browser/keychain_key_provider.h"
+@@ -1691,10 +1692,25 @@
+ #endif  // BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_MAC) && !BUILDFLAG(IS_LINUX)
+ 
+ #if BUILDFLAG(IS_MAC)
++  // Crest keeps its engine profiles in its own folder, which its launch names
++  // on every start instead of Chromium's default one. That folder is Crest's
++  // default, so it keeps the default ("v10") key every profile there was
++  // encrypted with: without it, each Space's cookies and the validators that
++  // keep its extensions installed would be unreadable. Any other folder gets
++  // upstream's separate key.
++  const char* home = getenv("HOME");
++  const bool crest_default_data_directory =
++      home && *home &&
++      base::CommandLine::ForCurrentProcess()
++              ->GetSwitchValuePath(switches::kUserDataDir)
++              .StripTrailingSeparators() ==
++          base::FilePath(crest::ProductUserDataDirectory(home))
++              .StripTrailingSeparators();
+   if (base::FeatureList::IsEnabled(features::kUseKeychainKeyProvider)) {
+     if (!base::FeatureList::IsEnabled(
+             features::kKeychainKeyProviderUserDataDirProtection) ||
+-        chrome::IsUsingDefaultDataDirectory().value_or(false)) {
++        chrome::IsUsingDefaultDataDirectory().value_or(false) ||
++        crest_default_data_directory) {
+       providers.emplace_back(
+           /*precedence=*/10u,
+           std::make_unique<os_crypt_async::KeychainKeyProvider>());

@@ -6,6 +6,8 @@ import difflib
 import fcntl
 import hashlib
 import html
+import http.server
+import io
 import importlib.util
 import json
 import os
@@ -21,6 +23,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -44,6 +47,29 @@ UNIVERSAL_OUTPUT = "out/CrestUniversal"
 MACHINES = {"arm64": "arm64", "x64": "x86_64"}
 # The first bytes of a universal, 64-bit or 32-bit Mach-O file.
 MACH_O_MAGIC = (bytes.fromhex("cafebabe"), bytes.fromhex("cffaedfe"), bytes.fromhex("cefaedfe"))
+# The marker Crest's entry point, Overlay/chrome/app/crest_exe_main_mac.cc,
+# leaves in the browser executable. Keep the two spellings identical.
+LAUNCH_SENTINEL = b"crest-browser-launch"
+# The resources Crest's entry point reads to decide how a launch starts: a
+# product names its own profile folder, an experiment requires one.
+PRODUCT_HOST = "Crest-Native-Host"
+EXPERIMENT_HOST = "Crest-Isolated-Experiment"
+HOST_MARKERS = ("Crest-App-Owned-Host", PRODUCT_HOST, EXPERIMENT_HOST)
+# The status Crest's entry point exits with when an experiment names no profile folder.
+EXPERIMENT_REFUSED = 64
+# Under a home folder: where a product keeps its engine profiles, and Chromium's
+# default folder, which every other Chromium also opens.
+PRODUCT_PROFILES = "Library/Application Support/Crest/Chromium"
+DEFAULT_PROFILES = "Library/Application Support/Chromium"
+# The profile the upgrade check makes with the previous engine.
+UPGRADE_PROFILE = "Crest-Upgrade-Check"
+# A stable app release's tag. Its engine made most people's profiles.
+STABLE_RELEASE = re.compile(r"v[0-9]+\.[0-9]+\.[0-9]+")
+# How long a launch check waits, long enough for Rosetta's first translation
+# of a fresh framework.
+LAUNCH_TIMEOUT = 180
+LSREGISTER = ("/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework"
+              "/Support/lsregister")
 # Present while a tree is being moved to a new release in place.
 ADVANCING = "advancing.json"
 # The free space a fresh source preparation requires.
@@ -375,8 +401,9 @@ class Workspace:
                             "--jobs", jobs, "--min-free-gib", reserve, "--output", architecture["output"])
         with timed(timings, "universal"):
             browser = universal_engine(self.source, self.lock)
+            require_crest_launch(browser)
         with timed(timings, "smoke"):
-            smoke_engine(browser, self.root, self.lock)
+            smoke_engine(browser, self.root, self.lock, previous_engine(self.root, self.repo))
         return timings
 
     def advance(self, target, previous_archive):
@@ -518,16 +545,46 @@ def require_universal(browser, lock):
                 raise ValueError(f"{path.relative_to(browser)} lacks {', '.join(sorted(missing))}")
 
 
+def require_crest_launch(browser):
+    """Refuse a browser whose own executable lacks Crest's entry point.
+
+    That entry point names the product's engine profile folder, refuses an
+    experiment without one and runs Crest's native host before it opens the
+    framework. Upstream's links the framework and calls `ChromeMain` at once;
+    a host patch can still apply cleanly to a file the browser target no
+    longer builds, so check the executable itself, in every architecture."""
+    executable = browser / "Contents/MacOS/Chromium"
+    machines = subprocess.run(["lipo", "-archs", str(executable)], capture_output=True, text=True,
+                              check=True).stdout.split()
+    universal = "Non-fat" not in subprocess.run(["lipo", "-info", str(executable)], capture_output=True,
+                                                 text=True, check=True).stdout
+    for machine in machines:
+        linked = subprocess.run(["otool", "-arch", machine, "-L", str(executable)], capture_output=True,
+                                text=True, check=True).stdout
+        if " Framework.framework/" in linked:
+            raise ValueError(f"The browser executable links the Chromium framework ({machine}); Crest's entry "
+                             "point must open it only when Chromium is needed")
+        with tempfile.TemporaryDirectory(prefix="crest-launch-") as temporary:
+            image = executable
+            if universal:
+                image = Path(temporary) / executable.name
+                subprocess.run(["lipo", "-thin", machine, "-output", str(image), str(executable)], check=True)
+            if LAUNCH_SENTINEL not in image.read_bytes():
+                raise ValueError(f"The browser executable lacks Crest's entry point ({machine}); check the "
+                                 "source the chrome_app target builds")
+
+
 def is_mach_o(path):
     """Whether `path` is a Mach-O file, thin or universal."""
     with path.open("rb") as stream:
         return stream.read(4) in MACH_O_MAGIC
 
 
-def smoke_engine(browser, workspace, lock):
-    """Require the universal `browser` to report the pinned version and to
-    render a page as each of the lock's architectures, the others through
-    Rosetta."""
+def smoke_engine(browser, workspace, lock, previous=None):
+    """Require the universal `browser` to report the pinned version, and, as
+    each of the lock's architectures, the others through Rosetta, to render a
+    page, to open Crest's own profile folder when a launch names none, and to
+    open unchanged the profiles the `previous` engine made there."""
     with (browser / "Contents/Info.plist").open("rb") as stream:
         actual = plistlib.load(stream)["CFBundleShortVersionString"]
     if lock["chromium"]["version"] != actual:
@@ -535,12 +592,301 @@ def smoke_engine(browser, workspace, lock):
     scratch = workspace / "scratch"
     scratch.mkdir(exist_ok=True)
     native = platform.machine()
-    for cpu in lock["architectures"]:
-        # Rosetta translates the whole framework on a fresh build's first
-        # launch, about 35 s on the build Mac, before the page runs.
-        machine = MACHINES[cpu]
-        timeout = 30 if machine == native else 180
-        check_renders_page(browser / "Contents/MacOS/Chromium", scratch, timeout=timeout, machine=machine)
+    machines = [MACHINES[cpu] for cpu in lock["architectures"]]
+    with launch_directory("hosts-", scratch) as temporary:
+        product = host_copy(browser, temporary / "Product.app", PRODUCT_HOST)
+        experiment = host_copy(browser, temporary / "Experiment.app", EXPERIMENT_HOST)
+        for machine in machines:
+            # Rosetta translates the whole framework on a fresh build's first
+            # launch, about 35 s on the build Mac, before the page runs.
+            timeout = 30 if machine == native else LAUNCH_TIMEOUT
+            check_renders_page(browser / "Contents/MacOS/Chromium", scratch, timeout=timeout, machine=machine)
+            check_launches_without_profile_folder(product, experiment, scratch, machine)
+    if previous:
+        check_profile_upgrade(browser / "Contents/MacOS/Chromium", previous / "Contents/MacOS/Chromium", scratch,
+                              machines)
+
+
+@contextlib.contextmanager
+def launch_directory(prefix, parent=None):
+    """A temporary directory for the app copies a check launches. Launch
+    Services records each launched app, and the helper apps inside it, a moment
+    after it starts; once the directory is gone, every app that was in it is
+    unregistered, so no record outlives its copy."""
+    apps = []
+    try:
+        with tempfile.TemporaryDirectory(prefix=prefix, dir=parent) as temporary:
+            root = Path(temporary).resolve()
+            try:
+                yield root
+            finally:
+                apps = [path for path in root.rglob("*.app") if path.is_dir() and not path.is_symlink()]
+    finally:
+        for app in apps:
+            subprocess.run([LSREGISTER, "-u", str(app)], capture_output=True)
+
+
+def host_copy(browser, copy, marker):
+    """Clone `browser` to `copy` carrying only the host resource `marker`, so a
+    check can launch it as that composition starts. Its executable and
+    framework are the built ones."""
+    run("cp", "-cR", browser, copy)
+    resources = copy / "Contents/Resources"
+    for name in HOST_MARKERS:
+        (resources / name).unlink(missing_ok=True)
+    (resources / marker).write_text("Launch check.\n")
+    return copy
+
+
+def launch_without_profile_folder(app, home, machine=None):
+    """Run `app` as `machine` in a new `home`, naming no profile folder and
+    asking only for the folder its browser settles on, which it prints before
+    any profile is read. Answers the finished launch."""
+    home.mkdir(parents=True)
+    launcher = ["arch", f"-{machine}"] if machine else []
+    # Only the switch that reports the folder, and the mock keychain, so the
+    # launch never reaches a real keychain item.
+    process = subprocess.Popen([*launcher, str(app / "Contents/MacOS/Chromium"), "--crest-print-user-data-dir",
+                                "--use-mock-keychain"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                               start_new_session=True,
+                               env={**os.environ, "HOME": str(home), "CFFIXED_USER_HOME": str(home)})
+    try:
+        output, errors = process.communicate(timeout=LAUNCH_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        raise ValueError(f"{app.name} kept running instead of reporting its profile folder; the engine lacks "
+                         "Crest's launch checks") from None
+    finally:
+        stop_process_group(process)
+    return subprocess.CompletedProcess(process.args, process.returncode, output, errors)
+
+
+def check_launches_without_profile_folder(product, experiment, scratch, machine=None):
+    """Require Crest's launch to decide the profile folder when nothing names one.
+
+    Finder, the Dock, a login item, the default-browser role and an update's
+    relaunch start Crest with no switches, while every harness and review
+    launch names a `--user-data-dir`. Without the folder Crest's entry point
+    names, Chromium opens its default one, which every other Chromium shares,
+    and every Space starts empty. `product` and `experiment` carry only that
+    composition's host resource: the product must settle on Crest's own folder
+    and the experiment must refuse to start."""
+    with tempfile.TemporaryDirectory(prefix="launch-", dir=scratch) as temporary:
+        root = Path(temporary).resolve()
+        home = root / "product"
+        launch = launch_without_profile_folder(product, home, machine)
+        expected = str(home / PRODUCT_PROFILES)
+        reported = launch.stdout.strip().rpartition("\n")[2] if launch.returncode == 0 else "nothing"
+        if reported != expected:
+            raise ValueError(f"A product launch without a profile folder opened {reported} instead of {expected} "
+                             f"(exit {launch.returncode}): {launch.stderr[-2000:]}")
+        require_no_default_profiles(home)
+        home = root / "experiment"
+        launch = launch_without_profile_folder(experiment, home, machine)
+        if (launch.returncode != EXPERIMENT_REFUSED or (home / DEFAULT_PROFILES).exists()
+                or (home / PRODUCT_PROFILES).exists()):
+            raise ValueError(f"An experiment started without a profile folder (exit {launch.returncode}): "
+                             f"{launch.stderr[-2000:]}")
+
+
+def require_no_default_profiles(home):
+    if strays := sorted(path.name for path in (home / DEFAULT_PROFILES).glob("Crest-*")):
+        raise ValueError("A launch made engine profiles in Chromium's default folder: " + ", ".join(strays))
+
+
+def stop_process_group(process):
+    """End a check's browser and every helper it started, and wait until all
+    are gone: a helper can outlive the browser and write into its folders."""
+    for stop, grace in ((signal.SIGTERM, 10), (signal.SIGKILL, 10)):
+        deadline = time.monotonic() + grace
+        try:
+            os.killpg(process.pid, stop)
+            while time.monotonic() < deadline:
+                process.poll()
+                os.killpg(process.pid, 0)
+                time.sleep(0.1)
+        except (ProcessLookupError, PermissionError):  # The whole group has exited.
+            break
+    process.wait()
+
+
+def stop_helpers(folder, grace=30):
+    """Wait for every process whose command line names `folder` to exit, and
+    end any still running after `grace` seconds. Some helpers run outside the
+    browser's process group and keep writing its profile for a moment after it
+    exits, longer under Rosetta."""
+    deadline = time.monotonic() + grace
+    while True:
+        listing = run("ps", "-axww", "-o", "pid=,command=", capture=True)
+        helpers = [int(pid) for pid, _, command in (line.strip().partition(" ") for line in listing.splitlines())
+                   if folder in command and pid.isdigit()]
+        if not helpers:
+            return
+        if time.monotonic() > deadline:
+            for pid in helpers:
+                with contextlib.suppress(ProcessLookupError, PermissionError):
+                    os.kill(pid, signal.SIGKILL)
+        time.sleep(0.2)
+
+
+class FixtureSite:
+    """A local site for the upgrade check. `/signin` sets a persistent session
+    cookie; every page's title says whether the browser still sends it."""
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/signin":
+                self.send_response(302)
+                self.send_header("Set-Cookie", "session=upgrade-check; Max-Age=31536000; Path=/; SameSite=Lax")
+                self.send_header("Location", "/")
+                self.end_headers()
+                return
+            signed_in = "session=upgrade-check" in self.headers.get("Cookie", "")
+            body = f"<title>{'Signed in' if signed_in else 'Signed out'}</title>".encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format, *args):
+            pass
+
+    def __enter__(self):
+        self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), self.Handler)
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        return self
+
+    def __exit__(self, *exception):
+        self.server.shutdown()
+        self.server.server_close()
+
+    def url(self, path):
+        return f"http://127.0.0.1:{self.server.server_address[1]}/{path}"
+
+
+def open_in_product_profile(executable, home, url, machine=None):
+    """Load `url` with `executable`, as `machine`, in the upgrade check's
+    profile in Crest's folder under `home`, and answer the page's title once
+    the browser exits by itself, which is when it has written the profile."""
+    data = home / PRODUCT_PROFILES
+    launcher = ["arch", f"-{machine}"] if machine else []
+    with tempfile.TemporaryFile() as output:
+        process = subprocess.Popen([*launcher, str(executable), "--headless", "--disable-gpu",
+                                    "--disable-background-networking", "--no-first-run", "--no-default-browser-check",
+                                    "--use-mock-keychain", f"--user-data-dir={data}",
+                                    f"--profile-directory={UPGRADE_PROFILE}", "--dump-dom", url],
+                                   stdout=output, stderr=subprocess.DEVNULL, start_new_session=True,
+                                   env={**os.environ, "HOME": str(home), "CFFIXED_USER_HOME": str(home)})
+        try:
+            process.wait(timeout=LAUNCH_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            raise ValueError(f"{executable.name} did not finish loading {url}") from None
+        finally:
+            stop_process_group(process)
+            stop_helpers(str(data))
+        if process.returncode != 0:
+            raise ValueError(f"{executable.name} exited with status {process.returncode} after loading {url}")
+        output.seek(0)
+        title = re.search(r"<title>([^<]*)</title>", output.read().decode(errors="replace"))
+    return title[1] if title else None
+
+
+def require_settings_kept(profile, engine):
+    """Chromium records when it resets tracked settings, the extensions Crest
+    installs among them, because it could not trust what was stored."""
+    for name in ("Secure Preferences", "Preferences"):
+        path = profile / name
+        if path.is_file() and read_json(path).get("prefs", {}).get("preference_reset_time"):
+            raise ValueError(f"{engine} reset the tracked settings of a profile it opened, extensions among them")
+
+
+def check_profile_upgrade(executable, previous, scratch, machines=(None,)):
+    """Require `executable` to open, unchanged, a profile the engine
+    `previous` made in Crest's folder.
+
+    The previous engine signs in to a local site in that profile. The new one
+    opens a copy of the folder as each of `machines`, then again, and must
+    still send the cookie and keep every tracked setting. A milestone that
+    stops reading what an earlier engine wrote, for example by changing the
+    keychain key for Crest's folder, signs every Space out and uninstalls its
+    extensions."""
+    with FixtureSite() as site, tempfile.TemporaryDirectory(prefix="upgrade-", dir=scratch) as temporary:
+        root = Path(temporary).resolve()
+        made = root / "previous"
+        if open_in_product_profile(previous, made, site.url("signin")) != "Signed in":
+            raise ValueError("The previous engine could not sign in to the upgrade check's local site")
+        for machine in machines:
+            home = root / f"upgraded-{machine or 'native'}"
+            run("ditto", made, home)
+            for launch in ("launch", "relaunch"):
+                if (title := open_in_product_profile(executable, home, site.url(""), machine)) != "Signed in":
+                    raise ValueError(f"On its {launch} as {machine or 'native'}, the engine found the previous "
+                                     f"engine's profile {title or 'unreadable'}: its cookies are lost")
+                require_settings_kept(home / PRODUCT_PROFILES / UPGRADE_PROFILE, "The engine")
+
+
+def stable_engine_key(repo, repository):
+    """The key of the engine the newest stable release was built with, which
+    made most people's profiles. Its tag is fetched if the checkout lacks it."""
+    releases = json.loads(run("gh", "release", "list", "--repo", repository, "--exclude-drafts",
+                              "--exclude-pre-releases", "--limit", "100", "--json", "tagName", capture=True))
+    tags = [release["tagName"] for release in releases if STABLE_RELEASE.fullmatch(release["tagName"])]
+    if not tags:
+        raise ValueError(f"{repository} has no stable release to check profile upgrades from")
+    ref = "refs/tags/" + max(tags, key=lambda tag: tuple(int(part) for part in tag[1:].split(".")))
+    if subprocess.run(["git", "-C", repo, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+                      capture_output=True).returncode:
+        run("git", "-C", repo, "fetch", "--quiet", "--depth=1", "--no-tags", f"https://github.com/{repository}.git",
+            f"{ref}:{ref}")
+    archive = subprocess.run(["git", "-C", repo, "archive", "--format=tar", ref, "--", *chromium_engine.INPUTS],
+                             capture_output=True, check=True).stdout
+    with tempfile.TemporaryDirectory(prefix="stable-inputs-") as temporary:
+        with tarfile.open(fileobj=io.BytesIO(archive)) as inputs:
+            inputs.extractall(temporary, filter="data")
+        return chromium_engine.engine_key(Path(temporary))
+
+
+def published_engine(key, directory, repository):
+    """The published engine `key` as a `Chromium.app` in `directory`,
+    downloaded once and checked against its published checksum."""
+    browser = directory / "Chromium.app"
+    if browser.is_dir():
+        return browser
+    tag = chromium_engine.release_tag(key)
+    release = chromium_artifact.published_release(repository, key)
+    if release is None or release.get("draft") or key not in (release.get("body") or ""):
+        raise ValueError(f"{tag}, the engine to check profile upgrades from, is not published")
+    # Engines published before universal builds name their architecture.
+    names = {item["name"] for item in release.get("assets", []) if item.get("state") == "uploaded"}
+    archives = sorted(name for name in names if name.startswith(f"Crest-Chromium-Engine-{key[:16]}-")
+                      and name.endswith(".zip") and f"{name}.sha256" in names)
+    if not archives:
+        raise ValueError(f"{tag} has no zipped engine with a checksum")
+    asset = archives[0]
+    directory.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="download-", dir=directory) as temporary:
+        download = Path(temporary)
+        run("gh", "release", "download", tag, "--repo", repository, "--pattern", asset, "--pattern",
+            f"{asset}.sha256", "--dir", download)
+        if sha256(download / asset) != (download / f"{asset}.sha256").read_text().split()[0]:
+            raise ValueError(f"{asset} does not match its published checksum")
+        run("ditto", "-x", "-k", download / asset, download / "unpacked")
+        (download / "unpacked/Chromium.app").rename(browser)
+    return browser
+
+
+def previous_engine(root, repo):
+    """The published engine whose profiles a new engine must open: the newest
+    stable release's, kept in the workspace. None when that is this engine."""
+    repository = os.environ.get("GITHUB_REPOSITORY") or chromium_artifact.REPOSITORY
+    key = stable_engine_key(repo, repository)
+    if key == chromium_engine.engine_key(repo):
+        return None
+    engines = root / "engines"
+    for stale in engines.glob("*"):
+        if stale.name != key[:16]:
+            remove_path(stale)
+    return published_engine(key, engines / key[:16], repository)
 
 
 def check_renders_page(browser, scratch, timeout=30, machine=None):
@@ -574,16 +920,7 @@ def check_renders_page(browser, scratch, timeout=30, machine=None):
         finally:
             # macOS helpers can keep output pipes open after dump-dom completes.
             # This checks rendering, then explicitly closes only its own process group.
-            try:
-                os.killpg(process.pid, signal.SIGTERM)
-            except (ProcessLookupError, PermissionError):  # The group has already exited.
-                pass
-            if process.poll() is None:
-                try:
-                    process.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    os.killpg(process.pid, signal.SIGKILL)
-                    process.wait()
+            stop_process_group(process)
 
 
 def require_overlay_compiled(repo, source, ninja, output="out/CrestBaseline"):

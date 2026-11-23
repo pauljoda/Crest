@@ -13,7 +13,7 @@
   },
   "chrome/BUILD.gn": {
     "before": "2171e306bf7f0a046429b6e442a3df1774b1413676ab1c3b18b0a72be7e7e9cc",
-    "after": "41b96e5caa8ffb2f00ed4ca62e8e725c71cec16bb0b5d05089a6d0aad31fb7a2"
+    "after": "4022d0abf658fe582323bb782cd76b4e9d1c3fdedc4167c50cac07e89282300b"
   },
   "chrome/browser/BUILD.gn": {
     "before": "e4098a876ac02db4ab67a4ce1ab3261545d1a4cd4b13433fa0b4bc03969baac3",
@@ -22,10 +22,6 @@
   "chrome/browser/ui/tabs/tab_features.cc": {
     "before": "d73f9115e1f549c9e1b170e722a2ca3f26dddb7fe72b8a3cebe8c3f881ac636c",
     "after": "05632a0940ba3d10a61996db3ed930eeb86c81e19c50ad5c74353dab8fc63526"
-  },
-  "chrome/app/chrome_exe_main_mac.cc": {
-    "before": "2003773d304e2a21638fc9946c8111178cf1425f84218a4762df994c5450d43f",
-    "after": "5ce393af0c672323fbdf4e06430fe91cffb13d7df1fe7c2b601bfaca1ce7e8a0"
   },
   "chrome/browser/ui/startup/startup_browser_creator.cc": {
     "before": "90a94bfdd710e052061fe70831279e999cbc5aed5f7d6fd82004e660093d8ad7",
@@ -197,7 +193,7 @@
   },
   "chrome/app/chrome_main_delegate.cc": {
     "before": "061dca08e0a9643b6c01172244bcec8056c77a56fcb176a3c64de0df87b796bb",
-    "after": "4e096dbbefd21785a68e3a2d8ad931a6811a5ad8aebf9ef79a6df7406eb1a9a7"
+    "after": "baa2c9ce38d626713b279b5216028efdd772f8e0f22cf2f8db469f0ee08329a9"
   },
   "chrome/browser/webauthn/chrome_authenticator_request_delegate.cc": {
     "before": "5e3d40d3abeb6ec142dfb19bec5c89e9d1e7581cca49da78336b03e12eaaad8b",
@@ -402,6 +398,10 @@
   "chrome/browser/ui/views/storage/storage_pressure_bubble_view.cc": {
     "before": "58564eeef3ba09bb2701f80a3ab9519403b9fb82eafdb3ec8df0d97146d046cb",
     "after": "2380fa2ba2fadd10fd85c661ffd3d1288e0f57d784c8480f3de7bdc970bc39bb"
+  },
+  "chrome/browser/browser_process_impl.cc": {
+    "before": "d1fc130bfd4b46bb4975fccb4aa1bd82cb7990f94858e2012984c9d129332ffb",
+    "after": "eb328bf02cf0ca770770c9e5c1faa8475b7ab563d91885f1de8a7e1b4cb5e039"
   },
   "services/network/BUILD.gn": {
     "before": "1e38a27be4dc0ddd09617493b68d2a6d31f8073a5e73e014739d60eed56561e9",

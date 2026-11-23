@@ -1255,9 +1255,10 @@ bool IsEnabled() {
 void EnsureCrestUIStarted(Browser* browser) {
   CHECK(NSThread.isMainThread);
   if (State().started) return;
-  // An experiment bundle must name its own engine profile root. A product
-  // bundle uses Chromium's default directory for its own bundle identity.
-  CHECK(IsProductBundle() || base::CommandLine::ForCurrentProcess()->HasSwitch("user-data-dir"));
+  // Every Crest browser names its engine profile root: an experiment on its
+  // command line, a product bundle in its executable's `main`.
+  // ChromeMainDelegate stops a launch without one before any profile is read.
+  CHECK(base::CommandLine::ForCurrentProcess()->HasSwitch("user-data-dir"));
   // The review and product compositions keep separate framework names so a
   // package can only ever contain the one it was assembled from.
   NSBundle* bundle = nil;
