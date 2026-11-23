@@ -22,7 +22,6 @@
 #include "chrome/browser/ui/exclusive_access/exclusive_access_context.h"
 #include "chrome/browser/ui/find_bar/find_bar.h"
 #include "chrome/browser/ui/location_bar/location_bar.h"
-#include "components/sharing_message/sharing_dialog_data.h"
 #include "components/web_modal/web_contents_modal_dialog_host.h"
 
 class Browser;

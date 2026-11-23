@@ -256,16 +256,11 @@ uses the blocklist, root store and log list compiled into its source. Chromium
 stops enforcing Certificate Transparency 70 days after the built-in log list's
 date, which the component update replaces.
 
-`native-host.patch` carries upstream distrust changes the pinned source does not
-yet contain, copied hunk for hunk from Chromium:
-
-| Files | Change | Upstream |
-| --- | --- | --- |
-| `net/data/ssl/chrome_root_store/root_store.textproto`, `root_store.certs` | Removes emSign ECC Root CA - G3 | Chrome Root Store version 43, Chromium `8793082f793c` |
-
-The root store keeps its pinned version number. Once an upstream release
-contains a change, its hunks no longer apply and the update stops there: remove
-those sections from the host patch and refresh the host inputs.
+When Chromium distrusts a root that the pinned source still trusts,
+`native-host.patch` carries the change, copied hunk for hunk from Chromium, and
+the root store keeps its pinned version number. The patch carries no such
+change now. Once an upstream release contains a carried change, the plan reports
+its sections as already upstream and drops them from the rebased host patch.
 
 ## Safe Browsing
 
