@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Site Controls as iPhone and iPad show them: a sheet that rises from the
 /// bottom edge, half the screen tall and pulled up for the rest, or on an
-/// iPad wide enough a popover under the control that opened them.
+/// iPad wide enough a popover under the control that opened them. They stay
+/// on the page they opened for and close when the window shows another.
 struct MobileSiteControlsContent: View {
     // MARK: - Types
 
@@ -32,6 +33,9 @@ struct MobileSiteControlsContent: View {
     /// The window's commands and downloads as the window gives them now.
     private let commands: MobileBrowserCommandContext?
     private let downloadsAccess: MobileDownloadsMenuAccess?
+    /// The page the window shows now, which Site Controls follow only while
+    /// it is the one they opened for.
+    private let shownPage: ObjectIdentifier
 
     @State private var model: SiteControlsModel
     /// The model's platform, kept with it, so what waits for Site Controls to
@@ -52,9 +56,15 @@ struct MobileSiteControlsContent: View {
             // sheet, runs once they are gone.
             .onDisappear { platform.didDismiss() }
             // The window gives its commands and downloads anew as it changes;
-            // Site Controls follow them while open.
+            // Site Controls follow them while open, for the page they opened
+            // for, and close once the window shows another page.
             .onChange(of: WindowState(commands: commands, downloadsAccess: downloadsAccess)) {
+                guard shownPage == ObjectIdentifier(platform.mobilePage) else { return }
                 platform.follow(commands: commands, downloadsAccess: downloadsAccess)
+            }
+            .onChange(of: shownPage) {
+                guard shownPage != ObjectIdentifier(platform.mobilePage) else { return }
+                platform.dismiss()
             }
             .onChange(of: model.page.sitePermissionRequests.current?.id) {
                 model.remembersPermission = true
@@ -75,6 +85,7 @@ struct MobileSiteControlsContent: View {
         self.usesSheet = usesSheet
         self.commands = commands
         self.downloadsAccess = downloadsAccess
+        shownPage = ObjectIdentifier(page)
         _platform = State(initialValue: platform)
         _model = State(initialValue: model)
     }
