@@ -26,6 +26,8 @@ import {
   type SidebarList,
   type SiteContentBlocking,
   type SitePermissionRecordState,
+  type SpaceDeletionState,
+  type SpaceLockChanged,
   type SpaceState,
   type SplitGroupState,
   type TabState,
@@ -45,6 +47,8 @@ export interface WorkspaceModel {
   readonly defaultSpaceId: string | null;
   /** The app's preferences, kept by the workspace that keeps them, or the defaults elsewhere. */
   readonly appPreferences: AppPreferences;
+  /** The Spaces whose deletion began and hasn't finished, which a launch carries on. */
+  readonly spaceDeletions: readonly SpaceDeletionState[];
 }
 
 /** A question about a page that waits on the person until the core settles it. */
@@ -74,6 +78,13 @@ export class CoreState {
   workspaces = new Map<string, WorkspaceModel>();
   windows = new Map<string, WindowState>();
   pages = new Map<string, PageState>();
+  /**
+   * Each Space's access as the core last published it, by Space: whether
+   * this process holds the grant that shows it, and whether a request to
+   * unlock it waits on the device's owner. A Space that asks for
+   * authentication and has none here is locked.
+   */
+  spaceAccess = new Map<string, SpaceLockChanged>();
   /** The questions about pages that wait on the person, by prompt, in the order asked. */
   prompts = new Map<string, PagePrompt>();
   /** Every profile's downloads, in the core's order, newest first. */
@@ -151,6 +162,7 @@ export class CoreState {
       order: session.spaces.map((space) => space.id),
       defaultSpaceId: session.defaultSpaceId,
       appPreferences: session.appPreferences ?? AppPreferencesStatics.default,
+      spaceDeletions: session.spaceDeletions,
     });
   }
 }
@@ -185,7 +197,9 @@ const appliers: ChangeAppliers = {
   WorkspaceClosed: (state, change) => void state.workspaces.delete(change.workspaceId),
   WorkspaceChanged: (state, change) => {
     const workspace = state.workspaces.get(change.workspaceId);
-    if (workspace) state.workspaces.set(change.workspaceId, { ...workspace, defaultSpaceId: change.defaultSpaceId });
+    if (workspace) {
+      state.workspaces.set(change.workspaceId, { ...workspace, defaultSpaceId: change.defaultSpaceId, spaceDeletions: change.spaceDeletions });
+    }
   },
   SpacesChanged: (state, change) => {
     const workspace = state.workspaces.get(change.workspaceId);
@@ -334,7 +348,7 @@ const appliers: ChangeAppliers = {
   SiteContentBlockingChanged: (state, change) => {
     state.blockingSites = change.sites;
   },
-  SpaceLockChanged: unread,
+  SpaceLockChanged: (state, change) => void state.spaceAccess.set(change.spaceId, change),
   StorageFailed: unread,
   SyncJournalChanged: unread,
   SyncRecordsSkipped: unread,

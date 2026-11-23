@@ -17,6 +17,16 @@ import heraldryCredits from "../../../../../CrestShared/Resources/HeraldicArtwor
 import type { Session } from "../boot";
 import { type MenuEntry, showContextMenu } from "../menus";
 import { Sheet } from "../shell/prompts/PromptSheet";
+import {
+  deletionPlan,
+  groupMembers,
+  isDeleting,
+  isSubSpace,
+  runDeletion,
+  type SpaceDeletionPlan,
+  type SpaceDeletionRequest,
+} from "../spaces/space-deletion";
+import { failureMessages, isAuthenticating, isLocked, setSpaceLock, unlockSpace, useAccessFailure } from "../spaces/space-access";
 import { startingLook } from "../spaces/space-look";
 import { SpaceIdentityIcon } from "../spaces/SpaceIdentity";
 import { Symbol } from "../symbols";
@@ -48,6 +58,8 @@ export function SpacePage({ session, space, spaces, tab, onTab, scrolls }: {
   const [name, setName] = useState<{ spaceId: string; draft: string } | null>(null);
   const nameField = useRef<HTMLInputElement>(null);
   const [showsCredits, setShowsCredits] = useState(false);
+  const [deleting, setDeleting] = useState<SpaceDeletionRequest | null>(null);
+  const plan = deleting ? deletionPlan(deleting, spaces) : null;
   const draft = name?.spaceId === space.id ? name.draft : space.settings.name;
   const commitName = () => {
     if (!name || name.spaceId !== space.id) return;
@@ -80,11 +92,14 @@ export function SpacePage({ session, space, spaces, tab, onTab, scrolls }: {
               }),
               editCrest: () => onTab("appearance"),
               showCredits: () => setShowsCredits(true),
+              requestDeletion: setDeleting,
             }));
           }}>
           <Symbol name="ellipsis.circle" size={16} />
         </button>
       </header>
+      {/* A locked Space shows its settings only once it's unlocked, as the Mac's page does. */}
+      {isLocked(session.core, space) ? <LockedSpaceSection session={session} space={space} /> : <>
       <div className="settings-space-tabs">
         <Segmented label="Space settings" value={tab} onChange={onTab}
           choices={[{ value: "appearance", label: "Appearance" }, { value: "browsing", label: "Browsing" }, { value: "privacy", label: "Privacy" },
@@ -98,12 +113,22 @@ export function SpacePage({ session, space, spaces, tab, onTab, scrolls }: {
               : <ExtensionsTab session={session} space={space} spaces={spaces} />}
         </div>
       </div>
+      </>}
       <AnimatePresence>
         {showsCredits && (
           <motion.div key="credits" className="sheet-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <Sheet title="Artwork Credits" primary="Done" onPrimary={() => setShowsCredits(false)} onEscape={() => setShowsCredits(false)}>
               <div className="sheet-credits" data-testid="artwork-credits">{heraldryCredits.trim()}</div>
             </Sheet>
+          </motion.div>
+        )}
+        {plan && (
+          <motion.div key="delete" className="sheet-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <DeletionSheet plan={plan} onCancel={() => setDeleting(null)} onDelete={(successor) => {
+              setDeleting(null);
+              // The deletion redraws much of the window, so the question finishes closing first, as on the Mac.
+              setTimeout(() => void runDeletion(session, plan, spaces, successor), 140);
+            }} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -113,18 +138,22 @@ export function SpacePage({ session, space, spaces, tab, onTab, scrolls }: {
 
 /**
  * The Space's actions in its page's header, as the Mac's menu lists them
- * there: Rename and Edit Crest…, Move Up and Move Down, then Reset
- * Appearance, back to the look the Space started from while it has moved
- * from it, and Artwork Credits. Windows has no Space groups' joining and
- * leaving, locking or deleting yet, which the Mac lists between them.
+ * there: Rename and Edit Crest…, Move Up and Move Down, deleting the Space
+ * (or a primary with its Sub-Spaces), then Reset Appearance, back to the
+ * look the Space started from while it has moved from it, and Artwork
+ * Credits. Lock Space stands before deleting: on, it asks Windows Hello
+ * before the Space shows, as the Mac asks for Touch ID or the password; a
+ * private window's Spaces can't lock. Windows has no joining or leaving
+ * Space groups yet, which the Mac lists before Lock Space.
  */
-function spaceMenu({ session, space, spaces, rename, editCrest, showCredits }: {
+function spaceMenu({ session, space, spaces, rename, editCrest, showCredits, requestDeletion }: {
   session: Session;
   space: SpaceState;
   spaces: readonly SpaceState[];
   rename: () => void;
   editCrest: () => void;
   showCredits: () => void;
+  requestDeletion: (request: SpaceDeletionRequest) => void;
 }): MenuEntry[] {
   const reorder = (order: readonly string[] | null) => () => {
     if (order) void send(session, ReorderSpaces({ workspaceId: session.workspaceId, spaceIds: order }));
@@ -141,11 +170,93 @@ function spaceMenu({ session, space, spaces, rename, editCrest, showCredits }: {
     { title: "Move Down", enabled: down !== null, run: reorder(down) },
     "separator",
     {
+      title: "Lock Space", checked: space.settings.requiresAuthentication,
+      enabled: !(session.core.state.workspaces.get(session.workspaceId)?.kind.isPrivate ?? false),
+      run: () => void setSpaceLock(session, space, !space.settings.requiresAuthentication),
+    },
+    "separator",
+    ...deletionItems(session, space, spaces, requestDeletion),
+    "separator",
+    {
       title: "Reset Appearance", enabled: resets,
       run: () => starting && void send(session, SetSpaceBranding({ workspaceId: session.workspaceId, spaceId: space.id, branding: starting })),
     },
     { title: "Artwork Credits", run: showCredits },
   ];
+}
+
+/**
+ * BrowserSettingsPrivateSpaceAccessSection: a locked Space's page holds only
+ * the Space and Unlock, under "Locked", until Windows Hello unlocks it.
+ */
+function LockedSpaceSection({ session, space }: { session: Session; space: SpaceState }) {
+  const failure = useAccessFailure();
+  const authenticating = isAuthenticating(session.core, space.id);
+  return (
+    <div className="settings-scroll">
+      <div className="settings-column">
+        <Group title="Locked" footer={failure ? failureMessages[failure] : "Unlock this Space to see its settings."}>
+          <div className="settings-row settings-locked-row" data-testid="settings-private-space-lock">
+            <SpaceIdentityIcon symbol={space.settings.symbol} branding={space.settings.look} size={20} />
+            <span className="settings-row-title">{space.settings.name}</span>
+            <span className="settings-spacer" />
+            <button type="button" className="settings-unlock" disabled={isAuthenticating(session.core)}
+              aria-label={authenticating ? "Authenticating…" : `Unlock ${space.settings.name}`}
+              data-testid="settings-unlock-space" onClick={() => void unlockSpace(session, space)}>
+              <Symbol name="lock.open.fill" size={12} />
+              Unlock
+            </button>
+          </div>
+        </Group>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * BrowserSpaceDeletionMenuItems: Delete, while another Space stays and the
+ * Space isn't going already, and for a primary that leads Sub-Spaces,
+ * Delete with them, while a Space outside the group stays.
+ */
+function deletionItems(session: Session, space: SpaceState, spaces: readonly SpaceState[],
+  request: (request: SpaceDeletionRequest) => void): MenuEntry[] {
+  const name = space.settings.name;
+  const members = groupMembers(space, spaces);
+  const leadsGroup = !isSubSpace(space) && members.length > 1;
+  return [
+    {
+      title: `Delete “${name}”…`, enabled: spaces.length > 1 && !isDeleting(session, space.id),
+      run: () => request({ spaceId: space.id, includesSubSpaces: false }),
+    },
+    ...(leadsGroup ? [{
+      title: `Delete “${name}” and Its Sub-Spaces…`, enabled: members.length < spaces.length,
+      run: () => request({ spaceId: space.id, includesSubSpaces: true }),
+    }] : []),
+  ];
+}
+
+/**
+ * The deletion's question, as the Mac's alert asks it, and for a primary
+ * that goes alone, its sheet's choice of the Sub-Space that keeps the group.
+ */
+function DeletionSheet({ plan, onCancel, onDelete }: {
+  plan: SpaceDeletionPlan;
+  onCancel: () => void;
+  onDelete: (successor: string | null) => void;
+}) {
+  const [successor, setSuccessor] = useState(plan.successors[0]?.id ?? null);
+  return (
+    <Sheet title={plan.title} primary={plan.confirmation} secondary="Cancel" warning
+      onPrimary={() => onDelete(successor)} onEscape={onCancel}>
+      <p className="sheet-message">{plan.message}</p>
+      {plan.successors.length > 0 && (
+        <select className="sheet-field sheet-choice" aria-label="New primary" data-testid="space-deletion-successor"
+          value={successor ?? ""} onChange={(event) => setSuccessor(event.target.value)} data-autofocus>
+          {plan.successors.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.settings.name}</option>)}
+        </select>
+      )}
+    </Sheet>
+  );
 }
 
 /**

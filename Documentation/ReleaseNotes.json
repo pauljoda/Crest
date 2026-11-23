@@ -5937,6 +5937,10 @@
     "windows-sidebar-more-tabs-space-menu": {
       "category": "internal",
       "message": "The Windows sidebar shows the Mac's Show more tabs button and scroll indicator, and a Space's settings page has the Mac's actions menu with Reset Appearance and Artwork Credits"
+    },
+    "windows-delete-lock-spaces": {
+      "category": "internal",
+      "message": "Spaces on Windows can be deleted with their data, handing a group to a Sub-Space, and locked behind Windows Hello, locking again when Crest goes to the background"
     }
   }
 }

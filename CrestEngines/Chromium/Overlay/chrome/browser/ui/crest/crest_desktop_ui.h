@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "base/files/file_path.h"
@@ -87,7 +88,10 @@ class CrestDesktopUI : public content::WebUIController {
 // phases are blink::WebMouseWheelEvent's flags, the deltas follow the DOM's
 // wheel event, and the place and deltas are in CSS pixels. An extension's
 // button runs its action for a page, opening the extension's popup beside the
-// button as Chrome opens it from its toolbar (the op "runExtension").
+// button as Chrome opens it from its toolbar (the op "runExtension"). A
+// locked Space asks Windows Hello whether the device's owner is there, over
+// the window that asks (the op "verifyOwner"), as the Mac asks
+// LocalAuthentication.
 class DesktopBridge : public content::WebUIMessageHandler,
                       public content::RenderWidgetHost::InputEventObserver,
                       public content::RenderWidgetHostObserver {
@@ -143,6 +147,12 @@ class DesktopBridge : public content::WebUIMessageHandler,
   // own context menus run, answered later as the chosen item's id or null.
   void ShowMenu(base::Value id, const std::string& items, double x, double y);
   void AnswerMenu(base::Value id, std::optional<std::string> chosen);
+  // Asks Windows Hello, over this window, to verify the device's owner for
+  // `reason`, answered later as {"result"}: "verified", "canceled" (the person
+  // dismissed it or ran out of tries), "busy" (another verification is up),
+  // or "unavailable" (no Windows Hello, or it is not set up or allowed).
+  void VerifyOwner(base::Value id, const std::string& reason);
+  void AnswerOwner(base::Value id, std::string_view result);
   // Fetches `address`, an https address, as text: without cookies or stored
   // credentials, through no cache, following redirects only to other https
   // addresses, sending the validators of a copy the interface already holds,

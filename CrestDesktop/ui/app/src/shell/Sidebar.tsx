@@ -90,6 +90,7 @@ import {
   unitsShown,
 } from "./sidebar-selection";
 import type { SidebarDialog } from "./SidebarDialogs";
+import { isLocked } from "../spaces/space-access";
 import { SidebarScrollAffordance } from "./SidebarScrollAffordance";
 import { SplitGroupHeader } from "./SplitGroupHeader";
 import { previewHandlers, showsTabPreviews } from "./TabPreview";
@@ -507,7 +508,9 @@ export function Sidebar({
     if ("tabId" in current) void send(session, RenameTab({ workspaceId, spaceId: space.id, tabId: current.tabId, title }));
     else void send(session, RenameFolder({ workspaceId, spaceId: space.id, folderId: current.folderId, title }));
   };
-  const live = page?.live;
+  // A locked Space's address field shows nothing of its tabs.
+  const shownLocked = isLocked(session.core, space);
+  const live = shownLocked ? undefined : page?.live;
 
   // What the shown Space's page draws as the person uses it. A page a slide
   // shows beside it is drawn still: no selection, lift or rename of its own.
@@ -568,7 +571,7 @@ export function Sidebar({
       );
     }
     const showsPins = pinned.some((list) => list.rows.length > 0) || !!lift;
-    return (
+    const content = (
       <>
       {!practice && (
         <PinnedExtensionStrip session={session} space={space} pageId={page?.id ?? null} pageKey={`${page?.live.url ?? ""}|${page?.live.title ?? ""}`} />
@@ -768,6 +771,10 @@ export function Sidebar({
       </LayoutGroup>
       </>
     );
+    // A locked Space's page shows blurred and redacted, and takes nothing, as the Mac's.
+    return isLocked(session.core, space)
+      ? <div className="space-page-locked" inert aria-hidden data-testid="space-page-locked">{content}</div>
+      : content;
   };
 
   return (
@@ -785,9 +792,9 @@ export function Sidebar({
       {/* An open utility list's search stands where the address field stood, as on the Mac. */}
       {!practice && !utility && <div className="address-area">
         <AddressField
-          address={live?.address ?? live?.url ?? tabs.get(shownTabId ?? "")?.url ?? ""}
+          address={shownLocked ? "" : live?.address ?? live?.url ?? tabs.get(shownTabId ?? "")?.url ?? ""}
           // A live site's controls: its lock, which opens its certificate, and Site Controls.
-          site={siteControlPage ? {
+          site={siteControlPage && !shownLocked ? {
             secure: siteControlPage.live.security.isSecure,
             certificate: certificates.length > 0,
             reviewCertificate: () => void session.shell?.certificate(certificates),
@@ -795,7 +802,7 @@ export function Sidebar({
             notice: popupNotice,
             toggle: () => setSiteControlsOpen((open) => !open),
           } : null}
-          secure={live ? live.security.isSecure : !!tabs.get(shownTabId ?? "")?.url?.toLowerCase().startsWith("https:")}
+          secure={live ? live.security.isSecure : !shownLocked && !!tabs.get(shownTabId ?? "")?.url?.toLowerCase().startsWith("https:")}
           resident={!!page}
           loading={!!live?.isLoading}
           accent={css(primaryColor(space.settings.look))}

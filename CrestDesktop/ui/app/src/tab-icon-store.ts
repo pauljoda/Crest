@@ -105,3 +105,15 @@ export async function storeTabIcon(tabId: string, address: string, image: Uint8A
     // An image that can't be kept is drawn again when its page next loads.
   }
 }
+
+/** Forgets the images kept for `tabIds`, as a deleted Space's tabs leave nothing behind. */
+export async function forgetTabIcons(tabIds: readonly string[]) {
+  const db = await database();
+  if (!db || tabIds.length === 0) return;
+  try {
+    const store = db.transaction(storeName, "readwrite").objectStore(storeName);
+    for (const tabId of tabIds) store.delete(tabId);
+  } catch {
+    // An image left behind is pruned with the oldest once the store fills.
+  }
+}

@@ -36,6 +36,9 @@ export type ShellNoticeKind = "link" | "confirmation";
 type ShellWindow = Window & ShellCallbacks & { chrome?: { send?: (message: string, args: unknown[]) => void } };
 
 /** The window around the interface, which the interface draws the buttons of. */
+/** How Windows Hello answered a request to verify the device's owner. */
+export type OwnerVerification = "verified" | "canceled" | "busy" | "unavailable";
+
 export interface ShellFrame {
   readonly maximized: boolean;
   readonly fullscreen: boolean;
@@ -292,6 +295,23 @@ export class ShellTransport implements CoreTransport {
   async menu(items: readonly ShellMenuItem[], x: number, y: number): Promise<string | null> {
     const reply = await this.#call("menu", JSON.stringify(items), String(x), String(y));
     return JSON.parse(new TextDecoder().decode(reply.bytes)) as string | null;
+  }
+
+  /**
+   * Asks Windows Hello, over this window, whether the device's owner is here,
+   * giving `reason`, as the Mac asks LocalAuthentication to unlock a Space:
+   * verified; canceled, when the person dismissed it or ran out of tries;
+   * busy, while another verification is up; or unavailable, where Windows
+   * Hello is missing, not set up or not allowed, or the engine can't ask.
+   */
+  async verifyOwner(reason: string): Promise<OwnerVerification> {
+    const reply = await this.#call("verifyOwner", reason);
+    try {
+      const { result } = JSON.parse(new TextDecoder().decode(reply.bytes)) as { result?: string };
+      return result === "verified" || result === "canceled" || result === "busy" ? result : "unavailable";
+    } catch {
+      return "unavailable";
+    }
   }
 
   /**

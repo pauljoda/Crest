@@ -1,5 +1,10 @@
 #include "chrome/browser/ui/crest/crest_desktop_ui.h"
 
+#include <UserConsentVerifierInterop.h>
+#include <windows.foundation.h>
+#include <windows.security.credentials.ui.h>
+#include <wrl/client.h>
+
 #include <map>
 #include <memory>
 #include <optional>
@@ -23,6 +28,9 @@
 #include "base/task/sequenced_task_runner.h"
 #include "base/task/thread_pool.h"
 #include "base/uuid.h"
+#include "base/win/core_winrt_util.h"
+#include "base/win/hstring_reference.h"
+#include "base/win/post_async_results.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/extensions/extension_action_runner.h"
 #include "chrome/browser/extensions/extension_view_host.h"
@@ -78,6 +86,7 @@
 #include "ui/views/controls/webview/webview.h"
 #include "ui/views/view.h"
 #include "ui/views/widget/widget.h"
+#include "ui/views/win/hwnd_util.h"
 #include "url/gurl.h"
 #include "url/url_constants.h"
 
@@ -430,7 +439,68 @@ void DesktopBridge::OnCall(const base::ListValue& arguments) {
     ShowMenu(arguments[0].Clone(), StringAt(arguments, 2), x, y);
     return;
   }
+  if (op == "verifyOwner") {
+    VerifyOwner(arguments[0].Clone(), StringAt(arguments, 2));
+    return;
+  }
   Reply(arguments[0], Answer(op, arguments));
+}
+
+void DesktopBridge::VerifyOwner(base::Value id, const std::string& reason) {
+  using ABI::Windows::Foundation::IAsyncOperation;
+  using ABI::Windows::Security::Credentials::UI::UserConsentVerificationResult;
+  // The prompt belongs to the window that asks, so it stands over it and the
+  // window waits for it, as the Mac's sheet does.
+  DesktopFrame* frame = DesktopHost::Get().FrameFor(Window());
+  HWND window = frame && frame->widget() ? views::HWNDForWidget(frame->widget()) : nullptr;
+  Microsoft::WRL::ComPtr<IUserConsentVerifierInterop> verifier;
+  HRESULT result = window ? base::win::GetActivationFactory<
+                                IUserConsentVerifierInterop,
+                                RuntimeClass_Windows_Security_Credentials_UI_UserConsentVerifier>(&verifier)
+                          : E_FAIL;
+  Microsoft::WRL::ComPtr<IAsyncOperation<UserConsentVerificationResult>> verification;
+  if (SUCCEEDED(result)) {
+    result = verifier->RequestVerificationForWindowAsync(
+        window, base::win::HStringReference(base::UTF8ToWide(reason).c_str()).Get(),
+        __uuidof(IAsyncOperation<UserConsentVerificationResult>), &verification);
+  }
+  if (SUCCEEDED(result)) {
+    base::WeakPtr<DesktopBridge> bridge = weak_factory_.GetWeakPtr();
+    result = base::win::PostAsyncHandlers(
+        verification.Get(),
+        base::BindOnce(
+            [](base::WeakPtr<DesktopBridge> bridge, base::Value id, UserConsentVerificationResult answer) {
+              if (!bridge) return;
+              using enum ABI::Windows::Security::Credentials::UI::UserConsentVerificationResult;
+              switch (answer) {
+                case UserConsentVerificationResult_Verified:
+                  bridge->AnswerOwner(std::move(id), "verified");
+                  return;
+                case UserConsentVerificationResult_Canceled:
+                case UserConsentVerificationResult_RetriesExhausted:
+                  bridge->AnswerOwner(std::move(id), "canceled");
+                  return;
+                case UserConsentVerificationResult_DeviceBusy:
+                  bridge->AnswerOwner(std::move(id), "busy");
+                  return;
+                default:
+                  bridge->AnswerOwner(std::move(id), "unavailable");
+              }
+            },
+            bridge, id.Clone()),
+        base::BindOnce(
+            [](base::WeakPtr<DesktopBridge> bridge, base::Value id, HRESULT) {
+              if (bridge) bridge->AnswerOwner(std::move(id), "unavailable");
+            },
+            bridge, id.Clone()));
+  }
+  if (FAILED(result)) AnswerOwner(std::move(id), "unavailable");
+}
+
+void DesktopBridge::AnswerOwner(base::Value id, std::string_view result) {
+  base::DictValue answer;
+  answer.Set("result", result);
+  Reply(id, Text(base::WriteJson(answer).value_or("{}")));
 }
 
 void DesktopBridge::Reply(const base::Value& id, const CoreReply& reply) {

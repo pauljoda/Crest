@@ -1767,3 +1767,29 @@ button.forge-swatch.selected {
   font: inherit;
   outline: none;
 }
+
+/* A locked Space's page: the Space and Unlock, as the Mac's private Space access row. */
+.settings-locked-row {
+  gap: 10px;
+}
+
+.settings-unlock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--settings-accent);
+  color: white;
+  font-weight: 600;
+  transition: filter 100ms ease-in-out;
+}
+
+.settings-unlock:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.settings-unlock:disabled {
+  opacity: 0.5;
+}

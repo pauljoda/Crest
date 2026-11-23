@@ -50,6 +50,9 @@ import type { SettingsPageName } from "../settings/catalog";
 import { extensions } from "../extensions";
 import { suggestionFetcher } from "../palette/suggestions";
 import { GettingStartedView } from "../guide/GettingStartedView";
+import { resumeSpaceDeletions } from "../spaces/space-deletion";
+import { isLocked, lockWhenCrestInactive } from "../spaces/space-access";
+import { SpaceAccessView } from "../spaces/SpaceAccessView";
 import { requestSettings, SettingsView } from "../settings/SettingsView";
 import { useCoreVersion } from "../use-core";
 import { NavigationButtons } from "./NavigationButtons";
@@ -111,6 +114,10 @@ export function BrowserWindow({ session }: { session: Session }) {
       windowId: session.windowId, direction: direction > 0 ? AdjacentDirection.next : AdjacentDirection.previous,
     }));
   }), [session]);
+  // A Space whose deletion the last launch began goes now, as the Mac's window carries it on.
+  useEffect(() => void resumeSpaceDeletions(session), [session]);
+  // Spaces that ask for authentication lock once Crest is no longer in front, as the Mac's do.
+  useEffect(() => lockWhenCrestInactive(session), [session]);
   const pages = [...state.pages.values()].filter((candidate) => candidate.phase.holdsEnginePage);
   const pagesByTab = new Map(pages.flatMap((candidate) => (candidate.tabId ? [[candidate.tabId, candidate.id] as const] : [])));
   const page = pages.find((candidate) => candidate.tabId === shownTabId) ?? null;
@@ -637,6 +644,22 @@ export function BrowserWindow({ session }: { session: Session }) {
         onRest={focusShownPage} render={(candidate, live) => {
           // Another Space's cards are its preview in passing, still, as the Mac's.
           const rowCards = live ? cards : spaceCards(window, candidate.id, shownTabs.get(candidate.id) ?? null);
+          const overlay = live && (
+            <div className="page-row-overlay">
+              {shell && (
+                <DownloadApproval shell={shell} downloads={downloads} asked={downloadApproval(state)}
+                  spaceName={(spaceId) => (spaceId ? workspace?.spaces.get(spaceId)?.settings.name ?? null : null)} />
+              )}
+              <AnimatePresence>
+                {dialog && <SidebarDialogLayer key="sidebar-dialog" session={session} dialog={dialog} onDone={() => setDialog(null)} />}
+              </AnimatePresence>
+              <Notices shell={shell} />
+            </div>
+          );
+          // A locked Space's card holds its lock screen, and none of its pages, until it's unlocked.
+          if (isLocked(session.core, candidate)) {
+            return <SpaceAccessView session={session} space={candidate} spaces={spaces} passive={!live}>{overlay}</SpaceAccessView>;
+          }
           return (
             <PageColumns
               windowId={session.windowId}
@@ -652,18 +675,7 @@ export function BrowserWindow({ session }: { session: Session }) {
                 <SpaceCard host={host} space={candidate} tabId={tabId} pages={pages} passive={!live} card={card} />
               )}
             >
-              {live && (
-                <div className="page-row-overlay">
-                  {shell && (
-                    <DownloadApproval shell={shell} downloads={downloads} asked={downloadApproval(state)}
-                      spaceName={(spaceId) => (spaceId ? workspace?.spaces.get(spaceId)?.settings.name ?? null : null)} />
-                  )}
-                  <AnimatePresence>
-                    {dialog && <SidebarDialogLayer key="sidebar-dialog" session={session} dialog={dialog} onDone={() => setDialog(null)} />}
-                  </AnimatePresence>
-                  <Notices shell={shell} />
-                </div>
-              )}
+              {overlay}
             </PageColumns>
           );
         }}>
