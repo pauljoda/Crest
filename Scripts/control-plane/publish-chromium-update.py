@@ -153,7 +153,12 @@ def main():
     else:
         subject = f"Check Crest's patches against Chromium {version}"
     run("git", "commit", "-s", "--allow-empty", "-m", subject)
-    run("git", "push", "origin", f"HEAD:refs/heads/{branch}")
+    # The branch is named for the release and its base. An earlier run that
+    # pushed it but didn't open its PR left it there, so reuse it as it is.
+    if run("git", "ls-remote", "--heads", "origin", f"refs/heads/{branch}", capture=True).strip():
+        print(f"{branch} was pushed by an earlier run; opening its pull request from it.")
+    else:
+        run("git", "push", "origin", f"HEAD:refs/heads/{branch}")
 
     if args.receipt:
         body = review_body(version, plan, receipt, chromium_engine.release_tag(chromium_engine.engine_key(REPO)),
