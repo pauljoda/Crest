@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "palette-word-leads-to-open-tab-or-site",
+    "development": "large-text-welcome-scrolls",
     "nightly": "roadmap-at-crest-browser"
   }
 }
