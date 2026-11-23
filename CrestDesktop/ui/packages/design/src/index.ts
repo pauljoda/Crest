@@ -174,6 +174,10 @@ export const motion = Object.freeze({
   onboardingHandOver: smooth(0.32),
   /** Setup's step chips as the walk moves: their color, lift and title. */
   setupChips: smooth(0.45),
+  /** The Getting Started guide changing chapter: its lessons coming and going. */
+  guideChapter: { duration: 0.2, ease: "easeInOut" } as const,
+  /** The guide's practice window taking its place for a chapter: SwiftUI's spring(response: 0.55, dampingFraction: 0.9). */
+  guideStage: { type: "spring", visualDuration: 0.55, bounce: 0.1 } as const,
 });
 
 /**

@@ -5,6 +5,7 @@ import crestIcon from "../../../../../CrestShared/Resources/AppIconPreviews.xcas
 import type { Session } from "../boot";
 import { SpaceIdentityIcon } from "../spaces/SpaceIdentity";
 import { Symbol } from "../symbols";
+import { residentNativeTabs } from "../native-tabs";
 import { useCoreVersion } from "../use-core";
 import { destinations, leadingRows, matches, type SettingsPageName, sidebarTint, trailingRows } from "./catalog";
 import { keptScroll } from "./controls";
@@ -115,10 +116,16 @@ export function SettingsView({ session, tabId, spaces, shownSpace }: {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [asked, tabId]);
-  // A closed Settings tab's state goes with it.
+  // The tab holds Settings while its state lives, so its row reads loaded;
+  // a closed Settings tab's state goes with it.
+  useEffect(() => void residentNativeTabs.add(tabId), [tabId]);
   useEffect(() => {
     const open = new Set(spaces.flatMap((space) => space.tabs.map((tab) => tab.id)));
-    for (const id of tabStates.keys()) if (!open.has(id)) tabStates.delete(id);
+    for (const id of tabStates.keys()) {
+      if (open.has(id)) continue;
+      tabStates.delete(id);
+      residentNativeTabs.delete(id);
+    }
   }, [spaces]);
   // A Space that left goes back to General.
   const selectedSpace = selection.kind === "space" ? spaces.find((space) => space.id === selection.spaceId) : undefined;

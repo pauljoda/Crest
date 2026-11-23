@@ -5929,6 +5929,10 @@
     "windows-setup-rerun": {
       "category": "internal",
       "message": "Settings on Windows has an Advanced page whose Setup section reruns Crest Setup from the welcome, or opens it to review and customize the Spaces"
+    },
+    "windows-getting-started-guide": {
+      "category": "internal",
+      "message": "Windows opens the Getting Started guide after Setup, with a practice Space on the real sidebar, its tabs and folders lessons, and Split View practice; the sidebar gains Clear on the open tabs' line"
     }
   }
 }

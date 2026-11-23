@@ -1,6 +1,7 @@
 import {
   AppWindow,
   Archive,
+  ArrowDown,
   ArrowLeft,
   ArrowLeftRight,
   ArrowRight,
@@ -126,6 +127,8 @@ import {
   X,
   ZoomIn,
   ZoomOut,
+  MousePointer2,
+  MousePointerClick,
 } from "lucide-react";
 import type { ReactElement } from "react";
 
@@ -302,6 +305,14 @@ const symbols: Record<string, LucideIcon> = {
   calendar: Calendar,
   "calendar.badge.clock": CalendarClock,
   "exclamationmark.arrow.trianglehead.2.clockwise.rotate.90": TriangleAlert,
+  // Clear on the open tabs' line, and the Getting Started guide's practice.
+  "arrow.down": ArrowDown,
+  leaf: Leaf,
+  "sun.max": Sun,
+  "mountain.2": Mountain,
+  cursorarrow: MousePointer2,
+  "cursorarrow.click": MousePointerClick,
+  "plus.rectangle.on.rectangle": CopyPlus,
 };
 
 /**

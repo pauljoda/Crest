@@ -31,7 +31,9 @@ export interface ColumnCard {
  * the window's chrome speaks for wears the Space's colour while there is
  * more than one.
  */
-export function PageColumns({ cards, focusedTabId, accent, interactive, onFocus, onResize, renderCard, children }: {
+export function PageColumns({ windowId, cards, focusedTabId, accent, interactive, onFocus, onResize, renderCard, children }: {
+  /** The window the row is in, whose sidebar's lift may draw a drop column in it. */
+  windowId: string;
   cards: SpaceCards;
   focusedTabId: string | null;
   accent: BrandColor;
@@ -60,7 +62,7 @@ export function PageColumns({ cards, focusedTabId, accent, interactive, onFocus,
 
   // Where a lift from the sidebar would join the cards: a column of the
   // width the card will have, drawn before it lands.
-  const aimed = useSplitDropIndex();
+  const aimed = useSplitDropIndex(windowId);
   const placeholder = interactive && aimed !== null && aimed <= cards.tabIds.length ? aimed : null;
   const slotShares = placeholder === null ? shares : sharesInserting(placeholder, shares);
 

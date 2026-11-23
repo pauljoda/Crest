@@ -17,6 +17,13 @@ function adopt(tabId: string, key: string, image: Uint8Array): string {
   return url;
 }
 
+/**
+ * Icons bundled for tabs whose pages never load, by tab: the Getting Started
+ * practice's tabs wear the marks shipped for them, as a loaded page would
+ * leave them, where the Mac's practice sets each tab's favicon.
+ */
+export const bundledTabIcons = new Map<string, string>();
+
 /** The icon the window last drew for a tab, or null, without asking its page again. */
 export function cachedTabIcon(tabId: string): string | null {
   return byTab.get(tabId)?.url ?? null;

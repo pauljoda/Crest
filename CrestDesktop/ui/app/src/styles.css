@@ -1539,14 +1539,54 @@ button {
    with the Mac's room on either side of it: about 19 above, 18 below, and as
    much again where the saved tabs would stand when there are none. */
 .tab-list > .tab-section.current-tabs {
-  border-top: 1px solid var(--surface-border);
-  padding-top: 20px;
   margin-top: 16px;
 }
 
 .tab-list > .tab-section.current-tabs:first-child {
-  padding-top: 19px;
   margin-top: 28px;
+}
+
+/* The line itself, as the Mac's BrowserCurrentTabsDivider on a pointer
+   shell, with Clear at its trailing end, 8 past where the line stops. The
+   section's gap and this margin keep the line 20 above the New Tab row, or
+   19 where nothing stands above it. Clear shows only while the pointer
+   rests over the Space's page, and takes no room of its own. */
+.current-tabs-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 1px;
+  margin-bottom: 18px;
+}
+
+.tab-list > .tab-section.current-tabs:first-child > .current-tabs-divider {
+  margin-bottom: 17px;
+}
+
+.current-tabs-line {
+  flex: 1;
+  height: 1px;
+  background: var(--surface-border);
+}
+
+.current-tabs-clear {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fg-secondary);
+  white-space: nowrap;
+}
+
+.current-tabs-clear:hover {
+  color: var(--fg);
+}
+
+.space-page:hover .current-tabs-clear {
+  display: inline-flex;
 }
 
 /* An open folder, group or split is the Mac's container: 4 of padding over

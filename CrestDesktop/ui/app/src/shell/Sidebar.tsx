@@ -1,9 +1,11 @@
 import {
   ChooseTabIcon,
+  ClearCurrentTabs,
   CollapseFolder,
   ExpandSavedTabs,
   type FolderState,
   type HistoryEntryState,
+  NativeView,
   OpenTab,
   type PageState,
   type PermissionAsked,
@@ -19,19 +21,22 @@ import {
   TabIconMode,
   TabPlacement,
   type TabState,
+  TabSurface,
 } from "@crest/contracts";
 import { motion as tokens } from "@crest/design";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import crestIcon from "../../../../../CrestShared/Resources/AppIconPreviews.xcassets/CrestPreview.imageset/icon.png";
 import type { Session } from "../boot";
 import type { Browsing } from "../browsing";
 import { openPalette, toggleUtilityEvent } from "../commands";
 import { insideCrest } from "../environment";
 import { type MenuEntry, showContextMenu } from "../menus";
 import { useFaviconColor } from "../favicon-palette";
-import { useTabIcon } from "../page-icon";
+import { residentNativeTabs } from "../native-tabs";
+import { bundledTabIcons, useTabIcon } from "../page-icon";
 import { pageStills } from "../spaces/page-stills";
 import { Symbol } from "../symbols";
 import type { Downloads } from "../downloads";
@@ -122,6 +127,20 @@ interface SidebarProps {
   readonly docked: boolean;
   /** Floats a docked sidebar over the page, or docks a floating one. */
   readonly onToggleDock: () => void;
+  /** The Getting Started practice this sidebar serves, if it is the practice's rather than the window's. */
+  readonly practice?: PracticeSidebar;
+}
+
+/**
+ * What the Getting Started practice asks of the sidebar it reuses, as the
+ * Mac's BrowserGettingStartedPracticeSidebar binds the real rows to the
+ * practice: its Space's pins, saved tabs (always shown, under a caption in
+ * place of the Space header) and open tabs, with none of the window's
+ * address field, Space switcher or lists. New Tab opens the practice's
+ * example tab, since its pages never load.
+ */
+export interface PracticeSidebar {
+  readonly openExampleTab: () => void;
 }
 
 /**
@@ -131,7 +150,7 @@ interface SidebarProps {
  */
 export function Sidebar({
   session, browsing, space, spaces, shownTabId, shownTabs, page, pagesByTab, showsNavigation, permission, downloads, onDialog,
-  docked, onToggleDock,
+  docked, onToggleDock, practice,
 }: SidebarProps) {
   const aside = useRef<HTMLElement>(null);
 
@@ -147,13 +166,15 @@ export function Sidebar({
   const newDownloads = profileDownloads.filter((download) => !download.isAcknowledged);
   const toggleLists = () => setUtility((current) => (current ? null : newDownloads.length > 0 ? "downloads" : chosen));
   useEffect(() => {
+    // The practice's sidebar opens none of the window's lists.
+    if (practice) return;
     const toggle = (event: Event) => {
       const surface = (event as CustomEvent<UtilitySurfaceName>).detail;
       setUtility((current) => (current === surface ? null : surface));
     };
     window.addEventListener(toggleUtilityEvent, toggle);
     return () => window.removeEventListener(toggleUtilityEvent, toggle);
-  }, []);
+  }, [practice]);
   const dismissUtility = useCallback(() => setUtility(null), []);
   // The search and the filter are the window's, shared by its Spaces, and start over with each list.
   const [utilitySearch, setUtilitySearch] = useState("");
@@ -182,6 +203,9 @@ export function Sidebar({
   const tabs = new Map(space.tabs.map((tab) => [tab.id, tab]));
   const folders = new Map(space.folders.map((folder) => [folder.id, folder]));
   const show = (tabId: string) => void session.core.send(ShowTab({ windowId: session.windowId, spaceId: space.id, tabId }));
+  // A tab is resident without a page while one of Crest's own views holds it,
+  // and every practice tab is, as the Mac's practice reads its tabs as loaded.
+  const residesWithoutPage = (tabId: string) => !!practice || residentNativeTabs.has(tabId);
   const close = (tabId: string) => void browsing.closeTab(space.id, tabId);
   // A rename belongs to the Space it started in.
   const [renaming, setRenaming] = useState<Renaming>(null);
@@ -211,7 +235,7 @@ export function Sidebar({
   useEffect(() => select(noSelection), [space.id, select]);
   // A change to the outline keeps only what the sidebar still shows.
   useEffect(() => {
-    const next = reconciled(selectionNow.current, unitsShown());
+    const next = reconciled(selectionNow.current, unitsShown(aside.current));
     if (next !== selectionNow.current) select(next);
   }, [space.sidebar, space.tabs, space.folders, select]);
   // Pinned tabs a lift let go of shake, as the Mac's do.
@@ -224,7 +248,7 @@ export function Sidebar({
   const activeItem = shownTabId ? tabItem(shownTabId) : null;
   /** The units the sidebar shows, and the selection over them as of now. */
   const selectionOverRows = () => {
-    const units = unitsShown();
+    const units = unitsShown(aside.current);
     return { units, current: reconciled(selectionNow.current, units) };
   };
 
@@ -250,7 +274,7 @@ export function Sidebar({
       const { units, current } = selectionOverRows();
       select(clicked(current, item, units, { command: true, shift: false }, activeItem));
     },
-    selectAll: () => select(allSelected(unitsShown())),
+    selectAll: () => select(allSelected(unitsShown(aside.current))),
     reselect: (how, picks, copies) => select(how === "cleared" ? noSelection
       : allSelected(how === "copies" ? [...copies.values()].map((id) => [tabItem(id)]) : rootItems(picks, copies))),
   };
@@ -363,7 +387,7 @@ export function Sidebar({
     // does once it is the window's first responder; a rename field in it keeps its own.
     const active = document.activeElement;
     const onRow = active instanceof HTMLElement && !(active instanceof HTMLInputElement) && !active.isContentEditable
-      && !!active.closest(".sidebar [data-unit]");
+      && !!aside.current?.contains(active) && !!active.closest("[data-unit]");
     if (!selectionHasKeyboard(current) && !onRow) return false;
     if (current !== selectionNow.current) select(current);
     if (key.code === keys.escape) {
@@ -394,7 +418,7 @@ export function Sidebar({
       let next = clicked(current, target, units, { command: key.control && !edge, shift: key.shift }, activeItem);
       if (!key.shift) next = { ...clicked(next, target, units, { command: false, shift: false }, activeItem), engaged: true };
       select(next);
-      [...document.querySelectorAll<HTMLElement>(".sidebar [data-unit]")].filter((element) => element.offsetParent !== null)[index]
+      [...(aside.current?.querySelectorAll<HTMLElement>("[data-unit]") ?? [])].filter((element) => element.offsetParent !== null)[index]
         ?.scrollIntoView({ block: "nearest" });
       return true;
     }
@@ -503,17 +527,33 @@ export function Sidebar({
     const marked = isLive ? outer.marked : () => false;
     const isLifted = isLive ? outer.isLifted : () => false;
     const gapAt = isLive ? outer.gapAt : () => false;
-    const savedTabsExpanded = space.settings.isSavedTabsExpanded;
+    // The practice always shows its saved tabs, as the Mac's does.
+    const savedTabsExpanded = !!practice || space.settings.isSavedTabsExpanded;
     const isPinnedTop = (list: SidebarList) => list.section.name === "pinned" && list.folderId === null;
     const pinned = space.sidebar.lists.filter(isPinnedTop);
     // The saved tabs show while the header has them open.
     const rest = space.sidebar.lists.filter((list) => !isPinnedTop(list) && (savedTabsExpanded || list.section.name !== "saved"));
     const isCurrentTop = (list: SidebarList) => list.folderId === null && list.section.name === "current";
+    const openNewTab = () => (practice ? practice.openExampleTab() : openPalette("newTab"));
     const newTabRow = (
-      <button key="new-tab" className="sidebar-row new-tab-row" onClick={() => openPalette("newTab")}>
+      <button key="new-tab" className="sidebar-row new-tab-row" onClick={openNewTab}>
         <span className="row-glyph"><Symbol name="plus" /></span>
         <span className="row-title">New Tab</span>
       </button>
+    );
+    // Clear on the line archives the open tabs but the one the window shows
+    // and the rest of its split, or every open tab.
+    // What it clears is what the open tabs' rows hold, at the top level and in folders, as the Mac's seam reads them.
+    const shownSplitId = shownTabId ? tabs.get(shownTabId)?.splitGroupId ?? null : null;
+    const openTabs = space.sidebar.lists.filter((list) => list.section === TabPlacement.current)
+      .flatMap((list) => list.rows.flatMap((row) => (row.kind.name === "folder" ? [] : row.kind.groupsTabs ? row.members : [row.id])))
+      .flatMap((id) => tabs.get(id) ?? []);
+    const clearLine = (
+      <CurrentTabsDivider key="divider" canClearAll={isLive && openTabs.length > 0}
+        canClearOthers={isLive && openTabs.some((tab) => tab.id !== shownTabId && (shownSplitId === null || tab.splitGroupId !== shownSplitId))}
+        onClear={(all) => void send(session, ClearCurrentTabs({
+          workspaceId: session.workspaceId, windowId: session.windowId, spaceId: space.id, keepsShownTab: !all,
+        }))} />
     );
     // An open utility list takes the shown Space's page: its pins, its header
     // and its tabs. Another Space's page a slide passes shows nothing.
@@ -529,7 +569,9 @@ export function Sidebar({
     const showsPins = pinned.some((list) => list.rows.length > 0) || !!lift;
     return (
       <>
-      <PinnedExtensionStrip session={session} space={space} pageId={page?.id ?? null} pageKey={`${page?.live.url ?? ""}|${page?.live.title ?? ""}`} />
+      {!practice && (
+        <PinnedExtensionStrip session={session} space={space} pageId={page?.id ?? null} pageKey={`${page?.live.url ?? ""}|${page?.live.title ?? ""}`} />
+      )}
       {showsPins && (
         <PinnedGrid className={`pinned-grid${gapAt(TabPlacement.pinned, null, null) ? " drop-at-end" : ""}`}
           count={pinned.reduce((count, list) => count + list.rows.filter((row) => tabs.has(row.id) && !isLifted(row.id)).length, 0)}
@@ -538,7 +580,7 @@ export function Sidebar({
             const tab = tabs.get(row.id);
             if (!tab) return [];
             const pageId = pagesByTab.get(tab.id) ?? null;
-            const loaded = pageId !== null && session.core.state.pages.get(pageId)?.phase.name === "live";
+            const loaded = residesWithoutPage(tab.id) || (pageId !== null && session.core.state.pages.get(pageId)?.phase.name === "live");
             const tile = (
               <button
                 type="button"
@@ -564,6 +606,8 @@ export function Sidebar({
         </PinnedGrid>
       )}
 
+      {/* The practice names its saved tabs under a caption, where the window's sidebar has the Space's header. */}
+      {practice ? <p className="practice-saved-caption">Saved</p> : (
       <div className={`space-header${showsPins ? "" : " without-pins"}`}>
         <button
           className="space-header-title"
@@ -589,13 +633,14 @@ export function Sidebar({
           void showContextMenu(session.shell, { clientX: bounds.left, clientY: bounds.bottom }, spaceHeaderMenu(context));
         }} />
       </div>
+      )}
 
       <LayoutGroup id={`sidebar-${space.id}`}>
         <div
           className="tab-list"
           // The empty area offers the Space's own actions, and a double click opens a new tab, as on the Mac.
-          onContextMenu={(event) => event.target === event.currentTarget && menu(event, backgroundMenu(context))}
-          onDoubleClick={(event) => event.target === event.currentTarget && openPalette("newTab")}
+          onContextMenu={(event) => !practice && event.target === event.currentTarget && menu(event, backgroundMenu(context))}
+          onDoubleClick={(event) => event.target === event.currentTarget && openNewTab()}
         >
           {/* The current tabs always stand under the divider, the New Tab row at their top, as on the Mac. */}
           {rest.filter((list) => list.folderId === null && (list.rows.length > 0 || lift || isCurrentTop(list))).map(function renderList(list: SidebarList): ReactElement {
@@ -606,6 +651,7 @@ export function Sidebar({
               data-list-section={list.section.name}
               data-list-folder={list.folderId ?? ""}
             >
+              {isCurrentTop(list) && clearLine}
               {isCurrentTop(list) && newTabRow}
               {list.rows.flatMap((row) => {
                 const gap: ReactElement[] = [];
@@ -644,7 +690,8 @@ export function Sidebar({
                     const inside = rest.find((candidate) => candidate.folderId === folder.id);
                     if (!inside) return [];
                     if (!folder.isCollapsed) return [renderList(inside)];
-                    const keeps = (id: string) => (folder.isGroup ? id === shownTabId : pagesByTab.has(id) || id === shownTabId);
+                    const keeps = (id: string) => (folder.isGroup ? id === shownTabId
+                      : pagesByTab.has(id) || residesWithoutPage(id) || id === shownTabId);
                     const rows = inside.rows.filter((candidate) => candidate.kind.name !== "folder" && candidate.members.concat(candidate.id).some(keeps));
                     return [renderList({ ...inside, rows })];
                   })()];
@@ -664,6 +711,7 @@ export function Sidebar({
                       session={session}
                       tab={tab}
                       pageId={pagesByTab.get(tab.id) ?? null}
+                      resident={residesWithoutPage(tab.id)}
                       depth={row.kind.groupsTabs ? row.depth + 1 : row.depth}
                       inSplit={row.kind.groupsTabs}
                       selected={tab.id === shownTabId}
@@ -710,7 +758,7 @@ export function Sidebar({
             </section>
             );
           })}
-          {!rest.some(isCurrentTop) && <section className="tab-section current-tabs">{newTabRow}</section>}
+          {!rest.some(isCurrentTop) && <section className="tab-section current-tabs">{clearLine}{newTabRow}</section>}
         </div>
       </LayoutGroup>
       </>
@@ -718,15 +766,19 @@ export function Sidebar({
   };
 
   return (
-    <aside ref={aside} className="sidebar">
-      {showsNavigation && (
+    <aside ref={aside} className={`sidebar${practice ? " practice-sidebar" : ""}`}>
+      {practice && (
+        // The practice has one Space, and no Space strip to slide.
+        <div className="space-pages"><div className="space-page">{renderPage(space, true)}</div></div>
+      )}
+      {!practice && showsNavigation && (
         <div className="sidebar-toolbar">
           <span className="window-drag" />
           <NavigationButtons browsing={browsing} page={page} />
         </div>
       )}
       {/* An open utility list's search stands where the address field stood, as on the Mac. */}
-      {!utility && <div className="address-area">
+      {!practice && !utility && <div className="address-area">
         <AddressField
           address={live?.address ?? live?.url ?? tabs.get(shownTabId ?? "")?.url ?? ""}
           // A live site's controls: its lock, which opens its certificate, and Site Controls.
@@ -756,9 +808,9 @@ export function Sidebar({
         </AnimatePresence>
       </div>}
 
-      <SpacePageStrip spaces={spaces} liveId={space.id} gestureArea={aside} render={renderPage} />
+      {!practice && <SpacePageStrip spaces={spaces} liveId={space.id} gestureArea={aside} render={renderPage} />}
 
-      <SpaceSwitcher
+      {!practice && <SpaceSwitcher
         spaces={spaces}
         selectedId={space.id}
         onSelect={(spaceId) => {
@@ -774,9 +826,9 @@ export function Sidebar({
               setChoices((count) => count + 1);
             }} />
         )}
-      />
+      />}
       {/* Over the page beside the sidebar, in the window's colours, whatever moves the sidebar's card. */}
-      {windowElement && createPortal(
+      {!practice && windowElement && createPortal(
         <UtilityFan expanded={utility !== null} trigger={listsButton} selected={utility}
           badgeColor={space.settings.look.colors.colors[0] ?? indigo} downloads={profileDownloads}
           newDownloadCount={newDownloads.length} onSelect={setUtility} />,
@@ -876,6 +928,8 @@ interface TabRowProps {
   readonly session: Session;
   readonly tab: TabState;
   readonly pageId: string | null;
+  /** Whether the tab is resident without a page: one of Crest's own views holds it, or it is the practice's. */
+  readonly resident: boolean;
   readonly depth: number;
   /** Whether the row is a split's member, which its split's card already insets. */
   readonly inSplit: boolean;
@@ -905,11 +959,11 @@ interface TabRowProps {
 }
 
 function TabRow({
-  session, tab, pageId, depth, inSplit, selected, renaming, row, unit, marked, held, lifted, insertsBefore, aimedAround, onPress,
+  session, tab, pageId, resident, depth, inSplit, selected, renaming, row, unit, marked, held, lifted, insertsBefore, aimedAround, onPress,
   onSelect, onClose, onMiddleClick, onContextMenu, onRenamed,
 }: TabRowProps) {
   // A tab whose page isn't loaded reads dimmer, as the Mac's residency shows it.
-  const loaded = pageId !== null && session.core.state.pages.get(pageId)?.phase.name === "live";
+  const loaded = resident || (pageId !== null && session.core.state.pages.get(pageId)?.phase.name === "live");
   return (
     <div
       role="button"
@@ -1065,30 +1119,92 @@ function RenameField({ initial, placeholder, onDone }: {
 }
 
 export function TabIcon({ session, tab, pageId, size = 16 }: { session: Session; tab: TabState; pageId: string | null; size?: number }) {
-  return <TabIconFace icon={useTabIconSource(session, tab, pageId)} symbol={tab.symbol} size={size} />;
+  return <TabIconFace icon={useTabIconSource(session, tab, pageId)} symbol={tab.symbol} guide={isGuide(tab)} size={size} />;
 }
 
-/** The image a tab's icon shows. Inside Crest it comes from its page's engine; in development, from the site. */
+/**
+ * The image a tab's icon shows: one bundled for it, as the practice's tabs
+ * wear; inside Crest, its page's engine's; in development, the site's.
+ */
 function useTabIconSource(session: Session, tab: TabState, pageId: string | null): string | null {
   const engineIcon = useTabIcon(session, tab.id, pageId, tab.faviconUrl);
+  const bundled = bundledTabIcons.get(tab.id);
+  if (bundled) return bundled;
   return insideCrest ? engineIcon : (tab.faviconUrl ?? (tab.url ? faviconFor(tab.url) : null));
+}
+
+/** Whether a tab shows the Getting Started guide, which wears Crest's app icon, as the Mac's does. */
+function isGuide(tab: TabState): boolean {
+  return tab.surface === TabSurface.nativeView && tab.nativeView === NativeView.gettingStarted;
 }
 
 /**
  * A tab's icon, or its symbol while it has none. A site without an icon of
  * its own wears the engine's grey globe, as the Mac's tabs do.
  */
-function TabIconFace({ icon, symbol, size }: { icon: string | null; symbol: string; size: number }) {
+function TabIconFace({ icon, symbol, guide = false, size }: { icon: string | null; symbol: string; guide?: boolean; size: number }) {
   const [failed, setFailed] = useState(false);
   // An emoji the person chose stands in for the site's icon.
   const emoji = emojiOf(symbol);
   if (emoji) {
     return <span className="tab-icon tab-emoji" style={{ width: size, height: size, fontSize: size * 0.85 }} aria-hidden>{emoji}</span>;
   }
+  if (guide) return <img className="tab-icon" src={crestIcon} width={size} height={size} alt="" />;
   if (icon && !failed) {
     return <img className="tab-icon" src={icon} width={size} height={size} alt="" onError={() => setFailed(true)} />;
   }
   return <Symbol name={symbol} size={size} className={`tab-icon${symbol === "globe" ? " default-favicon" : ""}`} />;
+}
+
+/**
+ * BrowserCurrentTabsDivider on a pointer shell: the line between the saved
+ * tabs and the open ones, and Clear at its trailing end while the pointer
+ * rests over the Space's page and there is something to clear (styles.css).
+ * Clear archives the open tabs but the shown one; holding Alt, as Option on
+ * the Mac, makes it Clear All. The line stops short of the control.
+ */
+function CurrentTabsDivider({ canClearOthers, canClearAll, onClear }: {
+  canClearOthers: boolean;
+  canClearAll: boolean;
+  onClear: (all: boolean) => void;
+}) {
+  const clearsAll = useAltHeld();
+  const canClear = clearsAll ? canClearAll : canClearOthers;
+  return (
+    <div className="current-tabs-divider" role="presentation">
+      <span className="current-tabs-line" />
+      {canClear && (
+        <button type="button" className="current-tabs-clear" data-testid="clear-current-tabs"
+          aria-label={clearsAll ? "Clear All Tabs" : "Clear Other Tabs"}
+          aria-description={clearsAll ? "Moves all open tabs to Archive" : "Moves the other open tabs to Archive"}
+          onClick={() => onClear(clearsAll)}>
+          <span>{clearsAll ? "Clear All" : "Clear"}</span>
+          <Symbol name="archivebox" size={11} />
+          <Symbol name="arrow.down" size={11} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Whether Alt is held, which the keys and the pointer both report. */
+function useAltHeld(): boolean {
+  const [held, setHeld] = useState(false);
+  useEffect(() => {
+    const follow = (event: globalThis.KeyboardEvent | PointerEvent) => setHeld(event.altKey);
+    const letGo = () => setHeld(false);
+    window.addEventListener("keydown", follow, true);
+    window.addEventListener("keyup", follow, true);
+    window.addEventListener("pointermove", follow, true);
+    window.addEventListener("blur", letGo);
+    return () => {
+      window.removeEventListener("keydown", follow, true);
+      window.removeEventListener("keyup", follow, true);
+      window.removeEventListener("pointermove", follow, true);
+      window.removeEventListener("blur", letGo);
+    };
+  }, []);
+  return held;
 }
 
 /**
@@ -1132,7 +1248,7 @@ function PinnedTileFace({ session, tab, pageId }: { session: Session; tab: TabSt
   return (
     <>
       <span className="pin-ring" style={accent ? { "--pin-accent": accent } as CSSProperties : undefined} aria-hidden />
-      <TabIconFace icon={icon} symbol={tab.symbol} size={19} />
+      <TabIconFace icon={icon} symbol={tab.symbol} guide={isGuide(tab)} size={19} />
     </>
   );
 }

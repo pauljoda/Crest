@@ -1,0 +1,503 @@
+/* BrowserGettingStartedView, in CrestBrandTheme: cream canvas and paper
+   surfaces, ink and slate in the dark. It borrows Setup's capsule buttons
+   and the Crest studio's selectable cards, so it names their colours too. */
+.getting-started {
+  --guide-canvas: rgb(251 245 230);
+  --guide-surface: rgb(255 253 247);
+  --guide-line: rgb(234 223 198);
+  --guide-secondary: rgb(0 0 0 / 0.5);
+  --guide-tertiary: rgb(0 0 0 / 0.26);
+  --guide-label: rgb(138 106 34);
+  --setup-ink: rgb(0 0 0 / 0.85);
+  --settings-primary: 0 0 0;
+  --forge-tint: rgb(43 108 196);
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow-y: auto;
+  background: var(--guide-canvas);
+  color: var(--setup-ink);
+  font: 14px var(--crest-font-system);
+  text-align: start;
+  /* The scroll bar keeps 8 past the content, as the Mac's content margin. */
+  scrollbar-gutter: stable;
+}
+
+@media (prefers-color-scheme: dark) {
+  .getting-started {
+    --guide-canvas: rgb(23 34 56);
+    --guide-surface: rgb(43 58 92);
+    --guide-line: rgb(255 253 247 / 0.22);
+    --guide-secondary: rgb(255 255 255 / 0.55);
+    --guide-tertiary: rgb(255 255 255 / 0.25);
+    --guide-label: rgb(242 193 78);
+    --setup-ink: rgb(255 255 255 / 0.85);
+    --settings-primary: 255 255 255;
+    --forge-tint: rgb(79 142 224);
+  }
+}
+
+.guide-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin: 0 auto;
+}
+
+.getting-started h1,
+.getting-started h2,
+.getting-started h3,
+.getting-started p {
+  margin: 0;
+}
+
+/* The masthead: Crest's mark in a 24 by 28 frame, the guide's name, and Reset practice at the far end. */
+.guide-masthead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 28px;
+}
+
+.guide-masthead-title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.guide-plain-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--guide-secondary);
+  font-size: 13px;
+}
+
+.guide-plain-button:hover {
+  color: var(--setup-ink);
+}
+
+.guide-footer .guide-plain-button {
+  color: var(--setup-ink);
+}
+
+/* The chapter picker: compact selectable cards sharing the width. */
+.guide-chapters {
+  display: flex;
+  gap: 8px;
+}
+
+.guide-chapter {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 12px 8px;
+}
+
+.guide-chapter-number {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--guide-secondary);
+}
+
+.guide-chapter-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* The stage, which clips the practice window where it overhangs. */
+.guide-stage {
+  position: relative;
+  overflow: hidden;
+  flex: none;
+}
+
+.guide-instructions {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 24px;
+}
+
+.guide-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.guide-heading h1 {
+  font: var(--crest-font-display-weight) 34px/1.15 var(--crest-font-display);
+}
+
+.guide-heading p,
+.guide-lesson p {
+  color: var(--guide-secondary);
+}
+
+.guide-lesson {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.guide-lesson-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.guide-caps {
+  font-family: var(--crest-font-display);
+  font-size: 12px;
+  font-weight: var(--crest-font-display-weight);
+  letter-spacing: 1.7px;
+  text-transform: uppercase;
+  color: var(--guide-label);
+}
+
+.guide-count {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--guide-secondary);
+}
+
+.guide-lesson h2 {
+  font: var(--crest-font-display-weight) 25px/1.15 var(--crest-font-display);
+}
+
+.guide-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.guide-fits {
+  position: relative;
+}
+
+/* The row at its own width, unseen, which says whether the row fits. */
+.guide-fits-probe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.guide-actions.row {
+  align-items: center;
+  white-space: nowrap;
+}
+
+.guide-actions.stack {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.guide-actions-group {
+  display: flex;
+  gap: 8px;
+}
+
+.guide-spacer {
+  flex: 1;
+  min-width: 8px;
+}
+
+.guide-hint {
+  font-size: 12px;
+  color: var(--guide-secondary);
+}
+
+.guide-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--guide-secondary);
+}
+
+.guide-footer strong {
+  font-weight: 600;
+  color: var(--setup-ink);
+}
+
+/* BrowserGettingStartedPracticeWindow: an 18-cornered window on the canvas,
+   in the brand's line, with a soft shadow; the stage moves it by its place. */
+.guide-window-place {
+  position: absolute;
+}
+
+.practice-window {
+  /* The real sidebar's colours over the brand's surface, as its rows read
+     over the Mac's practice surface rather than a Space's look. */
+  --primary-rgb: 0 0 0;
+  --fg: rgb(0 0 0 / 0.86);
+  --fg-secondary: rgb(0 0 0 / 0.5);
+  --surface: rgb(0 0 0 / 0.045);
+  --surface-selected: rgb(0 0 0 / 0.075);
+  --surface-border: rgb(0 0 0 / 0.1);
+  --field: rgb(0 0 0 / 0.045);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--guide-canvas);
+  box-shadow: inset 0 0 0 1px var(--guide-line), 0 8px 18px rgb(0 0 0 / 0.1);
+  -webkit-app-region: no-drag;
+}
+
+@media (prefers-color-scheme: dark) {
+  .practice-window {
+    --primary-rgb: 255 255 255;
+    --fg: rgb(255 255 255 / 0.9);
+    --fg-secondary: rgb(255 255 255 / 0.55);
+    --surface: rgb(255 255 255 / 0.06);
+    --surface-selected: rgb(255 255 255 / 0.12);
+    --surface-border: rgb(255 255 255 / 0.12);
+    --field: rgb(255 255 255 / 0.07);
+  }
+}
+
+.practice-window-chrome {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px;
+  border-bottom: 1px solid var(--guide-line);
+}
+
+.practice-window-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.practice-window-dots > span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.practice-window-title {
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.practice-window-brand {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--guide-secondary);
+}
+
+.practice-window-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+/* The practice's sidebar: its Space's crest and name over the real rows, on the surface. */
+.practice-sidebar-column {
+  flex: none;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--guide-surface);
+  border-right: 1px solid var(--guide-line);
+}
+
+.practice-sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 20px 18px 4px;
+}
+
+.practice-sidebar-header > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.practice-sidebar-header strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.practice-sidebar-header small {
+  font-size: 10px;
+  color: var(--guide-secondary);
+}
+
+.practice-sidebar-column > .sidebar {
+  flex: 1;
+  min-height: 0;
+}
+
+.practice-saved-caption {
+  margin: 0;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-secondary);
+}
+
+/* The document area: the shown tab's card, or a split's cards, 10 in from the area's edges. */
+.practice-document-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  background: var(--guide-surface);
+}
+
+.practice-document-area > .page-columns {
+  flex: 1;
+  margin: 10px;
+}
+
+.practice-document {
+  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--guide-canvas);
+  outline: 2px solid transparent;
+  outline-offset: -0.5px;
+}
+
+.practice-document-area .page-columns.several > .page-column.focused > .practice-document {
+  outline-color: var(--split-accent);
+}
+
+.practice-document-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.practice-document-title > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.practice-document hr,
+.practice-document-body hr {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--guide-line);
+}
+
+.practice-document-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.practice-display {
+  font: var(--crest-font-display-weight) 30px/1.15 var(--crest-font-display);
+}
+
+.practice-display.packing {
+  font-size: 27px;
+}
+
+.practice-display.small {
+  font-size: 26px;
+}
+
+.practice-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--guide-secondary);
+}
+
+.practice-art {
+  display: inline-flex;
+}
+
+.practice-art.sage {
+  color: rgb(141 191 154);
+}
+
+.practice-art.sky {
+  color: rgb(98 169 216);
+}
+
+.practice-lead {
+  font-size: 14px;
+  color: var(--guide-secondary);
+}
+
+.practice-secondary {
+  font-size: 13px;
+  color: var(--guide-secondary);
+}
+
+.practice-secondary.small,
+.practice-shortcut {
+  font-size: 12px;
+  color: var(--guide-secondary);
+}
+
+.practice-document-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--guide-tertiary);
+}
+
+.practice-unavailable {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  text-align: center;
+  color: var(--guide-secondary);
+}
+
+.practice-unavailable > svg {
+  margin-bottom: 6px;
+}
+
+.practice-unavailable strong {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--setup-ink);
+}
+
+.practice-unavailable span {
+  font-size: 13px;
+}

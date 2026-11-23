@@ -49,6 +49,7 @@ import { TabPictures } from "../switcher/tab-pictures";
 import type { SettingsPageName } from "../settings/catalog";
 import { extensions } from "../extensions";
 import { suggestionFetcher } from "../palette/suggestions";
+import { GettingStartedView } from "../guide/GettingStartedView";
 import { requestSettings, SettingsView } from "../settings/SettingsView";
 import { useCoreVersion } from "../use-core";
 import { NavigationButtons } from "./NavigationButtons";
@@ -638,6 +639,7 @@ export function BrowserWindow({ session }: { session: Session }) {
           const rowCards = live ? cards : spaceCards(window, candidate.id, shownTabs.get(candidate.id) ?? null);
           return (
             <PageColumns
+              windowId={session.windowId}
               cards={rowCards}
               focusedTabId={live ? shownTabId : shownTabs.get(candidate.id) ?? null}
               accent={primaryColor(candidate.settings.look)}
@@ -858,11 +860,14 @@ function SpaceCard({ host, space, tabId, pages, passive, card }: {
   const pageId = showsStartPage ? null
     : passive ? (tab?.surface === TabSurface.webPage && page && !host.livePageIds.has(page.id) ? page.id : null)
       : page?.id ?? null;
-  // A tab can show one of Crest's own views in place of a page: Settings.
+  // A tab can show one of Crest's own views in place of a page: Settings, or the Getting Started guide.
+  // Another Space's card in passing shows the guide's canvas alone, since its practice is the live card's.
   const native = tab?.surface === TabSurface.nativeView ? tab.nativeView : null;
-  const nativeContent = tab && native === NativeView.settings
-    ? <SettingsView session={session} tabId={tab.id} spaces={host.spaces} shownSpace={space} />
-    : tab?.surface === TabSurface.nativeView ? <UnknownNativeView /> : null;
+  const nativeContent = !tab || native === null ? null
+    : native === NativeView.settings ? <SettingsView session={session} tabId={tab.id} spaces={host.spaces} shownSpace={space} />
+      : native === NativeView.gettingStarted
+        ? (passive ? <div className="getting-started" aria-hidden /> : <GettingStartedView session={session} tabId={tab.id} />)
+        : <UnknownNativeView />;
   return (
     <PageCard session={session} pageId={nativeContent ? null : pageId} passive={passive} focused={card.focused} transition={card.transition}
       startPage={nativeContent ?? (showsStartPage ? (

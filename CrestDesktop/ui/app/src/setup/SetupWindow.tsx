@@ -13,6 +13,7 @@ import { AnimatePresence, motion, useReducedMotion, type Variants } from "motion
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 
 import { openHeldLaunch, type Session } from "../boot";
+import { openGettingStarted } from "../guide/guide";
 import { CrestMark } from "../shell/CrestMark";
 import { WindowControls } from "../shell/WindowControls";
 import { Symbol } from "../symbols";
@@ -144,10 +145,11 @@ export function SetupWindow({ session, entry, holdsLaunch, onOpened, onHandedOve
     try {
       const changes = await session.core.send(FinishSetup({ windowId: session.windowId }));
       const finished = changes.find((change): change is SetupFinished => change.$kind === "SetupFinished");
-      // Windows draws no Getting Started view yet, so the window opens on, or shows, the Space it would have shown.
+      // The window opens on, or shows, the Space the core names for the Getting Started guide, and shows the guide there.
       const guideSpaceId = finished?.guideSpaceId ?? null;
       if (holdsLaunch) await openHeldLaunch(session, guideSpaceId);
       else if (guideSpaceId) await session.core.send(ShowSpace({ windowId: session.windowId, spaceId: guideSpaceId })).catch(() => undefined);
+      if (guideSpaceId) await openGettingStarted(session, guideSpaceId);
       onOpened();
       // The browser window draws beneath first, as the Mac waits for it, then Setup hands over.
       requestAnimationFrame(() => requestAnimationFrame(() => setTakingOver(true)));

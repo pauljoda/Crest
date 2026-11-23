@@ -116,13 +116,17 @@ export function useSidebarLift(session: Session, spaceId: string, selectionFollo
   follows.current = selectionFollows;
   const checked = useRef(new Map<string, string | null | Promise<void>>());
   const cleanup = useRef<(() => void) | null>(null);
+  // The sidebar the lift started in, which alone it aims into, and the
+  // Getting Started practice window holding it, whose cards it joins in
+  // place of the window's.
+  const scope = useRef<{ sidebar: HTMLElement | null; practice: HTMLElement | null }>({ sidebar: null, practice: null });
 
   const update = useCallback((next: Lift | null) => {
     current.current = next;
     setLift(next);
     // The page row draws the column a split drop would take.
-    splitDrop.set(next?.aim?.kind === "split" && !next.refusal ? next.aim.index : null);
-  }, []);
+    splitDrop.set(next?.aim?.kind === "split" && !next.refusal ? next.aim.index : null, session.windowId);
+  }, [session]);
 
   const end = useCallback(() => {
     cleanup.current?.();
@@ -161,7 +165,7 @@ export function useSidebarLift(session: Session, spaceId: string, selectionFollo
     const lifted = current.current;
     if (!lifted) return;
     const planned = plan.current;
-    const aim = planned ? aimUnder(x, y, lifted.item, planned.targets) : null;
+    const aim = planned ? aimUnder(x, y, lifted.item, planned.targets, scope.current) : null;
     let refusal: string | null = planned?.targets.refusal ? messageOfRejection(planned.targets.refusal) ?? unplaceable : null;
     // The page area says at once whether the lift joins its cards.
     const splitRefusal = aim?.kind === "split" ? planned?.targets.split?.refusal ?? null : null;
@@ -219,7 +223,7 @@ export function useSidebarLift(session: Session, spaceId: string, selectionFollo
 
     const scroll = () => {
       const now = current.current;
-      const list = document.querySelector<HTMLElement>(".tab-list");
+      const list = (scope.current.sidebar ?? document).querySelector<HTMLElement>(".tab-list");
       if (!now || !list) return;
       const bounds = list.getBoundingClientRect();
       const top = scrollBand - (now.pointer.y - bounds.top);
@@ -234,6 +238,7 @@ export function useSidebarLift(session: Session, spaceId: string, selectionFollo
 
     const begin = async (x: number, y: number) => {
       lifted = true;
+      scope.current = { sidebar: element.closest<HTMLElement>(".sidebar"), practice: element.closest<HTMLElement>("[data-practice-window]") };
       letGo = holdPointer();
       element.setPointerCapture(pointerId);
       const bounds = element.getBoundingClientRect();
@@ -319,12 +324,14 @@ export function useSidebarLift(session: Session, spaceId: string, selectionFollo
  * tab's middle half, then the list the pointer is in, or one it strayed just
  * past.
  */
-function aimUnder(x: number, y: number, item: LiftItem, targets: DropTargetList): DropAim | null {
+function aimUnder(x: number, y: number, item: LiftItem, targets: DropTargetList,
+  scope: { sidebar: HTMLElement | null; practice: HTMLElement | null }): DropAim | null {
   // Over the page area, the lift joins the shown cards as a split, at the
   // slot the pointer has passed, where the core offers it.
-  const slot = splitInsertionIndex(x, y);
+  const slot = splitInsertionIndex(x, y, scope.practice);
   if (slot !== null) return targets.split ? { kind: "split", targetTabId: targets.split.tabId, index: slot } : null;
-  const under = document.elementsFromPoint(x, y);
+  // Only the lift's own sidebar takes it: the guide's practice sidebar and the window's are apart.
+  const under = document.elementsFromPoint(x, y).filter((element) => !scope.sidebar || scope.sidebar.contains(element));
   const find = (selector: string) => under.map((element) => element.closest<HTMLElement>(selector)).find((element) => element) ?? null;
   const middle = (element: HTMLElement) => {
     const bounds = element.getBoundingClientRect();
@@ -351,7 +358,7 @@ function aimUnder(x: number, y: number, item: LiftItem, targets: DropTargetList)
   let list = find("[data-list-section]");
   if (!list) {
     // A pointer that strays past a list's top or bottom still reaches it.
-    const lists = [...document.querySelectorAll<HTMLElement>("[data-list-section]")];
+    const lists = [...(scope.sidebar ?? document).querySelectorAll<HTMLElement>("[data-list-section]")];
     let nearest: { element: HTMLElement; distance: number } | null = null;
     for (const candidate of lists) {
       const bounds = candidate.getBoundingClientRect();

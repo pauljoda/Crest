@@ -44,10 +44,11 @@ export function holds(selection: SidebarSelection, item: SelectionItem): boolean
  * The units the sidebar shows, in the order it shows them: pinned tiles, the
  * saved tabs while open, then the open tabs, a folder's inside after its row
  * and the rows a collapsed folder keeps on screen, as the Mac's itemUnits
- * walks the core's outline. Each row carries its unit in `data-unit`.
+ * walks the core's outline. Each row carries its unit in `data-unit`. A
+ * window's own sidebar and the Getting Started practice's each keep theirs.
  */
-export function unitsShown(): SelectionUnit[] {
-  return [...document.querySelectorAll<HTMLElement>(".sidebar [data-unit]")]
+export function unitsShown(sidebar: HTMLElement | null): SelectionUnit[] {
+  return [...(sidebar ?? document).querySelectorAll<HTMLElement>(sidebar ? "[data-unit]" : ".sidebar [data-unit]")]
     .filter((element) => element.offsetParent !== null)
     .map((element) => element.dataset.unit!.split(",") as SelectionItem[]);
 }
@@ -157,8 +158,16 @@ export interface SelectionKey {
   readonly alt: boolean;
 }
 
-/** The commands and keys the sidebar's selection answers before the window, while it has the keyboard. */
-let taker: ((command: string | null, key: SelectionKey | null) => boolean) | null = null;
+/** What answers for one sidebar's selection: whether it took the command or key. */
+type SelectionTaker = (command: string | null, key: SelectionKey | null) => boolean;
+
+/**
+ * The commands and keys each sidebar's selection answers before the window,
+ * while it has the keyboard: the window's own, and the Getting Started
+ * practice's while the guide shows. Each answers only for a selection that
+ * has the keyboard, so at most one takes a key.
+ */
+const takers = new Set<SelectionTaker>();
 
 /**
  * Whether the selection took `command`, which `key` pressed, so the window
@@ -167,15 +176,14 @@ let taker: ((command: string | null, key: SelectionKey | null) => boolean) | nul
  * command's, as the Mac's selection monitor sees keys first.
  */
 export function selectionTakes(command: string | null, key: SelectionKey | null): boolean {
-  return taker?.(command, key) ?? false;
+  for (const take of takers) if (take(command, key)) return true;
+  return false;
 }
 
-/** Registers what answers `selectionTakes` while the sidebar shows. */
-export function registerSelectionTaker(take: typeof taker): () => void {
-  taker = take;
-  return () => {
-    if (taker === take) taker = null;
-  };
+/** Registers what answers `selectionTakes` while a sidebar shows. */
+export function registerSelectionTaker(take: SelectionTaker): () => void {
+  takers.add(take);
+  return () => void takers.delete(take);
 }
 
 /**
