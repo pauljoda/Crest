@@ -2506,6 +2506,13 @@ struct AppPreferencesChanged: CoreChange, Equatable, Sendable {
     let preferences: AppPreferences?
 }
 
+struct ApplyHouse: Query, Equatable, Sendable {
+    typealias Answer = NormalizedBranding
+
+    let branding: SpaceBranding
+    let house: SpaceHouse
+}
+
 struct ApplyManualSetup: Intent, ImportWorkspace, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
@@ -9128,6 +9135,13 @@ struct WatchPage: PageRequest, Equatable, Sendable {
     typealias Answer = Bool
 
     let pageID: UUID
+}
+
+struct WearHouseCrest: Query, Equatable, Sendable {
+    typealias Answer = NormalizedBranding
+
+    let branding: SpaceBranding
+    let house: SpaceHouse
 }
 
 struct WebNotificationClosed: Equatable, Sendable {

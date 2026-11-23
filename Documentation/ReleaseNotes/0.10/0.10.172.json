@@ -1,0 +1,24 @@
+{
+  "entries": [
+    {
+      "id": "space-icon-keeps-colors",
+      "category": "fixed",
+      "message": "Choosing a crest, symbol or emoji as a Space's icon keeps the Space's colors."
+    },
+    {
+      "id": "space-appearance-templates-first",
+      "category": "improved",
+      "message": "A Space's appearance starts with templates, each a full set of icon and colors, then the colors and the icon to refine it, with Undo when a template replaces colors you chose."
+    },
+    {
+      "id": "space-colors-hex-codes",
+      "category": "new",
+      "message": "Give any Space color an exact hex code, or pick it with the system color picker."
+    },
+    {
+      "id": "space-more-customization-page",
+      "category": "improved",
+      "message": "More Customization for a Space opens as its own page, with the crest's colors at the top."
+    }
+  ]
+}

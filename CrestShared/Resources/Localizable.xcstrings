@@ -1926,6 +1926,9 @@
     "A tab names a folder in another Space." : {
 
     },
+    "A template sets the icon and colors together." : {
+
+    },
     "About" : {
 
     },
@@ -2504,6 +2507,9 @@
     "Apple’s native web engine, with system integration and protected media playback." : {
 
     },
+    "Applied %@" : {
+
+    },
     "Applies to %@" : {
 
     },
@@ -2921,6 +2927,9 @@
       }
     },
     "Back to %@" : {
+
+    },
+    "Back to Appearance" : {
 
     },
     "Background" : {
@@ -6977,6 +6986,9 @@
         }
       }
     },
+    "Hex code" : {
+
+    },
     "Hexagon" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -8255,6 +8267,9 @@
 
     },
     "More Actions" : {
+
+    },
+    "More Colors" : {
 
     },
     "More Customization" : {
@@ -10260,6 +10275,9 @@
           }
         }
       }
+    },
+    "Presets" : {
+
     },
     "Press %@ again to %@" : {
 
@@ -13992,6 +14010,9 @@
       }
     },
     "Teeth" : {
+
+    },
+    "Templates" : {
 
     },
     "Temporarily unavailable" : {
