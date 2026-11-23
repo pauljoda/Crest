@@ -31,6 +31,11 @@ struct BrowserDeveloperCaptureControls: View {
 struct BrowserRegionCaptureOverlay: View {
     /// The shortest side a region capture may have.
     private static let minimumSelectionLength: CGFloat = 12
+    /// How far the page outside the selection is dimmed, so the part being
+    /// captured stands out.
+    private static let dimOpacity = 0.46
+    /// The corner of the selection's dashed outline.
+    private static let selectionCornerRadius: CGFloat = 4
 
     let page: BrowserPage
 
@@ -68,12 +73,12 @@ struct BrowserRegionCaptureOverlay: View {
         }
         context.fill(
             mask,
-            with: .color(.black.opacity(0.46)),
+            with: .color(.black.opacity(Self.dimOpacity)),
             style: FillStyle(eoFill: true)
         )
         if let selection = selectionRect(in: bounds) {
             context.stroke(
-                Path(roundedRect: selection, cornerRadius: 4),
+                Path(roundedRect: selection, cornerRadius: Self.selectionCornerRadius),
                 with: .color(.white),
                 style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])
             )
@@ -166,9 +171,23 @@ private struct BrowserDeveloperCaptureOptions: View {
     }
 }
 
+/// A sketch of a window captured over a page, standing for the captures the
+/// options make.
 private struct BrowserDeveloperCapturePreview: View {
+    // MARK: - Static Variables
+
+    /// The sketched window: its corner, how dark it is over the page, and
+    /// the shadow it casts there.
+    private static let windowCornerRadius: CGFloat = 6
+    private static let windowOpacity = 0.72
+    private static let windowShadowOpacity = 0.35
+    private static let windowShadowRadius: CGFloat = 12
+    private static let windowShadowOffset: CGFloat = 6
+
+    // MARK: - Actions - Drawing
+
     var body: some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
+        RoundedRectangle(cornerRadius: CrestRadius.control, style: .continuous)
             .fill(
                 LinearGradient(
                     colors: [.indigo, .purple, .cyan],
@@ -178,10 +197,12 @@ private struct BrowserDeveloperCapturePreview: View {
             )
             .frame(height: 112)
             .overlay {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(.black.opacity(0.72))
+                RoundedRectangle(cornerRadius: Self.windowCornerRadius, style: .continuous)
+                    .fill(.black.opacity(Self.windowOpacity))
                     .padding(22)
-                    .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
+                    .shadow(
+                        color: .black.opacity(Self.windowShadowOpacity), radius: Self.windowShadowRadius,
+                        y: Self.windowShadowOffset)
             }
             .accessibilityHidden(true)
     }

@@ -166,7 +166,7 @@ final class ShortcutRecorderButton: NSButton {
         guard !isRecording else { return }
         isRecording = true
         title = recordingTitle
-        bezelColor = .controlAccentColor
+        bezelColor = NSColor(CrestBrandTheme.accent)
         window?.makeFirstResponder(self)
         eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) {
             [weak self] event in

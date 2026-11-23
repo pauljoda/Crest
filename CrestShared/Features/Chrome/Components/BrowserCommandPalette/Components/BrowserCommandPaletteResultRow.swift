@@ -12,12 +12,12 @@ struct BrowserCommandPaletteResultRow: View {
         Button {
             model.activate(item.row)
         } label: {
-            HStack(spacing: BrowserCommandPaletteMetrics.rowSpacing) {
+            HStack(spacing: CrestSpacing.medium) {
                 BrowserCommandPaletteRowIcon(model: model, row: item.row)
 
                 VStack(
                     alignment: .leading,
-                    spacing: BrowserCommandPaletteMetrics.rowTextSpacing
+                    spacing: CrestSpacing.extraExtraSmall
                 ) {
                     Text(verbatim: item.row.title)
                         .font(.body.weight(.semibold))
@@ -25,7 +25,7 @@ struct BrowserCommandPaletteResultRow: View {
                     BrowserCommandPaletteRowDetail(model: model, row: item.row)
                 }
 
-                Spacer(minLength: BrowserCommandPaletteMetrics.rowSpacing)
+                Spacer(minLength: CrestSpacing.medium)
 
                 BrowserCommandPaletteRowTrailing(
                     model: model, row: item.row, isSelected: isSelected, namesKind: namesKind)

@@ -39,7 +39,7 @@ struct BrowserSettingsSidebar: View {
             .scrollContentBackground(.hidden)
             .browserNativeScrollState(tabState.sidebarScroll)
         }
-        .background(BrowserSettingsCanvas.background)
+        .background(CrestBrandTheme.canvas)
         .browserSpaceDeletionConfirmation(
             $pendingDeletion, browser: browser, spaceAccess: spaceAccess, dataDeleter: dataDeleter
         )
@@ -134,7 +134,7 @@ struct BrowserSettingsSidebar: View {
             }
         }
         .buttonStyle(CrestChromeButtonStyle(controlSize: BrowserSettingsSidebarMetrics.headerButtonSize))
-        .font(.system(size: 12, weight: .medium))
+        .font(CrestTypography.note.weight(.medium))
         .padding(.trailing, BrowserSettingsSidebarMetrics.headerTrailingInset)
         .accessibilityElement(children: .contain)
     }

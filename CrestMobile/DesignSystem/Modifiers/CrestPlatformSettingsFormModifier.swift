@@ -8,7 +8,7 @@ struct CrestPlatformSettingsFormModifier: ViewModifier {
         content
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
-            .background(BrowserSettingsCanvas.background)
+            .background(CrestBrandTheme.canvas)
             .frame(maxWidth: maxWidth)
     }
 }

@@ -34,7 +34,7 @@ struct MobileBrowserSidebarTopChrome: View {
                     clearHistory: confirmClearHistory
                 )
                 .padding(.horizontal, BrowserSidebarMetrics.layerInset)
-                .padding(.bottom, 4)
+                .padding(.bottom, CrestSpacing.extraSmall)
                 .transition(.opacity.combined(with: .move(edge: .trailing)))
             } else {
                 BrowserSidebarAddressField(
@@ -54,7 +54,7 @@ struct MobileBrowserSidebarTopChrome: View {
                 )
                 .modifier(SurfaceToneAppearance())
                 .padding(.horizontal, BrowserSidebarMetrics.layerInset)
-                .padding(.bottom, 4)
+                .padding(.bottom, CrestSpacing.extraSmall)
             }
         }
     }

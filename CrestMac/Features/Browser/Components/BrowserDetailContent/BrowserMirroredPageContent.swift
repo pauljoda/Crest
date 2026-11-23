@@ -13,14 +13,16 @@ struct BrowserMirroredPageContent: View {
                     .blur(radius: 12)
                     .accessibilityHidden(true)
             }
-            Rectangle().fill(.ultraThinMaterial)
+            // The most see-through of Crest's surface materials, whatever the
+            // device's choice, so the page under it still shows as the page.
+            Rectangle().fill(CrestSurfaceMaterial.ultraThin.material)
             Button {
                 pages.claimPresentedPage(for: tabID)
             } label: {
                 Label("Active in another window", systemImage: "macwindow.on.rectangle")
                     .font(.headline)
                     .padding(20)
-                    .background { CrestSurfaceLayer(shape: .rect(cornerRadius: 12)) }
+                    .background { CrestSurfaceLayer(shape: .rect(cornerRadius: CrestRadius.control)) }
             }
             .buttonStyle(.plain)
             .accessibilityHint("Move this page here without reloading it.")

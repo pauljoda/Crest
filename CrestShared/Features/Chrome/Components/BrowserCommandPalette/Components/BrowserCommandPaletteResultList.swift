@@ -30,7 +30,7 @@ struct BrowserCommandPaletteResultList: View {
             ScrollView {
                 VStack(
                     alignment: .leading,
-                    spacing: BrowserCommandPaletteMetrics.resultGroupSpacing
+                    spacing: BrowserCommandPaletteMetrics.resultSectionSpacing
                 ) {
                     ForEach(listsUpward ? model.groups.reversed() : model.groups) { group in
                         BrowserCommandPaletteResultGroupView(

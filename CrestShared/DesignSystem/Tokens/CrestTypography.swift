@@ -25,6 +25,9 @@ enum CrestTypography {
     /// A glyph alone on a control a finger presses, as on the phone's and
     /// iPad's chrome.
     static let touchControlGlyph = Font.system(size: 17, weight: .medium)
+    /// A glyph on a compact chrome control or leading a field, as on the
+    /// developer toolbar's tools or the phone's address bar.
+    static let compactControlGlyph = Font.system(size: 13, weight: .semibold)
     /// Supporting copy at reading size, such as a guide's paragraphs.
     static var supportingBody: Font { sans(14, relativeTo: .body) }
     /// A short label in the system face, semibold: a small heading over a

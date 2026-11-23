@@ -32,7 +32,7 @@ struct BrowserUtilityListRowLabel<Icon: View, Trailing: View>: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 24, height: 24)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: CrestSpacing.extraExtraSmall) {
                 Text(title)
                     .foregroundStyle(.primary)
                     .lineLimit(1)

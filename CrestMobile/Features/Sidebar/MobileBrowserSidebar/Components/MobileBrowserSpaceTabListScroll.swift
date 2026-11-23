@@ -32,7 +32,7 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                         }
                         .fixedSize(horizontal: false, vertical: true)
                         .sidebarScrollContent()
-                        .padding(.bottom, 8)
+                        .padding(.bottom, CrestSpacing.small)
 
                         Color.clear
                             .contentShape(.rect)

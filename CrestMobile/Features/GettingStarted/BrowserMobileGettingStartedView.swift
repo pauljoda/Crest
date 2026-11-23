@@ -2,6 +2,10 @@ import SwiftUI
 
 /// A touch tour backed by the same isolated store and real sidebar as the Mac guide.
 struct BrowserMobileGettingStartedView: View {
+    /// The practice sidebar's corner, a step between the card and panel
+    /// radii.
+    private static let practiceSidebarCornerRadius: CGFloat = 20
+
     var showsCompactNavigation = false
     @Bindable var state: BrowserGettingStartedState
     private var practice: BrowserGettingStartedPractice { state.practice }
@@ -20,7 +24,7 @@ struct BrowserMobileGettingStartedView: View {
         GeometryReader { geometry in
             let wide = geometry.size.width >= 700
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: CrestSpacing.extraLarge) {
                     HStack(spacing: 10) {
                         CrestStartPageMark().frame(width: 24, height: 28)
                         Text("Getting Started").font(.headline)
@@ -30,7 +34,7 @@ struct BrowserMobileGettingStartedView: View {
                             lesson = .pin
                         }
                         .labelStyle(.iconOnly)
-                        .frame(width: 44, height: 44)
+                        .frame(width: CrestLayout.minimumHitTarget, height: CrestLayout.minimumHitTarget)
                     }
                     if wide {
                         HStack(alignment: .top, spacing: 28) {
@@ -45,7 +49,7 @@ struct BrowserMobileGettingStartedView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                     Text("This guide stays in your Saved tabs.")
                         .font(.footnote).foregroundStyle(.secondary)
-                    HStack(alignment: .top, spacing: 12) {
+                    HStack(alignment: .top, spacing: CrestSpacing.medium) {
                         Image(systemName: "hand.draw")
                             .font(.title2)
                             .foregroundStyle(CrestBrandPalette.coral)
@@ -60,12 +64,12 @@ struct BrowserMobileGettingStartedView: View {
                             Image(systemName: "square.on.square").font(.title3)
                         }
                     }
-                    .padding(16)
+                    .padding(CrestSpacing.large)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(CrestBrandTheme.surface, in: .rect(cornerRadius: 16))
+                    .background(CrestBrandTheme.surface, in: .rect(cornerRadius: CrestRadius.card))
                     .accessibilityIdentifier("getting-started-navigation-hint")
                 }
-                .padding(20)
+                .padding(CrestSpacing.extraLarge)
                 .frame(maxWidth: 980)
                 .frame(maxWidth: .infinity)
                 .id("mobile-guide-top")
@@ -85,13 +89,13 @@ struct BrowserMobileGettingStartedView: View {
             capabilities: BrowserInteractionCapabilities(
                 supportsHover: false, supportsTouch: true, pairsRowWithPromotedSurface: false)
         )
-        .clipShape(.rect(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(CrestBrandTheme.line))
+        .clipShape(.rect(cornerRadius: Self.practiceSidebarCornerRadius))
+        .overlay(RoundedRectangle(cornerRadius: Self.practiceSidebarCornerRadius).strokeBorder(CrestBrandTheme.line))
         .accessibilityIdentifier("getting-started-practice-sidebar")
     }
 
     private var tabLesson: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: CrestSpacing.medium) {
             HStack {
                 Text("Tabs & folders").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
                 Spacer()
@@ -102,12 +106,12 @@ struct BrowserMobileGettingStartedView: View {
             Text(lesson.touchDetail).font(.subheadline).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) { lessonActions }
-                VStack(alignment: .leading, spacing: 12) { lessonActions }
+                HStack(spacing: CrestSpacing.medium) { lessonActions }
+                VStack(alignment: .leading, spacing: CrestSpacing.medium) { lessonActions }
             }
             HStack {
                 if let previous = lesson.previous {
-                    Button("Previous") { lesson = previous }.frame(minHeight: 44)
+                    Button("Previous") { lesson = previous }.frame(minHeight: CrestLayout.minimumHitTarget)
                 }
                 Spacer()
                 Button(lesson.next == nil ? "Practice again" : "Next", systemImage: "arrow.right") {
@@ -118,7 +122,7 @@ struct BrowserMobileGettingStartedView: View {
                         lesson = .pin
                     }
                 }
-                .frame(minHeight: 44)
+                .frame(minHeight: CrestLayout.minimumHitTarget)
             }
             .font(.subheadline.weight(.semibold))
         }

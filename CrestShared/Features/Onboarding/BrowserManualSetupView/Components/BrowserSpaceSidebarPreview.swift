@@ -32,18 +32,12 @@ struct BrowserSpaceSidebarPreview: View {
                 }
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-                .padding(
-                    .horizontal,
-                    BrowserManualSetupSidebarPreviewMetrics
-                        .addressHorizontalPadding
-                )
+                .padding(.horizontal, CrestSpacing.medium)
                 .frame(
                     height: BrowserManualSetupSidebarPreviewMetrics.addressHeight
                 )
                 .browserAddressFieldSurface(progress: 0, isLoading: false, isEditing: false, branding: branding)
-                .padding(
-                    BrowserManualSetupSidebarPreviewMetrics.addressOuterPadding
-                )
+                .padding(CrestSpacing.medium)
 
                 ScrollView {
                     VStack(

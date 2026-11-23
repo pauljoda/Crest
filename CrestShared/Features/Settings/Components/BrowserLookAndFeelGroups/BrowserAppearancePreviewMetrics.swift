@@ -4,5 +4,5 @@ import CoreGraphics
 enum BrowserAppearancePreviewMetrics {
     /// The size a preview window is laid out at before it is drawn small.
     static let previewSize = CGSize(width: 520, height: 520)
-    static let spacing: CGFloat = 20
+    static let spacing = CrestSpacing.extraLarge
 }

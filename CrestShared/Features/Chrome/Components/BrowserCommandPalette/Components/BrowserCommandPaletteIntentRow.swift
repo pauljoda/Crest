@@ -13,7 +13,7 @@ struct BrowserCommandPaletteIntentRow: View {
         Button {
             model.activate(item.row)
         } label: {
-            HStack(spacing: BrowserCommandPaletteMetrics.rowSpacing) {
+            HStack(spacing: CrestSpacing.medium) {
                 Group {
                     if model.tab(for: item.row) != nil {
                         BrowserCommandPaletteRowIcon(model: model, row: item.row)
@@ -42,14 +42,14 @@ struct BrowserCommandPaletteIntentRow: View {
                         BrowserCommandPaletteMetrics.rowIconBackgroundOpacity
                     ),
                     in: .rect(
-                        cornerRadius: BrowserCommandPaletteMetrics.rowIconCornerRadius
+                        cornerRadius: CrestRadius.compact
                     )
                 )
                 .accessibilityHidden(true)
 
                 VStack(
                     alignment: .leading,
-                    spacing: BrowserCommandPaletteMetrics.rowTextSpacing
+                    spacing: CrestSpacing.extraExtraSmall
                 ) {
                     Text(verbatim: item.row.title)
                         .font(.body.weight(.semibold))
@@ -57,7 +57,7 @@ struct BrowserCommandPaletteIntentRow: View {
                     BrowserCommandPaletteRowDetail(model: model, row: item.row)
                 }
 
-                Spacer(minLength: BrowserCommandPaletteMetrics.rowSpacing)
+                Spacer(minLength: CrestSpacing.medium)
 
                 BrowserCommandPaletteRowTrailing(model: model, row: item.row, isSelected: isSelected)
 

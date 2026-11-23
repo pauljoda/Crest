@@ -6,7 +6,7 @@ struct BrowserSessionRecoveryView<Value>: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: CrestSpacing.extraLarge) {
                 Label("Crest couldn't open your session", systemImage: "externaldrive.badge.exclamationmark")
                     .font(.title2.bold())
                 Text(
@@ -38,7 +38,7 @@ struct BrowserSessionRecoveryView<Value>: View {
                 #endif
             }
             .frame(maxWidth: 500, alignment: .leading)
-            .padding(32)
+            .padding(CrestSpacing.section)
             .frame(maxWidth: .infinity)
         }
         .confirmationDialog(

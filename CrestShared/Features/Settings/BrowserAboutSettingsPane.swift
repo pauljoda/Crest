@@ -1,6 +1,10 @@
 import SwiftUI
 
 struct BrowserAboutSettingsPane: View {
+    /// The app icon's corner, as the icon's own rounding draws it at the
+    /// size the pane shows it.
+    private static let appIconCornerRadius: CGFloat = 13
+
     var buildInformation = BrowserAboutBuildInformation.current
 
     @Environment(\.browserOpenWebsite) private var openWebsite
@@ -66,10 +70,10 @@ struct BrowserAboutSettingsPane: View {
         HStack(spacing: 14) {
             BrowserPlatformCurrentAppIcon()
                 .frame(width: 56, height: 56)
-                .clipShape(.rect(cornerRadius: 13))
+                .clipShape(.rect(cornerRadius: Self.appIconCornerRadius))
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: CrestSpacing.extraExtraSmall) {
                 Text(ProductIdentity.name)
                     .font(.title3.weight(.semibold))
                     .accessibilityAddTraits(.isHeader)
@@ -87,7 +91,7 @@ struct BrowserAboutSettingsPane: View {
                     .help(buildInformation.bundleIdentifier)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, CrestSpacing.extraExtraSmall)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 

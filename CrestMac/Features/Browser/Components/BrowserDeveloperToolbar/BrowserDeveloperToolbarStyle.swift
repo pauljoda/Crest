@@ -2,6 +2,11 @@ import SwiftUI
 
 /// The device's surface material, striped so the bar reads as a developer tool.
 struct BrowserDeveloperToolbarBackground: View {
+    /// How strongly the stripes lighten the bar: fainter over an opaque bar,
+    /// where nothing behind it softens them.
+    private static let opaqueStripeOpacity = 0.025
+    private static let stripeOpacity = 0.045
+
     let isOpaque: Bool
 
     var body: some View {
@@ -19,7 +24,7 @@ struct BrowserDeveloperToolbarBackground: View {
             stripe.addLine(to: CGPoint(x: x + size.height, y: size.height))
             context.stroke(
                 stripe,
-                with: .color(.white.opacity(isOpaque ? 0.025 : 0.045)),
+                with: .color(.white.opacity(isOpaque ? Self.opaqueStripeOpacity : Self.stripeOpacity)),
                 lineWidth: 8
             )
         }
@@ -35,7 +40,7 @@ struct BrowserDeveloperToolbarButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 13, weight: .semibold))
+                .font(CrestTypography.compactControlGlyph)
                 .foregroundStyle(isActive ? .primary : .secondary)
         }
         .buttonStyle(BrowserDeveloperToolbarButtonStyle(isActive: isActive))

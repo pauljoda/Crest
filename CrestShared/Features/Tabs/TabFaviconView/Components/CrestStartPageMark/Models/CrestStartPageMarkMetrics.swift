@@ -5,7 +5,6 @@ enum CrestStartPageMarkMetrics {
     static let grid: CGFloat = 64
     /// The tile's corner, as a share of its side: 15 points on the grid.
     static let cornerRadiusRatio: CGFloat = 15 / 64
-    static let borderOpacity: CGFloat = 0.12
     /// The side at and below which the mark is drawn flat, keylined rather
     /// than shadowed.
     static let flatSide: CGFloat = 32

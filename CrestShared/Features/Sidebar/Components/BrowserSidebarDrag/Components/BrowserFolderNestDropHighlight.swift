@@ -10,6 +10,9 @@ import SwiftUI
 /// itself, so only the outline redraws as a lift's target moves, never the
 /// row it decorates.
 struct BrowserFolderNestDropHighlight: View {
+    /// How strongly the outline's inside wears the drop indicator's color.
+    private static let fillOpacity = 0.14
+
     /// What the outline marks.
     enum Target: Equatable {
         case currentTab(UUID)
@@ -41,7 +44,7 @@ struct BrowserFolderNestDropHighlight: View {
             let shape = RoundedRectangle(
                 cornerRadius: BrowserSidebarMetrics.layerCornerRadius(depth: depth), style: .continuous)
             shape
-                .fill(CrestColor.dropIndicator.opacity(0.14))
+                .fill(CrestColor.dropIndicator.opacity(Self.fillOpacity))
                 .overlay { shape.strokeBorder(CrestColor.dropIndicator, lineWidth: 1.5) }
                 .padding(.leading, BrowserFolderLayout.surfaceLeadingInset(depth: depth))
                 .padding(.trailing, BrowserSidebarMetrics.layerInset)

@@ -15,10 +15,7 @@ struct BrowserCommandPaletteResultGroupView: View {
                 Text(header)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
-                    .padding(
-                        .horizontal,
-                        BrowserCommandPaletteMetrics.resultHeaderHorizontalPadding
-                    )
+                    .padding(.horizontal, CrestSpacing.extraSmall)
                 BrowserCommandPaletteResultRows(model: model, group: group, listsUpward: listsUpward)
             }
         } else {

@@ -31,7 +31,7 @@ private struct BrowserSystemSymbolCatalogPicker: View {
     @FocusState private var searchFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: CrestSpacing.large) {
             HStack {
                 Text("SF Symbols").font(.headline)
                 Spacer()
@@ -44,7 +44,7 @@ private struct BrowserSystemSymbolCatalogPicker: View {
                 dismiss()
             }
         }
-        .padding(20)
+        .padding(CrestSpacing.extraLarge)
         .frame(idealWidth: 480, maxWidth: 520, idealHeight: 500, maxHeight: 600)
         .task {
             searchFocused = true
@@ -67,16 +67,19 @@ struct BrowserSystemSymbolCatalogGrid: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: CrestSpacing.medium) {
             ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 8)], spacing: 8) {
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 88), spacing: CrestSpacing.small)],
+                    spacing: CrestSpacing.small
+                ) {
                     ForEach(matches, id: \.self) { name in
                         CrestSelectableCard(
                             isSelected: selection == name, accessibilityLabel: Text(verbatim: name), density: .compact
                         ) {
                             select(name)
                         } content: {
-                            VStack(spacing: 8) {
+                            VStack(spacing: CrestSpacing.small) {
                                 Image(systemName: name)
                                     .resizable().scaledToFit()
                                     .frame(width: 32, height: 32)
@@ -88,7 +91,7 @@ struct BrowserSystemSymbolCatalogGrid: View {
                         .help(name)
                     }
                 }
-                .padding(2)
+                .padding(CrestSpacing.extraExtraSmall)
             }
             .overlay {
                 if isLoading {

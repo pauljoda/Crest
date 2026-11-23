@@ -71,7 +71,7 @@ struct BrowserSyncSettingsView: View {
                         "iCloud",
                         value: "\(conflict.cloudSpaceCount) Spaces, \(conflict.cloudRecordCount) records"
                     )
-                    HStack(spacing: 12) {
+                    HStack(spacing: CrestSpacing.medium) {
                         Button("Use This Device") {
                             confirmsUsingDevice = true
                         }

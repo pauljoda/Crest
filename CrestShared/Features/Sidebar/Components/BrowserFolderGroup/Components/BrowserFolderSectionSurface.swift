@@ -5,6 +5,10 @@ import SwiftUI
 /// Split View wears it too, with no folder of its own to be dropped into. It
 /// follows the appearance choices of the folder's kind.
 struct BrowserFolderSectionSurface: ViewModifier {
+    /// How strongly a folder a lifted item would drop into is lit, beyond
+    /// a hover's wash.
+    private static let targetedEmphasisOpacity = 0.16
+
     let color: BrandColor
     var kind = BrowserFolderKind.folder
     var intensity: Double = 0
@@ -27,6 +31,12 @@ struct BrowserFolderSectionSurface: ViewModifier {
     private var appearance: BrowserDeviceAppearanceStore { BrowserDeviceAppearanceStore.shared }
     private var alwaysVisible: Bool { appearance[keyPath: kind.showsHighlights] }
     private var showsBorders: Bool { appearance[keyPath: kind.showsBorders] }
+    /// The wash over a surface that always shows: a hover's, or a stronger
+    /// one while a lifted item would drop into the folder.
+    private var emphasisOpacity: Double {
+        guard alwaysVisible, isHovered || isTargeted else { return 0 }
+        return isTargeted ? Self.targetedEmphasisOpacity : CrestOpacity.hover
+    }
 
     func body(content: Content) -> some View {
         content
@@ -40,7 +50,7 @@ struct BrowserFolderSectionSurface: ViewModifier {
                     showsFill: alwaysVisible || previewShowsHighlight || isHovered || isSelected || isTargeted,
                     showsBorders: showsBorders, depth: depth, insetsSurface: insetsSurface,
                     isSelected: isSelected,
-                    emphasisOpacity: alwaysVisible && (isHovered || isTargeted) ? (isTargeted ? 0.16 : 0.08) : 0)
+                    emphasisOpacity: emphasisOpacity)
             )
             .onHover { isHovered = $0 }
             .animation(

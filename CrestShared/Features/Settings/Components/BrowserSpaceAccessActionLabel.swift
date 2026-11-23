@@ -14,7 +14,7 @@ struct BrowserSpaceAccessActionLabel: View {
             }
         }
         .font(.body.weight(.semibold))
-        .padding(.vertical, 4)
+        .padding(.vertical, CrestSpacing.extraSmall)
         .frame(maxWidth: .infinity)
         .opacity(isAuthenticating ? 0 : 1)
         .overlay {

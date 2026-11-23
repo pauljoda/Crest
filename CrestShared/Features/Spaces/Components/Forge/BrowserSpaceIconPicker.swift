@@ -95,11 +95,14 @@ struct BrowserSpaceIconPicker: View {
     private var starterCrests: some View {
         VStack(alignment: .leading, spacing: BrowserSpaceIconPickerMetrics.styleSpacing) {
             ForEach(SpaceHouseStyle.all, id: \.self) { style in
-                VStack(alignment: .leading, spacing: BrowserSpaceIconPickerMetrics.titleSpacing) {
+                VStack(alignment: .leading, spacing: CrestSpacing.small) {
                     Text(style.title)
                         .crestCapsLabel()
                         .accessibilityAddTraits(.isHeader)
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 8)], spacing: 8) {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 80), spacing: CrestSpacing.small)],
+                        spacing: CrestSpacing.small
+                    ) {
                         ForEach(SpaceHouse.all.filter { $0.style == style }, id: \.self) { house in
                             crest(of: house)
                         }
@@ -107,7 +110,7 @@ struct BrowserSpaceIconPicker: View {
                 }
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, CrestSpacing.extraSmall)
         .accessibilityIdentifier("space-starter-crests")
     }
 
@@ -187,7 +190,6 @@ enum BrowserSpaceIconPickerMetrics {
     static let symbol = "sparkles"
     /// The room between the simple and heraldic crests, and under each name.
     static let styleSpacing: CGFloat = 14
-    static let titleSpacing: CGFloat = 8
 }
 
 #if DEBUG

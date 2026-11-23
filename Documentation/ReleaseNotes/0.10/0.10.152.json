@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "feature-fills-use-opacity-roles",
+      "category": "internal",
+      "message": "Drop slots, progress rings, folder washes and other faint fills draw from named opacity roles instead of loose numbers, with no visible change."
+    }
+  ]
+}

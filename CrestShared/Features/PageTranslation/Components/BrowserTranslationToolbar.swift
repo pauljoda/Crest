@@ -21,7 +21,7 @@ struct BrowserTranslationToolbar: View {
                 if !showsInlineStatus {
                     translationStatus
                         .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 4)
+                        .padding(.horizontal, CrestSpacing.extraSmall)
                 }
             }
             .font(.callout.weight(.medium))
@@ -58,7 +58,7 @@ struct BrowserTranslationToolbar: View {
                 .accessibilityLabel("Languages")
                 .help("Languages")
             } else {
-                HStack(spacing: 4) {
+                HStack(spacing: CrestSpacing.extraSmall) {
                     languageMenu(isSource: true)
                     Image(systemName: "arrow.right")
                         .font(.caption.weight(.semibold))
@@ -73,7 +73,7 @@ struct BrowserTranslationToolbar: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
-            Spacer(minLength: 8)
+            Spacer(minLength: CrestSpacing.small)
             primaryAction
             toolbarDivider
             Menu {
@@ -122,7 +122,7 @@ struct BrowserTranslationToolbar: View {
                     .font(.system(size: 8, weight: .semibold))
                     .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, CrestSpacing.small)
             .frame(minHeight: controlHeight)
             .contentShape(.rect)
         }
@@ -193,7 +193,7 @@ struct BrowserTranslationToolbar: View {
     }
 
     private var toolbarDivider: some View {
-        Divider().frame(height: 22).padding(.horizontal, 2).accessibilityHidden(true)
+        Divider().frame(height: 22).padding(.horizontal, CrestSpacing.extraExtraSmall).accessibilityHidden(true)
     }
 
     private var controlHeight: CGFloat { capabilities.minimumHitTarget }

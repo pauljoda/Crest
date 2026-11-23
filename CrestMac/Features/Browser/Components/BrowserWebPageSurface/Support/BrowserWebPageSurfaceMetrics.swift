@@ -6,7 +6,7 @@ enum BrowserWebPageSurfaceMetrics {
     static let infoBarHorizontalPadding: CGFloat = 14
     static let infoBarVerticalPadding: CGFloat = 10
     static let infoBarMaximumWidth: CGFloat = 640
-    static let infoBarCornerRadius: CGFloat = 16
+    static let infoBarCornerRadius = CrestRadius.card
     static let initialLoadingSpacing = CrestSpacing.small
     static let regionCaptureZIndex: Double = 20
     static let sharePickerZIndex: Double = 25
@@ -42,6 +42,8 @@ enum BrowserWebPageSurfaceMetrics {
     /// press, how it glides between points and how long it stays once the
     /// agent pauses.
     static let agentPointerSize: CGFloat = 20
+    /// The soft edge that keeps the arrow readable over any page.
+    static let agentPointerShadowRadius: CGFloat = 1
     static let agentPointerTagOffset = CGSize(width: 16, height: 18)
     static let agentPointerTagHorizontalPadding: CGFloat = 8
     static let agentPointerTagVerticalPadding: CGFloat = 3

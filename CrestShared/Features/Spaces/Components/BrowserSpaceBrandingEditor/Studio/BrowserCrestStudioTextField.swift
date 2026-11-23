@@ -7,7 +7,7 @@ struct BrowserCrestStudioTextField: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: CrestSpacing.small) {
             Text(title).font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
             HStack(spacing: 10) {
                 Image(systemName: symbol).foregroundStyle(.secondary).frame(width: 18).accessibilityHidden(true)

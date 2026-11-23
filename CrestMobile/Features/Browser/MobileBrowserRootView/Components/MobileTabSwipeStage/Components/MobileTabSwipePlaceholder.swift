@@ -12,7 +12,7 @@ struct MobileTabSwipePlaceholder: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: CrestSpacing.medium) {
             TabStateFaviconView(tab: tab, favicons: favicons, profileID: space.profileID, size: 40)
             Text(tab.shownTitle)
                 .font(.headline)
@@ -20,7 +20,7 @@ struct MobileTabSwipePlaceholder: View {
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
         }
-        .padding(.horizontal, 32)
+        .padding(.horizontal, CrestSpacing.section)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.bottom, bottomChromeHeight)
         .background {

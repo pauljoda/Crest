@@ -17,6 +17,9 @@ enum CrestBrandPalette {
     static let cinderComponents = CrestColorComponents(red: 24, green: 22, blue: 18)
     static let creamComponents = CrestColorComponents(red: 251, green: 245, blue: 230)
     static let paperComponents = CrestColorComponents(red: 255, green: 253, blue: 247)
+    /// The warm paper a room of color softens toward in the light, as the
+    /// one setup's window sits in does; slate is its dark.
+    static let parchmentComponents = CrestColorComponents(red: 246, green: 238, blue: 219)
     /// The warm hairline round a card on cream.
     static let hairlineComponents = CrestColorComponents(red: 234, green: 223, blue: 198)
     static let crestBlueComponents = CrestColorComponents(red: 43, green: 108, blue: 196)

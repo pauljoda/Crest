@@ -168,7 +168,7 @@ private struct BrowserSpaceDeletionConfirmation: ViewModifier {
                     .accessibilityIdentifier("confirm-delete-space")
                 }
             }
-            .padding(20)
+            .padding(CrestSpacing.extraLarge)
             .frame(width: 380)
             .onAppear { successorID = successorID ?? plan.successors.first?.id }
         }

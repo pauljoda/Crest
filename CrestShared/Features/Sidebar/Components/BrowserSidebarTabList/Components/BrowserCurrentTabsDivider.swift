@@ -72,7 +72,7 @@ struct BrowserCurrentTabsDivider: View {
 
     private var clearButton: some View {
         Button(action: clearsAll ? clearAll : clearOthers) {
-            HStack(spacing: 4) {
+            HStack(spacing: CrestSpacing.extraSmall) {
                 if revealsOnHoverOnly { Text(clearsAll ? "Clear All" : "Clear") }
                 Image(systemName: "archivebox")
                 Image(systemName: "arrow.down")

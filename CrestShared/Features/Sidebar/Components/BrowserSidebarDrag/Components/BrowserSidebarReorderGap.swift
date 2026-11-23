@@ -10,7 +10,7 @@ struct BrowserSidebarReorderGap: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(depth: depth), style: .continuous)
-            .fill(.primary.opacity(0.035))
+            .fill(.primary.opacity(CrestOpacity.dropSlot))
             .padding(.horizontal, BrowserSidebarMetrics.layerInset)
             .padding(.vertical, CrestSpacing.extraSmall)
             .frame(height: height)

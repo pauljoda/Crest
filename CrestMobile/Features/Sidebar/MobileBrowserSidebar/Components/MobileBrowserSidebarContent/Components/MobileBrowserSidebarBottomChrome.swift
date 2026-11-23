@@ -1,6 +1,10 @@
 import SwiftUI
 
 struct MobileBrowserSidebarBottomChrome: View {
+    /// The chrome's height: a capsule of touch targets with room above and
+    /// below it.
+    private static let height: CGFloat = 60
+
     @Environment(\.mobileBrowserControlPlacement) private var controlPlacement
     let configuration: MobileBrowserSidebarContentConfiguration
 
@@ -44,7 +48,7 @@ struct MobileBrowserSidebarBottomChrome: View {
 
     private var capsule: some View {
         controls
-            .frame(height: 60)
+            .frame(height: Self.height)
             .modifier(
                 SpaceForegroundBlend(
                     spaces: configuration.context.availableSpaces,
@@ -100,13 +104,13 @@ struct MobileBrowserSidebarBottomChrome: View {
     private var controls: some View {
         if showsNewTab {
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) {
+                HStack(spacing: CrestSpacing.small) {
                     leadingControls
                     Spacer(minLength: 0)
                     spaceActions { EmptyView() }
                         .fixedSize(horizontal: true, vertical: false)
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, CrestSpacing.medium)
 
                 HStack(spacing: 0) {
                     spaceActions { leadingButtons }
@@ -123,7 +127,7 @@ struct MobileBrowserSidebarBottomChrome: View {
                 }
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, CrestSpacing.medium)
             .accessibilityHidden(!configuration.showsSidebarToggle)
         }
     }
@@ -134,7 +138,7 @@ struct MobileBrowserSidebarBottomChrome: View {
         }
         .buttonStyle(MobileSpaceUtilityButtonLabel.capsuleButtonStyle)
         .controlSize(.large)
-        .padding(4)
+        .padding(CrestSpacing.extraSmall)
         .glassEffect(.regular, in: .capsule)
         .fixedSize(horizontal: true, vertical: false)
     }

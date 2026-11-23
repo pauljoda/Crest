@@ -19,7 +19,9 @@ struct BrowserSetupLiveWindow: View {
             BrowserSetupLiveWindowHost(content: browser(copy), cornerRadius: cornerRadius)
                 .overlay {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.14), lineWidth: CrestLayout.hairline)
+                        .strokeBorder(
+                            Color.primary.opacity(CrestOpacity.windowOutline), lineWidth: CrestLayout.hairline
+                        )
                         .allowsHitTesting(false)
                 }
                 .background { shadow }
@@ -78,8 +80,11 @@ extension BrowserSetupLiveWindow {
         HStack(spacing: BrowserSetupLiveWindowMetrics.windowButtonSpacing) {
             ForEach(0..<3, id: \.self) { _ in
                 Circle()
-                    .fill(Color.primary.opacity(0.2))
-                    .overlay { Circle().strokeBorder(Color.primary.opacity(0.12), lineWidth: CrestLayout.hairline) }
+                    .fill(Color.primary.opacity(BrowserSetupLiveWindowMetrics.windowButtonOpacity))
+                    .overlay {
+                        Circle()
+                            .strokeBorder(Color.primary.opacity(CrestOpacity.border), lineWidth: CrestLayout.hairline)
+                    }
                     .frame(
                         width: BrowserSetupLiveWindowMetrics.windowButton,
                         height: BrowserSetupLiveWindowMetrics.windowButton)
@@ -105,6 +110,9 @@ extension BrowserSetupLiveWindow {
 enum BrowserSetupLiveWindowMetrics {
     static let cornerRadius: CGFloat = 14
     static let windowButton: CGFloat = 13
+    /// How strongly the window's buttons are filled, dimmed as a window in
+    /// the background shows them.
+    static let windowButtonOpacity = 0.2
     static let windowButtonSpacing: CGFloat = 9
     static let windowButtonInset = EdgeInsets(top: 18, leading: 20, bottom: 0, trailing: 0)
 }

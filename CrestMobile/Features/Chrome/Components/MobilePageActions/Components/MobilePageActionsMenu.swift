@@ -1,12 +1,20 @@
 import SwiftUI
 
 struct MobilePageActionsMenu: View {
+    /// The dot that says a pop-up was blocked, at the glyph's top trailing
+    /// corner.
+    private static let noticeDotSize: CGFloat = 7
+    private static let noticeDotOffset = CGSize(width: 3, height: -3)
+    /// Where the new downloads badge sits over the glyph's top trailing
+    /// corner.
+    private static let badgeOffset = CGSize(width: 9, height: -7)
+
     let browser: BrowserStore
     let pages: MobileSelectedPageActionPort
     let systemImage: String
     var downloadsAccess: MobileDownloadsMenuAccess? = nil
     var hideToolbar: (() -> Void)? = nil
-    var controlSize = CGSize(width: 44, height: 44)
+    var controlSize = CGSize(width: CrestLayout.minimumHitTarget, height: CrestLayout.minimumHitTarget)
     /// Whether the menu is a toolbar item, whose label the system draws so a
     /// side toolbar can stand it on end with the others.
     var isToolbarItem = false
@@ -72,7 +80,7 @@ struct MobilePageActionsMenu: View {
     private var chromeLabel: some View {
         ZStack(alignment: .topTrailing) {
             Image(systemName: systemImage)
-                .font(.system(size: 13, weight: .semibold))
+                .font(CrestTypography.compactControlGlyph)
                 .foregroundStyle(
                     pages.blockedPopupNotice == nil
                         ? Color.secondary
@@ -81,8 +89,8 @@ struct MobilePageActionsMenu: View {
             if pages.blockedPopupNotice != nil {
                 Circle()
                     .fill(CrestColor.warning)
-                    .frame(width: 7, height: 7)
-                    .offset(x: 3, y: -3)
+                    .frame(width: Self.noticeDotSize, height: Self.noticeDotSize)
+                    .offset(Self.noticeDotOffset)
                     .accessibilityHidden(true)
             }
             if let downloadsAccess, downloadsAccess.newItemCount > 0 {
@@ -91,7 +99,7 @@ struct MobilePageActionsMenu: View {
                     tint: CrestBrandTheme.accent,
                     progress: downloadsAccess.activeProgress
                 )
-                .offset(x: 9, y: -7)
+                .offset(Self.badgeOffset)
             }
         }
         .frame(width: controlSize.width, height: controlSize.height)

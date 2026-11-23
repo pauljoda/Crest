@@ -25,8 +25,9 @@ struct BrowserFolderDragPreview: View {
         .frame(width: width, height: max(BrowserFolderDragPreviewLayout.height, sourceHeight), alignment: .topLeading)
         .background { CrestSurfaceLayer(shape: shape) }
         .overlay {
-            shape.fill(folder.displayColor.color.opacity(0.12))
-            shape.strokeBorder(folder.displayColor.color.opacity(0.35), lineWidth: 0.5)
+            shape.fill(folder.displayColor.color.opacity(BrowserFolderDragPreviewLayout.tintOpacity))
+            shape.strokeBorder(
+                folder.displayColor.color.opacity(BrowserFolderDragPreviewLayout.edgeOpacity), lineWidth: 0.5)
         }
         .clipShape(shape)
         .crestElevation(.dragged)
@@ -42,7 +43,7 @@ struct BrowserFolderDragPreview: View {
             if folder.kind.showsArtwork {
                 let color = folder.displayColor
                 BrowserFolderArtwork(symbol: folder.displaySymbol, color: color, isExpanded: !folder.isCollapsed)
-                    .foregroundStyle(color.color.opacity(0.86))
+                    .foregroundStyle(color.color.opacity(BrowserFolderDragPreviewLayout.artworkOpacity))
                     .frame(width: 20)
                 Text(folder.title).lineLimit(1)
             } else {

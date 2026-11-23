@@ -118,10 +118,7 @@ struct BrowserSidebarWidgetDeckStepper: View {
             Text(verbatim: compactSelectionValue)
                 .font(CrestTypography.compactMetadata.weight(.medium))
                 .foregroundStyle(.secondary)
-                .padding(
-                    .horizontal,
-                    BrowserSidebarWidgetDeckStyle.stepperBadgeHorizontalPadding
-                )
+                .padding(.horizontal, CrestSpacing.extraExtraSmall)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .background(.quaternary, in: .capsule)

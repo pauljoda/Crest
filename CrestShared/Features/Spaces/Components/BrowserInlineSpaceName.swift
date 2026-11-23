@@ -64,7 +64,7 @@ struct BrowserInlineSpaceName: View {
                 if isEditing {
                     Text(draftName.isEmpty ? " " : draftName)
                         .lineLimit(1)
-                        .padding(.trailing, 8)
+                        .padding(.trailing, CrestSpacing.small)
                         .hidden()
                         .overlay(alignment: .leading) {
                             TextField("Space name", text: $draftName)
@@ -106,7 +106,7 @@ struct BrowserInlineSpaceName: View {
         .font(titleFont ?? CrestTypography.display(size))
         .frame(minHeight: size <= 18 ? 32 : 44)
         .padding(.horizontal, size <= 18 ? 4 : 10)
-        .padding(.vertical, 4)
+        .padding(.vertical, CrestSpacing.extraSmall)
         .background {
             // A field while the name is edited, with its focus ring, and the
             // design system's hover surface under the pointer otherwise.

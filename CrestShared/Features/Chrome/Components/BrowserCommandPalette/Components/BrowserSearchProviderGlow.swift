@@ -4,6 +4,9 @@ import SwiftUI
 /// a soft halo outside its edge and a fine line on it, which Reduce
 /// Transparency and Increase Contrast keep to the line alone.
 struct BrowserSearchProviderGlow: ViewModifier {
+    /// How strongly the halo and the line wear the provider's color.
+    private static let glowOpacity = 0.65
+
     let color: BrandColor?
     /// The card's outline, which the glow follows as the card morphs.
     let shape: RoundedRectangle
@@ -21,7 +24,7 @@ struct BrowserSearchProviderGlow: ViewModifier {
             .background {
                 if let color, Self.showsHalo(reduceTransparency: reduceTransparency, contrast: contrast) {
                     shape.stroke(
-                        color.color.mix(with: .primary, by: colorScheme == .dark ? 0.2 : 0).opacity(0.65),
+                        color.color.mix(with: .primary, by: colorScheme == .dark ? 0.2 : 0).opacity(Self.glowOpacity),
                         lineWidth: 3
                     )
                     .blur(radius: 8)
@@ -33,7 +36,7 @@ struct BrowserSearchProviderGlow: ViewModifier {
                 if let color {
                     shape.strokeBorder(
                         contrast == .increased
-                            ? Color.primary : color.color.mix(with: .primary, by: 0.2).opacity(0.65),
+                            ? Color.primary : color.color.mix(with: .primary, by: 0.2).opacity(Self.glowOpacity),
                         lineWidth: contrast == .increased ? 1.5 : 1
                     )
                     .allowsHitTesting(false)

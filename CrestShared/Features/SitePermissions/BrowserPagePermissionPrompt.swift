@@ -8,7 +8,7 @@ struct BrowserPagePermissionPrompt: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: CrestSpacing.medium) {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: request.permission.symbol)
                     .font(.title3)
@@ -42,7 +42,7 @@ struct BrowserPagePermissionPrompt: View {
                 #if os(macOS)
                     .toggleStyle(.checkbox)
                 #endif
-            HStack(spacing: 8) {
+            HStack(spacing: CrestSpacing.small) {
                 Button {
                     controller.resolve(
                         request.id,
