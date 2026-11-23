@@ -38,7 +38,7 @@ struct MobileOnboardingSyncFeaturePage: View {
                         height: MobileOnboardingLayout.syncSymbolFrame
                     )
                     .background(
-                        CrestBrandTheme.surface,
+                        BrowserSetupPaper.raisedFill,
                         in: .circle
                     )
                     .accessibilityHidden(true)

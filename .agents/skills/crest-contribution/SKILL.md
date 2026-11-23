@@ -108,7 +108,9 @@ type you touch. The rules that matter most:
   ground is `CrestBrandTheme.canvas`, the warm near-black Settings uses, and
   a raised card or panel on it is `surface` or `flyout`, charcoal. Never fill
   a dark background with Crest's blues (`ink`, `slate`) or a navy of one's
-  own; the blues are for text, marks and the accent.
+  own; the blues are for text, marks and the accent. Onboarding is the one
+  exception: it lies on `BrowserSetupPaper`, ink in the light and the dark,
+  and what lies on it takes `browserSetupPaperContent()`.
 - **Things that appear in place grow from `CrestMotion.entranceScale`.** A
   card, preview, fan or control that appears beside the row or button it
   belongs to starts at that scale, 80% of its size, and grows the rest of the

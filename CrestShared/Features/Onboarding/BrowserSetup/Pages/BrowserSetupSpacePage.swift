@@ -31,6 +31,7 @@ struct BrowserSetupSpacePage: View {
                 } header: {
                     heading(editor)
                 }
+                .browserSetupRaisedRows()
                 Section {
                     BrowserSpaceColorWells(branding: editor.branding)
                         .padding(.vertical, CrestSpacing.small)
@@ -38,11 +39,13 @@ struct BrowserSetupSpacePage: View {
                 } header: {
                     CrestSettingsSectionHeading(title: "Colors")
                 }
+                .browserSetupRaisedRows()
                 Section {
                     BrowserSpaceIconPicker(branding: editor.branding, symbol: editor.symbol)
                 } header: {
                     CrestSettingsSectionHeading(title: "Icon")
                 }
+                .browserSetupRaisedRows()
             }
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)

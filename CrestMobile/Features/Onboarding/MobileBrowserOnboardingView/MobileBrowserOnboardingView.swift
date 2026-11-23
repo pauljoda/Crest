@@ -75,6 +75,7 @@ struct MobileBrowserOnboardingView: View {
                 setupView
             } else {
                 MobileOnboardingCurrentPage(context: pageContext)
+                    .browserSetupPaperContent()
                     .transition(.opacity)
             }
         }

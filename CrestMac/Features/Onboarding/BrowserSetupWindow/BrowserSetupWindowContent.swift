@@ -118,6 +118,7 @@ struct BrowserSetupWindowContent: View {
             },
             setUpWithoutCloud: cloudWait.setUpWithoutCloud
         )
+        .browserSetupPaperContent()
         .frame(width: windowWidth, alignment: .leading)
         .frame(maxHeight: .infinity)
         .background { BrowserSetupPaper() }
