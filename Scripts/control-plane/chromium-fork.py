@@ -10,9 +10,9 @@ from pathlib import Path
 import platform
 import shutil
 
-from chromium_fork import (ENGINE, REPO, Workspace, building, exclusive_workspace, plan_update, prepare_update,
-                           prune_downloads, prune_sources, read_json, release_notes, release_version, run,
-                           select_update, sha256, upstream_releases, write_json)
+from chromium_fork import (ENGINE, REPO, ArchiveNotPublished, Workspace, building, exclusive_workspace, plan_update,
+                           prepare_update, prune_downloads, prune_sources, read_json, release_feed, release_notes,
+                           release_version, run, select_update, sha256, stable_milestone, upstream_releases, write_json)
 import chromium_engine
 
 
@@ -70,6 +70,8 @@ def main():
     planning.add_argument("--version", default="auto", help="A release on the fork's channel, or auto for the newest eligible")
     planning.add_argument("--allow-major", action="store_true")
     planning.add_argument("--report", type=Path, help="Where to write the plan, rebased patches and conflicts")
+    planning.add_argument("--when-published", action="store_true",
+                          help="Exit successfully without a plan while the release's source archive isn't published")
     for name in ("build", "update"):
         build = commands.add_parser(name)
         build.add_argument("--sdk", type=Path, required=True)
@@ -81,11 +83,15 @@ def main():
             build.add_argument("--allow-major", action="store_true")
             build.add_argument("--when-idle", action="store_true",
                                help="Exit successfully without building while another Chromium operation runs")
+            build.add_argument("--replace-published-pinned", action="store_true",
+                               help="For a milestone without room for a second source, remove the pinned source "
+                                    "first if its engine is published")
     args = parser.parse_args()
     workspace = Workspace(args.workspace)
     policy = read_json(REPO / ENGINE / "fork.json")
     if getattr(args, "version", None) == "auto":
-        plan = select_update(workspace.lock["chromium"]["version"], upstream_releases(policy), args.allow_major)
+        plan = select_update(workspace.lock["chromium"]["version"], upstream_releases(policy), args.allow_major,
+                             stable_milestone(release_feed()))
         if not plan["candidate"]:
             print(json.dumps(plan, indent=2))
             return
@@ -99,17 +105,27 @@ def main():
                           "policy": policy}, indent=2))
         return
     if args.command == "check-upstream":
-        result = select_update(workspace.lock["chromium"]["version"], upstream_releases(policy), args.allow_major)
-        for field in ("candidate", "latest"):
+        feed = release_feed()
+        result = select_update(workspace.lock["chromium"]["version"], upstream_releases(policy), args.allow_major,
+                               stable_milestone(feed))
+        for field in ("candidate", "latest", "earlyStable"):
             if result[field] and result[field] != result["current"]:
-                result[f"{field}Notes"] = release_notes(result[field])
+                result[f"{field}Notes"] = release_notes(result[field], feed)
         print(json.dumps(result, indent=2))
         return
     if args.command == "plan":
         if args.version not in upstream_releases(policy):
             parser.error(f"{args.version} is not a {policy['upstream']['channel']} release")
-        plan, _ = plan_update(REPO, workspace.root, args.version, args.allow_major, args.report)
+        try:
+            plan, _ = plan_update(REPO, workspace.root, args.version, args.allow_major, args.report)
+        except ArchiveNotPublished as error:
+            if not args.when_published:
+                raise
+            return skip(f"{error}; the next check plans it.")
         print(json.dumps(plan, indent=2))
+        if output := os.environ.get("GITHUB_OUTPUT"):
+            with Path(output).open("a") as stream:
+                stream.write(f"blocked={str(plan['blocked']).lower()}\nreport={plan['report']}\n")
         return
     if platform.system() != "Darwin" or platform.machine() != "arm64":
         parser.error("Engine preparation and builds require an Apple Silicon Mac")
@@ -143,7 +159,8 @@ def main():
                 parser.error("Select a release on the current milestone, or explicitly pass --allow-major")
             if run("git", "-C", REPO, "status", "--porcelain", capture=True).strip():
                 parser.error("Start an upstream update from a clean Crest checkout")
-            workspace, plan = prepare_update(REPO, workspace.root, args.version, args.allow_major, timings)
+            workspace, plan = prepare_update(REPO, workspace.root, args.version, args.allow_major, timings,
+                                             replace_published_pinned=args.replace_published_pinned)
         workspace.build(args.sdk, args.ninja.resolve(), args.jobs, args.min_free_gib, timings)
         key = chromium_engine.engine_key(REPO)
         receipt = {"engineKey": key, "chromium": workspace.lock["chromium"]["version"],
