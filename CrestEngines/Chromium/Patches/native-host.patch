@@ -1765,10 +1765,12 @@
    crash_reporter::InitializeCrashKeys();
  
  #if BUILDFLAG(IS_CHROMEOS)
-@@ -1589,6 +1605,43 @@
+@@ -1587,7 +1603,45 @@
+   // Initialize the user data dir for any process type that needs it.
+   if (chrome::ProcessNeedsProfileDir(process_type)) {
      InitializeUserDataDir(base::CommandLine::ForCurrentProcess());
-   }
- 
++  }
++
 +#if BUILDFLAG(IS_MAC)
 +  if (process_type.empty()) {
 +    // A Crest browser opens the engine profile folder its launch named: the
@@ -1778,7 +1780,8 @@
 +    // empty, so a launch that named none, or one Chromium could not use, stops
 +    // here, before any profile is read.
 +    if (crest::IsEnabled() &&
-+        (!command_line.HasSwitch(switches::kUserDataDir) ||
++        (!command_line.GetSwitchValuePath(switches::kUserDataDir)
++              .IsAbsolute() ||
 +         !chrome::GetInvalidSpecifiedUserDataDir().empty())) {
 +      fprintf(stderr,
 +              "Crest: the browser has no usable engine profile folder and "
@@ -1803,12 +1806,11 @@
 +      fflush(stdout);
 +      exit(EXIT_SUCCESS);
 +    }
-+  }
+   }
 +#endif
-+
+ 
    // Register component_updater PathProvider after DIR_USER_DATA overridden by
    // command line flags. Maybe move the chrome PathProvider down here also?
-   component_updater::RegisterPathProvider(chrome::DIR_COMPONENTS,
 --- a/chrome/browser/webauthn/chrome_authenticator_request_delegate.cc
 +++ b/chrome/browser/webauthn/chrome_authenticator_request_delegate.cc
 @@ -17,6 +17,7 @@
@@ -3592,7 +3594,7 @@
  #include "chrome/common/chrome_paths_internal.h"
  #include "components/os_crypt/async/browser/key_provider.h"
  #include "components/os_crypt/async/browser/keychain_key_provider.h"
-@@ -1691,10 +1692,23 @@
+@@ -1691,10 +1692,25 @@
  #endif  // BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_MAC) && !BUILDFLAG(IS_LINUX)
  
  #if BUILDFLAG(IS_MAC)
@@ -3605,9 +3607,11 @@
 +  const char* home = getenv("HOME");
 +  const bool crest_default_data_directory =
 +      home && *home &&
-+      base::CommandLine::ForCurrentProcess()->GetSwitchValuePath(
-+          switches::kUserDataDir) ==
-+          base::FilePath(crest::ProductUserDataDirectory(home));
++      base::CommandLine::ForCurrentProcess()
++              ->GetSwitchValuePath(switches::kUserDataDir)
++              .StripTrailingSeparators() ==
++          base::FilePath(crest::ProductUserDataDirectory(home))
++              .StripTrailingSeparators();
    if (base::FeatureList::IsEnabled(features::kUseKeychainKeyProvider)) {
      if (!base::FeatureList::IsEnabled(
              features::kKeychainKeyProviderUserDataDirProtection) ||
