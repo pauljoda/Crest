@@ -19,8 +19,8 @@ struct BrowserDefaultBrowserStatus: Hashable, Sendable {
     let name: String
     let title: LocalizedStringResource
     let symbol: String
-    /// How the status reads; nil reads quietly.
-    let tone: CrestStatusTone?
+    /// The core's tone for how the status reads; nil reads quietly.
+    let tone: StatusTone?
 
     /// Why the system could not say, for a status it could not determine.
     let message: String?
@@ -28,7 +28,7 @@ struct BrowserDefaultBrowserStatus: Hashable, Sendable {
     // MARK: - Initializers
 
     private init(
-        name: String, title: LocalizedStringResource, symbol: String, tone: CrestStatusTone?, message: String? = nil
+        name: String, title: LocalizedStringResource, symbol: String, tone: StatusTone?, message: String? = nil
     ) {
         self.name = name
         self.title = title

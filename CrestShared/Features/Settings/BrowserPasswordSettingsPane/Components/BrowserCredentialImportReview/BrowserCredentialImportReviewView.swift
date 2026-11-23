@@ -155,9 +155,7 @@ struct BrowserCredentialImportReviewView: View {
     }
 
     private func warningLabel(_ count: Int) -> String {
-        count == 1
-            ? String(localized: "1 warning")
-            : String(localized: "\(count) warnings")
+        String(localized: "\(count) warnings")
     }
 
     private func commit() {

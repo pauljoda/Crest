@@ -60,10 +60,7 @@ struct BrowserSpaceDeletionPlan: Identifiable {
             successors = []
             unlocking = nil
         } else if request.includesSubSpaces {
-            title =
-                subSpaces.count == 1
-                ? String(localized: "Delete “\(name)” and its Sub-Space?")
-                : String(localized: "Delete “\(name)” and its \(subSpaces.count) Sub-Spaces?")
+            title = String(localized: "Delete “\(name)” and its \(subSpaces.count) Sub-Spaces?")
             message = String(
                 localized: """
                     This permanently removes their tabs and browser data from Crest. Downloaded files you already \

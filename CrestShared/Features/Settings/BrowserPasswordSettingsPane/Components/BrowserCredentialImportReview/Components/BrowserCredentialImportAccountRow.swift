@@ -141,10 +141,7 @@ struct BrowserCredentialImportAccountRow: View {
     }
 
     private var duplicateSummary: String {
-        let count = group.collapsedDuplicateRowCount
-        return count == 1
-            ? String(localized: "1 identical duplicate will be skipped.")
-            : String(localized: "\(count) identical duplicates will be skipped.")
+        String(localized: "\(group.collapsedDuplicateRowCount) identical duplicates will be skipped.")
     }
 
     private var selectionBinding: Binding<BrowserCredentialImportSelection> {

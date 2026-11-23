@@ -15,13 +15,7 @@ struct MobilePageActionsContent: View {
                 Label(downloadsAccess.rowTitle, systemImage: "arrow.down.circle")
             }
             .accessibilityLabel("Downloads")
-            .accessibilityValue(
-                BrowserChromeAccessibility.countValue(
-                    downloadsAccess.newItemCount,
-                    singular: "new download",
-                    plural: "new downloads"
-                )
-            )
+            .accessibilityValue(downloadsAccess.unreadAccessibilityValue)
             .accessibilityIdentifier(BrowserMobileAccessibilityID.pageActionsDownloads)
         }
 

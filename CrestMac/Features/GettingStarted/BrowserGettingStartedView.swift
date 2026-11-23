@@ -133,12 +133,9 @@ struct BrowserGettingStartedView: View {
 
     private var tabLesson: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text("TRY IT").crestCapsLabel()
-                Spacer()
-                Text("\(lesson.number) / \(BrowserGettingStartedLesson.all.count)").font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
+            Text("\(lesson.number) / \(BrowserGettingStartedLesson.all.count)").font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
             Text(lesson.title).font(CrestTypography.display(25))
             Text(lesson.detail).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             ViewThatFits(in: .horizontal) {

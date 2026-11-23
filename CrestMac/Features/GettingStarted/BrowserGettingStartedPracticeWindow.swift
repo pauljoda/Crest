@@ -118,8 +118,6 @@ struct BrowserGettingStartedPracticeWindow: View {
                         horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
-            Text(showsSplit ? "SPLIT VIEW PRACTICE" : "EXAMPLE PAGE")
-                .font(CrestTypography.sans(9, weight: .semibold)).tracking(2).foregroundStyle(.tertiary)
         }
         .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)

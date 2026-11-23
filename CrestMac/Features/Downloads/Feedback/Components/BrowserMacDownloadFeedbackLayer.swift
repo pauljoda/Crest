@@ -36,16 +36,6 @@ struct BrowserMacDownloadFeedbackLayer: View {
                         )
                     }
                 }
-                if feedback.flights.contains(where: { $0.path == nil }) {
-                    Label("Download started", systemImage: "arrow.down.circle")
-                        .font(.body.weight(.medium))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .crestFlyoutStyle(in: .rect(cornerRadius: CrestRadius.control))
-                        .padding(.leading, 16)
-                        .padding(.bottom, context.destination == nil ? 16 : 56)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             .onChange(of: model.pages.downloadCenter.feedbackEvents, initial: true) { _, events in
@@ -60,13 +50,16 @@ struct BrowserMacDownloadFeedbackLayer: View {
         .onDisappear { feedback.cancel() }
     }
 
+    /// A start whose icon has nowhere to fly is reported in the window's
+    /// notice instead.
     private func reconcile(
         events: [BrowserDownloadFeedbackEvent],
         context: BrowserMacDownloadFeedbackContext
     ) {
-        if feedback.reconcile(events: events, context: context) {
-            AccessibilityNotification.Announcement(String(localized: "Download started")).post()
-        }
+        let started = feedback.reconcile(events: events, context: context)
+        guard !started.isEmpty else { return }
+        AccessibilityNotification.Announcement(String(localized: "Download started")).post()
+        if started.contains(where: { $0.path == nil }) { model.chrome.showNotice(.downloadStarted) }
     }
 }
 

@@ -7,7 +7,9 @@ import AppKit
 struct BrowserMacApplicationAction: Hashable {
     // MARK: - Static Variables
 
-    static let about = BrowserMacApplicationAction(name: "about", title: "About Crest") { $0.showAbout() }
+    static let about = BrowserMacApplicationAction(name: "about", title: "About Crest", symbol: "info.circle") {
+        $0.showAbout()
+    }
     static let updates = BrowserMacApplicationAction(
         name: "updates", title: "Check for Updates…", symbol: "arrow.triangle.2.circlepath",
         isEnabled: { $0.canCheckForUpdates }, perform: { $0.checkForUpdates() })
@@ -20,7 +22,7 @@ struct BrowserMacApplicationAction: Hashable {
         name: "stop-all-agents", title: "Stop All Agents", symbol: "stop.circle",
         isEnabled: { $0.hasConnectedAgents }, perform: { $0.stopAllAgents() })
     static let gettingStarted = BrowserMacApplicationAction(
-        name: "getting-started", title: "Getting Started with Crest"
+        name: "getting-started", title: "Getting Started with Crest", symbol: "graduationcap"
     ) { $0.openGettingStarted() }
     /// Translates the whole shown page, offered while the translation toolbar
     /// is.

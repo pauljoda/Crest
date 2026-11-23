@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "mac-menu-icons-about-getting-started-paste-viewport",
+      "category": "improved",
+      "message": "About Crest, Getting Started with Crest, Paste and Match Style and the developer toolbar's viewport sizes show icons in their menus.",
+      "platforms": ["mac"]
+    }
+  ]
+}

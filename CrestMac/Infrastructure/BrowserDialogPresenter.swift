@@ -126,26 +126,32 @@ final class BrowserDialogPresenter {
         }
     }
 
+    /// Files the person chose that Crest couldn't read. Only macOS denying
+    /// access asks something of the person, whether to open the setting that
+    /// allows it, so that one is an alert and any other failure is a notice.
     func presentFileAccessFailure(
         _ error: Error,
         request: URLRequest,
         completion: @escaping @MainActor @Sendable () -> Void
     ) {
-        let alert = makeAlert(message: String(localized: "Crest couldn’t open the selected files."), request: request)
-        alert.informativeText = error.localizedDescription
         let denied =
             (error as NSError).domain == NSCocoaErrorDomain
             && (error as NSError).code == CocoaError.fileReadNoPermission.rawValue
-        if denied {
-            alert.informativeText +=
-                " "
-                + String(
-                    localized: "Allow Crest in Privacy & Security > Files and Folders, then choose the files again.")
-            alert.addButton(withTitle: String(localized: "Open Files and Folders Settings"))
+        guard denied else {
+            let summary = String(localized: "Crest couldn’t open the selected files.")
+            BrowserNoticeCenter.shared.post(.failure("\(summary) \(error.localizedDescription)"))
+            completion()
+            return
         }
+        let alert = makeAlert(
+            message: error.localizedDescription + " "
+                + String(
+                    localized: "Allow Crest in Privacy & Security > Files and Folders, then choose the files again."),
+            request: request)
+        alert.addButton(withTitle: String(localized: "Open Files and Folders Settings"))
         alert.addButton(withTitle: String(localized: "OK"))
         present(alert) { response in
-            if denied, response == .alertFirstButtonReturn, let url = BrowserSystemPermission.files.settingsURL {
+            if response == .alertFirstButtonReturn, let url = BrowserSystemPermission.files.settingsURL {
                 NSWorkspace.shared.open(url)
             }
             completion()
@@ -561,10 +567,7 @@ final class BrowserDialogPresenter {
     func approveQuitWithDownloads(count: Int, dismissal: BrowserPromptDismissal? = nil) async -> Bool {
         await withCheckedContinuation { continuation in
             let alert = NSAlert()
-            alert.messageText =
-                count == 1
-                ? String(localized: "Quit and cancel the download in progress?")
-                : String(localized: "Quit and cancel \(count) downloads in progress?")
+            alert.messageText = String(localized: "Quit and cancel \(count) downloads in progress?")
             alert.alertStyle = .warning
             alert.addButton(withTitle: String(localized: "Keep Browsing"))
             alert.addButton(withTitle: String(localized: "Quit"))

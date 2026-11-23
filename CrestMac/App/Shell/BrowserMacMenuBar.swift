@@ -105,6 +105,7 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
         let pasteAsPlainText = NSMenuItem(
             title: String(localized: "Paste and Match Style"), action: #selector(pasteAsPlainText(_:)),
             keyEquivalent: "v")
+        pasteAsPlainText.image = NSImage(systemSymbolName: "clipboard", accessibilityDescription: nil)
         pasteAsPlainText.target = self
         pasteAsPlainText.keyEquivalentModifierMask = [.command, .option, .shift]
         edit.addItem(pasteAsPlainText)

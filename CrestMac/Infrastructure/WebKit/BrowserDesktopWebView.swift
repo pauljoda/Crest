@@ -78,6 +78,7 @@ final class BrowserDesktopWebView: WKWebView {
             let item = NSMenuItem(
                 title: String(localized: "Paste and Match Style"), action: #selector(pasteAsPlainTextFromMenu(_:)),
                 keyEquivalent: "")
+            item.image = NSImage(systemSymbolName: "clipboard", accessibilityDescription: nil)
             item.target = self
             item.isEnabled = paste.isEnabled
             menu.insertItem(item, at: menu.index(of: paste) + 1)
