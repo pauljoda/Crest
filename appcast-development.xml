@@ -6,29 +6,28 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.150</title>
-            <pubDate>Mon, 23 Nov 2026 02:27:11 +0000</pubDate>
+            <title>0.10.157</title>
+            <pubDate>Mon, 23 Nov 2026 03:19:36 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1691</sparkle:version>
-            <sparkle:shortVersionString>0.10.150</sparkle:shortVersionString>
+            <sparkle:version>1692</sparkle:version>
+            <sparkle:shortVersionString>0.10.157</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### Improved
 
-- Disabled glyph buttons, such as reload and the round glass buttons, now fade to the same strength as every other disabled glyph.
-- Panels, notices, drag previews, Peeks and setup's windows now cast one consistent set of shadows, so surfaces at the same height look the same everywhere.
+- On Mac, a shortcut button you're recording a shortcut into is tinted Crest blue instead of the system accent color.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[Release notes](https://crestbrowser.com/releases/mac/development/0.10.150/) · [View all changes](https://github.com/crest-browser/Crest/compare/76d9d1de86ac2a72591832df714d3ab7fc249559...7a6d479f8232b5b8a3b7d999dbeb12ed16d0c76e) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.10.150-2026-11-23-1691-r691.1/Installer-Crest-0.10.150-development-2026-11-23-7a6d479.dmg)
+[Release notes](https://crestbrowser.com/releases/mac/development/0.10.157/) · [View all changes](https://github.com/crest-browser/Crest/compare/7a6d479f8232b5b8a3b7d999dbeb12ed16d0c76e...8ecda94507ea69a7bf756490ef70038395e2d924) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.10.157-2026-11-23-1692-r692.1/Installer-Crest-0.10.157-development-2026-11-23-8ecda94.dmg)
 
 [Browse Development releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.10.150-2026-11-23-1691-r691.1/Installer-Crest-0.10.150-development-2026-11-23-7a6d479.dmg" length="401187830" type="application/octet-stream" sparkle:edSignature="OesZgXOCYse16KWdGIn8qBy2xnl2JCvC0ZxNOwweTiPtU455cKhPBBL2ar3d92hGCzvGcvdXS7I/Hb9gkfjRBw=="/>
+            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.10.157-2026-11-23-1692-r692.1/Installer-Crest-0.10.157-development-2026-11-23-8ecda94.dmg" length="401153015" type="application/octet-stream" sparkle:edSignature="btuQbOCz9J6aPXD7t3KQzJbQap5uEYQUxH4hfq/v4z3cwFkx2zBEVFLLs3uolyGa+wP7LHnaJd3eYgyIlENSAw=="/>
         </item>
         <item>
             <title>0.10.138</title>
@@ -90,6 +89,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: IU4cWelZUqnL+Hjog6MM8549XRrswI/ggoEYi08xYzWcvuRSCVU3jqDU2IUKEo4S51oAVZTgjhojwEnPrhpRCw==
-length: 7022
+edSignature: uRX+vi4+/uoRbX4RvsoN5/i9oDonAbEcO/O6IK7zP+CVE6bIWQ0Swr21LYQQCnFGWLCKNC863KdKjpQwlFlGAw==
+length: 6852
 -->

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "large-text-welcome-scrolls",
+    "development": "setup-window-outline-and-peek-scrim-roles",
     "nightly": "roadmap-at-crest-browser"
   }
 }
