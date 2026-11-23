@@ -56,7 +56,7 @@ function ClearSpaceHistory({ session, spaceId, onDone }: { session: Session; spa
   const members = [...workspace.spaces.values()].filter((candidate) => candidate.id === primaryId || candidate.membership?.primaryId === primaryId);
   const primary = workspace.spaces.get(primaryId) ?? space;
   return (
-    <Sheet title={`Clear history for ${space.settings.name}?`} primary="Clear History" secondary="Cancel" warning
+    <Sheet title={`Clear history for ${space.settings.name}?`} primary="Clear History" secondary="Cancel" warning destructive
       onPrimary={() => {
         void send(session, ClearHistory({ workspaceId: session.workspaceId, spaceId, range: BrowsingDataRange.allTime }));
         onDone();
@@ -80,7 +80,7 @@ function DeleteFolder({ session, spaceId, folder, onDone }: {
       .catch(() => setMessage(""));
   }, [session, spaceId, folder.id]);
   return (
-    <Sheet title={`Delete ${folder.title}?`} primary="Delete Folder" secondary="Cancel" warning
+    <Sheet title={`Delete ${folder.title}?`} primary="Delete Folder" secondary="Cancel" warning destructive
       onPrimary={() => {
         void send(session, DeleteFolderAndContents({
           workspaceId: session.workspaceId, windowId: session.windowId, spaceId, folderId: folder.id,

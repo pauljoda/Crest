@@ -169,7 +169,7 @@ function SitePermissionsSection({ session, space, shared }: { session: Session; 
         )}
       </Group>
       <Confirmation question={resetting && (
-        <Sheet title="Reset All" primary="Reset All" secondary="Cancel" warning
+        <Sheet title="Reset All" primary="Reset All" secondary="Cancel" warning destructive
           onPrimary={() => {
             setResetting(false);
             void send(session, ResetSpacePermissions({ spaceId: space.id }));
@@ -341,7 +341,7 @@ function WebsiteDataSection({ session, space, sites, shared }: { session: Sessio
         )}
       </Group>
       <Confirmation question={removingAll && (
-        <Sheet title={`Remove all website data in “${space.settings.name}”?`} primary="Remove All" secondary="Cancel" warning
+        <Sheet title={`Remove all website data in “${space.settings.name}”?`} primary="Remove All" secondary="Cancel" warning destructive
           onPrimary={() => {
             setRemovingAll(false);
             sites.removeAll();
@@ -412,7 +412,7 @@ function ClearBrowsingDataSection({ session, space, didClear }: { session: Sessi
         </div>
       </Group>
       <Confirmation question={confirming && (
-        <Sheet title={`Clear browsing data in “${space.settings.name}”?`} primary="Clear" secondary="Cancel" warning
+        <Sheet title={`Clear browsing data in “${space.settings.name}”?`} primary="Clear" secondary="Cancel" warning destructive
           onPrimary={() => void clear()} onEscape={() => setConfirming(false)}>
           <p className="sheet-message">{range.title}: {listed(chosen.map((category) => category.title))}. Other Spaces aren’t affected.</p>
         </Sheet>

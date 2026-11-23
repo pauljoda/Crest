@@ -1653,10 +1653,16 @@ button {
   margin-bottom: 17px;
 }
 
+/* The line keeps the Mac's 12 from the sidebar's edges, 4 inside the rows (B10). */
 .current-tabs-line {
   flex: 1;
   height: 1px;
+  margin-left: 4px;
   background: var(--surface-border);
+}
+
+.current-tabs-divider {
+  padding-right: 4.5px;
 }
 
 .current-tabs-clear {
@@ -1988,12 +1994,9 @@ button {
   font-weight: 600;
 }
 
+/* New Tab stays secondary, at rest and under the pointer, as the Mac's row. */
 .new-tab-row {
   color: var(--fg-secondary);
-}
-
-.new-tab-row:hover {
-  color: var(--fg);
 }
 
 .tab-icon {
@@ -2511,8 +2514,11 @@ button {
   background: rgb(0 0 0 / 0.55);
 }
 
+/* The Mac's alert is a translucent material: rgb(52 51 51) at two thirds
+   over what it covers, which reads #484747 over a light page (I02) and
+   #2c2b2b over a dark one (I05, I06); nearly opaque paper in light. */
 .sheet {
-  --alert-surface: rgb(72 71 71);
+  --alert-surface: rgb(52 51 51 / 0.66);
   --alert-ink: rgb(255 255 255 / 0.9);
   --alert-secondary: rgb(255 255 255 / 0.82);
   --alert-edge: rgb(255 255 255 / 0.12);
@@ -2524,11 +2530,17 @@ button {
   background: var(--alert-surface);
   color: var(--alert-ink);
   box-shadow: inset 0 0 0 0.5px var(--alert-edge), 0 20px 50px rgb(0 0 0 / 0.35);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
   text-align: center;
 }
 
+.sheet.wraps {
+  text-align: start;
+}
+
 .browser-window.reads-dark .sheet {
-  --alert-surface: rgb(236 236 236);
+  --alert-surface: rgb(248 248 248 / 0.83);
   --alert-ink: rgb(0 0 0 / 0.85);
   --alert-secondary: rgb(0 0 0 / 0.75);
   --alert-edge: rgb(0 0 0 / 0.1);
@@ -2674,19 +2686,34 @@ button {
   color: rgb(255 255 255);
 }
 
+/* A button that deletes or clears, as the Mac's alert draws one (I06): its
+   red on a tint of it, never the blue default. */
+.sheet-button.primary.destructive {
+  background: rgb(99 51 52);
+  color: rgb(240 30 20);
+}
+
+.browser-window.reads-dark .sheet-button.primary.destructive {
+  background: rgb(244 194 195);
+  color: rgb(255 56 60);
+}
+
 /* The default button, which Return presses, wears no ring, as the Mac's. */
 .sheet-button:not(.primary):focus-visible {
   outline: 2px solid rgb(10 132 255 / 0.6);
   outline-offset: 2px;
 }
 
+/* Deny and Allow, as the Mac's prompt draws them (I01): 28-tall capsules in
+   regular weight, Deny quiet and Allow in Crest blue. */
 .permission-button {
-  height: 34px;
-  border-radius: var(--crest-radius-compact);
-  background: var(--prompt-surface);
-  box-shadow: inset 0 0 0 1px var(--prompt-border);
+  height: 28px;
+  border-radius: 14px;
+  background: var(--prompt-button, var(--prompt-surface));
+  box-shadow: none;
   color: var(--prompt-ink);
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 400;
   transition: filter 100ms ease-in-out;
 }
 
@@ -2768,12 +2795,29 @@ button {
   outline: none;
 }
 
-.browser-window.reads-light .site-control-panel {
+/* A page's permission request wears the same flyout as Site Controls, with
+   Allow in Crest blue (lifted over dark) as the Mac's (I01). */
+.browser-window.reads-light .permission-prompt {
+  --prompt-accent: rgb(79 142 224);
+  --prompt-on-accent: rgb(0 0 0 / 0.85);
+  --prompt-button: rgb(255 255 255 / 0.07);
+}
+
+.browser-window.reads-dark .permission-prompt {
+  --prompt-accent: rgb(43 108 196);
+  --prompt-on-accent: rgb(255 255 255);
+  --prompt-button: rgb(0 0 0 / 0.06);
+}
+
+.browser-window.reads-light .site-control-panel,
+.browser-window.reads-light .permission-prompt,
+.browser-window.reads-light .notice {
   --prompt-surface: rgb(43 42 41);
   --prompt-ink: rgb(255 255 255 / 0.9);
   --prompt-ink-secondary: rgb(255 255 255 / 0.55);
   --prompt-border: rgb(255 255 255 / 0.16);
   --flyout-edge: rgb(255 255 255 / 0.08);
+  --site-tile-hover: rgb(255 255 255 / 0.075);
   --site-tile: rgb(255 255 255 / 0.165);
   --site-accent: rgb(var(--crest-accent-dark));
   --site-success: rgb(134 196 142);
@@ -2781,13 +2825,16 @@ button {
   --site-danger: rgb(238 106 92);
 }
 
-.browser-window.reads-dark .site-control-panel {
+.browser-window.reads-dark .site-control-panel,
+.browser-window.reads-dark .permission-prompt,
+.browser-window.reads-dark .notice {
   --prompt-surface: rgb(246 245 243);
   --prompt-ink: rgb(0 0 0 / 0.85);
   --prompt-ink-secondary: rgb(0 0 0 / 0.5);
   --prompt-border: rgb(0 0 0 / 0.1);
   --flyout-edge: rgb(0 0 0 / 0.1);
   --site-tile: rgb(0 0 0 / 0.06);
+  --site-tile-hover: rgb(0 0 0 / 0.04);
   --site-accent: rgb(var(--crest-accent-light));
   --site-success: rgb(47 112 66);
   --site-warning: rgb(138 90 8);
@@ -2868,18 +2915,10 @@ button {
   color: var(--prompt-ink-secondary);
 }
 
+/* Allow wears the Mac's crestPrimary (H07): the Crest blue capsule with its
+   sheen, 34 tall, in the rounded bold of a button's title. */
 .site-popup-allow {
-  height: 26px;
-  padding: 0 10px;
-  border-radius: var(--crest-radius-compact);
-  background: var(--prompt-accent);
-  color: var(--prompt-on-accent);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.site-popup-allow:hover {
-  filter: brightness(0.96);
+  flex: none;
 }
 
 .site-control-action {
@@ -2896,8 +2935,9 @@ button {
   transition: background 100ms ease-in-out;
 }
 
+/* A tile under the pointer lifts by the Mac's step (#4e4d4d to #5b5a5a, H03). */
 .site-control-action:hover {
-  background: color-mix(in srgb, var(--site-tile), var(--prompt-ink) 6%);
+  background: linear-gradient(var(--site-tile-hover), var(--site-tile-hover)), var(--site-tile);
 }
 
 .site-control-action.labelled {
@@ -3099,16 +3139,20 @@ button {
 /* The window's notices, in the top trailing corner of the page, as the Mac's
    stand: a capsule on Crest's dark flyout surface, outlined just inside its
    edge so it stands apart from a page as dark as it. */
+/* The Mac's notice stands 18 from the window's top and trailing edges, which
+   is 8.5 inside the page card's (G01, F06). */
 .notices {
   position: absolute;
-  top: 18px;
-  inset-inline: 18px;
+  top: 8.5px;
+  inset-inline: 8.5px;
   display: flex;
   justify-content: flex-end;
   pointer-events: none;
   z-index: 30;
 }
 
+/* The Mac's capsule wears its floating flyout, as Site Controls does: the
+   same surface and edge, in callout semibold. */
 .notice {
   display: flex;
   align-items: center;
@@ -3117,11 +3161,11 @@ button {
   max-width: min(520px, 100%);
   padding: 6px 14px;
   border-radius: 20px;
-  background: rgb(42 42 44 / 0.94);
-  color: rgb(255 255 255 / 0.92);
+  background: var(--prompt-surface);
+  color: var(--prompt-ink);
+  font-size: 12px;
   font-weight: 600;
-  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.14), 0 8px 32px rgb(0 0 0 / 0.16);
-  backdrop-filter: blur(30px) saturate(1.5);
+  box-shadow: 0 0 0 0.5px var(--flyout-edge), 0 8px 32px rgb(0 0 0 / 0.16);
 }
 
 .notice span {

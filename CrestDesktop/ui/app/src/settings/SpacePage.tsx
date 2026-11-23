@@ -369,7 +369,7 @@ function DeletionSheet({ plan, onCancel, onDelete }: {
 }) {
   const [successor, setSuccessor] = useState(plan.successors[0]?.id ?? null);
   return (
-    <Sheet title={plan.title} primary={plan.confirmation} secondary="Cancel" warning
+    <Sheet title={plan.title} primary={plan.confirmation} secondary="Cancel" warning destructive
       onPrimary={() => onDelete(successor)} onEscape={onCancel}>
       <p className="sheet-message">{plan.message}</p>
       {plan.successors.length > 0 && (

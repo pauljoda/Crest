@@ -8,7 +8,7 @@ import {
 import type { PagePrompt } from "@crest/core-client";
 import { motion as tokens } from "@crest/design";
 import { AnimatePresence, motion } from "motion/react";
-import { type FormEvent, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import { type FormEvent, type KeyboardEvent, type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { Session } from "../../boot";
 import { authenticationSource, sourceLabel } from "./prompt-text";
@@ -142,11 +142,13 @@ function SignIn({ asked, spaceName, answer }: {
  * `onEscape` says, which is the second button unless that would go ahead
  * with something the person should choose.
  */
-export function Sheet({ title, primary, secondary, warning = false, onPrimary, onSecondary, onEscape, children }: {
+export function Sheet({ title, primary, secondary, warning = false, destructive = false, onPrimary, onSecondary, onEscape, children }: {
   title: string;
   primary: string;
   secondary?: string;
   warning?: boolean;
+  /** The primary button deletes or clears, which the Mac's alert draws in red on a tint of it. */
+  destructive?: boolean;
   onPrimary: () => void;
   onSecondary?: () => void;
   onEscape: () => void;
@@ -155,6 +157,18 @@ export function Sheet({ title, primary, secondary, warning = false, onPrimary, o
   const onCancel = onEscape;
   const second = onSecondary ?? onEscape;
   const form = useRef<HTMLFormElement>(null);
+  // A question whose title or message wraps reads from the leading edge, as
+  // the Mac's alert lays out a longer one (I05, I06); a short one is centred (I02).
+  const body = useRef<HTMLDivElement>(null);
+  const [wraps, setWraps] = useState(false);
+  useLayoutEffect(() => {
+    const lines = (element: Element | null | undefined) => {
+      if (!element) return 0;
+      const height = parseFloat(getComputedStyle(element).lineHeight) || 16;
+      return Math.round(element.getBoundingClientRect().height / height);
+    };
+    setWraps(lines(body.current?.querySelector(".sheet-title")) > 1 || lines(body.current?.querySelector(".sheet-message")) > 1);
+  }, [title, children]);
   useEffect(() => {
     // The page held the keyboard; the question takes it, its answer's
     // default text selected, as the Mac's field has it.
@@ -174,7 +188,7 @@ export function Sheet({ title, primary, secondary, warning = false, onPrimary, o
   };
   return (
     <motion.div
-      className={`sheet${warning ? " warning" : ""}`}
+      className={`sheet${warning ? " warning" : ""}${wraps ? " wraps" : ""}`}
       role="alertdialog"
       aria-modal="true"
       aria-label={title}
@@ -184,13 +198,13 @@ export function Sheet({ title, primary, secondary, warning = false, onPrimary, o
       transition={tokens.floatingPane}
     >
       <form ref={form} onSubmit={submit} onKeyDown={escape}>
-        <div className="sheet-body">
+        <div ref={body} className="sheet-body">
           <h2 className="sheet-title">{title}</h2>
           {children}
         </div>
         <div className="sheet-actions">
           {secondary && <button type="button" className="sheet-button" onClick={second}>{secondary}</button>}
-          <button type="submit" className="sheet-button primary">{primary}</button>
+          <button type="submit" className={`sheet-button primary${destructive ? " destructive" : ""}`}>{primary}</button>
         </div>
       </form>
     </motion.div>

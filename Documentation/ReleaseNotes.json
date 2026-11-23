@@ -5945,6 +5945,10 @@
     "windows-space-group-changes": {
       "category": "internal",
       "message": "A Space's settings page on Windows shows its group's crests and can start a Sub-Space, make a Space a Sub-Space of another group, or separate it, each after the Mac's question"
+    },
+    "windows-unchecked-shots-fixes": {
+      "category": "internal",
+      "message": "Windows notices, questions, permission requests and Site Controls' pop-up card now look as the Mac's do, with red buttons for questions that delete"
     }
   }
 }

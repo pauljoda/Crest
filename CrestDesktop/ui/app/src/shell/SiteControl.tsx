@@ -171,7 +171,7 @@ export function SiteControlPanel({
               </span>
               <span className="site-popup-guidance">{notice.status.guidance}</span>
               {notice.status.offersAllow && (
-                <button type="button" className="site-popup-allow"
+                <button type="button" className="setup-button primary site-popup-allow"
                   aria-label={`Allow automatic pop-ups for ${notice.origin.host}`}
                   title="Saves this permission in the current Space. Retry the action on the site afterward"
                   onClick={() => {
