@@ -5,6 +5,10 @@ import SwiftUI
 /// in the middle of the page, there being nothing else on it, and scrolls
 /// when larger text makes it taller than the page.
 struct MobileSetupBringPage: View {
+    // MARK: - Variables
+
+    @Environment(\.liesOnBrowserSetupPaper) private var liesOnPaper
+
     // MARK: - Actions - Drawing
 
     var body: some View {
@@ -31,7 +35,7 @@ struct MobileSetupBringPage: View {
                 .frame(maxWidth: .infinity)
                 .padding(MobileSetupBringPageMetrics.cardInset)
                 .background(
-                    Color(uiColor: .secondarySystemGroupedBackground),
+                    liesOnPaper ? BrowserSetupPaper.raisedFill : Color(uiColor: .secondarySystemGroupedBackground),
                     in: .rect(cornerRadius: CrestRadius.panel, style: .continuous)
                 )
                 .accessibilityElement(children: .combine)

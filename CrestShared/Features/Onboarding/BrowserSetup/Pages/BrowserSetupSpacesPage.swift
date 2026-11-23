@@ -54,6 +54,7 @@ struct BrowserSetupSpacesPage: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
+            .browserSetupRaisedRows()
             Section {
                 Button("New Space", systemImage: "plus") {
                     if let added = setup.addSpace() { open(added) }
@@ -61,6 +62,7 @@ struct BrowserSetupSpacesPage: View {
                 .buttonStyle(.crestTertiary)
                 .accessibilityIdentifier("setup-add-space")
             }
+            .browserSetupRaisedRows()
             if let message = setup.errorMessage {
                 Section {
                     Text(message).foregroundStyle(CrestColor.danger)

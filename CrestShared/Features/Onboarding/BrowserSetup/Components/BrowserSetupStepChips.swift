@@ -40,6 +40,7 @@ struct BrowserSetupStepChips: View {
     var open: ((BrowserSetupStep) -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.liesOnBrowserSetupPaper) private var liesOnPaper
 
     private var reached: Int {
         current.flatMap { steps.firstIndex(of: $0) } ?? -1
@@ -107,8 +108,12 @@ struct BrowserSetupStepChips: View {
             if isColored {
                 shape.fill(step.color)
             } else {
-                shape.fill(CrestBrandTheme.surface)
-                    .overlay { shape.strokeBorder(CrestBrandTheme.line, lineWidth: CrestLayout.hairline) }
+                shape.fill(liesOnPaper ? BrowserSetupPaper.raisedFill : CrestBrandTheme.surface)
+                    .overlay {
+                        shape.strokeBorder(
+                            liesOnPaper ? BrowserSetupPaper.raisedEdge : CrestBrandTheme.line,
+                            lineWidth: CrestLayout.hairline)
+                    }
             }
         }
         .crestElevation(isOpen ? .lifted : .control)

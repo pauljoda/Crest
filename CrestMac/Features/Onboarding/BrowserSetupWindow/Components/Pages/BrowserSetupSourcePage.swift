@@ -21,6 +21,7 @@ struct BrowserSetupSourcePage: View {
             } header: {
                 BrowserSetupPageHeading(verbatim: flow.chosenSource?.title ?? flow.review?.title ?? "")
             }
+            .browserSetupRaisedRows()
             Section {
                 if flow.passwordCount > 0 {
                     Toggle(isOn: Binding(get: { flow.includesPasswords }, set: flow.setPasswordsIncluded)) {
@@ -39,6 +40,7 @@ struct BrowserSetupSourcePage: View {
                     Text("Passwords for sites without HTTPS come in, but Crest won’t fill them in.")
                 }
             }
+            .browserSetupRaisedRows()
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)

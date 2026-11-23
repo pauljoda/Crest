@@ -33,6 +33,7 @@ struct BrowserSetupHomePage: View {
             BrowserDefaultBrowserSection {
                 BrowserSetupPageHeading("Make It Home")
             }
+            .browserSetupRaisedRows()
             Section {
                 Picker("Search with", selection: defaultProvider) {
                     ForEach(catalog.defaultChoices) { provider in
@@ -44,7 +45,9 @@ struct BrowserSetupHomePage: View {
             } header: {
                 CrestSettingsSectionHeading(title: "Search")
             }
+            .browserSetupRaisedRows()
             BrowserAdBlockingLevelSection(core: core, errorDescription: nil, title: "Ad Blocking")
+                .browserSetupRaisedRows()
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)

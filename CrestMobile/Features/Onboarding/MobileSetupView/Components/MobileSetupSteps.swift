@@ -93,6 +93,7 @@ struct MobileSetupSteps: View {
                     .transition(.opacity)
             }
         }
+        .browserSetupPaperContent(wearing: wornLook, over: colorScheme)
         .background {
             if standsAlone { background }
         }
@@ -195,8 +196,7 @@ struct MobileSetupSteps: View {
         }
     }
 
-    /// The step open now, its page, and the way on, in the scheme the open
-    /// Space's look reads in when the steps wear it. The page runs the
+    /// The step open now, its page, and the way on. The page runs the
     /// whole height, to the bottom of the screen, and the chips and the
     /// buttons float over it: the page fades out under the chips and scrolls
     /// on under the buttons.
@@ -204,7 +204,6 @@ struct MobileSetupSteps: View {
         GeometryReader { geometry in
             stepsLayers(bottomInset: geometry.safeAreaInsets.bottom)
         }
-        .environment(\.colorScheme, wornLook?.colorScheme(over: colorScheme) ?? colorScheme)
     }
 
     /// The page under the chips and the buttons, its end clear of the

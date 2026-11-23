@@ -32,6 +32,7 @@ struct MobileSetupPreviewSheet: View {
                     .accessibilityIdentifier(BrowserSetupAccessibilityID.previewDone)
             }
             .padding(.horizontal, CrestSpacing.small)
+            .browserSetupPaperContent()
             MobileSetupLiveWindow(session: live, cornerRadius: MobileSetupPreviewSheetMetrics.cornerRadius)
                 .allowsHitTesting(false)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
