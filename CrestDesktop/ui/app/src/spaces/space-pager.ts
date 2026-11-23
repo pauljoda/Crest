@@ -336,6 +336,8 @@ class SpacePager {
   #frameListeners = new Set<(frame: PagerFrame) => void>();
   #animation = 0;
   #select: (spaceId: string) => void = () => {};
+  /** What waits for the core to show the Space a slide was led to, such as a command run before it landed. */
+  #confirmations: (() => void)[] = [];
 
   get frame(): PagerFrame { return this.#frame; }
   get isMoving(): boolean { return this.#motion !== null; }
@@ -353,11 +355,14 @@ class SpacePager {
       this.#cancel();
       this.#presentedId = selectedId;
       this.#expectedId = null;
+      this.#confirm();
     } else if (this.#expectedId === selectedId) {
       // The core showed the Space a swipe settled on.
       this.#expectedId = null;
       if (!this.#motion) this.#presentedId = selectedId;
+      this.#confirm();
     } else if (selectionChanged) {
+      this.#confirm();
       this.#expectedId = null;
       const heading = this.#motion?.settling?.destinationId;
       const continues = heading && !this.#jump && !reducesMotion() ? this.#stepBetween(heading, selectedId) : null;
@@ -393,13 +398,98 @@ class SpacePager {
     }
   }
 
-  /** Notes a Next or Previous Space command, whose step slides around the ends. */
-  noteStep(direction: 1 | -1) {
-    const origin = this.#selectedId;
+  /**
+   * Notes a Next or Previous Space command, whose step slides around the
+   * ends, and returns the Space it leads to: from the one the window is
+   * about to show, should a change already be on its way to the core.
+   */
+  noteStep(direction: 1 | -1): string | null {
+    const origin = this.#expectedId ?? this.#selectedId;
     const index = origin ? this.#ids.indexOf(origin) : -1;
-    if (index < 0 || this.#ids.length < 2) return;
+    if (index < 0 || this.#ids.length < 2) return null;
     const destination = this.#ids[(index + direction + this.#ids.length) % this.#ids.length];
     this.#step = { origin: origin!, destination, direction };
+    return destination;
+  }
+
+  /**
+   * Starts the slide to `target` at once, for a change of Space the window is
+   * about to ask the core for, as the Mac's pager moves with its selection.
+   * The core's answer, and the window drawing the Space it shows, then come
+   * beneath a slide the compositor already runs, rather than before its
+   * first frame; the answer finds the slide under way and lets it go on. A
+   * slide whose page is already drawn, the shown Space's neighbour, starts
+   * its clock now, so nothing the window does next holds its start. Says
+   * whether the strip moves.
+   *
+   * A slide that `commitsAtEnd` asks the core only as it lands, as a swipe
+   * does, so the window draws the new Space at rest; `commitNow` asks at once
+   * for a command that can't wait for it.
+   */
+  lead(target: string, commitsAtEnd = false): boolean {
+    if (this.#locked || reducesMotion() || !this.#ids.includes(target) || target === this.#expectedId) return false;
+    const heading = this.#motion?.settling?.destinationId;
+    // Already on its way there, as a second click on the same crest finds it.
+    if (heading === target) return true;
+    const continues = heading && !this.#jump ? this.#stepBetween(heading, target) : null;
+    if (heading && continues) {
+      this.#continue(heading, target, continues);
+    } else {
+      const wasMoving = this.#motion !== null;
+      const origin = heading ?? this.#presentedId;
+      if (!origin || origin === target) return false;
+      this.#cancel();
+      this.#presentedId = origin;
+      const step = this.#stepBetween(origin, target) ?? (wasMoving ? null : this.#beginJump(origin, target));
+      // Where it can't slide, the window shows the Space once it has it.
+      if (!step) {
+        this.#publish();
+        return false;
+      }
+      this.#animate(origin, target, step, false);
+    }
+    if (commitsAtEnd && this.#motion) this.#motion.commitsSelection = true;
+    else this.#expectedId = target;
+    if (this.#holds.size === 0 && this.#prepared.includes(target)) this.#startSettleClock(performance.now());
+    this.#publish();
+    return true;
+  }
+
+  /**
+   * Asks the core now for the Space a slide is still to ask for as it lands,
+   * for a command that acts on the Space the window shows, and resolves once
+   * the window shows it (or a moment later, should the answer not come).
+   * Null where there's nothing to wait for.
+   */
+  commitNow(): Promise<void> | null {
+    const motion = this.#motion;
+    const destination = motion?.settling?.destinationId;
+    if (!motion || !destination || !motion.commitsSelection) return null;
+    motion.commitsSelection = false;
+    if (destination === (this.#expectedId ?? this.#selectedId)) return null;
+    this.#expectedId = destination;
+    const confirmed = new Promise<void>((resolve) => {
+      this.#confirmations.push(resolve);
+      setTimeout(resolve, 500);
+    });
+    this.#select(destination);
+    return confirmed;
+  }
+
+  #confirm() {
+    const waiting = this.#confirmations;
+    this.#confirmations = [];
+    for (const resolve of waiting) resolve();
+  }
+
+  /** Puts the strip back where the window is, for a change of Space it led that the core didn't make. */
+  abandon(target: string) {
+    if (this.#expectedId !== target) return;
+    this.#expectedId = null;
+    this.#confirm();
+    this.#cancel();
+    this.#presentedId = this.#selectedId;
+    this.#publish();
   }
 
   /**

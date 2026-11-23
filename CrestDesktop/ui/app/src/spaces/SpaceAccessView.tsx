@@ -1,4 +1,4 @@
-import { ShowSpace, type SpaceState } from "@crest/contracts";
+import type { SpaceState } from "@crest/contracts";
 import type { CSSProperties, ReactNode } from "react";
 
 import type { Session } from "../boot";
@@ -7,6 +7,7 @@ import { showContextMenu } from "../menus";
 import { PageCard } from "../shell/PageCard";
 import { Symbol } from "../symbols";
 import { failureMessages, isAuthenticating, unlockSpace, useAccessFailure } from "./space-access";
+import { showSpace } from "./show-space";
 import { SpaceIdentityIcon } from "./SpaceIdentity";
 
 /**
@@ -54,7 +55,7 @@ export function SpaceAccessView({ session, space, spaces, passive, children }: {
               const bounds = event.currentTarget.getBoundingClientRect();
               void showContextMenu(session.shell, { clientX: bounds.left, clientY: bounds.bottom + 4 }, others.map((candidate) => ({
                 title: candidate.settings.name,
-                run: () => void session.core.send(ShowSpace({ windowId: session.windowId, spaceId: candidate.id })).catch(() => undefined),
+                run: () => void showSpace(session.core, session.windowId, candidate.id).catch(() => undefined),
               })));
             }}>
             <Symbol name="square.grid.2x2" size={13} />

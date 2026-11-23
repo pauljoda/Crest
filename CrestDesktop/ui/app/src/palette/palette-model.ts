@@ -19,14 +19,13 @@ import {
   RestoreArchivedTab,
   type SearchOffer,
   type SearchProvider,
-  ShowSpace,
   ShowTab,
   TabPlacement,
 } from "@crest/contracts";
 import { CoreRejection, type CrestCore } from "@crest/core-client";
 
 import { settingsPages } from "../settings/catalog";
-import { pageStills } from "../spaces/page-stills";
+import { showSpace } from "../spaces/show-space";
 import { CompletionEditing, completedText, continued } from "./completion";
 
 /**
@@ -426,8 +425,9 @@ export class PaletteModel {
       }
       case "showsSpace":
         if (!row.subjectId) return false;
-        pageStills.leaving(core);
-        send(core, ShowSpace({ windowId, spaceId: row.subjectId }));
+        void showSpace(core, windowId, row.subjectId).catch((error: unknown) => {
+          if (!(error instanceof CoreRejection)) throw error;
+        });
         return true;
       case "reopensArchivedTab":
         if (!row.subjectId) return false;

@@ -1,5 +1,4 @@
 import {
-  AdjacentDirection,
   DiscardStagedLink,
   MovePage,
   NativeView,
@@ -17,7 +16,6 @@ import {
   type ShortcutBinding,
   type ShortcutCommand,
   ShortcutModifiers,
-  ShowAdjacentSpace,
   ShowSpace,
   ShowStartPage,
   ShowTab,
@@ -46,6 +44,7 @@ import { useChromeLook } from "../spaces/look-blend";
 import { SpaceContentStrip } from "../spaces/SpaceContentStrip";
 import { RecentTabSwitcher, releasesHold, type SwitcherControls, type SwitcherHold, type SwitcherStart } from "../switcher/RecentTabSwitcher";
 import { pageStills } from "../spaces/page-stills";
+import { showAdjacentSpace } from "../spaces/show-space";
 import { TabPictures } from "../switcher/tab-pictures";
 import type { SettingsPageName } from "../settings/catalog";
 import { extensions } from "../extensions";
@@ -105,16 +104,11 @@ export function BrowserWindow({ session }: { session: Session }) {
     if (!space) return;
     spacePager.update(spaceIds.split(","), space.id, (spaceId) => {
       pageStills.leaving(session.core);
-      void session.core.send(ShowSpace({ windowId: session.windowId, spaceId }));
+      void session.core.send(ShowSpace({ windowId: session.windowId, spaceId })).catch(() => spacePager.abandon(spaceId));
     });
   }, [session, spaceIds, space?.id]);
-  useEffect(() => setSpaceStepper((direction) => {
-    spacePager.noteStep(direction);
-    pageStills.leaving(session.core);
-    void session.core.send(ShowAdjacentSpace({
-      windowId: session.windowId, direction: direction > 0 ? AdjacentDirection.next : AdjacentDirection.previous,
-    }));
-  }), [session]);
+  useEffect(() => setSpaceStepper((direction) => void showAdjacentSpace(session.core, session.windowId, direction).catch(() => undefined)),
+    [session]);
   // A Space whose deletion the last launch began goes now, as the Mac's window carries it on.
   useEffect(() => void resumeSpaceDeletions(session), [session]);
   // Spaces that ask for authentication lock once Crest is no longer in front, as the Mac's do.
@@ -489,6 +483,15 @@ export function BrowserWindow({ session }: { session: Session }) {
     };
     handlers.mostRecentTab = recentTab(1);
     handlers.mostRecentTabBackward = recentTab(-1);
+    // A slide a click started asks for its Space as it lands; a command run
+    // before then asks at once, and acts once the window shows that Space.
+    for (const [name, handle] of Object.entries(handlers)) {
+      handlers[name] = () => {
+        const shows = spacePager.commitNow();
+        if (shows) void shows.then(handle);
+        else handle();
+      };
+    }
     return handlers;
   }, [session, browsing, dismissPalette, copyAnswer, closePeek]);
 

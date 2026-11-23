@@ -15,11 +15,9 @@ import {
   OpenInspector,
   type PageState,
   ReopenClosedTab,
-  ShowAdjacentSpace,
   ShowAdjacentTab,
   ShowLeastRecentTab,
   ShowMostRecentTab,
-  ShowSpace,
   ShowTab,
   type SpaceState,
   SplitJoinCandidate,
@@ -39,8 +37,7 @@ import { failureNotice, notices, urlCopiedNotice } from "./notices";
 import { pageTools, zoomPercentage } from "./shell/page-tools";
 import { toggleSiteContentBlocking } from "./shell/site-control";
 import type { CommandHandlers } from "./shortcuts";
-import { pageStills } from "./spaces/page-stills";
-import { spacePager } from "./spaces/space-pager";
+import { showAdjacentSpace, showSpaceNow } from "./spaces/show-space";
 
 /**
  * Asks the window's sidebar to open one of its utility lists, or close it
@@ -123,10 +120,7 @@ export function windowCommands(session: Session, browsing: Browsing, view: () =>
     const { selections } = await core.query(NumberedSelections({ windowId }));
     const selection = selections.find((candidate) => candidate.command.name === name);
     if (!selection) return;
-    if (selection.target === NumberedSelectionTarget.space) {
-      pageStills.leaving(core);
-      send(ShowSpace({ windowId, spaceId: selection.spaceId }));
-    }
+    if (selection.target === NumberedSelectionTarget.space) void showSpaceNow(core, windowId, selection.spaceId).catch(ignoreRefusal);
     else if (selection.spaceId === view().space?.id) send(ShowTab({ windowId, spaceId: selection.spaceId, tabId: selection.tabId }));
   };
   /** Moves focus one card along the split the window shows, wrapping at both ends. */
@@ -211,16 +205,8 @@ export function windowCommands(session: Session, browsing: Browsing, view: () =>
     ...numbered,
     ...splitCommands,
     // A step slides the Space strip one page, around the ends where it wraps.
-    previousSpace: () => {
-      spacePager.noteStep(-1);
-      pageStills.leaving(core);
-      return send(ShowAdjacentSpace({ windowId, direction: AdjacentDirection.previous }));
-    },
-    nextSpace: () => {
-      spacePager.noteStep(1);
-      pageStills.leaving(core);
-      return send(ShowAdjacentSpace({ windowId, direction: AdjacentDirection.next }));
-    },
+    previousSpace: () => void showAdjacentSpace(core, windowId, -1).catch(ignoreRefusal),
+    nextSpace: () => void showAdjacentSpace(core, windowId, 1).catch(ignoreRefusal),
     collapseAllFolders: inSpace((space) => send(CollapseAllFolders({ workspaceId, spaceId: space.id }))),
     // The sidebar's lists, each opened or closed by its command, as the Mac's toggle them.
     showHistory: () => toggleUtility("history"),

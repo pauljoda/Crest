@@ -5961,6 +5961,10 @@
     "windows-sidebar-edge-and-space-look": {
       "category": "internal",
       "message": "The hidden sidebar on Windows comes out at its edge and as the pointer leaves the window there, and a change of Space carries each Space's look through the slide"
+    },
+    "windows-click-space-switch": {
+      "category": "internal",
+      "message": "Clicking a Space on Windows slides at once and switches as the strip lands, as a swipe does"
     }
   }
 }

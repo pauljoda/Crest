@@ -14,7 +14,6 @@ import {
   RenameTab,
   SetFolderColor,
   SetFolderSymbol,
-  ShowSpace,
   ShowTab,
   type SidebarList,
   type SpaceState,
@@ -37,7 +36,7 @@ import { type MenuEntry, showContextMenu } from "../menus";
 import { useFaviconColor } from "../favicon-palette";
 import { residentNativeTabs } from "../native-tabs";
 import { bundledTabIcons, useTabIcon } from "../page-icon";
-import { pageStills } from "../spaces/page-stills";
+import { showSpace } from "../spaces/show-space";
 import { Symbol } from "../symbols";
 import type { Downloads } from "../downloads";
 import { css, emojiOf, indigo, primaryColor } from "../branding";
@@ -828,10 +827,7 @@ export function Sidebar({
       {!practice && <SpaceSwitcher
         spaces={spaces}
         selectedId={space.id}
-        onSelect={(spaceId) => {
-          pageStills.leaving(session.core);
-          void session.core.send(ShowSpace({ windowId: session.windowId, spaceId }));
-        }}
+        onSelect={(spaceId) => void showSpace(session.core, session.windowId, spaceId).catch(() => undefined)}
         leading={<ChromeButton symbol="sidebar.left" label={docked ? "Hide Sidebar" : "Dock Sidebar"} onClick={onToggleDock} />}
         trailing={(
           <CommonListsButton session={session} button={listsButton} expanded={utility !== null} chosen={chosen}
