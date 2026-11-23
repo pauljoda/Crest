@@ -644,9 +644,12 @@ def performance_configuration_matches(source, lock, sdk=None, cpu="arm64"):
 
 def download(url, destination):
     destination.parent.mkdir(parents=True, exist_ok=True)
-    partial = destination.with_suffix(destination.suffix + ".partial")
+    # Planning downloads without the workspace lock, so each download writes
+    # its own file and installs it whole.
+    descriptor, name = tempfile.mkstemp(dir=destination.parent, prefix=destination.name + ".", suffix=".partial")
+    partial = Path(name)
     try:
-        with urllib.request.urlopen(url, timeout=120) as response, partial.open("wb") as output:
+        with os.fdopen(descriptor, "wb") as output, urllib.request.urlopen(url, timeout=120) as response:
             shutil.copyfileobj(response, output)
         partial.replace(destination)
     finally:

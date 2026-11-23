@@ -59,6 +59,11 @@ def resolve(*, event, operation, requested, allow_major, upstream_enabled, build
             raise SystemExit(f"{version} is not a stable release")
         if release_version(version)[0] != pinned and not allow_major:
             raise SystemExit("Milestone updates require allow_major")
+        # A requested release obeys the same ceiling as a selected one.
+        ceiling = milestone if milestone is not None else pinned
+        if release_version(version)[0] > ceiling:
+            raise SystemExit(f"{version} is newer than the full stable milestone {ceiling}; "
+                             "run operation=preflight to check its patches")
     if (operation != "check" or preflight) and not build_enabled:
         if not scheduled:
             raise SystemExit("Set CHROMIUM_CI_ENABLED=true after configuring the build Mac")

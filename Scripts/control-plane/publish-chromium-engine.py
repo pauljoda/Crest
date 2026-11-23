@@ -102,7 +102,7 @@ def publish(args):
         names = {item["name"] for item in release["assets"]}
         if {asset, f"{asset}.sha256"} <= names and key in release["body"]:
             print(f"{tag} is already published.")
-            if not args.candidate:
+            if not args.candidate and not args.dry_run:
                 remove_candidate(args.repository, candidate)
             return
         raise SystemExit("Published engine release is incomplete or has a different full key; refusing to overwrite it")

@@ -83,6 +83,10 @@ class UpstreamSelectionTests(unittest.TestCase):
             self.assertEqual((outputs["operation"], outputs["preflight"]), ("check", ""))
             outputs, _, _ = resolution.resolve(**inputs | {"current": "158.0.8127.37"})
             self.assertEqual((outputs["operation"], outputs["preflight"]), ("check", "159.0.8154.13"))
+            # Asking for the early stable release by name doesn't get it built.
+            with self.assertRaisesRegex(SystemExit, "full stable milestone 158"):
+                resolution.resolve(**inputs | {"event": "workflow_dispatch", "operation": "update",
+                                               "requested": "159.0.8154.13", "allow_major": True})
 
     def test_updates_advance_but_downgrades_and_equal_versions_do_not(self):
         releases = ["156.0.8078.80", "156.0.8078.79"]

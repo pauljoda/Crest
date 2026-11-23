@@ -68,10 +68,21 @@ def carry_plan(report, early=False):
     plan = read_json(report / "plan.json")
     if not plan["blocked"] and not early:
         raise ValueError(f"The plan for {plan['version']} isn't blocked; build it as an update")
-    patches = sorted((report / "Patches").iterdir())
-    for patch in patches:
-        shutil.copyfile(patch, REPO / ENGINE / "Patches" / patch.name)
-    return plan, {str(ENGINE / "Patches" / patch.name) for patch in patches}
+    patches, paths, retired = REPO / ENGINE / "Patches", set(), set()
+    for patch in sorted((report / "Patches").iterdir()):
+        if chromium_engine.patch_sections(patch.read_text()):
+            shutil.copyfile(patch, patches / patch.name)
+        else:
+            # Upstream has every section of this patch, so it leaves the series.
+            (patches / patch.name).unlink(missing_ok=True)
+            retired.add(patch.name)
+        paths.add(str(ENGINE / "Patches" / patch.name))
+    if retired:
+        series = patches / "series"
+        series.write_text("".join(line for line in series.read_text().splitlines(keepends=True)
+                                  if line.split("#", 1)[0].strip() not in retired))
+        paths.add(str(ENGINE / "Patches/series"))
+    return plan, paths
 
 
 def main():
@@ -149,13 +160,15 @@ def main():
                            args.candidate)
     else:
         body = blocked_body(version, plan, early=bool(args.preflight))
-    title = f"Exploited in the wild: {subject}" if args.exploited else subject
+    # The plan read the release's notes; the flag lets a caller say so regardless.
+    exploited = args.exploited or bool(plan.get("releaseNotes", {}).get("exploited"))
+    title = f"Exploited in the wild: {subject}" if exploited else subject
     existing = json.loads(run("gh", "pr", "list", "--repo", args.repository, "--head", branch,
                               "--base", base, "--state", "open", "--json", "url", capture=True))
     url = existing[0]["url"] if existing else run("gh", "pr", "create", "--repo", args.repository, "--draft",
         "--base", base, "--head", branch, "--title", title, "--body", body, capture=True).strip()
     print(url)
-    notify(args.repository, url, args.reviewer, args.exploited, version)
+    notify(args.repository, url, args.reviewer, exploited, version)
     if not args.preflight:
         close_preflights(args.repository, base, version, url)
     if output := os.environ.get("GITHUB_OUTPUT"):
@@ -283,7 +296,8 @@ def blocked_body(version, plan, early):
              if interfaces else "") + requests(plan) +
             f"To finish it in a session, from this branch: run `chromium-fork.py plan {major}--version {version}`, "
             "resolve each conflict in the report's `conflicts`, and commit the patches. Plan again until nothing "
-            f"stops it, then run `chromium-fork.py update {major}--version {version}` from the clean checkout: it "
+            f"stops it, then run `chromium-fork.py update {major}--version {version} --sdk <macOS SDK>` from the "
+            "clean checkout: it "
             "pins the release, refreshes the host hashes and builds the engine. Add the patch version and release "
             "note before review.\n")
 
