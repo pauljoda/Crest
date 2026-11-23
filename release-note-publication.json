@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "opens-in-engine-logos",
+    "development": "onboarding-on-navy",
     "nightly": "opens-in-engine-logos"
   }
 }

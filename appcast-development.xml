@@ -6,34 +6,28 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.169</title>
-            <pubDate>Mon, 23 Nov 2026 21:10:59 +0000</pubDate>
+            <title>0.10.171</title>
+            <pubDate>Mon, 23 Nov 2026 23:12:44 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1697</sparkle:version>
-            <sparkle:shortVersionString>0.10.169</sparkle:shortVersionString>
+            <sparkle:version>1700</sparkle:version>
+            <sparkle:shortVersionString>0.10.171</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
-
-- Site Controls gather the page's actions and the site's settings in one place, with the actions you use most on top.
-- Drag actions into, along and out of the row on top of Site Controls; each device keeps its own.
-- Copy Page Title, Show QR Code and Open Page in Private Window are new commands in the menu bar and the command palette.
-
 ### Improved
 
-- Opens in shows each engine's logo.
+- Setup lies on Crest's navy in light and dark mode, on Mac, iPhone and iPad.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[Release notes](https://crestbrowser.com/releases/mac/development/0.10.169/) · [View all changes](https://github.com/crest-browser/Crest/compare/185e2d310e0d0e18710544b188a985250cfad380...752ce0495c2fa7d640a7c0cb7fbc06834d4dd676) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.10.169-2026-11-23-1697-r697.1/Installer-Crest-0.10.169-development-2026-11-23-752ce04.dmg)
+[Release notes](https://crestbrowser.com/releases/mac/development/0.10.171/) · [View all changes](https://github.com/crest-browser/Crest/compare/752ce0495c2fa7d640a7c0cb7fbc06834d4dd676...402fcb4e8b85dcf0cf7f7e63d1b3febb25c70f63) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.10.171-2026-11-23-1700-r700.1/Installer-Crest-0.10.171-development-2026-11-23-402fcb4.dmg)
 
 [Browse Development releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.10.169-2026-11-23-1697-r697.1/Installer-Crest-0.10.169-development-2026-11-23-752ce04.dmg" length="410326007" type="application/octet-stream" sparkle:edSignature="QlE+8PFssx8fwU9b3KkUX2mfijIHCa/ohUw5bjDv9/C2ybIGq6LSU8m0LoNGT/isY7YPxv66V+db2z40UGVHBw=="/>
+            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.10.171-2026-11-23-1700-r700.1/Installer-Crest-0.10.171-development-2026-11-23-402fcb4.dmg" length="410331126" type="application/octet-stream" sparkle:edSignature="J8qjwTzvU2YmzyuuDOPriYWoyric/MSg6mMFc9yed+d/NQ8NvPObAb/g6quG1//XLj0MKbqXWokpw5x9h22lCg=="/>
         </item>
         <item>
             <title>0.10.138</title>
@@ -95,6 +89,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: orq/uEi8gjs94mdjJs8A7ErRXH2xWPSnhBccXyp4niBkV7rs1gwTYzJG/yI+PwzpDWwjLzGfgDEahznYpD2zBA==
-length: 7119
+edSignature: HAyXSA77fScM8JBH2+quwOLfISHWVK3H63LIdMD/Xd+wlI5eBvY/T5rbgqbmgEBHj7onmFiSmWbl73Ex/vUgAQ==
+length: 6812
 -->
