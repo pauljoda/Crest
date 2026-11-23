@@ -43,10 +43,11 @@ struct BrowserSpaceIconKind: Hashable, Identifiable, Sendable {
     }
 }
 
-/// A Space's icon: a crest, started from one of the houses, which also sets
-/// the Space's Background and Accent, or a plain symbol or emoji in the
-/// Accent. Setup's Space page and a Space's appearance in Settings both show
-/// it.
+/// A Space's icon: one of the houses' crests or a plain symbol or emoji.
+/// Choosing an icon never changes the Space's colors: each crest shows in
+/// them, and wearing one gives the Space only the crest. Setup's Space page
+/// and a Space's appearance in Settings both show it, after the templates
+/// and the colors.
 struct BrowserSpaceIconPicker: View {
     // MARK: - Variables
 
@@ -89,9 +90,8 @@ struct BrowserSpaceIconPicker: View {
         }
     }
 
-    /// The houses' crests, simple then heraldic, each in its own colors and
-    /// nothing of the Space's, so editing the Space never redraws them:
-    /// choosing one gives the Space its crest, Background and Accent.
+    /// The houses' crests, simple then heraldic, each in the Space's colors:
+    /// choosing one gives the Space that crest and nothing else.
     private var starterCrests: some View {
         VStack(alignment: .leading, spacing: BrowserSpaceIconPickerMetrics.styleSpacing) {
             ForEach(SpaceHouseStyle.all, id: \.self) { style in
@@ -115,22 +115,28 @@ struct BrowserSpaceIconPicker: View {
     }
 
     private func crest(of house: SpaceHouse) -> some View {
-        BrowserCrestStudioChoice(title: house.title, selected: house.isWorn(by: branding)) {
-            branding = house.applying(to: branding)
+        let worn = house.wearingCrest(on: branding)
+        return BrowserCrestStudioChoice(
+            title: house.title,
+            selected: branding.iconStyle == .layeredCrest && Self.sameArms(branding.crest, worn.crest)
+        ) {
+            branding = house.wearingCrest(on: branding)
         } artwork: {
             BrowserSpaceCrestIcon(
-                branding: Self.starterLook(of: house), size: BrowserCrestForgeMetrics.tileCrestSize,
-                rasterizesLayers: false
+                branding: worn, size: BrowserCrestForgeMetrics.tileCrestSize, rasterizesLayers: false
             )
             .equatable()
         }
+        .accessibilityIdentifier("space-icon-crest-\(house.name)")
     }
 
-    /// `house`'s own look wearing its crest.
-    private static func starterLook(of house: SpaceHouse) -> SpaceBranding {
-        var look = house.look
-        look.iconStyle = .layeredCrest
-        return look
+    /// Whether two crests draw the same arms, wherever each started.
+    private static func sameArms(_ crest: SpaceCrest, _ other: SpaceCrest) -> Bool {
+        var crest = crest
+        var other = other
+        crest.startingPresetID = nil
+        other.startingPresetID = nil
+        return crest == other
     }
 
     private var emojiButton: some View {

@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// One Space of the browser setup builds: its name, its Background and
-/// Accent, each opening the color popover, palettes to take in one tap, and
-/// its icon, a crest started from a house or a plain symbol or emoji. The
-/// preview shows every change as it is made. Your Space, the person's first
-/// Space, is this page under the step's name.
+/// One Space of the browser setup builds, in the order a person shapes it:
+/// its name, then the templates, each a full set of icon and colors, then
+/// the colors that refine it, its Background and Accent wells and presets,
+/// then its icon on its own, a crest in the Space's colors or a plain symbol
+/// or emoji, which never changes the colors. The preview shows every change
+/// as it is made. Your Space, the person's first Space, is this page under
+/// the step's name.
 struct BrowserSetupSpacePage: View {
     // MARK: - Variables
 
@@ -33,8 +35,15 @@ struct BrowserSetupSpacePage: View {
                 }
                 .browserSetupRaisedRows()
                 Section {
+                    BrowserSpaceTemplatePicker(branding: editor.branding)
+                } header: {
+                    CrestSettingsSectionHeading(title: "Templates")
+                } footer: {
+                    Text("A template sets the icon and colors together.")
+                }
+                .browserSetupRaisedRows()
+                Section {
                     BrowserSpaceColorWells(branding: editor.branding)
-                        .padding(.vertical, CrestSpacing.small)
                     BrowserSpacePalettePicker(branding: editor.branding)
                 } header: {
                     CrestSettingsSectionHeading(title: "Colors")

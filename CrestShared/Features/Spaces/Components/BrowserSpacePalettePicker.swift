@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// The palettes a Space can take in one tap, each a small sidebar in its
-/// Background with a dot of its Accent. Setup's Space page and a Space's
-/// appearance in Settings both show them.
+/// The color presets a Space can take in one tap, each a small sidebar in
+/// its Background with a dot of its Accent. A preset changes the colors and
+/// keeps the icon. Setup's Space page and a Space's appearance in Settings
+/// both show them under the Space's colors.
 struct BrowserSpacePalettePicker: View {
     // MARK: - Variables
 
@@ -28,6 +29,16 @@ struct BrowserSpacePalettePicker: View {
     // MARK: - Actions - Drawing
 
     var body: some View {
+        VStack(alignment: .leading, spacing: CrestSpacing.small) {
+            Text("Presets")
+                .crestCapsLabel()
+                .accessibilityAddTraits(.isHeader)
+            grid
+        }
+        .padding(.vertical, CrestSpacing.extraExtraSmall)
+    }
+
+    private var grid: some View {
         LazyVGrid(
             columns: [GridItem(.adaptive(minimum: BrowserSpacePalettePickerMetrics.column), spacing: 6)], spacing: 6
         ) {
@@ -49,7 +60,6 @@ struct BrowserSpacePalettePicker: View {
                 .accessibilityIdentifier("space-palette-\(palette.name)")
             }
         }
-        .padding(.vertical, CrestSpacing.extraExtraSmall)
         .accessibilityIdentifier("space-palettes")
     }
 

@@ -1,9 +1,11 @@
 import SwiftUI
 
-/// A Space's two colors as color wells, each one color or a gradient: its
-/// Background, which the sidebar wears, and its Accent, which its crest's
-/// emblem and border, its icon and its highlights wear. Setup's Space page
-/// shows them; a Space's appearance in Settings shows them on its stage.
+/// A Space's colors, one row each, every one a color or a gradient in its
+/// well: its Background, which the sidebar wears, its Accent, which its
+/// crest's emblem and border, its icon and its highlights wear, and its
+/// Pattern while the sidebar draws a pattern. Each well opens the color
+/// popover, which also takes a hex code for each of its colors. Setup's Space
+/// page and a Space's appearance in Settings show them, above the presets.
 struct BrowserSpaceColorWells: View {
     // MARK: - Variables
 
@@ -21,28 +23,33 @@ struct BrowserSpaceColorWells: View {
             })
     }
 
+    /// Background and Accent, and Pattern while the sidebar shows one.
+    private var roles: [BrowserSpaceBrandColorRole] {
+        branding.showsPattern ? BrowserSpaceBrandColorRole.all : [.background, .accent]
+    }
+
     // MARK: - Actions - Drawing
 
     var body: some View {
-        HStack(alignment: .top, spacing: CrestSpacing.large) {
-            well(.background)
-            well(.accent)
+        ForEach(roles) { role in
+            row(role)
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("space-color-wells")
     }
 
-    private func well(_ role: BrowserSpaceBrandColorRole) -> some View {
-        VStack(spacing: CrestSpacing.extraSmall) {
+    private func row(_ role: BrowserSpaceBrandColorRole) -> some View {
+        // The title and the well share one center line, as the well is taller
+        // than a line of text.
+        HStack(spacing: CrestSpacing.small) {
+            Text(role.title)
+            Spacer(minLength: CrestSpacing.medium)
             CrestColorWell(
                 title: role.title,
                 fill: Binding(
                     get: { branding.wellFill(role) },
                     set: { fill in $branding.editorUpdate { $0.setWellFill(fill, of: role) } }),
                 texture: role == .background ? texture : nil)
-            Text(role.title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("space-color-\(role.name)")
     }
 }

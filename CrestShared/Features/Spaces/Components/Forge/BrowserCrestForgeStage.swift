@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// The crest on the Space's own sidebar field, beside the Space's colors:
-/// its Background and Accent, its Pattern while the sidebar shows one, and
-/// each part of the crest while `showsCrestColors`.
+/// The crest on the Space's own sidebar field, the page's preview of every
+/// change, beside the color of each part of the crest while
+/// `showsCrestColors`. The Space's own colors have a section of their own
+/// under the templates.
 struct BrowserCrestForgeStage: View {
     @Binding var branding: SpaceBranding
     let symbol: String
@@ -19,7 +20,6 @@ struct BrowserCrestForgeStage: View {
     let openStep: (BrowserCrestStudioStep) -> Void
 
     @State private var openLayer: BrowserCrestForgeLayer?
-    @State private var openSidebarColor: BrowserSpaceBrandColorRole?
 
     var body: some View {
         stage
@@ -30,17 +30,28 @@ struct BrowserCrestForgeStage: View {
             .accessibilityIdentifier("space-forge-stage")
     }
 
-    /// The crest beside its colors on the Mac; on iPhone and iPad, beside them
-    /// where there's room for both and above them where there isn't.
+    /// The crest beside its parts' colors on the Mac; on iPhone and iPad,
+    /// beside them where there's room for both and above them where there
+    /// isn't, and alone under the stage's tools.
     @ViewBuilder private var stage: some View {
         #if os(macOS)
             wideStage
         #else
-            ViewThatFits(in: .horizontal) {
-                wideStage
+            if showsSwatches {
+                ViewThatFits(in: .horizontal) {
+                    wideStage
+                    compactStage
+                }
+            } else {
                 compactStage
             }
         #endif
+    }
+
+    /// Whether the stage shows the crest's parts' colors beside it, which
+    /// it then stands to the leading side of; alone, it stands in the middle.
+    private var showsSwatches: Bool {
+        showsCrestColors && branding.iconStyle == .layeredCrest
     }
 
     private var wideStage: some View {
@@ -49,12 +60,17 @@ struct BrowserCrestForgeStage: View {
                 mark(size: BrowserCrestForgeMetrics.crestSize)
                 nameField
             }
-            swatches(columnWidth: BrowserCrestForgeMetrics.swatchColumnWidth)
-            Spacer(minLength: 0)
+            if showsSwatches {
+                swatches(columnWidth: BrowserCrestForgeMetrics.swatchColumnWidth)
+                Spacer(minLength: 0)
+            }
         }
-        .padding(.leading, 28)
+        .padding(.leading, showsSwatches ? 28 : CrestSpacing.large)
         .padding(.trailing, CrestSpacing.large)
-        .frame(maxWidth: .infinity, minHeight: BrowserCrestForgeMetrics.stageHeight, alignment: .leading)
+        .frame(
+            maxWidth: .infinity, minHeight: BrowserCrestForgeMetrics.stageHeight,
+            alignment: showsSwatches ? .leading : .center
+        )
         .background { field(shadeFrom: .leading, to: .trailing) }
     }
 
@@ -62,9 +78,9 @@ struct BrowserCrestForgeStage: View {
         VStack(spacing: 14) {
             mark(size: BrowserCrestForgeMetrics.compactCrestSize)
             nameField
-            swatches(
-                columnWidth: BrowserCrestForgeMetrics.compactSwatchColumnWidth,
-                sidebarColumnWidth: BrowserCrestForgeMetrics.compactSidebarSwatchColumnWidth)
+            if showsSwatches {
+                swatches(columnWidth: BrowserCrestForgeMetrics.compactSwatchColumnWidth)
+            }
         }
         .padding(.top, 48)
         .padding(.horizontal, CrestSpacing.small)
@@ -87,50 +103,13 @@ struct BrowserCrestForgeStage: View {
         }
     }
 
-    /// The colors in columns of `columnWidth`: the Space's, which take wider
-    /// columns where that keeps their names whole, then the crest's parts.
-    private func swatches(columnWidth: CGFloat, sidebarColumnWidth: CGFloat? = nil) -> some View {
-        VStack(alignment: .leading, spacing: CrestSpacing.large) {
-            swatchGroup("Colors") {
-                ForEach(shownRoles) { role in
-                    sidebarSwatch(role, columnWidth: sidebarColumnWidth ?? columnWidth)
-                }
-            }
-            if showsCrestColors, branding.iconStyle == .layeredCrest {
-                swatchGroup(branding.iconStyle.title) {
-                    ForEach(BrowserCrestForgeLayer.shown(by: branding)) { layer in
-                        layerSwatch(layer, columnWidth: columnWidth)
-                    }
-                }
+    /// The crest's parts' colors in columns of `columnWidth`.
+    private func swatches(columnWidth: CGFloat) -> some View {
+        swatchGroup(branding.iconStyle.title) {
+            ForEach(BrowserCrestForgeLayer.shown(by: branding)) { layer in
+                layerSwatch(layer, columnWidth: columnWidth)
             }
         }
-    }
-
-    /// The Space's colors the stage offers: Background and Accent, and
-    /// Pattern while the sidebar draws a pattern.
-    private var shownRoles: [BrowserSpaceBrandColorRole] {
-        branding.showsPattern ? BrowserSpaceBrandColorRole.all : [.background, .accent]
-    }
-
-    /// The Space's texture, which its Background's picker sets.
-    private var texture: Binding<Double> {
-        Binding(
-            get: { branding.textureStrength },
-            set: { strength in
-                branding.textureStrength = strength
-                branding.hasCustomAppearance = true
-                branding = branding.normalized()
-            })
-    }
-
-    /// The fill a Space color wears, which a pick sets as the Space's wells do.
-    private func fill(of role: BrowserSpaceBrandColorRole) -> Binding<CrestColorFill> {
-        Binding(
-            get: { branding.wellFill(role) },
-            set: { fill in
-                branding.setWellFill(fill, of: role)
-                branding = branding.normalized()
-            })
     }
 
     /// The Space's own sidebar field, shaded toward the colors so they read.
@@ -197,23 +176,6 @@ struct BrowserCrestForgeStage: View {
             .presentationCompactAdaptation(.popover)
         }
     }
-
-    private func sidebarSwatch(_ role: BrowserSpaceBrandColorRole, columnWidth: CGFloat) -> some View {
-        BrowserCrestForgeSwatch(
-            title: role.title, fill: branding.wellFill(role), isOpen: openSidebarColor == role,
-            columnWidth: columnWidth
-        ) {
-            openSidebarColor = role
-        }
-        .crestPopover(
-            isPresented: Binding(
-                get: { openSidebarColor == role }, set: { if !$0, openSidebarColor == role { openSidebarColor = nil } }),
-            arrowEdge: .bottom
-        ) {
-            CrestColorPopover(fill: fill(of: role), texture: role == .background ? texture : nil)
-                .presentationCompactAdaptation(.popover)
-        }
-    }
 }
 
 /// One color on the stage, named by what it paints. A part the crest doesn't
@@ -272,9 +234,10 @@ enum BrowserCrestForgeMetrics {
     static let swatchCornerRadius: CGFloat = 10
     static let swatchColumnWidth: CGFloat = 62
     static let compactSwatchColumnWidth: CGFloat = 52
-    static let compactSidebarSwatchColumnWidth: CGFloat = 76
     static let nameWidth: CGFloat = 240
     static let tileCrestSize: CGFloat = 56
+    /// The room between the stage and the heading of the templates under it.
+    static let stageHeadingSpacing = CrestSpacing.extraLarge
     /// A Space's pages are wider than other settings pages, for the stage.
     static let columnWidth: CGFloat = 720
 }
