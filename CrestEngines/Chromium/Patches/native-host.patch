@@ -36,8 +36,8 @@
      return std::unique_ptr<BrowserWindow, BrowserWindowDeleter>(
 --- a/chrome/browser/ui/startup/startup_browser_creator_impl.cc
 +++ b/chrome/browser/ui/startup/startup_browser_creator_impl.cc
-@@ -18,6 +18,9 @@
- #include "base/supports_user_data.h"
+@@ -21,6 +21,9 @@
+ #include "base/time/time.h"
  #include "base/version.h"
  #include "build/build_config.h"
 +#if BUILDFLAG(IS_MAC)
@@ -46,7 +46,7 @@
  #include "chrome/browser/apps/platform_apps/install_chrome_app.h"
  #include "chrome/browser/browser_process.h"
  #include "chrome/browser/custom_handlers/protocol_handler_registry_factory.h"
-@@ -253,6 +256,14 @@
+@@ -260,6 +263,14 @@
      bool restore_tabbed_browser) {
    CHECK(profile, base::NotFatalUntil::M162);
    profile_ = profile;
@@ -1405,15 +1405,15 @@
    params.initiator_frame_token = base::OptionalFromPtr(initiator_frame_token);
 --- a/content/browser/renderer_host/render_frame_host_impl.cc
 +++ b/content/browser/renderer_host/render_frame_host_impl.cc
-@@ -225,6 +225,7 @@
- #include "content/public/browser/surface_embed_connector.h"
+@@ -230,6 +230,7 @@
  #include "content/public/browser/tracing_support.h"
+ #include "content/public/browser/user_browser_context.h"
  #include "content/public/browser/weak_document_ptr.h"
 +#include "content/public/browser/web_contents_delegate.h"
  #include "content/public/browser/web_ui_url_loader_factory.h"
  #include "content/public/common/alternative_error_page_override_info.mojom.h"
  #include "content/public/common/bindings_policy.h"
-@@ -3885,7 +3886,10 @@
+@@ -3994,7 +3995,10 @@
      int32_t world_id) {
    CHECK_CURRENTLY_ON(BrowserThread::UI);
    CHECK_GT(world_id, ISOLATED_WORLD_ID_GLOBAL);
@@ -1425,7 +1425,7 @@
    AssertFrameWasCommitted();
  
    const bool wants_result = !callback.is_null();
-@@ -6690,6 +6694,16 @@
+@@ -6980,6 +6984,16 @@
    commit_state_resetter.disable();
  }
  
@@ -1442,7 +1442,7 @@
  void RenderFrameHostImpl::DidOpenDocumentInputStream(const GURL& url) {
    // Check if the URL can actually be committed to the current origin. When
    // checking, the restrictions should be the same as a same-document navigation
-@@ -7856,6 +7870,18 @@
+@@ -8174,6 +8188,18 @@
    if (!IsActive() && source == ClosePageSource::kRenderer) {
      page_close_state_ = PageCloseState::kNotClosing;
      return;
@@ -1461,7 +1461,7 @@
    }
  
    page_close_state_ = PageCloseState::kReadyToBeClosed;
-@@ -10453,6 +10479,18 @@
+@@ -10792,6 +10818,18 @@
  
    // TODO(crbug.com/385170155): Consider whether to pass actual_navigation_start
    // through this path as well, which may involve a lot of plumbing.
@@ -1480,7 +1480,7 @@
    CHECK(owner_);
    owner_->GetCurrentNavigator().RequestOpenURL(
        this, validated_url, base::OptionalToPtr(params->initiator_frame_token),
-@@ -10462,7 +10500,8 @@
+@@ -10801,7 +10839,8 @@
        params->disposition, params->should_replace_current_entry,
        params->user_gesture, params->triggering_event_info,
        params->href_translate, std::move(blob_url_loader_factory),
@@ -2321,7 +2321,7 @@
    // dispatched. Note that this function is not related to
 --- a/extensions/browser/extension_util.cc
 +++ b/extensions/browser/extension_util.cc
-@@ -101,6 +101,14 @@
+@@ -103,6 +103,14 @@
    }
  #endif
  
@@ -2334,8 +2334,8 @@
 +  }
 +
    // The ultimate fallback database check.
-   return ExtensionPrefs::Get(context)->IsIncognitoEnabled(extension_id);
- }
+   ExtensionPrefs* extension_prefs = ExtensionPrefs::Get(context);
+   if (isolated_mode) {
 --- a/chrome/browser/notifications/mac/notification_platform_bridge_mac.cc
 +++ b/chrome/browser/notifications/mac/notification_platform_bridge_mac.cc
 @@ -19,6 +19,8 @@
