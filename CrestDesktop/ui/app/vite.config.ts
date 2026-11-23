@@ -11,6 +11,8 @@ const heraldry = fileURLToPath(new URL("../../../CrestShared/Resources/CrestHera
 const searchLogos = fileURLToPath(new URL("../../../CrestShared/Resources/SearchProviderLogos.xcassets", import.meta.url));
 /** The marks the Getting Started practice's tabs wear, shared with the Mac. */
 const guideLogos = fileURLToPath(new URL("../../../CrestShared/Resources/GettingStartedLogos.xcassets", import.meta.url));
+/** Who drew the heraldic artwork the crest studio offers, which a Space page credits. */
+const artworkCredits = fileURLToPath(new URL("../../../CrestShared/Resources/HeraldicArtworkCredits.txt", import.meta.url));
 
 /** The version the release pipeline marks the build with, which About and Settings show. */
 const version = /MARKETING_VERSION\s*=\s*(\S+)/.exec(
@@ -23,7 +25,7 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     host: "127.0.0.1",
-    fs: { allow: [searchForWorkspaceRoot(process.cwd()), appIcons, heraldry, searchLogos, guideLogos] },
+    fs: { allow: [searchForWorkspaceRoot(process.cwd()), appIcons, heraldry, searchLogos, guideLogos, artworkCredits] },
   },
   build: { target: "chrome130", sourcemap: true },
 });

@@ -245,6 +245,8 @@
   --surface-selected: rgb(0 0 0 / 0.075);
   --surface-border: rgb(0 0 0 / 0.1);
   --field: rgb(0 0 0 / 0.045);
+  --sidebar-glass: rgb(255 255 255 / 0.55);
+  --sidebar-glass-hover: rgb(255 255 255 / 0.7);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -264,6 +266,8 @@
     --surface-selected: rgb(255 255 255 / 0.12);
     --surface-border: rgb(255 255 255 / 0.12);
     --field: rgb(255 255 255 / 0.07);
+    --sidebar-glass: rgb(58 58 60 / 0.5);
+    --sidebar-glass-hover: rgb(74 74 76 / 0.56);
   }
 }
 

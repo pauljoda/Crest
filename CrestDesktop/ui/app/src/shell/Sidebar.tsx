@@ -90,6 +90,7 @@ import {
   unitsShown,
 } from "./sidebar-selection";
 import type { SidebarDialog } from "./SidebarDialogs";
+import { SidebarScrollAffordance } from "./SidebarScrollAffordance";
 import { SplitGroupHeader } from "./SplitGroupHeader";
 import { previewHandlers, showsTabPreviews } from "./TabPreview";
 import { FolderArtwork } from "./FolderArtwork";
@@ -636,6 +637,8 @@ export function Sidebar({
       )}
 
       <LayoutGroup id={`sidebar-${space.id}`}>
+        {/* The list scrolls under its own affordance: an indicator while it moves, and Show more tabs at rest. */}
+        <div className="tab-list-scroll">
         <div
           className="tab-list"
           // The empty area offers the Space's own actions, and a double click opens a new tab, as on the Mac.
@@ -759,6 +762,8 @@ export function Sidebar({
             );
           })}
           {!rest.some(isCurrentTop) && <section className="tab-section current-tabs">{clearLine}{newTabRow}</section>}
+        </div>
+        {isLive && <SidebarScrollAffordance dragging={!!lift} />}
         </div>
       </LayoutGroup>
       </>

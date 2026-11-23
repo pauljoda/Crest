@@ -5933,6 +5933,10 @@
     "windows-getting-started-guide": {
       "category": "internal",
       "message": "Windows opens the Getting Started guide after Setup, with a practice Space on the real sidebar, its tabs and folders lessons, and Split View practice; the sidebar gains Clear on the open tabs' line"
+    },
+    "windows-sidebar-more-tabs-space-menu": {
+      "category": "internal",
+      "message": "The Windows sidebar shows the Mac's Show more tabs button and scroll indicator, and a Space's settings page has the Mac's actions menu with Reset Appearance and Artwork Credits"
     }
   }
 }

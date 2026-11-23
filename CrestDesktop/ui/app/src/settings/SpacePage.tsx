@@ -2,16 +2,24 @@ import {
   CleanUpCurrentTabs,
   CurrentTabCleanup,
   type Intent,
+  ReorderSpaces,
   SetBrowsingPreferences,
   SetSeparatePinnedTabs,
+  SetSpaceBranding,
   SetSpaceIdentity,
   SetSpaceSearch,
   type SpaceState,
 } from "@crest/contracts";
-import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { useRef, useState } from "react";
 
+import heraldryCredits from "../../../../../CrestShared/Resources/HeraldicArtworkCredits.txt?raw";
 import type { Session } from "../boot";
+import { type MenuEntry, showContextMenu } from "../menus";
+import { Sheet } from "../shell/prompts/PromptSheet";
+import { startingLook } from "../spaces/space-look";
 import { SpaceIdentityIcon } from "../spaces/SpaceIdentity";
+import { Symbol } from "../symbols";
 import { Button, Group, keptScroll, Picker, Row, Segmented, Toggle } from "./controls";
 import { ExtensionsTab } from "./ExtensionsTab";
 import { SpaceAppearance } from "./SpaceAppearance";
@@ -22,7 +30,8 @@ export type SpacePageTab = "appearance" | "browsing" | "privacy" | "extensions";
 
 /**
  * The Mac's BrowserSettingsSpacePage, as far as Windows has built it: the
- * Space's icon and name, which edits in place, over its tabs: Appearance,
+ * Space's icon and name, which edits in place, and its actions menu, over
+ * its tabs: Appearance,
  * its look (Edit Space… opens it); Browsing, how it searches, archives and
  * shares pinned tabs; Privacy, what it keeps and clearing what it holds;
  * and Extensions.
@@ -37,6 +46,8 @@ export function SpacePage({ session, space, spaces, tab, onTab, scrolls }: {
   scrolls: Map<string, number>;
 }) {
   const [name, setName] = useState<{ spaceId: string; draft: string } | null>(null);
+  const nameField = useRef<HTMLInputElement>(null);
+  const [showsCredits, setShowsCredits] = useState(false);
   const draft = name?.spaceId === space.id ? name.draft : space.settings.name;
   const commitName = () => {
     if (!name || name.spaceId !== space.id) return;
@@ -51,13 +62,28 @@ export function SpacePage({ session, space, spaces, tab, onTab, scrolls }: {
     <>
       <header className="settings-page-header space">
         <SpaceIdentityIcon symbol={space.settings.symbol} branding={space.settings.look} size={26} />
-        <input className="settings-space-name" value={draft} aria-label="Space name" placeholder="Untitled Space"
+        <input ref={nameField} className="settings-space-name" value={draft} aria-label="Space name" placeholder="Untitled Space"
           onChange={(event) => setName({ spaceId: space.id, draft: event.target.value })}
           onBlur={commitName}
           onKeyDown={(event) => {
             if (event.key === "Enter") event.currentTarget.blur();
             if (event.key === "Escape") setName(null);
           }} />
+        <button type="button" className="settings-space-menu" aria-label="Space actions" title="Space actions"
+          data-testid="space-settings-menu" onClick={(event) => {
+            const bounds = event.currentTarget.getBoundingClientRect();
+            void showContextMenu(session.shell, { clientX: bounds.left, clientY: bounds.bottom + 4 }, spaceMenu({
+              session, space, spaces,
+              rename: () => requestAnimationFrame(() => {
+                nameField.current?.focus();
+                nameField.current?.select();
+              }),
+              editCrest: () => onTab("appearance"),
+              showCredits: () => setShowsCredits(true),
+            }));
+          }}>
+          <Symbol name="ellipsis.circle" size={16} />
+        </button>
       </header>
       <div className="settings-space-tabs">
         <Segmented label="Space settings" value={tab} onChange={onTab}
@@ -72,8 +98,82 @@ export function SpacePage({ session, space, spaces, tab, onTab, scrolls }: {
               : <ExtensionsTab session={session} space={space} spaces={spaces} />}
         </div>
       </div>
+      <AnimatePresence>
+        {showsCredits && (
+          <motion.div key="credits" className="sheet-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <Sheet title="Artwork Credits" primary="Done" onPrimary={() => setShowsCredits(false)} onEscape={() => setShowsCredits(false)}>
+              <div className="sheet-credits" data-testid="artwork-credits">{heraldryCredits.trim()}</div>
+            </Sheet>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
+}
+
+/**
+ * The Space's actions in its page's header, as the Mac's menu lists them
+ * there: Rename and Edit Crest…, Move Up and Move Down, then Reset
+ * Appearance, back to the look the Space started from while it has moved
+ * from it, and Artwork Credits. Windows has no Space groups' joining and
+ * leaving, locking or deleting yet, which the Mac lists between them.
+ */
+function spaceMenu({ session, space, spaces, rename, editCrest, showCredits }: {
+  session: Session;
+  space: SpaceState;
+  spaces: readonly SpaceState[];
+  rename: () => void;
+  editCrest: () => void;
+  showCredits: () => void;
+}): MenuEntry[] {
+  const reorder = (order: readonly string[] | null) => () => {
+    if (order) void send(session, ReorderSpaces({ workspaceId: session.workspaceId, spaceIds: order }));
+  };
+  const up = movedOrder(spaces, space.id, -1);
+  const down = movedOrder(spaces, space.id, 1);
+  const starting = startingLook(space.settings.look);
+  const resets = starting !== null && JSON.stringify(starting) !== JSON.stringify(space.settings.look);
+  return [
+    { title: "Rename", run: rename },
+    { title: "Edit Crest…", run: editCrest },
+    "separator",
+    { title: "Move Up", enabled: up !== null, run: reorder(up) },
+    { title: "Move Down", enabled: down !== null, run: reorder(down) },
+    "separator",
+    {
+      title: "Reset Appearance", enabled: resets,
+      run: () => starting && void send(session, SetSpaceBranding({ workspaceId: session.workspaceId, spaceId: space.id, branding: starting })),
+    },
+    { title: "Artwork Credits", run: showCredits },
+  ];
+}
+
+/**
+ * BrowserSpaceOrderActions: the Spaces' order with `spaceId` moved one place
+ * by `step`, or null where it can't go. A group moves whole among the
+ * groups; a Sub-Space moves within its group, never before its primary.
+ */
+function movedOrder(spaces: readonly SpaceState[], spaceId: string, step: number): string[] | null {
+  const groups: string[][] = [];
+  for (const candidate of spaces) {
+    const primaryId = candidate.membership?.primaryId;
+    const group = primaryId && primaryId !== candidate.id ? groups.find((members) => members[0] === primaryId) : undefined;
+    if (group) group.push(candidate.id);
+    else groups.push([candidate.id]);
+  }
+  const group = groups.findIndex((members) => members.includes(spaceId));
+  if (group < 0) return null;
+  const member = groups[group].indexOf(spaceId);
+  if (member > 0) {
+    const target = member + step;
+    if (target <= 0 || target >= groups[group].length) return null;
+    [groups[group][member], groups[group][target]] = [groups[group][target], groups[group][member]];
+  } else {
+    const target = group + step;
+    if (target < 0 || target >= groups.length) return null;
+    [groups[group], groups[target]] = [groups[target], groups[group]];
+  }
+  return groups.flat();
 }
 
 function send(session: Session, intent: Intent) {

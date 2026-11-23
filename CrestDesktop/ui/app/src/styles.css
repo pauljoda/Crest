@@ -188,6 +188,9 @@ button {
   /* The Mac's surface layer, the address field's and a pinned tile's, over
      a dark look. */
   --field: rgb(70 70 70 / 0.32);
+  /* The Mac's regular glass over a dark look, as B15's Show more tabs. */
+  --sidebar-glass: rgb(58 58 60 / 0.5);
+  --sidebar-glass-hover: rgb(74 74 76 / 0.56);
 }
 
 .browser-window.reads-dark {
@@ -198,6 +201,8 @@ button {
   --surface-selected: rgb(255 255 255 / 0.55);
   --surface-border: rgb(23 34 56 / 0.12);
   --field: rgb(226 233 224 / 0.5);
+  --sidebar-glass: rgb(255 255 255 / 0.55);
+  --sidebar-glass-hover: rgb(255 255 255 / 0.7);
 }
 
 /* The sidebar's place, as the Mac's: a column beside the page while docked;
@@ -1519,6 +1524,14 @@ button {
   color: rgb(var(--primary-rgb));
 }
 
+.tab-list-scroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .tab-list {
   flex: 1;
   min-height: 0;
@@ -1527,6 +1540,83 @@ button {
   flex-direction: column;
   gap: 2px;
   scrollbar-width: none;
+}
+
+/* SidebarScrollAffordance: over the list and clipped by it, taking no
+   presses but the button's while it shows. */
+.sidebar-scroll-affordance {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* A 3-wide capsule 3 in from the trailing edge, in the primary colour at
+   45%, shown only while the list scrolls. */
+.sidebar-scroll-indicator {
+  position: absolute;
+  top: 0;
+  right: 3px;
+  width: 3px;
+  border-radius: 1.5px;
+  background: rgb(var(--primary-rgb) / 0.45);
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.sidebar-scroll-indicator.shows {
+  opacity: 1;
+}
+
+/* Show more tabs: a 22 glass circle 6 above the list's bottom edge, centred,
+   in a 28 hit circle around it. At rest out of sight it waits below the
+   edge at half size, and rises as it shows. */
+.sidebar-more-tabs {
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  width: 28px;
+  height: 28px;
+  margin-left: -14px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  opacity: 0;
+  transform: translateY(58px) scale(0.5);
+  transform-origin: 50% 100%;
+  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+  -webkit-app-region: no-drag;
+}
+
+.sidebar-more-tabs.shows {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.sidebar-more-tabs-bubble {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--sidebar-glass);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.28), inset 0 0.5px 0 rgb(255 255 255 / 0.14);
+  color: rgb(var(--primary-rgb) / 0.9);
+  transition: background 0.1s ease-in-out;
+}
+
+.sidebar-more-tabs:hover .sidebar-more-tabs-bubble {
+  background: var(--sidebar-glass-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-more-tabs {
+    transform: none;
+    transition: opacity 0s;
+  }
 }
 
 .tab-section {
@@ -2505,6 +2595,32 @@ button {
 }
 
 .sheet:has(.sheet-field) .sheet-button {
+  flex: 0 0 110px;
+}
+
+/* A sheet that reads rather than asks, as the Mac's Artwork Credits: 420
+   wide, its text scrolling and selectable, Done at the trailing end. */
+.sheet:has(.sheet-credits) {
+  width: min(420px, 100%);
+  text-align: start;
+}
+
+.sheet-credits {
+  max-height: 260px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+  cursor: text;
+}
+
+.sheet:has(.sheet-credits) .sheet-actions {
+  justify-content: flex-end;
+}
+
+.sheet:has(.sheet-credits) .sheet-button {
   flex: 0 0 110px;
 }
 

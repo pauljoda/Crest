@@ -211,6 +211,23 @@
   font: 600 18px var(--crest-font-system);
 }
 
+/* The Space's actions: the Mac's borderless ellipsis.circle menu button at the header's end. */
+.settings-space-menu {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  color: var(--settings-secondary);
+  transition: background 100ms ease-in-out, color 100ms ease-in-out;
+}
+
+.settings-space-menu:hover {
+  background: rgb(var(--settings-primary) / 0.07);
+  color: var(--settings-ink);
+}
+
 .settings-space-tabs {
   display: flex;
   justify-content: center;
