@@ -1,0 +1,36 @@
+{
+  "entries": [
+    {
+      "id": "site-controls-control-center",
+      "category": "new",
+      "message": "Site Controls are a control center for the page: up to four actions you choose on top, a blocked pop-up, permission request or Developer Mode waiting right under them, extensions, an ads and trackers card that names what the site is spared, Reader, Translate and zoom, then pages for the connection, permissions, ads and trackers, site data, downloads and every other action.",
+      "platforms": [
+        "mac"
+      ]
+    },
+    {
+      "id": "site-controls-choose-top-actions",
+      "category": "new",
+      "message": "Drag actions into, along and out of the row on top of Site Controls, from the row or the list in Edit, or choose them with Edit or a tile's context menu; each device keeps its own.",
+      "platforms": [
+        "mac"
+      ]
+    },
+    {
+      "id": "copy-title-qr-code-private-window-commands",
+      "category": "new",
+      "message": "Copy Page Title, Show QR Code and Open Page in Private Window are new commands in the menu bar and the command palette.",
+      "platforms": [
+        "mac"
+      ]
+    },
+    {
+      "id": "opens-in-engine-logos",
+      "category": "improved",
+      "message": "Opens in shows each engine's logo.",
+      "platforms": [
+        "mac"
+      ]
+    }
+  ]
+}

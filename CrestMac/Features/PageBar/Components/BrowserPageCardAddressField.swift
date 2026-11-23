@@ -134,7 +134,7 @@ struct BrowserPageCardAddressField: View {
     private var siteControl: BrowserSiteControlConfiguration? {
         guard let page, page.live.displayURL != nil, let space else { return nil }
         return BrowserSiteControlConfiguration(
-            page: page, space: space, selectedTabID: tab?.id, permissionCenter: pages.permissionCenter,
+            page: page, space: space, selectedTabID: tab?.id,
             presentationChanged: { _ in }, contextMenuPresentationChanged: { _ in })
     }
 }

@@ -76,6 +76,24 @@ struct BrowserRootView: View {
         .modifier(BrowserExtensionSidePanelRegistration(host: model.extensionSidePanel, pages: model.pages))
         .modifier(BrowserPopupWindowPresentation(pages: model.pages))
         .modifier(BrowserRootWindowTitle(model: model))
+        .modifier(BrowserRootWindowCommands(model: model, shortcuts: shortcuts))
+    }
+}
+
+/// Lets controls anywhere in the window, such as Site Controls, run the
+/// window's commands as its menu bar does.
+private struct BrowserRootWindowCommands: ViewModifier {
+    let model: BrowserRootModel
+    let shortcuts: BrowserShortcutStore?
+    @Environment(\.browserMacWindows) private var windows
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    func body(content: Content) -> some View {
+        content.environment(
+            \.browserWindowCommands,
+            BrowserWindowCommands(
+                actions: model.commandActions(windows: windows, layoutDirection: layoutDirection), shortcuts: shortcuts)
+        )
     }
 }
 

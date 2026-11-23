@@ -372,6 +372,23 @@ final class BrowserMacWindows {
             closed: { [weak self] controller in self?.privateWindowClosed(controller) })
     }
 
+    /// Opens `url` in a new tab of private browsing, whose window opens or
+    /// comes forward.
+    func openInPrivateWindow(_ url: URL) {
+        openPrivateWindow()
+        guard application.privateBrowser.openNewTab(url: url) != nil else { return }
+        application.privatePages.select()
+        application.privatePages.load(url)
+    }
+
+    /// Opens Settings at `destination` for `space`, in the browser window
+    /// `windowID`.
+    func openSettings(
+        _ destination: BrowserSettingsDestination, for space: BrowserSpaceRuntimeAssignment, in windowID: UUID
+    ) {
+        application.openSettings(destination, for: space, in: windowID)
+    }
+
     /// Closing the private window ends private browsing: its Quick Windows
     /// go with it, and the engine lets go of its profiles.
     private func privateWindowClosed(_ controller: BrowserMacWindowController) {

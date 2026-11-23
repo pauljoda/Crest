@@ -1,8 +1,8 @@
 import SwiftUI
 
 // The places where an engine contributes its own site-scoped content to a
-// shared surface: the Site Settings permission list, the Site Controls
-// popover, the top of a Space's sidebar, and a Quick Window's toolbar. The presentation layer composes
+// shared surface: the Site Settings permission list, Site Controls'
+// extension tiles and page, the top of a Space's sidebar, and a Quick Window's toolbar. The presentation layer composes
 // these names and never mentions an engine's types; each engine's module
 // supplies its own implementation of them. The declarations below are the
 // WebKit composition — the Chromium framework has its own file, and neither is
@@ -28,8 +28,22 @@ struct BrowserEngineSitePermissionsSection: View {
     }
 }
 
-/// WebKit's port ships no extensions, so Site Controls has nothing to add.
-struct BrowserEngineSiteControlsSection: View {
+/// WebKit's port ships no extensions, so Site Controls has no tiles to add.
+struct BrowserEngineSiteControlsTiles: View {
+    let page: BrowserPage
+    let space: SpaceModel
+    let url: URL?
+    let dismiss: () -> Void
+    let openPage: () -> Void
+
+    /// Whether Site Controls show the engine's extensions for `page`.
+    static func offers(_ page: BrowserPage) -> Bool { false }
+
+    var body: some View { EmptyView() }
+}
+
+/// Nor an Extensions page.
+struct BrowserEngineSiteControlsExtensionsPage: View {
     let page: BrowserPage
     let space: SpaceModel
     let url: URL?

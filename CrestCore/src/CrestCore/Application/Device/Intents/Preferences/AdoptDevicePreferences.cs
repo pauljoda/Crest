@@ -9,7 +9,7 @@ namespace CrestCore.Contracts;
 /// the same, so a later launch never reads that default again; the release's
 /// own copy stays where it is. A device that keeps no file carries nothing
 /// and still publishes its preferences, so the platform reads them from
-/// launch.
+/// launch, together with the actions on top of Site Controls.
 public sealed record AdoptDevicePreferences(double? DefaultPageZoom, string? BackgroundPageActivity, bool? AllowsHighFrameRate,
     bool? SyncsWithICloud, IReadOnlyList<SpaceDownloadPreferences> Downloads) : DevicePreferenceIntent {
     #region Actions - Device
@@ -18,6 +18,7 @@ public sealed record AdoptDevicePreferences(double? DefaultPageZoom, string? Bac
         device.Adopt(this);
         turn.Changes.Publish(new PagePreferencesChanged(device.Pages));
         turn.Changes.Publish(new DownloadPreferencesChanged(device.Downloads));
+        turn.Changes.Publish(new SiteControlTopActionsChanged(device.SiteControlTopActions));
     }
 
     #endregion

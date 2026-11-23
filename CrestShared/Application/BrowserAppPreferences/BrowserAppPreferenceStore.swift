@@ -146,6 +146,19 @@ final class BrowserAppPreferenceStore {
                 isEnabled: isEnabled))
     }
 
+    /// Whether pages in `translation`'s source language translate into its
+    /// target by themselves, as Always Translate turns on.
+    func alwaysTranslates(_ translation: BrowserPageTranslation) -> Bool {
+        automaticallyTranslates && preferences.translationRules.decision(for: translation.sourceID)?.target != nil
+    }
+
+    /// Turns Always Translate on or off for `translation`'s source language,
+    /// which turns automatic translation on too.
+    func setAlwaysTranslates(_ enabled: Bool, _ translation: BrowserPageTranslation) {
+        setTranslationRule(sourceID: translation.sourceID, targetID: translation.targetID, isEnabled: enabled)
+        if enabled { automaticallyTranslates = true }
+    }
+
     // MARK: - Actions - Commands
 
     /// Applies `edit` to the unbound value, or sends the record it makes of

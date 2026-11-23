@@ -147,7 +147,8 @@ internal sealed class SqliteConnection : IDisposable {
         CustomFilters = ReadCustomFilters(),
         Pages = ReadPages(),
         Downloads = ReadDownloads(),
-        SyncsWithICloud = ReadSyncsWithICloud()
+        SyncsWithICloud = ReadSyncsWithICloud(),
+        SiteControlTopActions = ReadSiteControlTopActions()
     };
 
     /// How this device shows pages, or the defaults until the store keeps
@@ -182,6 +183,17 @@ internal sealed class SqliteConnection : IDisposable {
         bool syncs = true;
         Rows("SELECT enabled FROM device_cloud_sync", statement => syncs = Sqlite.sqlite3_column_int(statement, 0) != 0);
         return syncs;
+    }
+
+    /// The actions the person keeps on top of Site Controls, first to last.
+    /// An action this build does not know is left out, and its slot goes to a
+    /// default when the device restores them.
+    private List<SiteControlAction> ReadSiteControlTopActions() {
+        var actions = new List<SiteControlAction>();
+        Rows("SELECT action FROM device_site_control_action ORDER BY slot", statement => {
+            if (SiteControlAction.Named(Sqlite.ColumnText(statement, 0)) is { } action) actions.Add(action);
+        });
+        return actions;
     }
 
     /// The lists the person turned on or off. A list this build does not know
@@ -474,6 +486,14 @@ internal sealed class SqliteConnection : IDisposable {
                 Checked(space.Folder is { } folder ? Sqlite.BindBlob(statement, 4, folder.Token) : Sqlite.BindNull(statement, 4));
                 Checked(Sqlite.sqlite3_bind_int64(statement, 5, index));
             });
+    }
+
+    internal void WriteSiteControlTopActions(IReadOnlyList<SiteControlAction> actions) {
+        Execute("DELETE FROM device_site_control_action");
+        InsertInOrder("INSERT INTO device_site_control_action(slot, action) VALUES(?,?)", actions, (statement, action, index) => {
+            Checked(Sqlite.sqlite3_bind_int64(statement, 1, index));
+            Bind(statement, 2, action.Name);
+        });
     }
 
     internal void WriteSyncsWithICloud(bool syncs) {

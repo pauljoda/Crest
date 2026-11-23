@@ -6,12 +6,9 @@ struct BrowserTranslationActions: View {
 
     private var automaticallyTranslatesSource: Binding<Bool> {
         Binding {
-            preferences.automaticallyTranslates
-                && preferences.preferences.translationRules.decision(for: translation.sourceID)?.target != nil
-        } set: { enabled in
-            preferences.setTranslationRule(
-                sourceID: translation.sourceID, targetID: translation.targetID, isEnabled: enabled)
-            if enabled { preferences.automaticallyTranslates = true }
+            preferences.alwaysTranslates(translation)
+        } set: {
+            preferences.setAlwaysTranslates($0, translation)
         }
     }
 
