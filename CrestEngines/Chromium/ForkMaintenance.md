@@ -229,8 +229,9 @@ this part stays manual. It is required before publishing any engine:
      the extension installed and running;
    - no profile's `Secure Preferences` gained a `prefs.preference_reset_time`.
 4. Repeat step 3 on the copy saved in step 2, which the new engine has not
-   opened yet, running the copy's executable with `arch -x86_64` and the same
-   environment and switches, which runs it under Rosetta.
+   opened yet: point `HOME` and `CFFIXED_USER_HOME` at that copy, and run the
+   new engine copy's executable with `arch -x86_64`, the rest of step 2's
+   environment and the same switches, which runs it under Rosetta.
 
 ### Deciding what ships
 
