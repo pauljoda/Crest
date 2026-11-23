@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "chromium-spaces-keep-profiles-after-158",
+    "development": "arabic-pin-tabs-plural",
     "nightly": "roadmap-at-crest-browser"
   }
 }
