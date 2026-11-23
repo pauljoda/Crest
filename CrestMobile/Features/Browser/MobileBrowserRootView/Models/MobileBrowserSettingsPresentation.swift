@@ -39,6 +39,14 @@ final class MobileBrowserSettingsPresentation {
         style.open(in: space, on: self)
     }
 
+    /// Opens Settings on `destination`, in the sheet or the Settings tab
+    /// this layout shows them in.
+    func open(at destination: BrowserSettingsDestination) {
+        open()
+        guard showsSheet || browser.shownTab?.nativeTabContent == .settings else { return }
+        state.path = [destination]
+    }
+
     @discardableResult
     func present(matching assignment: BrowserTabRuntimeAssignment) -> Bool {
         guard let style,

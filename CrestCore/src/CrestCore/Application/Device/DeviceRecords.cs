@@ -22,7 +22,8 @@ internal sealed record TabGroupRecord(Guid Id, Guid SpaceId, EngineKind Engine, 
 /// has completed setup, what it has adopted from an installed release, the
 /// tab groups whose folders follow them, the site searches, what each
 /// persistent Space's palette remembers, the agent preferences, whether a
-/// launch is reopening its windows' pages, and the release launched last.
+/// launch is reopening its windows' pages, the release launched last, and the
+/// actions on top of Site Controls.
 internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOnlyList<Guid> Reopening,
     IReadOnlyList<SitePermissionRecord> SitePermissions, IReadOnlyList<SiteEngineChoice> SiteEngines, ShortcutOverrides Shortcuts,
     LinkPreferences Links, KeptSetupDraft? SetupDraft, bool SetupCompleted, IReadOnlySet<DeviceAdoption> Adopted,
@@ -79,6 +80,10 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
 
     /// Whether this device syncs with iCloud.
     public bool SyncsWithICloud { get; init; } = true;
+
+    /// The four actions the person keeps on top of Site Controls, or none
+    /// while they keep the defaults.
+    public IReadOnlyList<SiteControlAction> SiteControlTopActions { get; init; } = [];
 
     #endregion
 

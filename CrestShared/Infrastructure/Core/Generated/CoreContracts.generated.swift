@@ -175,6 +175,7 @@ enum Change: Equatable, Sendable {
     case shortcutsChanged(ShortcutsChanged)
     case sidebarChanged(SidebarChanged)
     case siteContentBlockingChanged(SiteContentBlockingChanged)
+    case siteControlTopActionsChanged(SiteControlTopActionsChanged)
     case sitePermissionsChanged(SitePermissionsChanged)
     case spaceLockChanged(SpaceLockChanged)
     case spaceSettingsChanged(SpaceSettingsChanged)
@@ -449,6 +450,11 @@ enum Change: Equatable, Sendable {
     /// The `SiteContentBlockingChanged` this change carries, or nil for another member.
     var siteContentBlockingChanged: SiteContentBlockingChanged? {
         if case .siteContentBlockingChanged(let value) = self { value } else { nil }
+    }
+
+    /// The `SiteControlTopActionsChanged` this change carries, or nil for another member.
+    var siteControlTopActionsChanged: SiteControlTopActionsChanged? {
+        if case .siteControlTopActionsChanged(let value) = self { value } else { nil }
     }
 
     /// The `SitePermissionsChanged` this change carries, or nil for another member.
@@ -1915,6 +1921,7 @@ extension Change {
         case .shortcutsChanged(let change): change.apply(to: state)
         case .sidebarChanged(let change): change.apply(to: state)
         case .siteContentBlockingChanged(let change): change.apply(to: state)
+        case .siteControlTopActionsChanged(let change): change.apply(to: state)
         case .sitePermissionsChanged(let change): change.apply(to: state)
         case .spaceLockChanged(let change): change.apply(to: state)
         case .spaceSettingsChanged(let change): change.apply(to: state)
@@ -1997,6 +2004,7 @@ extension Change {
         case .shortcutsChanged(let change): change.apply(to: core, in: &batch)
         case .sidebarChanged(let change): change.apply(to: core, in: &batch)
         case .siteContentBlockingChanged(let change): change.apply(to: core, in: &batch)
+        case .siteControlTopActionsChanged(let change): change.apply(to: core, in: &batch)
         case .sitePermissionsChanged(let change): change.apply(to: core, in: &batch)
         case .spaceLockChanged(let change): change.apply(to: core, in: &batch)
         case .spaceSettingsChanged(let change): change.apply(to: core, in: &batch)
@@ -2079,6 +2087,7 @@ extension Change {
         case .shortcutsChanged(let change): change.note(in: &receipts)
         case .sidebarChanged(let change): change.note(in: &receipts)
         case .siteContentBlockingChanged(let change): change.note(in: &receipts)
+        case .siteControlTopActionsChanged(let change): change.note(in: &receipts)
         case .sitePermissionsChanged(let change): change.note(in: &receipts)
         case .spaceLockChanged(let change): change.note(in: &receipts)
         case .spaceSettingsChanged(let change): change.note(in: &receipts)
@@ -5544,6 +5553,11 @@ struct MoveSetupSpace: Intent, SetupDraftIntent, Equatable, Sendable {
     let targetSpaceID: UUID
 }
 
+struct MoveSiteControlTopAction: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let action: SiteControlAction
+    let index: Int
+}
+
 struct MoveSplitMember: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -6636,6 +6650,11 @@ struct PlaceImportTab: Intent, SetupFlowIntent, Equatable, Sendable {
     let placement: TabPlacement
 }
 
+struct PlaceSiteControlTopAction: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let action: SiteControlAction
+    let slot: Int
+}
+
 struct PopupBlocked: Equatable, Sendable {
     let pageID: UUID
     let pageURL: String
@@ -6966,6 +6985,10 @@ struct RemoveSetupSpace: Intent, SetupDraftIntent, Equatable, Sendable {
     let spaceID: UUID
 }
 
+struct RemoveSiteControlTopAction: Intent, DevicePreferenceIntent, Equatable, Sendable {
+    let action: SiteControlAction
+}
+
 struct RemovedTabs: Equatable, Sendable {
     let tabIDs: [UUID]
 }
@@ -7041,6 +7064,9 @@ struct ResetShortcut: Intent, ShortcutIntent, Equatable, Sendable {
 }
 
 struct ResetShortcuts: Intent, ShortcutIntent, Equatable, Sendable {
+}
+
+struct ResetSiteControlTopActions: Intent, DevicePreferenceIntent, Equatable, Sendable {
 }
 
 struct ResetSitePermission: Intent, SitePermissionIntent, Equatable, Sendable {
@@ -7981,6 +8007,19 @@ struct SiteContentBlocking: Equatable, Sendable {
 
 struct SiteContentBlockingChanged: CoreChange, Equatable, Sendable {
     let sites: [SiteContentBlocking]
+}
+
+struct SiteControlTopActions: Equatable, Sendable {
+    static let maximumCount: Int = 4
+    static let `default` = SiteControlTopActions(
+        actions: [SiteControlAction.copyLink, SiteControlAction.share, SiteControlAction.pinTab, SiteControlAction.findInPage]
+    )
+
+    let actions: [SiteControlAction]
+}
+
+struct SiteControlTopActionsChanged: CoreChange, Equatable, Sendable {
+    let topActions: SiteControlTopActions
 }
 
 struct SiteDataRead: EngineEvent, Equatable, Sendable {
@@ -11444,6 +11483,72 @@ struct CloudZoneLoss: Hashable, Sendable {
         init(name: String, restoresLocalRecords: Bool) {
             self.name = name
             self.restoresLocalRecords = restoresLocalRecords
+        }
+    }
+}
+
+/// The members of the core's `ContentBlockKind`. A member's wire tag is its index in `all`.
+struct ContentBlockKind: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var symbol: String { facts.symbol }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource, symbol: String) {
+        self.tag = tag
+        facts = Facts(name: name, title: title, symbol: symbol)
+    }
+
+    static let ads = ContentBlockKind(tag: 0, name: "ads", title: LocalizedStringResource("Ads"), symbol: "megaphone")
+    static let trackers = ContentBlockKind(
+        tag: 1,
+        name: "trackers",
+        title: LocalizedStringResource("Trackers"),
+        symbol: "eye.slash"
+    )
+    static let scams = ContentBlockKind(
+        tag: 2,
+        name: "scams",
+        title: LocalizedStringResource("Scams"),
+        symbol: "exclamationmark.shield"
+    )
+    static let cookieNotices = ContentBlockKind(
+        tag: 3,
+        name: "cookie-notices",
+        title: LocalizedStringResource("Cookie notices"),
+        symbol: "checklist"
+    )
+    static let annoyances = ContentBlockKind(
+        tag: 4,
+        name: "annoyances",
+        title: LocalizedStringResource("Annoyances"),
+        symbol: "bell.slash"
+    )
+
+    static let all: [ContentBlockKind] = [ads, trackers, scams, cookieNotices, annoyances]
+
+    static func named(_ name: String?) -> ContentBlockKind? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ContentBlockKind, rhs: ContentBlockKind) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let symbol: String
+
+        init(name: String, title: LocalizedStringResource, symbol: String) {
+            self.name = name
+            self.title = title
+            self.symbol = symbol
         }
     }
 }
@@ -15673,6 +15778,7 @@ struct FilterList: Hashable, Sendable {
     var isDefault: Bool { facts.isDefault }
     var isStrict: Bool { facts.isStrict }
     var languages: [String] { facts.languages }
+    var blocks: [ContentBlockKind] { facts.blocks }
     private let facts: Facts
 
     private init(
@@ -15683,7 +15789,8 @@ struct FilterList: Hashable, Sendable {
         source: String,
         isDefault: Bool,
         isStrict: Bool,
-        languages: [String]
+        languages: [String],
+        blocks: [ContentBlockKind]
     ) {
         self.tag = tag
         facts = Facts(
@@ -15693,7 +15800,8 @@ struct FilterList: Hashable, Sendable {
             source: source,
             isDefault: isDefault,
             isStrict: isStrict,
-            languages: languages
+            languages: languages,
+            blocks: blocks
         )
     }
 
@@ -15705,7 +15813,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist.to/easylist/easylist.txt",
         isDefault: true,
         isStrict: false,
-        languages: []
+        languages: [],
+        blocks: [ContentBlockKind.ads]
     )
     static let easyPrivacy = FilterList(
         tag: 1,
@@ -15715,7 +15824,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist.to/easylist/easyprivacy.txt",
         isDefault: true,
         isStrict: false,
-        languages: []
+        languages: [],
+        blocks: [ContentBlockKind.trackers]
     )
     static let uBlockFilters = FilterList(
         tag: 2,
@@ -15725,7 +15835,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://ublockorigin.github.io/uAssets/filters/filters.min.txt",
         isDefault: true,
         isStrict: false,
-        languages: []
+        languages: [],
+        blocks: [ContentBlockKind.ads]
     )
     static let uBlockPrivacy = FilterList(
         tag: 3,
@@ -15735,7 +15846,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://ublockorigin.github.io/uAssets/filters/privacy.min.txt",
         isDefault: true,
         isStrict: false,
-        languages: []
+        languages: [],
+        blocks: [ContentBlockKind.trackers]
     )
     static let uBlockBadware = FilterList(
         tag: 4,
@@ -15745,7 +15857,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://ublockorigin.github.io/uAssets/filters/badware.min.txt",
         isDefault: true,
         isStrict: false,
-        languages: []
+        languages: [],
+        blocks: [ContentBlockKind.scams]
     )
     static let uBlockQuickFixes = FilterList(
         tag: 5,
@@ -15755,7 +15868,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://ublockorigin.github.io/uAssets/filters/quick-fixes.min.txt",
         isDefault: true,
         isStrict: false,
-        languages: []
+        languages: [],
+        blocks: []
     )
     static let uBlockUnbreak = FilterList(
         tag: 6,
@@ -15765,7 +15879,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://ublockorigin.github.io/uAssets/filters/unbreak.min.txt",
         isDefault: true,
         isStrict: false,
-        languages: []
+        languages: [],
+        blocks: []
     )
     static let adGuardBase = FilterList(
         tag: 7,
@@ -15775,7 +15890,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://filters.adtidy.org/extension/ublock/filters/2_without_easylist.txt",
         isDefault: false,
         isStrict: true,
-        languages: []
+        languages: [],
+        blocks: [ContentBlockKind.ads]
     )
     static let easyListGermany = FilterList(
         tag: 8,
@@ -15785,7 +15901,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist.to/easylistgermany/easylistgermany.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["de"]
+        languages: ["de"],
+        blocks: [ContentBlockKind.ads]
     )
     static let listeFr = FilterList(
         tag: 9,
@@ -15795,7 +15912,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist-downloads.adblockplus.org/liste_fr.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["fr"]
+        languages: ["fr"],
+        blocks: [ContentBlockKind.ads]
     )
     static let easyListItaly = FilterList(
         tag: 10,
@@ -15805,7 +15923,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist-downloads.adblockplus.org/easylistitaly.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["it"]
+        languages: ["it"],
+        blocks: [ContentBlockKind.ads]
     )
     static let easyListDutch = FilterList(
         tag: 11,
@@ -15815,7 +15934,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist-downloads.adblockplus.org/easylistdutch.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["nl"]
+        languages: ["nl"],
+        blocks: [ContentBlockKind.ads]
     )
     static let easyListSpanish = FilterList(
         tag: 12,
@@ -15825,7 +15945,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist-downloads.adblockplus.org/easylistspanish.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["es"]
+        languages: ["es"],
+        blocks: [ContentBlockKind.ads]
     )
     static let easyListPolish = FilterList(
         tag: 13,
@@ -15835,7 +15956,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist-downloads.adblockplus.org/easylistpolish.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["pl"]
+        languages: ["pl"],
+        blocks: [ContentBlockKind.ads]
     )
     static let easyListChina = FilterList(
         tag: 14,
@@ -15845,7 +15967,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://easylist-downloads.adblockplus.org/easylistchina.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["zh"]
+        languages: ["zh"],
+        blocks: [ContentBlockKind.ads]
     )
     static let adGuardJapanese = FilterList(
         tag: 15,
@@ -15855,7 +15978,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://filters.adtidy.org/extension/ublock/filters/7.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["ja"]
+        languages: ["ja"],
+        blocks: [ContentBlockKind.ads]
     )
     static let adGuardRussian = FilterList(
         tag: 16,
@@ -15865,7 +15989,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://filters.adtidy.org/extension/ublock/filters/1.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["ru", "uk", "be"]
+        languages: ["ru", "uk", "be"],
+        blocks: [ContentBlockKind.ads]
     )
     static let adGuardTurkish = FilterList(
         tag: 17,
@@ -15875,7 +16000,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://filters.adtidy.org/extension/ublock/filters/13.txt",
         isDefault: false,
         isStrict: false,
-        languages: ["tr"]
+        languages: ["tr"],
+        blocks: [ContentBlockKind.ads]
     )
     static let easyListCookie = FilterList(
         tag: 18,
@@ -15885,7 +16011,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://secure.fanboy.co.nz/fanboy-cookiemonster_ubo.txt",
         isDefault: false,
         isStrict: true,
-        languages: []
+        languages: [],
+        blocks: [ContentBlockKind.cookieNotices]
     )
     static let adGuardAnnoyances = FilterList(
         tag: 19,
@@ -15895,7 +16022,8 @@ struct FilterList: Hashable, Sendable {
         source: "https://filters.adtidy.org/extension/ublock/filters/14.txt",
         isDefault: false,
         isStrict: true,
-        languages: []
+        languages: [],
+        blocks: [ContentBlockKind.annoyances]
     )
 
     static let all: [FilterList] = [
@@ -15941,6 +16069,7 @@ struct FilterList: Hashable, Sendable {
         let isDefault: Bool
         let isStrict: Bool
         let languages: [String]
+        let blocks: [ContentBlockKind]
 
         init(
             name: String,
@@ -15949,7 +16078,8 @@ struct FilterList: Hashable, Sendable {
             source: String,
             isDefault: Bool,
             isStrict: Bool,
-            languages: [String]
+            languages: [String],
+            blocks: [ContentBlockKind]
         ) {
             self.name = name
             self.title = title
@@ -15958,6 +16088,7 @@ struct FilterList: Hashable, Sendable {
             self.isDefault = isDefault
             self.isStrict = isStrict
             self.languages = languages
+            self.blocks = blocks
         }
     }
 }
@@ -20649,6 +20780,9 @@ struct ShortcutCommand: Hashable, Sendable {
         case openNextExtension
         case clearAllTabs
         case collapseAllFolders
+        case copyPageTitle
+        case showPageQRCode
+        case openPageInPrivateWindow
     }
 
     let tag: Int
@@ -22909,6 +23043,63 @@ struct ShortcutCommand: Hashable, Sendable {
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
+    static let copyPageTitle = ShortcutCommand(
+        tag: 80,
+        kind: .copyPageTitle,
+        name: "copyPageTitle",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Copy Page Title"),
+        searchTerms: LocalizedStringResource("copy title name heading clipboard"),
+        menuTitle: nil,
+        symbol: "textformat",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [],
+        paletteRest: nil,
+        offersInPalette: true,
+        isOptionAlternate: false,
+        isReservedFromPages: false,
+        defaultPreference: ShortcutPreference.preferWebsite
+    )
+    static let showPageQRCode = ShortcutCommand(
+        tag: 81,
+        kind: .showPageQRCode,
+        name: "showPageQRCode",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Show QR Code"),
+        searchTerms: LocalizedStringResource("qr code scan camera phone send link address"),
+        menuTitle: nil,
+        symbol: "qrcode",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [],
+        paletteRest: nil,
+        offersInPalette: true,
+        isOptionAlternate: false,
+        isReservedFromPages: false,
+        defaultPreference: ShortcutPreference.preferWebsite
+    )
+    static let openPageInPrivateWindow = ShortcutCommand(
+        tag: 82,
+        kind: .openPageInPrivateWindow,
+        name: "openPageInPrivateWindow",
+        section: ShortcutSection.page,
+        title: LocalizedStringResource("Open Page in Private Window"),
+        searchTerms: LocalizedStringResource("incognito private browsing open again"),
+        menuTitle: nil,
+        symbol: "eyeglasses",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [],
+        paletteRest: nil,
+        offersInPalette: true,
+        isOptionAlternate: false,
+        isReservedFromPages: false,
+        defaultPreference: ShortcutPreference.preferWebsite
+    )
 
     static let all: [ShortcutCommand] = [
         newWindow,
@@ -22990,7 +23181,10 @@ struct ShortcutCommand: Hashable, Sendable {
         toggleSelectedTabSaved,
         openNextExtension,
         clearAllTabs,
-        collapseAllFolders
+        collapseAllFolders,
+        copyPageTitle,
+        showPageQRCode,
+        openPageInPrivateWindow
     ]
 
     static func named(_ name: String?) -> ShortcutCommand? {
@@ -23084,7 +23278,8 @@ struct ShortcutMenu: Hashable, Sendable {
                 ShortcutCommand.newBlankWindow,
                 ShortcutCommand.newTab,
                 ShortcutCommand.newQuickWindow,
-                ShortcutCommand.newPrivateWindow
+                ShortcutCommand.newPrivateWindow,
+                ShortcutCommand.openPageInPrivateWindow
             ],
             [ShortcutCommand.openFile],
             [ShortcutCommand.closeTabOrWindow, ShortcutCommand.closeWindow],
@@ -23197,6 +23392,8 @@ struct ShortcutMenu: Hashable, Sendable {
             [
                 ShortcutCommand.copyPageLink,
                 ShortcutCommand.copyPageLinkAsMarkdown,
+                ShortcutCommand.copyPageTitle,
+                ShortcutCommand.showPageQRCode,
                 ShortcutCommand.sharePage,
                 ShortcutCommand.exportPDF,
                 ShortcutCommand.saveWebArchive,
@@ -23823,6 +24020,774 @@ struct SidebarRowKind: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `SiteControlAction`. A member's wire tag is its index in `all`.
+struct SiteControlAction: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var group: SiteControlActionGroup { facts.group }
+    var title: LocalizedStringResource { facts.title }
+    var shortTitle: LocalizedStringResource { facts.shortTitle }
+    var onTitle: LocalizedStringResource? { facts.onTitle }
+    var onShortTitle: LocalizedStringResource? { facts.onShortTitle }
+    var symbol: String { facts.symbol }
+    var onSymbol: String? { facts.onSymbol }
+    var onWhileTabIs: TabPlacement? { facts.onWhileTabIs }
+    var command: ShortcutCommand? { facts.command }
+    var requiredCapability: EngineCapability? { facts.requiredCapability }
+    var platforms: [DevicePlatform] { facts.platforms }
+    var keepsSiteControlsOpen: Bool { facts.keepsSiteControlsOpen }
+    var showsOnlyWhenAvailable: Bool { facts.showsOnlyWhenAvailable }
+    private let facts: Facts
+
+    private init(
+        tag: Int,
+        name: String,
+        group: SiteControlActionGroup,
+        title: LocalizedStringResource,
+        shortTitle: LocalizedStringResource,
+        onTitle: LocalizedStringResource?,
+        onShortTitle: LocalizedStringResource?,
+        symbol: String,
+        onSymbol: String?,
+        onWhileTabIs: TabPlacement?,
+        command: ShortcutCommand?,
+        requiredCapability: EngineCapability?,
+        platforms: [DevicePlatform],
+        keepsSiteControlsOpen: Bool,
+        showsOnlyWhenAvailable: Bool
+    ) {
+        self.tag = tag
+        facts = Facts(
+            name: name,
+            group: group,
+            title: title,
+            shortTitle: shortTitle,
+            onTitle: onTitle,
+            onShortTitle: onShortTitle,
+            symbol: symbol,
+            onSymbol: onSymbol,
+            onWhileTabIs: onWhileTabIs,
+            command: command,
+            requiredCapability: requiredCapability,
+            platforms: platforms,
+            keepsSiteControlsOpen: keepsSiteControlsOpen,
+            showsOnlyWhenAvailable: showsOnlyWhenAvailable
+        )
+    }
+
+    static let copyLink = SiteControlAction(
+        tag: 0,
+        name: "copyLink",
+        group: SiteControlActionGroup.copy,
+        title: LocalizedStringResource("Copy Link"),
+        shortTitle: LocalizedStringResource("Copy Link"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "link",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.copyPageLink,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let copyLinkAsMarkdown = SiteControlAction(
+        tag: 1,
+        name: "copyLinkAsMarkdown",
+        group: SiteControlActionGroup.copy,
+        title: LocalizedStringResource("Copy Link as Markdown"),
+        shortTitle: LocalizedStringResource("Markdown"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "doc.on.clipboard",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.copyPageLinkAsMarkdown,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let copyTitle = SiteControlAction(
+        tag: 2,
+        name: "copyTitle",
+        group: SiteControlActionGroup.copy,
+        title: LocalizedStringResource("Copy Title"),
+        shortTitle: LocalizedStringResource("Copy Title"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "textformat",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.copyPageTitle,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let showQRCode = SiteControlAction(
+        tag: 3,
+        name: "showQRCode",
+        group: SiteControlActionGroup.copy,
+        title: LocalizedStringResource("Show QR Code"),
+        shortTitle: LocalizedStringResource("QR Code"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "qrcode",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.showPageQRCode,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let share = SiteControlAction(
+        tag: 4,
+        name: "share",
+        group: SiteControlActionGroup.shareAndExport,
+        title: LocalizedStringResource("Share…"),
+        shortTitle: LocalizedStringResource("Share"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "square.and.arrow.up",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.sharePage,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let capturePage = SiteControlAction(
+        tag: 5,
+        name: "capturePage",
+        group: SiteControlActionGroup.shareAndExport,
+        title: LocalizedStringResource("Capture Page"),
+        shortTitle: LocalizedStringResource("Capture"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "camera",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.capturePage,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let print = SiteControlAction(
+        tag: 6,
+        name: "print",
+        group: SiteControlActionGroup.shareAndExport,
+        title: LocalizedStringResource("Print…"),
+        shortTitle: LocalizedStringResource("Print"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "printer",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.printPage,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let exportPDF = SiteControlAction(
+        tag: 7,
+        name: "exportPDF",
+        group: SiteControlActionGroup.shareAndExport,
+        title: LocalizedStringResource("Export as PDF…"),
+        shortTitle: LocalizedStringResource("PDF"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "doc.richtext",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.exportPDF,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let saveWebArchive = SiteControlAction(
+        tag: 8,
+        name: "saveWebArchive",
+        group: SiteControlActionGroup.shareAndExport,
+        title: LocalizedStringResource("Save Web Archive…"),
+        shortTitle: LocalizedStringResource("Web Archive"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "square.and.arrow.down",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.saveWebArchive,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let pinTab = SiteControlAction(
+        tag: 9,
+        name: "pinTab",
+        group: SiteControlActionGroup.tab,
+        title: LocalizedStringResource("Pin Tab"),
+        shortTitle: LocalizedStringResource("Pin"),
+        onTitle: LocalizedStringResource("Unpin Tab"),
+        onShortTitle: LocalizedStringResource("Pinned"),
+        symbol: "pin",
+        onSymbol: "pin.fill",
+        onWhileTabIs: TabPlacement.pinned,
+        command: ShortcutCommand.toggleSelectedTabPinned,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let saveTab = SiteControlAction(
+        tag: 10,
+        name: "saveTab",
+        group: SiteControlActionGroup.tab,
+        title: LocalizedStringResource("Save Tab"),
+        shortTitle: LocalizedStringResource("Save"),
+        onTitle: LocalizedStringResource("Unsave Tab"),
+        onShortTitle: LocalizedStringResource("Saved"),
+        symbol: "bookmark",
+        onSymbol: "bookmark.fill",
+        onWhileTabIs: TabPlacement.saved,
+        command: ShortcutCommand.toggleSelectedTabSaved,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let duplicateTab = SiteControlAction(
+        tag: 11,
+        name: "duplicateTab",
+        group: SiteControlActionGroup.tab,
+        title: LocalizedStringResource("Duplicate Tab"),
+        shortTitle: LocalizedStringResource("Duplicate"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "plus.square.on.square",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.duplicateTab,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let splitWithNextTab = SiteControlAction(
+        tag: 12,
+        name: "splitWithNextTab",
+        group: SiteControlActionGroup.tab,
+        title: LocalizedStringResource("Split With Next Tab"),
+        shortTitle: LocalizedStringResource("Split"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "rectangle.split.2x1",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.splitWithNextTab,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let openInPrivateWindow = SiteControlAction(
+        tag: 13,
+        name: "openInPrivateWindow",
+        group: SiteControlActionGroup.tab,
+        title: LocalizedStringResource("Open in Private Window"),
+        shortTitle: LocalizedStringResource("Private"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "eyeglasses",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.openPageInPrivateWindow,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let archiveTab = SiteControlAction(
+        tag: 14,
+        name: "archiveTab",
+        group: SiteControlActionGroup.tab,
+        title: LocalizedStringResource("Archive Tab"),
+        shortTitle: LocalizedStringResource("Archive"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "archivebox",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.archiveTab,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let findInPage = SiteControlAction(
+        tag: 15,
+        name: "findInPage",
+        group: SiteControlActionGroup.page,
+        title: LocalizedStringResource("Find in Page"),
+        shortTitle: LocalizedStringResource("Find"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "text.magnifyingglass",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.findInPage,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let reloadPage = SiteControlAction(
+        tag: 16,
+        name: "reloadPage",
+        group: SiteControlActionGroup.page,
+        title: LocalizedStringResource("Reload Page"),
+        shortTitle: LocalizedStringResource("Reload"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "arrow.clockwise",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.reloadPage,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let reloadIgnoringCache = SiteControlAction(
+        tag: 17,
+        name: "reloadIgnoringCache",
+        group: SiteControlActionGroup.page,
+        title: LocalizedStringResource("Reload (Ignore Cache)"),
+        shortTitle: LocalizedStringResource("Hard Reload"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "arrow.trianglehead.2.clockwise.rotate.90",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.reloadFromOrigin,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let openInOtherEngine = SiteControlAction(
+        tag: 18,
+        name: "openInOtherEngine",
+        group: SiteControlActionGroup.page,
+        title: LocalizedStringResource("Open Page in Other Engine"),
+        shortTitle: LocalizedStringResource("Other Engine"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "arrow.triangle.swap",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: nil,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let showTranslationControls = SiteControlAction(
+        tag: 19,
+        name: "showTranslationControls",
+        group: SiteControlActionGroup.page,
+        title: LocalizedStringResource("Show Translation Controls"),
+        shortTitle: LocalizedStringResource("Translate Bar"),
+        onTitle: LocalizedStringResource("Hide Translation Controls"),
+        onShortTitle: nil,
+        symbol: "translate",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.toggleTranslationToolbar,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let downloads = SiteControlAction(
+        tag: 20,
+        name: "downloads",
+        group: SiteControlActionGroup.browser,
+        title: LocalizedStringResource("Downloads"),
+        shortTitle: LocalizedStringResource("Downloads"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "arrow.down.circle",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.showDownloads,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let showHistory = SiteControlAction(
+        tag: 21,
+        name: "showHistory",
+        group: SiteControlActionGroup.browser,
+        title: LocalizedStringResource("Show History"),
+        shortTitle: LocalizedStringResource("History"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "clock",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.showHistory,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let blockElement = SiteControlAction(
+        tag: 22,
+        name: "blockElement",
+        group: SiteControlActionGroup.privacy,
+        title: LocalizedStringResource("Block Element"),
+        shortTitle: LocalizedStringResource("Block"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "eye.slash",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.blockElement,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let showBlockedElements = SiteControlAction(
+        tag: 23,
+        name: "showBlockedElements",
+        group: SiteControlActionGroup.privacy,
+        title: LocalizedStringResource("Show Blocked Elements"),
+        shortTitle: LocalizedStringResource("Blocked"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "eye",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.showBlockedElements,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let clearCookies = SiteControlAction(
+        tag: 24,
+        name: "clearCookies",
+        group: SiteControlActionGroup.privacy,
+        title: LocalizedStringResource("Clear Cookies"),
+        shortTitle: LocalizedStringResource("Cookies"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "person.crop.circle.badge.xmark",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.clearSiteCookies,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let clearCache = SiteControlAction(
+        tag: 25,
+        name: "clearCache",
+        group: SiteControlActionGroup.privacy,
+        title: LocalizedStringResource("Clear Cache"),
+        shortTitle: LocalizedStringResource("Cache"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "trash",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.clearSiteCache,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop, DevicePlatform.mobile],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let showDeveloperToolbar = SiteControlAction(
+        tag: 26,
+        name: "showDeveloperToolbar",
+        group: SiteControlActionGroup.developer,
+        title: LocalizedStringResource("Show Developer Toolbar"),
+        shortTitle: LocalizedStringResource("Dev Toolbar"),
+        onTitle: LocalizedStringResource("Hide Developer Toolbar"),
+        onShortTitle: nil,
+        symbol: "macbook.and.iphone",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: ShortcutCommand.toggleDeveloperToolbar,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: false
+    )
+    static let inspectElement = SiteControlAction(
+        tag: 27,
+        name: "inspectElement",
+        group: SiteControlActionGroup.developer,
+        title: LocalizedStringResource("Inspect Element"),
+        shortTitle: LocalizedStringResource("Inspect"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "scope",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: nil,
+        requiredCapability: EngineCapability.inspector,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let toggleConsole = SiteControlAction(
+        tag: 28,
+        name: "toggleConsole",
+        group: SiteControlActionGroup.developer,
+        title: LocalizedStringResource("Toggle Console"),
+        shortTitle: LocalizedStringResource("Console"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "terminal",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: nil,
+        requiredCapability: EngineCapability.inspector,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let toggleNetworkPanel = SiteControlAction(
+        tag: 29,
+        name: "toggleNetworkPanel",
+        group: SiteControlActionGroup.developer,
+        title: LocalizedStringResource("Toggle Network Panel"),
+        shortTitle: LocalizedStringResource("Network"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "network",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: nil,
+        requiredCapability: EngineCapability.inspector,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let clearCookiesAndReload = SiteControlAction(
+        tag: 30,
+        name: "clearCookiesAndReload",
+        group: SiteControlActionGroup.developer,
+        title: LocalizedStringResource("Clear Cookies and Reload"),
+        shortTitle: LocalizedStringResource("Clear + Reload"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "arrow.clockwise.circle",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: nil,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.desktop],
+        keepsSiteControlsOpen: true,
+        showsOnlyWhenAvailable: true
+    )
+    static let addToHomeScreen = SiteControlAction(
+        tag: 31,
+        name: "addToHomeScreen",
+        group: SiteControlActionGroup.shareAndExport,
+        title: LocalizedStringResource("Add to Home Screen"),
+        shortTitle: LocalizedStringResource("Home Screen"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "plus.app",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: nil,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+    static let hideToolbar = SiteControlAction(
+        tag: 32,
+        name: "hideToolbar",
+        group: SiteControlActionGroup.page,
+        title: LocalizedStringResource("Hide Toolbar"),
+        shortTitle: LocalizedStringResource("Hide Toolbar"),
+        onTitle: nil,
+        onShortTitle: nil,
+        symbol: "chevron.down",
+        onSymbol: nil,
+        onWhileTabIs: nil,
+        command: nil,
+        requiredCapability: nil,
+        platforms: [DevicePlatform.mobile],
+        keepsSiteControlsOpen: false,
+        showsOnlyWhenAvailable: false
+    )
+
+    static let all: [SiteControlAction] = [
+        copyLink,
+        copyLinkAsMarkdown,
+        copyTitle,
+        showQRCode,
+        share,
+        capturePage,
+        print,
+        exportPDF,
+        saveWebArchive,
+        pinTab,
+        saveTab,
+        duplicateTab,
+        splitWithNextTab,
+        openInPrivateWindow,
+        archiveTab,
+        findInPage,
+        reloadPage,
+        reloadIgnoringCache,
+        openInOtherEngine,
+        showTranslationControls,
+        downloads,
+        showHistory,
+        blockElement,
+        showBlockedElements,
+        clearCookies,
+        clearCache,
+        showDeveloperToolbar,
+        inspectElement,
+        toggleConsole,
+        toggleNetworkPanel,
+        clearCookiesAndReload,
+        addToHomeScreen,
+        hideToolbar
+    ]
+
+    static func named(_ name: String?) -> SiteControlAction? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SiteControlAction, rhs: SiteControlAction) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let group: SiteControlActionGroup
+        let title: LocalizedStringResource
+        let shortTitle: LocalizedStringResource
+        let onTitle: LocalizedStringResource?
+        let onShortTitle: LocalizedStringResource?
+        let symbol: String
+        let onSymbol: String?
+        let onWhileTabIs: TabPlacement?
+        let command: ShortcutCommand?
+        let requiredCapability: EngineCapability?
+        let platforms: [DevicePlatform]
+        let keepsSiteControlsOpen: Bool
+        let showsOnlyWhenAvailable: Bool
+
+        init(
+            name: String,
+            group: SiteControlActionGroup,
+            title: LocalizedStringResource,
+            shortTitle: LocalizedStringResource,
+            onTitle: LocalizedStringResource?,
+            onShortTitle: LocalizedStringResource?,
+            symbol: String,
+            onSymbol: String?,
+            onWhileTabIs: TabPlacement?,
+            command: ShortcutCommand?,
+            requiredCapability: EngineCapability?,
+            platforms: [DevicePlatform],
+            keepsSiteControlsOpen: Bool,
+            showsOnlyWhenAvailable: Bool
+        ) {
+            self.name = name
+            self.group = group
+            self.title = title
+            self.shortTitle = shortTitle
+            self.onTitle = onTitle
+            self.onShortTitle = onShortTitle
+            self.symbol = symbol
+            self.onSymbol = onSymbol
+            self.onWhileTabIs = onWhileTabIs
+            self.command = command
+            self.requiredCapability = requiredCapability
+            self.platforms = platforms
+            self.keepsSiteControlsOpen = keepsSiteControlsOpen
+            self.showsOnlyWhenAvailable = showsOnlyWhenAvailable
+        }
+    }
+}
+
+/// The members of the core's `SiteControlActionGroup`. A member's wire tag is its index in `all`.
+struct SiteControlActionGroup: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, title: title)
+    }
+
+    static let copy = SiteControlActionGroup(tag: 0, name: "copy", title: LocalizedStringResource("Copy"))
+    static let shareAndExport = SiteControlActionGroup(
+        tag: 1,
+        name: "shareAndExport",
+        title: LocalizedStringResource("Share and Export")
+    )
+    static let tab = SiteControlActionGroup(tag: 2, name: "tab", title: LocalizedStringResource("Tab"))
+    static let page = SiteControlActionGroup(tag: 3, name: "page", title: LocalizedStringResource("Page"))
+    static let browser = SiteControlActionGroup(tag: 4, name: "browser", title: LocalizedStringResource("Browser"))
+    static let privacy = SiteControlActionGroup(tag: 5, name: "privacy", title: LocalizedStringResource("Privacy"))
+    static let developer = SiteControlActionGroup(
+        tag: 6,
+        name: "developer",
+        title: LocalizedStringResource("Developer")
+    )
+
+    static let all: [SiteControlActionGroup] = [copy, shareAndExport, tab, page, browser, privacy, developer]
+
+    static func named(_ name: String?) -> SiteControlActionGroup? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SiteControlActionGroup, rhs: SiteControlActionGroup) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
+        }
+    }
+}
+
 /// The members of the core's `SitePermission`. A member's wire tag is its index in `all`.
 struct SitePermission: Hashable, Sendable {
     let tag: Int
@@ -23830,6 +24795,7 @@ struct SitePermission: Hashable, Sendable {
     var title: LocalizedStringResource { facts.title }
     var symbol: String { facts.symbol }
     var requestTitle: LocalizedStringResource { facts.requestTitle }
+    var question: LocalizedStringResource { facts.question }
     var askTitle: LocalizedStringResource { facts.askTitle }
     var askChoiceTitle: LocalizedStringResource { facts.askChoiceTitle }
     var isMedia: Bool { facts.isMedia }
@@ -23845,6 +24811,7 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource,
         symbol: String,
         requestTitle: LocalizedStringResource,
+        question: LocalizedStringResource,
         askTitle: LocalizedStringResource,
         askChoiceTitle: LocalizedStringResource,
         isMedia: Bool,
@@ -23859,6 +24826,7 @@ struct SitePermission: Hashable, Sendable {
             title: title,
             symbol: symbol,
             requestTitle: requestTitle,
+            question: question,
             askTitle: askTitle,
             askChoiceTitle: askChoiceTitle,
             isMedia: isMedia,
@@ -23875,6 +24843,7 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("Camera"),
         symbol: "video",
         requestTitle: LocalizedStringResource("Wants to use your camera"),
+        question: LocalizedStringResource("Use your camera?"),
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: true,
@@ -23889,6 +24858,7 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("Microphone"),
         symbol: "mic",
         requestTitle: LocalizedStringResource("Wants to use your microphone"),
+        question: LocalizedStringResource("Use your microphone?"),
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: true,
@@ -23903,6 +24873,7 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("Camera & Microphone"),
         symbol: "video.and.waveform",
         requestTitle: LocalizedStringResource("Wants to use your camera and microphone"),
+        question: LocalizedStringResource("Use your camera and mic?"),
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: true,
@@ -23917,6 +24888,7 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("Location"),
         symbol: "location",
         requestTitle: LocalizedStringResource("Wants to use your location"),
+        question: LocalizedStringResource("Use your location?"),
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: false,
@@ -23931,6 +24903,7 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("Notifications"),
         symbol: "bell",
         requestTitle: LocalizedStringResource("Wants to send notifications"),
+        question: LocalizedStringResource("Send notifications?"),
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: false,
@@ -23945,6 +24918,7 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("Automatic Pop-ups"),
         symbol: "macwindow.on.rectangle",
         requestTitle: LocalizedStringResource("Requests permission"),
+        question: LocalizedStringResource("Open pop-ups?"),
         askTitle: LocalizedStringResource("Blocked by Default"),
         askChoiceTitle: LocalizedStringResource("Default (Block)"),
         isMedia: false,
@@ -23959,6 +24933,7 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("Automatic Downloads"),
         symbol: "arrow.down.circle",
         requestTitle: LocalizedStringResource("Wants to download multiple files automatically"),
+        question: LocalizedStringResource("Download several files?"),
         askTitle: LocalizedStringResource("Ask after First"),
         askChoiceTitle: LocalizedStringResource("Default (Ask after First)"),
         isMedia: false,
@@ -23973,6 +24948,7 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("External Apps"),
         symbol: "arrow.up.forward.app",
         requestTitle: LocalizedStringResource("Requests permission"),
+        question: LocalizedStringResource("Open another app?"),
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: false,
@@ -23987,6 +24963,7 @@ struct SitePermission: Hashable, Sendable {
         title: LocalizedStringResource("Screen Sharing"),
         symbol: "rectangle.inset.filled.and.person.filled",
         requestTitle: LocalizedStringResource("Wants to share your screen"),
+        question: LocalizedStringResource("Share your screen?"),
         askTitle: LocalizedStringResource("Ask"),
         askChoiceTitle: LocalizedStringResource("Ask"),
         isMedia: false,
@@ -24025,6 +25002,7 @@ struct SitePermission: Hashable, Sendable {
         let title: LocalizedStringResource
         let symbol: String
         let requestTitle: LocalizedStringResource
+        let question: LocalizedStringResource
         let askTitle: LocalizedStringResource
         let askChoiceTitle: LocalizedStringResource
         let isMedia: Bool
@@ -24038,6 +25016,7 @@ struct SitePermission: Hashable, Sendable {
             title: LocalizedStringResource,
             symbol: String,
             requestTitle: LocalizedStringResource,
+            question: LocalizedStringResource,
             askTitle: LocalizedStringResource,
             askChoiceTitle: LocalizedStringResource,
             isMedia: Bool,
@@ -24050,6 +25029,7 @@ struct SitePermission: Hashable, Sendable {
             self.title = title
             self.symbol = symbol
             self.requestTitle = requestTitle
+            self.question = question
             self.askTitle = askTitle
             self.askChoiceTitle = askChoiceTitle
             self.isMedia = isMedia

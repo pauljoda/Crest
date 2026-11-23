@@ -212,6 +212,7 @@ struct MobileBrowserWindowScene: View {
                 togglePrivateBrowsing: togglePrivateBrowsing,
                 closePrivateBrowsing: closePrivateBrowsing
             )
+            .environment(\.mobileOpenInPrivateBrowsing) { url in openInPrivateBrowsing(url) }
         }
     }
 
@@ -278,6 +279,13 @@ struct MobileBrowserWindowScene: View {
 
     private func togglePrivateBrowsing() {
         let destinationMode = model.togglePrivateBrowsing(from: workspaceKind)
+        withAnimation(modeAnimation) {
+            workspaceKind = destinationMode
+        }
+    }
+
+    private func openInPrivateBrowsing(_ url: URL) {
+        let destinationMode = model.openInPrivateBrowsing(url, from: workspaceKind)
         withAnimation(modeAnimation) {
             workspaceKind = destinationMode
         }

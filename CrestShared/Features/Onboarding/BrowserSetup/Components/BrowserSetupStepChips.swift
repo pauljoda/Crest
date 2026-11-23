@@ -73,7 +73,7 @@ struct BrowserSetupStepChips: View {
 
     /// The chips in a row, each as `content` draws it, set at its angle.
     private func chips<Chip: View>(@ViewBuilder _ content: @escaping (Int, BrowserSetupStep) -> Chip) -> some View {
-        BrowserSetupStepChipsFlow(gap: size.gap) {
+        CrestFlowLayout(gap: size.gap, alignment: .center) {
             ForEach(Array(steps.enumerated()), id: \.element) { index, step in
                 content(index, step)
                     .rotationEffect(.degrees(BrowserSetupStepChipsMetrics.tilt(at: index)))
@@ -135,67 +135,6 @@ enum BrowserSetupStepChipsMetrics {
 
     static func tilt(at index: Int) -> Double {
         tilts[index % tilts.count]
-    }
-}
-
-/// Lays the chips out in rows no wider than the room offered, each row
-/// centered, so the welcome's chips wrap on a phone rather than run off it.
-private struct BrowserSetupStepChipsFlow: Layout {
-    // MARK: - Types
-
-    /// The chips one row holds, and how wide and tall the row is.
-    private struct Row {
-        var indices: [Int] = []
-        var width: CGFloat = 0
-        var height: CGFloat = 0
-    }
-
-    // MARK: - Variables
-
-    let gap: CGFloat
-
-    // MARK: - Actions - Layout
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let rows = rows(of: subviews, within: proposal.width ?? .infinity)
-        let height = rows.map(\.height).reduce(0, +) + gap * CGFloat(max(rows.count - 1, 0))
-        return CGSize(width: rows.map(\.width).max() ?? 0, height: height)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var y = bounds.minY
-        for row in rows(of: subviews, within: bounds.width) {
-            var x = bounds.minX + (bounds.width - row.width) / 2
-            for index in row.indices {
-                let size = subviews[index].sizeThatFits(.unspecified)
-                subviews[index].place(
-                    at: CGPoint(x: x, y: y + (row.height - size.height) / 2), proposal: ProposedViewSize(size))
-                x += size.width + gap
-            }
-            y += row.height + gap
-        }
-    }
-
-    // MARK: - Actions - Reading
-
-    /// The chips in rows, each taking chips while they fit within `width`.
-    private func rows(of subviews: Subviews, within width: CGFloat) -> [Row] {
-        var rows: [Row] = []
-        var row = Row()
-        for (index, subview) in subviews.enumerated() {
-            let size = subview.sizeThatFits(.unspecified)
-            let widened = row.indices.isEmpty ? size.width : row.width + gap + size.width
-            if !row.indices.isEmpty, widened > width {
-                rows.append(row)
-                row = Row(indices: [index], width: size.width, height: size.height)
-            } else {
-                row.indices.append(index)
-                row.width = widened
-                row.height = max(row.height, size.height)
-            }
-        }
-        if !row.indices.isEmpty { rows.append(row) }
-        return rows
     }
 }
 

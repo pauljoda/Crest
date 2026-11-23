@@ -46,8 +46,12 @@ extension BrowserPlatformPage {
         blockedPopupState = nextState
     }
 
-    func allowAutomaticPopupsForBlockedSite() {
+    /// Allows the blocked site's pop-ups from now on, in the page's Space.
+    /// Given the origin a control showed, it allows them only while the
+    /// notice is still that site's.
+    func allowAutomaticPopupsForBlockedSite(shownFor shownOrigin: SiteOrigin? = nil) {
         guard let notice = blockedPopupState.notice,
+            shownOrigin == nil || notice.origin == shownOrigin,
             notice.status.offersAllow,
             let currentURL = live.displayURL ?? pageEngine.currentURL,
             SiteOrigin(url: currentURL) == notice.origin

@@ -111,6 +111,16 @@ struct BrowserMacCommand {
     static let copyPageLinkAsMarkdown = BrowserMacCommand(
         .copyPageLinkAsMarkdown, actsOnPage: true, isAvailable: { $0.hasCommandPage },
         run: { $0.copyPageLinkAsMarkdown() })
+    static let copyPageTitle = BrowserMacCommand(
+        .copyPageTitle, actsOnPage: true, isAvailable: { $0.commandPage?.live.title.isEmpty == false },
+        run: { $0.copyPageTitle() })
+    static let showPageQRCode = BrowserMacCommand(
+        .showPageQRCode, actsOnPage: true, isAvailable: { $0.commandPage?.linkToCopy != nil },
+        run: { $0.showPageQRCode() })
+    static let openPageInPrivateWindow = BrowserMacCommand(
+        .openPageInPrivateWindow, actsOnPage: true,
+        isAvailable: { $0.hasCommandPage && !$0.browser.isPrivateBrowsing && $0.windows != nil },
+        run: { $0.openPageInPrivateWindow() })
     static let sharePage = BrowserMacCommand(
         .sharePage, actsOnPage: true, isAvailable: { $0.hasCommandPage },
         run: { $0.commandPage?.sharePage() })
@@ -185,7 +195,7 @@ struct BrowserMacCommand {
         findInPage, findNext, findPrevious, zoomIn, zoomOut,
         actualSize,
         copyPageLink,
-        copyPageLinkAsMarkdown,
+        copyPageLinkAsMarkdown, copyPageTitle, showPageQRCode, openPageInPrivateWindow,
         sharePage, exportPDF, saveWebArchive, printPage, capturePage, clearSiteCookies, clearSiteCache,
         toggleSidebar, collapseAllFolders, showHistory, showArchive, showDownloads,
         showWebInspector,

@@ -671,18 +671,17 @@ extension BrowserRootModel {
         shortcuts: BrowserShortcutStore?,
         settings: BrowserSpaceSettingsPresentationState? = nil
     ) -> BrowserCommandPaletteCommandRegistry {
+        commandActions(windows: windows, layoutDirection: layoutDirection)
+            .paletteRegistry(shortcuts: shortcuts) { [weak self] destination in
+                self?.openPaletteSettings(destination, in: settings)
+            }
+    }
+
+    /// The commands this window runs, by the same routes as the menu bar.
+    func commandActions(windows: BrowserMacWindows?, layoutDirection: LayoutDirection) -> BrowserCommandActions {
         BrowserCommandActions(
-            browser: browser,
-            pages: pages,
-            chrome: chrome,
-            windows: windows,
-            spaceAccess: spaceAccess,
-            targetWindowID: windowID,
-            layoutDirection: layoutDirection,
-        )
-        .paletteRegistry(shortcuts: shortcuts) { [weak self] destination in
-            self?.openPaletteSettings(destination, in: settings)
-        }
+            browser: browser, pages: pages, chrome: chrome, windows: windows, spaceAccess: spaceAccess,
+            targetWindowID: windowID, layoutDirection: layoutDirection)
     }
 
     /// Opens Settings at `destination`, which `settings` presents.

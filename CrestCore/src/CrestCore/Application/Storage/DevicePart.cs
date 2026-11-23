@@ -187,10 +187,15 @@ internal sealed class DevicePart {
         (records, other) => records.SyncsWithICloud == other.SyncsWithICloud,
         (store, records, _) => store.WriteSyncsWithICloud(records.SyncsWithICloud));
 
+    public static readonly DevicePart SiteControlTopActions = new(
+        ["CREATE TABLE IF NOT EXISTS device_site_control_action (slot INTEGER PRIMARY KEY, action TEXT NOT NULL)"],
+        (records, other) => records.SiteControlTopActions.SequenceEqual(other.SiteControlTopActions),
+        (store, records, _) => store.WriteSiteControlTopActions(records.SiteControlTopActions));
+
     public static IReadOnlyList<DevicePart> All { get; } = [
         Windows, Reopening, SitePermissions, SiteEngines, DefaultEngine, Shortcuts, Links, SetupDraft, SetupCompleted, Adoptions,
         TabGroups, PaletteMemories, SearchCatalog, Agents, ReopeningPages, LaunchedRelease, ContentBlockingLevel, FilterListChoices,
-        BlockingSites, CustomFilterLists, CustomFilters, Pages, Downloads, SyncsWithICloud
+        BlockingSites, CustomFilterLists, CustomFilters, Pages, Downloads, SyncsWithICloud, SiteControlTopActions
     ];
 
     #endregion

@@ -1,6 +1,18 @@
 import Observation
 import SwiftUI
 
+// MARK: - Types
+
+/// A page of Site Controls a command asked to show for one page.
+struct BrowserSiteControlsRequest: Equatable {
+    /// The page whose Site Controls open.
+    let page: ObjectIdentifier
+    let destination: SiteControlsPage
+    /// Tells two requests for the same page apart, so asking again opens it
+    /// again.
+    let id = UUID()
+}
+
 @Observable
 @MainActor
 final class BrowserChromeState {
@@ -36,6 +48,9 @@ final class BrowserChromeState {
     }
     @ObservationIgnored private var commandPaletteModeStorage: BrowserCommandPaletteMode?
     private(set) var addressFocusRequest = 0
+    /// The page of Site Controls a command asked to show, such as Show QR
+    /// Code, which the Site Controls of the page it names open on.
+    private(set) var siteControlsRequest: BrowserSiteControlsRequest?
     private(set) var startPageFocusRequest = 0
     /// The recent tabs a held Most Recent Tab shortcut shows over the window,
     /// or nil while none shows.
@@ -151,6 +166,21 @@ final class BrowserChromeState {
 
     func dismissCommandPalette() {
         commandPaletteMode = nil
+    }
+
+    // MARK: - Actions - Site Controls
+
+    /// Asks the Site Controls of `page` to open on `destination`.
+    func requestSiteControls(_ destination: SiteControlsPage, for page: BrowserPage) {
+        siteControlsRequest = BrowserSiteControlsRequest(page: ObjectIdentifier(page), destination: destination)
+    }
+
+    /// The page of Site Controls asked for `page`, which only its Site
+    /// Controls take, once; nil when none was asked for it.
+    func takeSiteControlsRequest(for page: BrowserPage) -> SiteControlsPage? {
+        guard let request = siteControlsRequest, request.page == ObjectIdentifier(page) else { return nil }
+        siteControlsRequest = nil
+        return request.destination
     }
 
     // MARK: - Actions - Notices
