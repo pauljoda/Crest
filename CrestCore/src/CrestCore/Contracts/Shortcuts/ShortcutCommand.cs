@@ -84,7 +84,10 @@ public sealed class ShortcutCommand {
         ShowBlockedElements,
         OpenNextExtension,
         ClearAllTabs,
-        CollapseAllFolders
+        CollapseAllFolders,
+        CopyPageTitle,
+        ShowPageQRCode,
+        OpenPageInPrivateWindow
     }
 
     #endregion
@@ -349,6 +352,20 @@ public sealed class ShortcutCommand {
         ShortcutSection.View, title: "Collapse All Folders", symbol: "rectangle.compress.vertical",
         searchTerms: "close fold folders sidebar tidy", availableWhen: facts => facts.HasOpenFolder);
 
+    // Copies the page's title as it reads in the tab, without its address.
+    public static readonly ShortcutCommand CopyPageTitle = new(Kinds.CopyPageTitle, name: "copyPageTitle", ShortcutSection.Page,
+        title: "Copy Page Title", symbol: "textformat", searchTerms: "copy title name heading clipboard", availableWhen: ShowingWebPage);
+    // Shows the page's address as a code another device's camera reads, in
+    // Site Controls.
+    public static readonly ShortcutCommand ShowPageQRCode = new(Kinds.ShowPageQRCode, name: "showPageQRCode", ShortcutSection.Page,
+        title: "Show QR Code", symbol: "qrcode", searchTerms: "qr code scan camera phone send link address",
+        availableWhen: ShowingWebPage);
+    // Opens the page's address in private browsing, which keeps nothing of
+    // the visit. A private window has nowhere more private to send it.
+    public static readonly ShortcutCommand OpenPageInPrivateWindow = new(Kinds.OpenPageInPrivateWindow,
+        name: "openPageInPrivateWindow", ShortcutSection.Page, title: "Open Page in Private Window", symbol: "eyeglasses",
+        searchTerms: "incognito private browsing open again", availableWhen: facts => ShowingWebPage(facts) && !facts.IsPrivate);
+
     public static IReadOnlyList<ShortcutCommand> All { get; } = [
         NewWindow, NewBlankWindow, NewTab, NewQuickWindow, NewPrivateWindow, CloseTabOrWindow, CloseWindow, OpenLocation, Back,
         Forward, ReloadPage, StopLoading, ReloadFromOrigin, ToggleSelectedTabPinned, DuplicateTab, ReopenClosedTab,
@@ -360,7 +377,7 @@ public sealed class ShortcutCommand {
         SplitWithNextTab, FocusNextSplitCard, FocusPreviousSplitCard, RemoveTabFromSplit, SeparateSplitTabs,
         MoveSplitCardLeft, MoveSplitCardRight, ToggleDeveloperToolbar, ToggleTranslationToolbar, OpenFile, FindNext,
         FindPrevious, CapturePage, MostRecentTabBackward, ClearSiteCookies, ClearSiteCache, ToggleSelectedTabSaved,
-        OpenNextExtension, ClearAllTabs, CollapseAllFolders
+        OpenNextExtension, ClearAllTabs, CollapseAllFolders, CopyPageTitle, ShowPageQRCode, OpenPageInPrivateWindow
     ];
 
     public Kinds Kind { get; }

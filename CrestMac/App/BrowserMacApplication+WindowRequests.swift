@@ -58,8 +58,15 @@ extension BrowserMacApplication {
 
     /// Opens Settings on the Extensions pane for `space`.
     func openExtensionSettings(for space: BrowserSpaceRuntimeAssignment, in window: UUID) {
+        openSettings(.extensions, for: space, in: window)
+    }
+
+    /// Opens Settings at `destination` for `space`, in `window`.
+    func openSettings(
+        _ destination: BrowserSettingsDestination, for space: BrowserSpaceRuntimeAssignment, in window: UUID
+    ) {
         guard let host = hostWindow(window) else { return }
-        host.settings.present(.extensions, assignment: space)
+        host.settings.present(destination, assignment: space)
         host.browser.openSettings()
         host.pages.select()
     }

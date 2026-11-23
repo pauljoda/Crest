@@ -9,30 +9,33 @@ public sealed class SitePermission {
     #region Static Variables
 
     public static readonly SitePermission Camera = new(name: "camera", title: "Camera", symbol: "video",
-        requestTitle: "Wants to use your camera", isMedia: true, isEngineEnforced: true);
+        requestTitle: "Wants to use your camera", question: "Use your camera?", isMedia: true, isEngineEnforced: true);
     public static readonly SitePermission Microphone = new(name: "microphone", title: "Microphone", symbol: "mic",
-        requestTitle: "Wants to use your microphone", isMedia: true, isEngineEnforced: true);
+        requestTitle: "Wants to use your microphone", question: "Use your microphone?", isMedia: true, isEngineEnforced: true);
     public static readonly SitePermission CameraAndMicrophone = new(name: "cameraAndMicrophone", title: "Camera & Microphone",
-        symbol: "video.and.waveform", requestTitle: "Wants to use your camera and microphone", isMedia: true,
+        symbol: "video.and.waveform", requestTitle: "Wants to use your camera and microphone", question: "Use your camera and mic?",
+        isMedia: true,
         components: [Camera, Microphone]);
     public static readonly SitePermission Location = new(name: "location", title: "Location", symbol: "location",
-        requestTitle: "Wants to use your location", isEngineEnforced: true);
+        requestTitle: "Wants to use your location", question: "Use your location?", isEngineEnforced: true);
     public static readonly SitePermission Notifications = new(name: "notifications", title: "Notifications", symbol: "bell",
-        requestTitle: "Wants to send notifications", isEngineEnforced: true);
+        requestTitle: "Wants to send notifications", question: "Send notifications?",
+        isEngineEnforced: true);
     // A site gets no automatic pop-ups until the person allows them.
     public static readonly SitePermission Popups = new(name: "popups", title: "Automatic Pop-ups", symbol: "macwindow.on.rectangle",
-        requestTitle: "Requests permission", askTitle: "Blocked by Default", askChoiceTitle: "Default (Block)");
+        requestTitle: "Requests permission", question: "Open pop-ups?", askTitle: "Blocked by Default",
+        askChoiceTitle: "Default (Block)");
     // A site's first automatic download goes through; the next one asks.
     public static readonly SitePermission AutomaticDownloads = new(name: "automaticDownloads", title: "Automatic Downloads",
-        symbol: "arrow.down.circle", requestTitle: "Wants to download multiple files automatically", askTitle: "Ask after First",
-        askChoiceTitle: "Default (Ask after First)");
+        symbol: "arrow.down.circle", requestTitle: "Wants to download multiple files automatically",
+        question: "Download several files?", askTitle: "Ask after First", askChoiceTitle: "Default (Ask after First)");
     public static readonly SitePermission ExternalApplications = new(name: "externalApplications", title: "External Apps",
-        symbol: "arrow.up.forward.app", requestTitle: "Requests permission");
+        symbol: "arrow.up.forward.app", requestTitle: "Requests permission", question: "Open another app?");
     // The system's sharing picker asks each time; a site can only be blocked.
     // A page on iPhone or iPad cannot share the screen at all.
     public static readonly SitePermission ScreenSharing = new(name: "screenSharing", title: "Screen Sharing",
-        symbol: "rectangle.inset.filled.and.person.filled", requestTitle: "Wants to share your screen", isAskedBySystem: true,
-        platforms: [DevicePlatform.Desktop]);
+        symbol: "rectangle.inset.filled.and.person.filled", requestTitle: "Wants to share your screen",
+        question: "Share your screen?", isAskedBySystem: true, platforms: [DevicePlatform.Desktop]);
 
     public static IReadOnlyList<SitePermission> All { get; } =
         [Camera, Microphone, CameraAndMicrophone, Location, Notifications, Popups, AutomaticDownloads, ExternalApplications,
@@ -54,6 +57,11 @@ public sealed class SitePermission {
     /// What a site's request for the capability says it wants.
     [Localized]
     public string RequestTitle { get; }
+
+    /// What a site's request for the capability asks the person, in a few
+    /// words, where a prompt has little room.
+    [Localized]
+    public string Question { get; }
 
     /// What the settings call the capability's Ask decision, which is what a
     /// site gets before the person answers.
@@ -90,13 +98,14 @@ public sealed class SitePermission {
 
     #region Constructors
 
-    private SitePermission(string name, string title, string symbol, string requestTitle, bool isMedia = false,
+    private SitePermission(string name, string title, string symbol, string requestTitle, string question, bool isMedia = false,
         IReadOnlyList<SitePermission>? components = null, string askTitle = "Ask", string askChoiceTitle = "Ask",
         bool isEngineEnforced = false, bool isAskedBySystem = false, IReadOnlyList<DevicePlatform>? platforms = null) {
         Name = name;
         Title = title;
         Symbol = symbol;
         RequestTitle = requestTitle;
+        Question = question;
         AskTitle = askTitle;
         AskChoiceTitle = askChoiceTitle;
         IsMedia = isMedia;

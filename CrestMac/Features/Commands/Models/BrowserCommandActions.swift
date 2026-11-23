@@ -1,6 +1,21 @@
 import AppKit
 import SwiftUI
 
+// MARK: - Types
+
+/// The commands of the window a view is in, as its menu bar runs them, with
+/// the keys the person set for them.
+struct BrowserWindowCommands {
+    let actions: BrowserCommandActions
+    let shortcuts: BrowserShortcutStore?
+}
+
+extension EnvironmentValues {
+    /// The commands of the window a view is in; nil outside a window that
+    /// runs them.
+    @Entry var browserWindowCommands: BrowserWindowCommands? = nil
+}
+
 /// Every command Crest's Mac shell can run, as ordinary methods on a value.
 ///
 /// The menu bar used to own these bodies privately, which meant the command
@@ -367,6 +382,26 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     func copyPageLinkAsMarkdown() {
         guard commandPage?.copyPageLinkAsMarkdown() == true else { return }
         chrome.showURLCopiedFeedback()
+    }
+
+    /// Copies the title of the page the page commands act on.
+    func copyPageTitle() {
+        guard let title = commandPage?.live.title, !title.isEmpty else { return }
+        chrome.copy(title)
+    }
+
+    /// Opens the Site Controls of the page the page commands act on, on its
+    /// QR code.
+    func showPageQRCode() {
+        guard let page = commandPage else { return }
+        chrome.requestSiteControls(.qrCode, for: page)
+    }
+
+    /// Opens the address of the page the page commands act on in private
+    /// browsing.
+    func openPageInPrivateWindow() {
+        guard let url = commandPage?.live.documentURL else { return }
+        windows?.openInPrivateWindow(url)
     }
 
     /// Turns blocking off, or on again, for the site of the page the window

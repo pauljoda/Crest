@@ -3,8 +3,8 @@ using CrestCore.Application;
 namespace CrestCore.Contracts;
 
 /// A change to how this device shows pages, where its Spaces' downloads go,
-/// or the choices an installed release kept for them. The device store keeps
-/// them and never syncs them.
+/// which actions sit on top of Site Controls, or the choices an installed
+/// release kept for them. The device store keeps them and never syncs them.
 public abstract record DevicePreferenceIntent : Intent {
     #region Abstract Methods
 

@@ -19,6 +19,7 @@ struct BrowserQuickWindowAddressControl: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(BrowserChromeState.self) private var chrome: BrowserChromeState?
+    @Environment(\.browserMacWindows) private var windows
 
     var body: some View {
         HStack(spacing: 7) {
@@ -53,6 +54,7 @@ struct BrowserQuickWindowAddressControl: View {
                 )
                 if let siteControl {
                     BrowserSiteControlButton(configuration: siteControl)
+                        .environment(\.browserWindowCommands, windowCommands)
                 }
             }
         }
@@ -82,12 +84,22 @@ struct BrowserQuickWindowAddressControl: View {
     /// The page's Site Controls, as a browser window's address field offers
     /// them: its site settings, permission requests and extensions.
     private var siteControl: BrowserSiteControlConfiguration? {
-        guard let page = model.page, page.live.displayURL != nil, let space = model.spaceModel,
-            let pages = model.pages
+        guard let page = model.page, page.live.displayURL != nil, let space = model.spaceModel, model.pages != nil
         else { return nil }
         return BrowserSiteControlConfiguration(
-            page: page, space: space, selectedTabID: nil, permissionCenter: pages.permissionCenter,
+            page: page, space: space, selectedTabID: nil,
             presentationChanged: { _ in }, contextMenuPresentationChanged: { _ in })
+    }
+
+    /// The page commands as they run in this Quick Window, on its page, which
+    /// its Site Controls run.
+    private var windowCommands: BrowserWindowCommands? {
+        guard let chrome, let pages = model.pages, let page = model.page else { return nil }
+        return BrowserWindowCommands(
+            actions: BrowserCommandActions(
+                browser: model.browser, pages: pages, chrome: chrome, windows: windows,
+                targetWindowID: model.presentedRequest.targetWindowID, quickWindowPage: page),
+            shortcuts: nil)
     }
 
     /// Whether the palette shows over the field, which needs the Quick

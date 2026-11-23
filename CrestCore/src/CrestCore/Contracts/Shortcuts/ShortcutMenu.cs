@@ -12,7 +12,7 @@ public sealed class ShortcutMenu {
 
     public static readonly ShortcutMenu File = new(name: "file", title: "File", groups: [
         [ShortcutCommand.NewWindow, ShortcutCommand.NewBlankWindow, ShortcutCommand.NewTab, ShortcutCommand.NewQuickWindow,
-            ShortcutCommand.NewPrivateWindow],
+            ShortcutCommand.NewPrivateWindow, ShortcutCommand.OpenPageInPrivateWindow],
         [ShortcutCommand.OpenFile],
         [ShortcutCommand.CloseTabOrWindow, ShortcutCommand.CloseWindow],
         [ShortcutCommand.PrintPage]
@@ -47,8 +47,9 @@ public sealed class ShortcutMenu {
         [ShortcutCommand.OpenNextExtension],
         [ShortcutCommand.FindInPage, ShortcutCommand.FindNext, ShortcutCommand.FindPrevious],
         [ShortcutCommand.ZoomIn, ShortcutCommand.ZoomOut, ShortcutCommand.ActualSize],
-        [ShortcutCommand.CopyPageLink, ShortcutCommand.CopyPageLinkAsMarkdown, ShortcutCommand.SharePage, ShortcutCommand.ExportPDF,
-            ShortcutCommand.SaveWebArchive, ShortcutCommand.CapturePage],
+        [ShortcutCommand.CopyPageLink, ShortcutCommand.CopyPageLinkAsMarkdown, ShortcutCommand.CopyPageTitle,
+            ShortcutCommand.ShowPageQRCode, ShortcutCommand.SharePage, ShortcutCommand.ExportPDF, ShortcutCommand.SaveWebArchive,
+            ShortcutCommand.CapturePage],
         [ShortcutCommand.ClearSiteCookies, ShortcutCommand.ClearSiteCache]
     ]);
     public static readonly ShortcutMenu Develop = new(name: "develop", title: "Develop", groups: [

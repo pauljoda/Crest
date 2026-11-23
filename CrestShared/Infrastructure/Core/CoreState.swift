@@ -81,6 +81,12 @@ final class CoreState {
         set { publish(newValue, into: \.downloadPreferencesStorage, as: \.downloadPreferences) }
     }
     @ObservationIgnored private var downloadPreferencesStorage: [SpaceDownloadPreferences] = []
+    /// The four actions this device keeps on top of Site Controls.
+    var siteControlTopActions: SiteControlTopActions {
+        get { observed(\.siteControlTopActionsStorage, as: \.siteControlTopActions) }
+        set { publish(newValue, into: \.siteControlTopActionsStorage, as: \.siteControlTopActions) }
+    }
+    @ObservationIgnored private var siteControlTopActionsStorage = SiteControlTopActions.default
     /// The newest file revision the core has on disk, counting the stored
     /// session's edits and this device's saved windows; zero before its first
     /// save and for a core that keeps nothing.

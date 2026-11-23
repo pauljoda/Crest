@@ -119,7 +119,6 @@ struct SpaceSidebarAddressBand: View {
             page: page,
             space: space,
             selectedTabID: selectedTabID,
-            permissionCenter: pages.permissionCenter,
             presentationChanged: siteControlPresentationChanged,
             contextMenuPresentationChanged:
                 siteControlContextMenuPresentationChanged

@@ -94,42 +94,46 @@ struct BrowserPinnedExtensionStrip: View {
     }
 }
 
+/// The page's extension tiles in Site Controls, running the page's actions,
+/// pinning them and opening their menus.
 struct ChromiumExtensionControls: View {
     let page: ChromiumNativePage
     /// The page's Space in the read model.
     let space: SpaceModel
     let url: URL?
     let dismiss: () -> Void
+    let openPage: () -> Void
     private var store: ChromiumExtensionStore { ChromiumComposition.extensions }
     @Environment(BrowserExtensionSidePanelHost.self) private var sidePanel: BrowserExtensionSidePanelHost?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: CrestSpacing.medium) {
-            Divider()
-            BrowserSiteExtensionsSection(
-                actions: store.actions(for: page),
-                manageExtensions: { afterDismiss { ChromiumComposition.openExtensionSettings() } },
-                perform: { action, anchor in
-                    let retained = anchor?.replacingSourceWindow(page.surface.window)
-                    afterDismiss { page.runExtension(action.id, anchor: retained) }
-                },
-                togglePinned: { store.togglePin($0, space: space.identity) },
-                // Site Controls stays open under the menu, as it does for the
-                // pin button, and closes only for an item that leads elsewhere.
-                presentMenu: { action, anchor in
-                    store.presentMenu(
-                        action, space: space.identity, anchor: anchor,
-                        openSidePanel: BrowserExtensionSidePanelHost.opener(
-                            action, page: page, host: sidePanel),
-                        closeSource: dismiss)
-                })
-            if store.mayChange(space.identity), let id = ChromiumNativePage.webStoreExtensionID(url) {
-                Button("Install Extension…", systemImage: "plus.app") {
-                    afterDismiss { store.install(id, in: space.identity, anchor: page.surface) }
-                }
-            }
-        }
+        BrowserSiteExtensionsSection(
+            actions: store.actions(for: page),
+            perform: { action, anchor in
+                let retained = anchor?.replacingSourceWindow(page.surface.window)
+                afterDismiss { page.runExtension(action.id, anchor: retained) }
+            },
+            togglePinned: { store.togglePin($0, space: space.identity) },
+            // Site Controls stay open under the menu, as they do for the pin
+            // button, and close only for an item that leads elsewhere.
+            presentMenu: { action, anchor in
+                store.presentMenu(
+                    action, space: space.identity, anchor: anchor,
+                    openSidePanel: BrowserExtensionSidePanelHost.opener(
+                        action, page: page, host: sidePanel),
+                    closeSource: dismiss)
+            },
+            install: installAction,
+            openPage: openPage)
     }
+
+    /// Installs the extension a Chrome Web Store page shows, where the Space
+    /// may change its extensions.
+    private var installAction: (() -> Void)? {
+        guard store.mayChange(space.identity), let id = ChromiumNativePage.webStoreExtensionID(url) else { return nil }
+        return { afterDismiss { store.install(id, in: space.identity, anchor: page.surface) } }
+    }
+
     private func afterDismiss(_ action: @escaping @MainActor () -> Void) {
         dismiss()
         Task { @MainActor in

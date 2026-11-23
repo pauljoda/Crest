@@ -234,6 +234,9 @@
         }
       }
     },
+    "%@ allowed" : {
+
+    },
     "%@ and its data are removed from every Space in this group." : {
 
     },
@@ -254,6 +257,9 @@
       }
     },
     "%@ authentication" : {
+
+    },
+    "%@ blocked" : {
 
     },
     "%@ didn’t respond in time." : {
@@ -374,6 +380,9 @@
         }
       }
     },
+    "%@ Options" : {
+
+    },
     "%@ per second" : {
 
     },
@@ -477,6 +486,9 @@
     "%@, %@, %lld of %lld" : {
 
     },
+    "%@, %@. Blocks %@" : {
+
+    },
     "%@, %lld of %lld" : {
 
     },
@@ -494,6 +506,9 @@
       }
     },
     "%@, customized" : {
+
+    },
+    "%@, inside %@" : {
 
     },
     "%@, Shared" : {
@@ -658,6 +673,9 @@
     "%lld additional rejected rows are included in the final count." : {
 
     },
+    "%lld allowed" : {
+
+    },
     "%lld archived tabs" : {
       "localizations" : {
         "en" : {
@@ -679,6 +697,9 @@
           }
         }
       }
+    },
+    "%lld blocked" : {
+
     },
     "%lld days ago" : {
       "localizations" : {
@@ -839,6 +860,9 @@
           }
         }
       }
+    },
+    "%lld in progress" : {
+
     },
     "%lld items selected" : {
       "localizations" : {
@@ -2088,7 +2112,19 @@
     "AdGuard Turkish" : {
 
     },
+    "Ads" : {
+
+    },
+    "Ads and trackers" : {
+
+    },
     "Ads and Trackers" : {
+
+    },
+    "Ads and trackers are blocked" : {
+
+    },
+    "Ads and Trackers Options" : {
 
     },
     "ads trackers content blocking filter lists subscribe EasyList uBlock AdGuard my filters custom rules block element cookie notices strict balanced" : {
@@ -2194,6 +2230,9 @@
     "All Categories" : {
 
     },
+    "All Extensions" : {
+
+    },
     "All Statuses" : {
 
     },
@@ -2214,6 +2253,9 @@
       }
     },
     "Allow “%@” to use Crest?" : {
+
+    },
+    "Allow %@ %@" : {
 
     },
     "Allow 120 FPS" : {
@@ -2288,6 +2330,9 @@
     "Allowed for Session" : {
 
     },
+    "Allowed on %@" : {
+
+    },
     "Already open" : {
 
     },
@@ -2313,6 +2358,9 @@
 
     },
     "Always show folder highlights" : {
+
+    },
+    "Always Translate" : {
 
     },
     "Always Translate %@" : {
@@ -2534,6 +2582,9 @@
 
     },
     "Ask where to save each download" : {
+
+    },
+    "Asked by this site" : {
 
     },
     "Audio visualizer" : {
@@ -2978,13 +3029,25 @@
     "Block Element" : {
 
     },
+    "Blocked" : {
+
+    },
     "Blocked by Default" : {
 
     },
     "Blocked for Session" : {
 
     },
+    "Blocked on %@" : {
+
+    },
     "Blocking" : {
+
+    },
+    "Blocking Level" : {
+
+    },
+    "Blocking on %@" : {
 
     },
     "Blocks ads and trackers while keeping sites working." : {
@@ -3488,6 +3551,9 @@
     "Choose a shape to color its field" : {
 
     },
+    "Choose an action below to put in this slot" : {
+
+    },
     "Choose an emblem to color it" : {
 
     },
@@ -3558,6 +3624,9 @@
     "Choose which copy to keep" : {
 
     },
+    "Chosen" : {
+
+    },
     "Chosen Space" : {
 
     },
@@ -3597,6 +3666,9 @@
           }
         }
       }
+    },
+    "Clear + Reload" : {
+
     },
     "Clear All" : {
 
@@ -4104,6 +4176,9 @@
     "Connected" : {
 
     },
+    "Connection" : {
+
+    },
     "Connection Details Unavailable" : {
 
     },
@@ -4111,6 +4186,9 @@
 
     },
     "Connection Secure" : {
+
+    },
+    "Console" : {
 
     },
     "Contains" : {
@@ -4153,6 +4231,9 @@
     "Control your browsing data" : {
 
     },
+    "Cookie notices" : {
+
+    },
     "Cookies" : {
 
     },
@@ -4187,6 +4268,9 @@
     "Copy Link" : {
 
     },
+    "Copy Link as Markdown" : {
+
+    },
     "Copy Link URL" : {
       "comment" : "Tab context menu action that copies the address of that tab."
     },
@@ -4213,6 +4297,9 @@
         }
       }
     },
+    "Copy Page Title" : {
+
+    },
     "Copy Password" : {
       "localizations" : {
         "ar" : {
@@ -4224,6 +4311,12 @@
       }
     },
     "Copy Setup" : {
+
+    },
+    "Copy Title" : {
+
+    },
+    "copy title name heading clipboard" : {
 
     },
     "Copy URL" : {
@@ -5260,6 +5353,9 @@
     "Deny" : {
 
     },
+    "Deny %@ %@" : {
+
+    },
     "Depth" : {
 
     },
@@ -5270,6 +5366,9 @@
 
     },
     "Desktop" : {
+
+    },
+    "Desktop Site" : {
 
     },
     "Destination" : {
@@ -5298,6 +5397,9 @@
     "Detect Language" : {
 
     },
+    "Dev Toolbar" : {
+
+    },
     "Develop" : {
       "localizations" : {
         "ar" : {
@@ -5320,6 +5422,9 @@
       }
     },
     "Developer Mode" : {
+
+    },
+    "Developer Mode is on" : {
 
     },
     "Developer Toolbar" : {
@@ -5586,6 +5691,9 @@
     "Download Records" : {
 
     },
+    "Download several files?" : {
+
+    },
     "Download started" : {
 
     },
@@ -5644,6 +5752,9 @@
 
     },
     "Drag a rectangle to copy that part of the page" : {
+
+    },
+    "Drag actions in, out and along the row, or choose a slot and then an action." : {
 
     },
     "Drag another tab here" : {
@@ -5736,6 +5847,9 @@
     "Dune" : {
 
     },
+    "Duplicate" : {
+
+    },
     "Duplicate %lld Tabs" : {
 
     },
@@ -5815,6 +5929,12 @@
     "Edit %@, %@" : {
 
     },
+    "Edit Actions" : {
+
+    },
+    "Edit Actions…" : {
+
+    },
     "Edit Crest…" : {
 
     },
@@ -5842,6 +5962,9 @@
           }
         }
       }
+    },
+    "Edit Top Actions" : {
+
     },
     "Edit Website Rule" : {
 
@@ -5892,6 +6015,9 @@
 
     },
     "Empty Quick Window using %@" : {
+
+    },
+    "Empty slot %lld" : {
 
     },
     "Enable Extension" : {
@@ -6757,6 +6883,9 @@
         }
       }
     },
+    "Hard Reload" : {
+
+    },
     "Hare" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -6802,6 +6931,9 @@
         }
       }
     },
+    "Hidden by you" : {
+
+    },
     "Hide AI Answers" : {
 
     },
@@ -6823,6 +6955,9 @@
           }
         }
       }
+    },
+    "Hide Developer Toolbar" : {
+
     },
     "Hide Now Playing" : {
 
@@ -6875,6 +7010,9 @@
           }
         }
       }
+    },
+    "Hide Translation Controls" : {
+
     },
     "Hide until this tab plays again" : {
 
@@ -7273,6 +7411,9 @@
     "Importing…" : {
 
     },
+    "In %@" : {
+
+    },
     "In Progress" : {
       "localizations" : {
         "ar" : {
@@ -7282,6 +7423,9 @@
           }
         }
       }
+    },
+    "In slot %lld" : {
+
     },
     "Include exactly one %s or {searchTerms} query placeholder." : {
 
@@ -7298,6 +7442,9 @@
           }
         }
       }
+    },
+    "incognito private browsing open again" : {
+
     },
     "Indigo" : {
 
@@ -7324,6 +7471,9 @@
 
     },
     "Install and Relaunch" : {
+
+    },
+    "Install Extension…" : {
 
     },
     "Install In" : {
@@ -7934,6 +8084,9 @@
         }
       }
     },
+    "Markdown" : {
+
+    },
     "Market" : {
 
     },
@@ -8039,6 +8192,9 @@
       }
     },
     "More" : {
+
+    },
+    "More Actions" : {
 
     },
     "More Customization" : {
@@ -8257,6 +8413,9 @@
     "Nest a folder" : {
 
     },
+    "Network" : {
+
+    },
     "Neutral" : {
 
     },
@@ -8298,6 +8457,9 @@
           }
         }
       }
+    },
+    "New Pages of This Site Open in" : {
+
     },
     "New primary" : {
 
@@ -8668,6 +8830,9 @@
     "Normal — Preview Off" : {
 
     },
+    "Not asked yet" : {
+
+    },
     "Not checked" : {
 
     },
@@ -8768,6 +8933,12 @@
         }
       }
     },
+    "Off while Reader is on" : {
+
+    },
+    "Off. The page reloaded." : {
+
+    },
     "Offer a copy to Passwords" : {
       "localizations" : {
         "ar" : {
@@ -8809,6 +8980,12 @@
           }
         }
       }
+    },
+    "On by itself for this address" : {
+
+    },
+    "On this page" : {
+
     },
     "On-device Translation" : {
 
@@ -8875,6 +9052,9 @@
 
     },
     "Open a regular window to do this." : {
+
+    },
+    "Open another app?" : {
 
     },
     "Open Crest" : {
@@ -8993,6 +9173,9 @@
     "Open in Other Space" : {
 
     },
+    "Open in Private Window" : {
+
+    },
     "Open in Quick Window" : {
 
     },
@@ -9065,6 +9248,12 @@
     "Open Page in %@" : {
 
     },
+    "Open Page in Other Engine" : {
+
+    },
+    "Open Page in Private Window" : {
+
+    },
     "Open pages keep their engine." : {
 
     },
@@ -9077,6 +9266,9 @@
           }
         }
       }
+    },
+    "Open pop-ups?" : {
+
     },
     "Open Settings" : {
 
@@ -9131,6 +9323,12 @@
           }
         }
       }
+    },
+    "Open This Page in %@" : {
+
+    },
+    "Open This Page in Another Space" : {
+
     },
     "Open Translate…" : {
 
@@ -9210,6 +9408,9 @@
     "Opens in" : {
 
     },
+    "Opens in %@" : {
+
+    },
     "Opens the address field for editing" : {
       "localizations" : {
         "ar" : {
@@ -9229,6 +9430,9 @@
           }
         }
       }
+    },
+    "Opens this page in another Space" : {
+
     },
     "option" : {
       "localizations" : {
@@ -9279,6 +9483,9 @@
 
     },
     "Other agents" : {
+
+    },
+    "Other Engine" : {
 
     },
     "Outline" : {
@@ -9571,6 +9778,9 @@
         }
       }
     },
+    "PDF" : {
+
+    },
     "Peek" : {
       "localizations" : {
         "ar" : {
@@ -9698,6 +9908,9 @@
     },
     "Pile" : {
       "extractionState" : "manual"
+    },
+    "Pin" : {
+
     },
     "Pin %lld Tabs" : {
       "localizations" : {
@@ -9869,6 +10082,9 @@
     "Pinned tabs live at the top and are for your everyday apps. Right-click Gmail and choose Pin Tab, or use the button below." : {
 
     },
+    "Pinned to the toolbar" : {
+
+    },
     "Pins" : {
 
     },
@@ -9901,7 +10117,13 @@
     "Podcasts & Shows" : {
 
     },
+    "Pop-up blocked" : {
+
+    },
     "Pop-up blocked for %@" : {
+
+    },
+    "Pop-ups allowed" : {
 
     },
     "Pop-ups allowed for %@" : {
@@ -10078,6 +10300,9 @@
     "Previous Widget" : {
 
     },
+    "Print" : {
+
+    },
     "Print Page" : {
       "localizations" : {
         "ar" : {
@@ -10234,6 +10459,18 @@
     "Put the suggestions URL’s placeholder in the path or query, not the fragment." : {
 
     },
+    "Puts it in slot %lld" : {
+
+    },
+    "QR Code" : {
+
+    },
+    "QR code for %@" : {
+
+    },
+    "qr code scan camera phone send link address" : {
+
+    },
     "Quartered" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10363,6 +10600,9 @@
           }
         }
       }
+    },
+    "Reader" : {
+
     },
     "Reader Mode" : {
       "localizations" : {
@@ -10716,6 +10956,9 @@
         }
       }
     },
+    "Remove from Actions" : {
+
+    },
     "Remove from Folder" : {
 
     },
@@ -10894,6 +11137,9 @@
           }
         }
       }
+    },
+    "Replace With" : {
+
     },
     "Replace with Current URL" : {
       "localizations" : {
@@ -11155,6 +11401,9 @@
     "Retry" : {
 
     },
+    "Retry the action on the page." : {
+
+    },
     "Retry the action on the page. Crest did not reopen the blocked pop-up." : {
 
     },
@@ -11185,6 +11434,9 @@
       }
     },
     "Return to your tabs" : {
+
+    },
+    "Returns the page to its actual size" : {
 
     },
     "Returns to the last page" : {
@@ -11573,6 +11825,9 @@
         }
       }
     },
+    "Saved in %@. Other Spaces decide for themselves." : {
+
+    },
     "Saved in %@. The Passwords offer wasn’t completed." : {
       "localizations" : {
         "ar" : {
@@ -11602,6 +11857,9 @@
           }
         }
       }
+    },
+    "Saved on this device." : {
+
     },
     "Saved passwords" : {
       "localizations" : {
@@ -11658,6 +11916,9 @@
           }
         }
       }
+    },
+    "Scams" : {
+
     },
     "Scarlet" : {
 
@@ -12042,6 +12303,9 @@
         }
       }
     },
+    "Send notifications?" : {
+
+    },
     "Separate" : {
 
     },
@@ -12162,6 +12426,9 @@
         }
       }
     },
+    "Share" : {
+
+    },
     "Share & Export…" : {
       "localizations" : {
         "ar" : {
@@ -12171,6 +12438,9 @@
           }
         }
       }
+    },
+    "Share and Export" : {
+
     },
     "Share Feedback on r/CrestBrowser" : {
 
@@ -12190,6 +12460,9 @@
     },
     "Share Tab" : {
       "comment" : "Screen sharing picker button that shares the selected tab."
+    },
+    "Share your screen?" : {
+
     },
     "Share…" : {
       "localizations" : {
@@ -12283,6 +12556,9 @@
 
     },
     "Show All" : {
+
+    },
+    "Show All Downloads" : {
 
     },
     "Show all results" : {
@@ -12390,6 +12666,9 @@
     "Show Previous Spaces" : {
 
     },
+    "Show QR Code" : {
+
+    },
     "Show Reader" : {
       "localizations" : {
         "ar" : {
@@ -12462,7 +12741,13 @@
     "Show…" : {
 
     },
+    "Shows ads and trackers on this site" : {
+
+    },
     "Shows its options" : {
+
+    },
+    "Shows the connection" : {
 
     },
     "Shuffle" : {
@@ -12516,6 +12801,9 @@
     "Signs you out of most sites." : {
 
     },
+    "Signs you out of this site" : {
+
+    },
     "Silver" : {
 
     },
@@ -12536,6 +12824,12 @@
       }
     },
     "Site Controls" : {
+
+    },
+    "Site Controls, permission request waiting" : {
+
+    },
+    "Site Data" : {
 
     },
     "site data storage local session indexeddb service workers sign out delete remove" : {
@@ -12578,6 +12872,9 @@
 
     },
     "Slate Blue" : {
+
+    },
+    "Slot %lld, %@" : {
 
     },
     "Smart Copy/Paste" : {
@@ -13793,6 +14090,9 @@
     "The destination Space changed. Choose the file again." : {
 
     },
+    "The developer toolbar shows" : {
+
+    },
     "The download folder is unavailable. Choose another folder in Space settings." : {
 
     },
@@ -14202,6 +14502,9 @@
         }
       }
     },
+    "This page has no address to share." : {
+
+    },
     "This page is redirecting incorrectly" : {
       "localizations" : {
         "ar" : {
@@ -14363,6 +14666,9 @@
     "this Space" : {
 
     },
+    "This Space blocks nothing" : {
+
+    },
     "This Space’s saved passwords changed during review. No passwords were imported; choose the file again to refresh conflicts." : {
 
     },
@@ -14507,6 +14813,9 @@
         }
       }
     },
+    "Trackers" : {
+
+    },
     "Transformations" : {
 
     },
@@ -14523,6 +14832,9 @@
 
     },
     "Translate automatically from" : {
+
+    },
+    "Translate Bar" : {
 
     },
     "Translate From" : {
@@ -14712,10 +15024,16 @@
     "Turn blocking off for a site from its page menu. Ad blocking settings stay on this device." : {
 
     },
+    "Turn Off" : {
+
+    },
     "Turn Off Blocking on %@" : {
 
     },
     "Turn Off Blocking on This Site" : {
+
+    },
+    "Turn Off Developer Mode" : {
 
     },
     "Turn On Blocking" : {
@@ -15255,6 +15573,18 @@
     "Use Website Icon" : {
 
     },
+    "Use your camera and mic?" : {
+
+    },
+    "Use your camera?" : {
+
+    },
+    "Use your location?" : {
+
+    },
+    "Use your microphone?" : {
+
+    },
     "Used by %@" : {
       "comment" : "A tab's mark while an agent uses it."
     },
@@ -15441,6 +15771,9 @@
       }
     },
     "Web Access" : {
+
+    },
+    "Web Archive" : {
 
     },
     "WebKit" : {

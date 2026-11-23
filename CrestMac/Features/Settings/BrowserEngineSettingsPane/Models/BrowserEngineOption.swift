@@ -37,4 +37,12 @@ struct BrowserEngineOption: Identifiable {
     let summary: LocalizedStringResource
     let benefits: [BrowserEngineBenefit]
     var id: EngineKind { engine }
+
+    // MARK: - Actions - Lookup
+
+    /// The name of `engine`'s logo in the app's assets, or nil for an engine
+    /// this list does not show.
+    static func logo(of engine: EngineKind) -> String? {
+        all.first { $0.engine == engine }?.logo
+    }
 }

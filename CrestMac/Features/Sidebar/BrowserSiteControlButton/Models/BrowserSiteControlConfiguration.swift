@@ -6,7 +6,6 @@ struct BrowserSiteControlConfiguration {
     /// controls act for.
     let space: SpaceModel
     let selectedTabID: UUID?
-    let permissionCenter: BrowserSitePermissionCenter
     let presentationChanged: (Bool) -> Void
     let contextMenuPresentationChanged: (Bool) -> Void
 }

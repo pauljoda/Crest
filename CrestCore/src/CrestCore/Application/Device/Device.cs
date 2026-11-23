@@ -123,6 +123,7 @@ internal sealed partial class Device {
         pages = records.Pages;
         downloads.AddRange(records.Downloads);
         syncsWithICloud = records.SyncsWithICloud;
+        chosenSiteControlTopActions = RestoredSiteControlTopActions(records.SiteControlTopActions, platform);
     }
 
     #endregion
@@ -359,7 +360,8 @@ internal sealed partial class Device {
         CustomFilters = customFilters,
         Pages = pages,
         Downloads = [.. downloads],
-        SyncsWithICloud = syncsWithICloud
+        SyncsWithICloud = syncsWithICloud,
+        SiteControlTopActions = chosenSiteControlTopActions?.Actions ?? []
     };
 
     #endregion
