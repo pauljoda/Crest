@@ -207,9 +207,38 @@ directories the previous default directory still holds, and only those:
 directory and is left alone. Each adopted directory is named on standard error.
 A durable adoption record lists every profile before any directory moves. The
 next launch resumes an interrupted move, including a destination created by an
-earlier build that did not yet write its record. Conflicting copies and I/O
-failures stop startup without opening a partial profile set. The record remains
-for a retry after the filesystem problem is resolved.
+earlier build that did not yet write its record. A profile Crest's folder
+already holds is always the one it opens: a namesake still in the previous
+folder, made by a build that opened Chromium's default folder, stays there
+untouched and is named on standard error. I/O failures stop startup without
+opening a partial profile set. The record remains for a retry after the
+filesystem problem is resolved.
+
+Chromium encrypts cookies and the validators that keep extensions installed
+with a key from the keychain, and gives a folder other than its default one a
+separate key. The browser treats the folder Crest's launch names as its default,
+so profiles there keep the key they were written with.
+
+That `main` is Crest's own, `Overlay/chrome/app/crest_exe_main_mac.cc`, which
+`chrome_app` builds from in place of upstream's entry point. It also refuses a
+packaged experiment without an explicit `--user-data-dir`, and runs Crest's
+native host before it opens the framework with `dlopen`, so WebKit-only browsing
+never loads Chromium. Upstream's entry point links the framework and calls
+`ChromeMain` at once, so none of this can run there. Three checks keep an
+upstream build change from dropping it silently:
+
+- The build's library check for `chrome_app` allows only `libSystem`, so an
+  executable that links the framework fails to build.
+- The engine build, after merging the architectures, and the packager refuse a
+  browser executable that lacks the `crest-browser-launch` marker string in any
+  architecture or links the framework.
+- A `--distribution` package launches a copy of itself as a product bundle with
+  no `--user-data-dir` and a temporary `HOME`, and requires the browser to print
+  `$HOME/Library/Application Support/Crest/Chromium` for
+  `--crest-print-user-data-dir`, and Chromium's default folder to hold no
+  `Crest-*` profile. It launches a review copy without `--user-data-dir` and
+  requires it to refuse. In the framework, a Crest browser started without a
+  usable `--user-data-dir` stops before any profile is read.
 
 Moving directories runs before the framework is loaded and has no JSON reader.
 The browser process finishes the recorded metadata edits in

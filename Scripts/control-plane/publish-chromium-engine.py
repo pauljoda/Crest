@@ -23,8 +23,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import chromium_engine  # noqa: E402
-from chromium_fork import (exclusive_workspace, performance_configuration_matches, read_json, sha256,  # noqa: E402
-                           universal_engine)
+from chromium_fork import (exclusive_workspace, performance_configuration_matches, read_json,  # noqa: E402
+                           require_crest_launch, sha256, universal_engine)
 from repository import REPOSITORY  # noqa: E402
 
 
@@ -87,9 +87,11 @@ def publish(args):
             raise SystemExit(f"The {architecture['output']} build is not current; run build-chromium-baseline.py first")
 
     # The universal engine merges them again here, so it holds exactly what
-    # they built, and every executable must hold every architecture.
+    # they built, every executable must hold every architecture, and the
+    # browser executable must be Crest's own entry point.
     try:
         browser = universal_engine(source, lock)
+        require_crest_launch(browser)
     except ValueError as error:
         raise SystemExit(str(error)) from None
     helpers = browser.glob("Contents/Frameworks/*.framework/Versions/*/Helpers/*.app")

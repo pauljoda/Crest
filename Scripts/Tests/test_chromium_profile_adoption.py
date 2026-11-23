@@ -70,14 +70,29 @@ int main(int argc, char** argv) {
         self.assertEqual((self.preferred / "Crest-A/Cookies").read_text(), "already moved")
         self.assertEqual((self.preferred / "Crest-B/Cookies").read_text(), "waiting")
 
-    def test_conflicting_profiles_stop_without_overwriting_either_copy(self):
+    def test_profile_in_crests_folder_is_kept_and_its_namesake_left_in_place(self):
         self.profile(self.previous, "Crest-A", "old")
         self.profile(self.preferred, "Crest-A", "new")
-        self.adopt(succeeds=False)
+        result = self.adopt()
+        self.assertIn("kept engine profile Crest-A", result.stderr)
         self.assertEqual((self.previous / "Crest-A/Cookies").read_text(), "old")
         self.assertEqual((self.preferred / "Crest-A/Cookies").read_text(), "new")
         self.assertTrue((self.preferred / "Crest Adoption").exists())
 
+    def test_profiles_made_in_the_default_folder_after_adoption_are_never_adopted(self):
+        # An adoption the browser never finished, then a build that opened
+        # Chromium's default folder and made profiles there with the same names.
+        self.profile(self.preferred, "Crest-A", "moved")
+        (self.preferred / "Crest Adoption").write_text(f"{self.previous}\nCrest-A\n")
+        self.profile(self.previous, "Crest-A", "stray")
+        self.adopt()
+        (self.preferred / "Crest Adoption").rename(self.preferred / "Crest Adoption Complete")
+        self.profile(self.previous, "Crest-C", "stray only")
+        self.adopt()
+        self.assertEqual((self.preferred / "Crest-A/Cookies").read_text(), "moved")
+        self.assertEqual((self.previous / "Crest-A/Cookies").read_text(), "stray")
+        self.assertEqual((self.previous / "Crest-C/Cookies").read_text(), "stray only")
+        self.assertFalse((self.preferred / "Crest-C").exists())
 
 if __name__ == "__main__":
     unittest.main()

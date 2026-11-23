@@ -172,6 +172,37 @@ engine without Crest's interface, so before publishing an engine, also load real
 pages, an extension and a sign-in in Crest packaged with `--distribution`, in an
 isolated copy (`CREST_ISOLATED_SESSION=1`).
 
+### Profile upgrade check
+
+Every milestone update must also open, unchanged, the profiles the previous
+engine made. Harnesses and review launches name a `--user-data-dir`, but people
+start Crest with none, and a milestone can change the browser's entry point or
+what Chromium does with a folder it didn't choose, such as which keychain key it
+reads. Before publishing the engine:
+
+1. Package the previous published engine and the new one with `--distribution`.
+   Make each a product-mode copy: replace its `Crest-Isolated-Experiment`
+   resource with `Crest-Native-Host`, give both the same bundle identifier of
+   their own, and sign them again.
+2. Open the previous engine's copy through Launch Services (`open -n -g`) with
+   no `--user-data-dir`, a temporary `HOME` and `CFFIXED_USER_HOME`,
+   `CREST_ISOLATED_SESSION=1` with a persistence ID, and `--use-mock-keychain`.
+   Finish Setup, sign in to a local fixture site in two Spaces, and install an
+   extension from the Chrome Web Store in one. Quit Crest.
+3. Open the new engine's copy the same way on that `HOME`, then quit and open
+   it again. Each time, require:
+   - the browser's helpers carry
+     `--user-data-dir=$HOME/Library/Application Support/Crest/Chromium`, its
+     `Last Version` names the new release, and no `Crest-*` profile appears in
+     `$HOME/Library/Application Support/Chromium`;
+   - each Space still sends its own fixture cookie, and the extension is still
+     installed and running;
+   - no profile's `Secure Preferences` gained a `prefs.preference_reset_time`,
+     which Chromium writes when it resets tracked settings, extensions among
+     them.
+4. Repeat step 3 from a fresh copy of the step 2 `HOME` with
+   `open --arch x86_64`, which runs both builds under Rosetta.
+
 ### Deciding what ships
 
 | Release | Steps | Ships |

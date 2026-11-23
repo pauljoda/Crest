@@ -44,6 +44,9 @@ UNIVERSAL_OUTPUT = "out/CrestUniversal"
 MACHINES = {"arm64": "arm64", "x64": "x86_64"}
 # The first bytes of a universal, 64-bit or 32-bit Mach-O file.
 MACH_O_MAGIC = (bytes.fromhex("cafebabe"), bytes.fromhex("cffaedfe"), bytes.fromhex("cefaedfe"))
+# The marker Crest's entry point, Overlay/chrome/app/crest_exe_main_mac.cc,
+# leaves in the browser executable. Keep the two spellings identical.
+LAUNCH_SENTINEL = b"crest-browser-launch"
 # Present while a tree is being moved to a new release in place.
 ADVANCING = "advancing.json"
 # The free space a fresh source preparation requires.
@@ -375,6 +378,7 @@ class Workspace:
                             "--jobs", jobs, "--min-free-gib", reserve, "--output", architecture["output"])
         with timed(timings, "universal"):
             browser = universal_engine(self.source, self.lock)
+            require_crest_launch(browser)
         with timed(timings, "smoke"):
             smoke_engine(browser, self.root, self.lock)
         return timings
@@ -516,6 +520,35 @@ def require_universal(browser, lock):
             held = set(subprocess.run(["lipo", "-archs", str(path)], capture_output=True, text=True).stdout.split())
             if missing := machines - held:
                 raise ValueError(f"{path.relative_to(browser)} lacks {', '.join(sorted(missing))}")
+
+
+def require_crest_launch(browser):
+    """Refuse a browser whose own executable lacks Crest's entry point.
+
+    That entry point names the product's engine profile folder, refuses an
+    experiment without one and runs Crest's native host before it opens the
+    framework. Upstream's links the framework and calls `ChromeMain` at once;
+    a host patch can still apply cleanly to a file the browser target no
+    longer builds, so check the executable itself, in every architecture."""
+    executable = browser / "Contents/MacOS/Chromium"
+    machines = subprocess.run(["lipo", "-archs", str(executable)], capture_output=True, text=True,
+                              check=True).stdout.split()
+    universal = "Non-fat" not in subprocess.run(["lipo", "-info", str(executable)], capture_output=True,
+                                                 text=True, check=True).stdout
+    for machine in machines:
+        linked = subprocess.run(["otool", "-arch", machine, "-L", str(executable)], capture_output=True,
+                                text=True, check=True).stdout
+        if " Framework.framework/" in linked:
+            raise ValueError(f"The browser executable links the Chromium framework ({machine}); Crest's entry "
+                             "point must open it only when Chromium is needed")
+        with tempfile.TemporaryDirectory(prefix="crest-launch-") as temporary:
+            image = executable
+            if universal:
+                image = Path(temporary) / executable.name
+                subprocess.run(["lipo", "-thin", machine, "-output", str(image), str(executable)], check=True)
+            if LAUNCH_SENTINEL not in image.read_bytes():
+                raise ValueError(f"The browser executable lacks Crest's entry point ({machine}); check the "
+                                 "source the chrome_app target builds")
 
 
 def is_mach_o(path):
