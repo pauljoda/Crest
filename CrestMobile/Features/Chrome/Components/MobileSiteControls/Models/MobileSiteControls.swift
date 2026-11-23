@@ -5,7 +5,9 @@ import SwiftUI
 /// them, and what only a phone or tablet offers, such as the site's desktop
 /// version, Add to Home Screen and Hide Toolbar, is data. A command that runs
 /// as Site Controls close, such as the share sheet, which UIKit presents only
-/// once nothing else is going away, waits until they are gone.
+/// once nothing else is going away, waits until they are gone. The window's
+/// commands and downloads follow the window while Site Controls stay open.
+@Observable
 @MainActor
 final class MobileSiteControls: SiteControlsPlatform {
     // MARK: - Variables
@@ -13,24 +15,25 @@ final class MobileSiteControls: SiteControlsPlatform {
     let browser: BrowserStore
     let pages: MobileSelectedPageActionPort
     let mobilePage: MobileBrowserPage
-    /// The window's commands, as its palette runs them.
-    private let commands: MobileBrowserCommandContext?
+    /// The window's commands, as its palette runs them, as the window last
+    /// gave them.
+    private(set) var commands: MobileBrowserCommandContext?
+    /// The window's downloads list and how many downloads wait unseen, where
+    /// the window shows a downloads badge, as the window last gave them.
+    private(set) var downloadsAccess: MobileDownloadsMenuAccess?
     /// Where the control that opened Site Controls sits in the window, which
     /// a share sheet points at on iPad.
     private let source: CGRect?
     /// Hides the toolbar, where the window has one to hide.
     private let hideToolbar: (() -> Void)?
-    /// The window's downloads list and how many downloads wait unseen, where
-    /// the window shows a downloads badge.
-    private let downloadsAccess: MobileDownloadsMenuAccess?
     private let close: @MainActor () -> Void
     /// Opens one of Site Controls' pages, for an action that shows its result
     /// there, such as the page's QR code.
-    var openSiteControlsPage: (@MainActor (SiteControlsPage) -> Void)?
+    @ObservationIgnored var openSiteControlsPage: (@MainActor (SiteControlsPage) -> Void)?
     /// Whether Site Controls are going away, so a command waits for them.
-    private var isDismissing = false
+    @ObservationIgnored private var isDismissing = false
     /// What runs once Site Controls are gone.
-    private var afterDismissalWork: [@MainActor () -> Void] = []
+    @ObservationIgnored private var afterDismissalWork: [@MainActor () -> Void] = []
 
     var page: BrowserPlatformPage { mobilePage }
     var core: CrestCore { browser.core }
@@ -128,7 +131,20 @@ final class MobileSiteControls: SiteControlsPlatform {
     }
 
     func openSettings(_ destination: BrowserSettingsDestination) {
-        afterDismissal { [browser] in _ = browser.openSettings() }
+        let commands = commands
+        afterDismissal { [browser] in
+            guard let commands else {
+                _ = browser.openSettings()
+                return
+            }
+            commands.openSettings(destination)
+        }
+    }
+
+    /// Follows the window's commands and downloads as it gives them anew.
+    func follow(commands: MobileBrowserCommandContext?, downloadsAccess: MobileDownloadsMenuAccess?) {
+        self.commands = commands
+        self.downloadsAccess = downloadsAccess
     }
 
     func dismiss() {

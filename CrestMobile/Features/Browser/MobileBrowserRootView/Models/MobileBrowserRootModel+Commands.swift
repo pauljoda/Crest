@@ -228,7 +228,8 @@ extension MobileBrowserRootModel {
             },
             openPageInSpace: { spaceID in
                 self.openPage(pageActions?.activePage?.live.documentURL, inSpace: spaceID)
-            }
+            },
+            openSettings: { destination in self.settings.open(at: destination) }
         )
     }
 

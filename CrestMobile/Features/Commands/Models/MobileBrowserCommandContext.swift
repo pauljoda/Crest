@@ -96,4 +96,6 @@ struct MobileBrowserCommandContext {
     /// Opens the active page's address as a new tab in another Space of the
     /// window, unlocking it first.
     let openPageInSpace: (UUID) -> Void
+    /// Opens Settings at a destination.
+    let openSettings: (BrowserSettingsDestination) -> Void
 }
