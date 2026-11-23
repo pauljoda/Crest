@@ -19,6 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session } from "../boot";
 import { failureNotice, notices } from "../notices";
 import { holdPointer } from "./pointer-hold";
+import { inOtherSpace } from "./sidebar-selection";
 import { splitDrop, splitInsertionIndex } from "./split-drop";
 
 /**
@@ -223,7 +224,7 @@ export function useSidebarLift(session: Session, spaceId: string, selectionFollo
 
     const scroll = () => {
       const now = current.current;
-      const list = (scope.current.sidebar ?? document).querySelector<HTMLElement>(".tab-list");
+      const list = [...(scope.current.sidebar ?? document).querySelectorAll<HTMLElement>(".tab-list")].find((element) => !inOtherSpace(element));
       if (!now || !list) return;
       const bounds = list.getBoundingClientRect();
       const top = scrollBand - (now.pointer.y - bounds.top);
@@ -358,7 +359,7 @@ function aimUnder(x: number, y: number, item: LiftItem, targets: DropTargetList,
   let list = find("[data-list-section]");
   if (!list) {
     // A pointer that strays past a list's top or bottom still reaches it.
-    const lists = [...(scope.sidebar ?? document).querySelectorAll<HTMLElement>("[data-list-section]")];
+    const lists = [...(scope.sidebar ?? document).querySelectorAll<HTMLElement>("[data-list-section]")].filter((element) => !inOtherSpace(element));
     let nearest: { element: HTMLElement; distance: number } | null = null;
     for (const candidate of lists) {
       const bounds = candidate.getBoundingClientRect();

@@ -49,8 +49,17 @@ export function holds(selection: SidebarSelection, item: SelectionItem): boolean
  */
 export function unitsShown(sidebar: HTMLElement | null): SelectionUnit[] {
   return [...(sidebar ?? document).querySelectorAll<HTMLElement>(sidebar ? "[data-unit]" : ".sidebar [data-unit]")]
-    .filter((element) => element.offsetParent !== null)
+    .filter((element) => element.offsetParent !== null && !inOtherSpace(element))
     .map((element) => element.dataset.unit!.split(",") as SelectionItem[]);
+}
+
+/**
+ * Whether `element` stands in another Space's sidebar page: the Space pager
+ * keeps the shown Space's neighbours drawn, unseen, beside it, so a lookup
+ * across the sidebar meets their rows too.
+ */
+export function inOtherSpace(element: Element): boolean {
+  return element.closest(".space-page[aria-hidden]") !== null;
 }
 
 /**

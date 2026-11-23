@@ -12,14 +12,16 @@ import {
  * pattern or gradient at the look's strength, a fade that keeps the chrome
  * readable, and the look's grain. As the Space pager moves, they blend as the
  * Mac's SpaceBackdropBlend does: stacked in the strip's order, each fading in
- * over the one before it as the strip reaches it.
+ * over the one before it as the strip reaches it. The shown Space's
+ * neighbours wait drawn beneath it, unseen, each on its layer, so a slide
+ * fades in banners the compositor already holds.
  */
 export function SpaceBanner({ spaces, spaceId }: { spaces: readonly SpaceState[]; spaceId: string }) {
   const frame = useRef<HTMLDivElement>(null);
   const size = useElementSize(frame);
   const pager = useSpacePager();
   const layers = useRef(new Map<string, HTMLDivElement>());
-  const shown = [...new Set([...pager.pages, spaceId])]
+  const shown = [...new Set([...pager.pages, spaceId, ...pager.prepared])]
     .map((id) => spaces.find((space) => space.id === id))
     .filter((space): space is SpaceState => !!space);
   const shownIds = shown.map((space) => space.id).join();
@@ -48,6 +50,8 @@ function bannerStyle(id: string, frame: PagerFrame, spaceId: string): LeafStyle 
     const resting = frame.phase === "idle" && frame.originId ? frame.originId : spaceId;
     return { opacity: id === resting ? "1" : "0", zIndex: id === resting ? "1" : "0" };
   }
+  // A neighbour the slide doesn't take up stays unseen beneath it.
+  if (!frame.pages.includes(id)) return { opacity: "0", zIndex: "0" };
   const placed = placedIndex(index, frame.position, count);
   return { zIndex: `${placed + count + 1}`, opacity: `${Math.min(1, Math.max(0, frame.position - placed + 1))}` };
 }

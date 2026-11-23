@@ -29,6 +29,13 @@ export interface PagerFrame {
   readonly destinationId: string | null;
   /** The Spaces whose pages are on screen: the one at rest, or both a slide moves between. */
   readonly pages: readonly string[];
+  /**
+   * The Spaces beside the one shown, which the leaves keep drawn, unseen, on
+   * layers of their own: a swipe or a slide then moves what the compositor
+   * already holds. Drawn as the slide began, a Space's banner, page and card
+   * cost an integrated GPU several frames, which held the slide's start.
+   */
+  readonly prepared: readonly string[];
   /** The last change of Space the pager showed at once, without a slide, as under Reduce Motion. */
   readonly dissolve: { readonly from: string; readonly generation: number } | null;
 }
@@ -318,7 +325,12 @@ class SpacePager {
   /** Pages drawing in place before a slide moves them, which hold its start. */
   #holds = new Set<symbol>();
   #width = 0;
-  #frame: PagerFrame = { order: [], position: 0, phase: "idle", originId: null, destinationId: null, pages: [], dissolve: null };
+  #frame: PagerFrame = {
+    order: [], position: 0, phase: "idle", originId: null, destinationId: null, pages: [], prepared: [], dissolve: null,
+  };
+  /** The shown Space's neighbours, named once the strip has rested a moment; a slide keeps them. */
+  #prepared: readonly string[] = [];
+  #prepareTimer: ReturnType<typeof setTimeout> | undefined;
   #dissolve: PagerFrame["dissolve"] = null;
   #listeners = new Set<() => void>();
   #frameListeners = new Set<(frame: PagerFrame) => void>();
@@ -408,6 +420,12 @@ class SpacePager {
 
   /** How long a page can hold a settle at its start, in milliseconds. */
   static readonly longestHold = 300;
+
+  /**
+   * How long the strip rests before its neighbours are drawn: past the end
+   * of a slide, and past the frames the Space it landed on takes to draw.
+   */
+  static readonly prepareDelay = 250;
 
   /** Measures the page the strip moves, before a slide reads it. */
   setWidth(width: number) {
@@ -672,9 +690,25 @@ class SpacePager {
     this.#publishFrame();
     const after = this.#frame;
     if (before.phase !== after.phase || before.pages.join() !== after.pages.join() || before.order.join() !== after.order.join()
-      || before.originId !== after.originId || before.destinationId !== after.destinationId || before.dissolve !== after.dissolve) {
+      || before.originId !== after.originId || before.destinationId !== after.destinationId || before.dissolve !== after.dissolve
+      || before.prepared !== after.prepared) {
       for (const listener of this.#listeners) listener();
     }
+    if (after.phase === "idle") this.#schedulePrepare();
+  }
+
+  /** Once the strip has rested a moment, names the shown Space's neighbours for the leaves to draw ahead of a slide. */
+  #schedulePrepare() {
+    clearTimeout(this.#prepareTimer);
+    this.#prepareTimer = setTimeout(() => {
+      const origin = this.#presentedId;
+      if (this.#motion || !origin) return;
+      const prepared = [...new Set([this.#neighbor(origin, -1), this.#neighbor(origin, 1)])]
+        .filter((id): id is string => !!id && id !== origin);
+      if (prepared.join() === this.#prepared.join()) return;
+      this.#prepared = prepared;
+      this.#publish();
+    }, SpacePager.prepareDelay);
   }
 
   /** Tells the frame listeners where the strip stands at `time`, on the document's timeline. */
@@ -695,7 +729,9 @@ class SpacePager {
     const phase: PagerPhase = !motion ? "idle" : motion.settling ? "settling" : "tracking";
     const sameOrder = previous.order.join() === this.#order.join();
     const samePages = previous.pages.join() === pages.join();
-    if (sameOrder && samePages && previous.position === position && previous.phase === phase
+    const prepared = this.#prepared.filter((id) => this.#ids.includes(id));
+    const samePrepared = previous.prepared.join() === prepared.join();
+    if (sameOrder && samePages && samePrepared && previous.position === position && previous.phase === phase
       && previous.originId === origin && previous.destinationId === destination && previous.dissolve === this.#dissolve) return;
     this.#frame = {
       order: sameOrder ? previous.order : this.#order,
@@ -704,6 +740,7 @@ class SpacePager {
       originId: origin,
       destinationId: destination,
       pages: samePages ? previous.pages : pages,
+      prepared: samePrepared ? previous.prepared : prepared,
       dissolve: this.#dissolve,
     };
     for (const listener of this.#frameListeners) listener(this.#frame);

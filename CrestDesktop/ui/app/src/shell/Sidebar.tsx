@@ -75,6 +75,7 @@ import {
   clicked,
   folderItem,
   holds,
+  inOtherSpace,
   itemParts,
   noSelection,
   pickedWith,
@@ -264,7 +265,7 @@ export function Sidebar({
     },
     confirmDeleteFolder: (folder) => onDialog({ kind: "deleteFolder", spaceId: space.id, folder }),
     chooseLook: (folder, kind) => {
-      const row = document.querySelector<HTMLElement>(`[data-folder="${folder.id}"]`);
+      const row = [...document.querySelectorAll<HTMLElement>(`[data-folder="${folder.id}"]`)].find((element) => !inOtherSpace(element));
       if (row) setFolderLook({ folderId: folder.id, kind, anchor: row.getBoundingClientRect() });
     },
     chooseTabIcon: (tab) => {
@@ -420,7 +421,8 @@ export function Sidebar({
       let next = clicked(current, target, units, { command: key.control && !edge, shift: key.shift }, activeItem);
       if (!key.shift) next = { ...clicked(next, target, units, { command: false, shift: false }, activeItem), engaged: true };
       select(next);
-      [...(aside.current?.querySelectorAll<HTMLElement>("[data-unit]") ?? [])].filter((element) => element.offsetParent !== null)[index]
+      [...(aside.current?.querySelectorAll<HTMLElement>("[data-unit]") ?? [])]
+        .filter((element) => element.offsetParent !== null && !inOtherSpace(element))[index]
         ?.scrollIntoView({ block: "nearest" });
       return true;
     }

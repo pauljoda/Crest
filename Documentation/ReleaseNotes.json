@@ -5949,6 +5949,10 @@
     "windows-unchecked-shots-fixes": {
       "category": "internal",
       "message": "Windows notices, questions, permission requests and Site Controls' pop-up card now look as the Mac's do, with red buttons for questions that delete"
+    },
+    "windows-space-swipe-smoothness": {
+      "category": "internal",
+      "message": "Swiping between Spaces on Windows starts without a stall, and a page a paused swipe carried partly off screen comes back whole instead of white"
     }
   }
 }

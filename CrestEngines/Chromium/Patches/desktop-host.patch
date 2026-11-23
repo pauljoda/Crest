@@ -841,24 +841,24 @@
 +  // Crest: an embed that moves, as the Space pager slides a page, tells the
 +  // child where it stands and nothing more. A rect moving by fractions of a
 +  // pixel snaps to one a pixel wider or narrower now and then, so as it moves
-+  // a size within a pixel of the last one is that size; and what of it shows
-+  // changes as it passes the edge of what clips it, so while it moves at its
-+  // size the child keeps the part it showed, and so has drawn all of it
-+  // wherever it goes. Otherwise the child would be resized, laid out and
-+  // drawn again, under a new viz::LocalSurfaceId, every frame of the move.
++  // a size within a pixel of the last one is that size. Otherwise the child
++  // would be resized, laid out and drawn again, under a new
++  // viz::LocalSurfaceId, every frame of the move.
 +  gfx::Rect moved_rect = window_rect;
-+  gfx::Rect moved_clip_rect = clip_rect;
-+  gfx::Rect moved_unobscured_rect = unobscured_rect;
 +  if (window_rect.origin() != last_window_rect_.origin() &&
 +      !last_window_rect_.IsEmpty() &&
 +      std::abs(window_rect.width() - last_window_rect_.width()) <= 1 &&
 +      std::abs(window_rect.height() - last_window_rect_.height()) <= 1) {
 +    moved_rect.set_size(last_window_rect_.size());
-+    if (!last_clip_rect_.IsEmpty()) {
-+      moved_clip_rect = last_clip_rect_;
-+      moved_unobscured_rect = last_unobscured_rect_;
-+    }
 +  }
++  // Crest: and the child hears that all of it shows, whatever clips the
++  // embed. Crest's cards hold their page whole at rest; only motion carries
++  // part of one beyond what clips it, such as a swipe between Spaces that
++  // pauses partway. Told it shows only that part, the child would shrink its
++  // visible viewport to it and leave the rest unpainted, which would come
++  // back blank as the card returns.
++  const gfx::Rect moved_clip_rect(moved_rect.size());
++  const gfx::Rect moved_unobscured_rect(moved_rect.size());
 +
 +  if (last_window_rect_ == moved_rect && last_clip_rect_ == moved_clip_rect &&
 +      last_unobscured_rect_ == moved_unobscured_rect &&

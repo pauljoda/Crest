@@ -1,6 +1,8 @@
 import { motion as tokens } from "@crest/design";
 import { motion, type Transition } from "motion/react";
-import { type ReactNode, type RefObject, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  type ReactNode, type RefObject, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore,
+} from "react";
 
 import type { Session } from "../boot";
 import { type PageStill, pageStills } from "../spaces/page-stills";
@@ -48,9 +50,14 @@ export function PageCard({ session, pageId, startPage, passive = false, focused 
   const clear = startPage !== null || !pageId;
   const card = useRef<HTMLElement>(null);
   // A slide brings the card on screen; at rest, and through a swipe that may
-  // take it away, the window shows its page.
-  const place = useContext(StripPlace);
-  const arriving = moving && place !== null && place !== pager.originId;
+  // take it away, the window shows its page. A card waiting, drawn unseen,
+  // beside the shown Space shows its still and embeds nothing until a slide
+  // takes it up: its page may be the one the shown card holds, as a pinned
+  // tab two Spaces of a group share.
+  const strip = useContext(StripPlace);
+  const place = strip?.id ?? null;
+  const waiting = strip?.waits ?? false;
+  const arriving = place !== null && place !== pager.originId && (moving || waiting);
   const shown = !passive && (!moving || place === pager.originId);
   const { still, cover, coverGone } = usePageStill(session, session.shell && !clear ? pageId : null, card, arriving, shown);
   return (
@@ -64,7 +71,7 @@ export function PageCard({ session, pageId, startPage, passive = false, focused 
       onLayoutAnimationComplete={() => card.current?.style.removeProperty("will-change")}
       ref={card}>
       {session.shell
-        ? <EmbeddedPage session={session} pageId={pageId} passive={passive || !focused} asleep={!!still} />
+        ? !waiting && <EmbeddedPage session={session} pageId={pageId} passive={passive || !focused} asleep={!!still} />
         : !passive && <FramedPages session={session} pageId={pageId} all={focused} />}
       {still && <StillImage still={still} />}
       {cover && <StillImage still={cover.still} going={cover.going} onGone={coverGone} />}
@@ -89,7 +96,10 @@ function usePageStill(session: Session, pageId: string | null, card: RefObject<H
     return pageStills.showing(element, pageId);
   }, [pageId, card, shown]);
   // A still fits a card of its size; one taken at another size, before the
-  // window or the sidebar changed, leaves the card to show its page.
+  // window or the sidebar changed, leaves the card to show its page. One that
+  // comes while the card waits beside the shown Space is drawn then, rather
+  // than as a slide takes the card up.
+  useSyncExternalStore(pageStills.subscribe, () => pageStills.version);
   const candidate = arriving && pageId ? pageStills.still(pageId) : null;
   const [unfit, setUnfit] = useState<string | null>(null);
   const still = candidate && unfit !== candidate.url ? candidate : null;

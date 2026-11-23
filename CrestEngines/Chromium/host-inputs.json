@@ -557,7 +557,7 @@
   },
   "components/surface_embed/renderer/surface_embed_web_plugin.cc": {
     "before": "4dc9a4d8926f77e010e5cc40751bf848b6b19fc80f3ae4411996d3992fc481dc",
-    "after": "74e26350d5ae781d8b14db489276e784d00ed86159f24fa196f257f3b50ef55d"
+    "after": "cc65ad1c6f5e06c84cecc658e14676c95fc5706c154b3746d3d57eaffae3b37a"
   },
   "chrome/app/chrome_exe.rc": {
     "before": "2ad48370adfcc2a4406132ca559773ec75cbc04a84e66111b5b0133cd9e1dca0",

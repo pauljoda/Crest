@@ -36,6 +36,18 @@ class PageStills {
   #stills = new Map<string, PageStill & { readonly image: HTMLImageElement }>();
   #asked = new Map<string, Asked>();
   #shown = new Map<HTMLElement, string>();
+  #listeners = new Set<() => void>();
+  #version = 0;
+
+  /** Counts the stills kept, so a card waiting beside the shown Space draws one that comes after it did. */
+  get version(): number {
+    return this.#version;
+  }
+
+  subscribe = (listener: () => void) => {
+    this.#listeners.add(listener);
+    return () => void this.#listeners.delete(listener);
+  };
 
   /** Follows a card the window shows its page in, at rest, until it goes. */
   showing(card: HTMLElement, pageId: string): () => void {
@@ -119,6 +131,8 @@ class PageStills {
         URL.revokeObjectURL(still.url);
         this.#stills.delete(pageId);
       }
+      this.#version++;
+      for (const listener of this.#listeners) listener();
     }, () => URL.revokeObjectURL(url));
   }
 

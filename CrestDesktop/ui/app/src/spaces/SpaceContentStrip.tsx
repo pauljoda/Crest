@@ -12,13 +12,18 @@ import {
  * live one; a slide shows the card of the Space it moves to or from as a
  * still preview, a card coming on screen showing its page's still where it
  * has one (`page-stills.ts`), and no card takes the pointer until the strip
- * rests.
+ * rests. The shown Space's neighbours wait drawn beneath it, unseen, so a
+ * slide moves cards the compositor already holds.
  * Neighbouring Spaces that show the same pinned tab count as one place, so
  * moving between them moves no card. Where pages don't slide, the cards keep
  * their place and fade into one another instead.
  */
-/** The Space whose place in the strip a card stands in, so it knows whether a slide brings it or takes it away. */
-export const StripPlace = createContext<string | null>(null);
+/**
+ * The Space whose place in the strip a card stands in, so it knows whether a
+ * slide brings it or takes it away, and whether it waits, drawn unseen,
+ * beside the shown Space for a slide to take it up.
+ */
+export const StripPlace = createContext<{ readonly id: string; readonly waits: boolean } | null>(null);
 
 export function SpaceContentStrip({ spaces, liveId, shownPins, embedsPages, onRest, render, children }: {
   spaces: readonly SpaceState[];
@@ -63,7 +68,7 @@ export function SpaceContentStrip({ spaces, liveId, shownPins, embedsPages, onRe
   }, [dissolve, dissolving?.generation]);
 
   const leaving = dissolving && dissolving.from !== liveId ? dissolving.from : null;
-  const shown = [...new Set([...frame.pages, liveId, ...(leaving ? [leaving] : [])])]
+  const shown = [...new Set([...frame.pages, liveId, ...(leaving ? [leaving] : []), ...frame.prepared])]
     .map((id) => spaces.find((space) => space.id === id))
     .filter((space): space is SpaceState => !!space);
   const shownIds = shown.map((space) => space.id).join();
@@ -156,7 +161,9 @@ export function SpaceContentStrip({ spaces, liveId, shownPins, embedsPages, onRe
             inert={!live || moving}
             aria-hidden={!live || undefined}
           >
-            <StripPlace.Provider value={space.id}>{render(space, live)}</StripPlace.Provider>
+            <StripPlace.Provider value={{ id: space.id, waits: !live && space.id !== leaving && !frame.pages.includes(space.id) }}>
+              {render(space, live)}
+            </StripPlace.Provider>
           </div>
         );
       })}
@@ -192,6 +199,12 @@ function cardStyle(id: string, frame: PagerFrame, strip: PageStrip, liveId: stri
   }
   // The card a dissolve leaves lies over the one it shows, fading away.
   if (id === leaving) return { transform: "", visibility: "", zIndex: "2", willChange };
+  // A Space beside the shown one waits drawn, in place and unseen, on a layer
+  // of its own, for a slide to take it up: the layer is rasterized once, at
+  // rest, rather than in the slide's first frames.
+  if (id !== resting && !frame.pages.includes(id) && frame.prepared.includes(id)) {
+    return { transform: "", visibility: "", opacity: "0", zIndex: "-1", willChange: "transform, opacity" };
+  }
   if (frame.phase === "idle" || index < 0) {
     // At rest only the Space the pager shows; one it hasn't taken up yet waits unseen.
     const shows = id === resting;

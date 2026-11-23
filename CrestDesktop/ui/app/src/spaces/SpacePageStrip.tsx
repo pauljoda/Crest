@@ -11,7 +11,9 @@ import {
  * holds them: the shown Space's page, live, and while a slide or a swipe
  * moves the strip, the page it moves to or from, drawn still. Every page
  * moves a whole sidebar width per Space on the pager's clock, and none takes
- * the pointer until the strip comes to rest.
+ * the pointer until the strip comes to rest. The shown Space's neighbours wait
+ * drawn beneath it, unseen, so a slide moves pages the compositor already
+ * holds.
  */
 export function SpacePageStrip({ spaces, liveId, gestureArea, render }: {
   spaces: readonly SpaceState[];
@@ -25,8 +27,8 @@ export function SpacePageStrip({ spaces, liveId, gestureArea, render }: {
   const strip = useRef<HTMLDivElement>(null);
   const pages = useRef(new Map<string, HTMLDivElement>());
   const moving = frame.phase !== "idle";
-  // The shown Space's page always, beside the ones the pager has on screen.
-  const shown = [...new Set([...frame.pages, liveId])]
+  // The shown Space's page always, beside the ones the pager has on screen and its neighbours.
+  const shown = [...new Set([...frame.pages, liveId, ...frame.prepared])]
     .map((id) => spaces.find((space) => space.id === id))
     .filter((space): space is SpaceState => !!space);
 
@@ -93,6 +95,11 @@ export function SpacePageStrip({ spaces, liveId, gestureArea, render }: {
 function pageStyle(id: string, frame: PagerFrame, liveId: string): LeafStyle {
   const count = frame.order.length;
   const index = frame.order.indexOf(id);
+  // A Space beside the shown one waits drawn, in place and unseen, on a layer
+  // of its own, for a slide to take it up. It takes no input, being inert.
+  if (id !== liveId && id !== frame.originId && !frame.pages.includes(id) && frame.prepared.includes(id)) {
+    return { visibility: "", opacity: "0", transform: "", willChange: "transform, opacity" };
+  }
   // A shown Space the pager hasn't taken up yet waits off the strip, out of sight.
   if (index < 0 || (frame.phase === "idle" && id !== frame.originId && id !== liveId)) return { visibility: "hidden" };
   const offset = frame.phase === "idle" ? (id === frame.originId ? 0 : 1) : placedIndex(index, frame.position, count) - frame.position;
