@@ -128,10 +128,7 @@ struct BrowserPasswordDescriptorRow: View {
                 )
                 .accessibilityHidden(true)
         } else {
-            Image(systemName: "key.fill")
-                .foregroundStyle(spaceAccent)
-                .frame(width: 22)
-                .accessibilityHidden(true)
+            BrowserSiteIconMark(origins: descriptor.origins, symbol: "key.fill", tint: spaceAccent, size: 22)
         }
     }
 

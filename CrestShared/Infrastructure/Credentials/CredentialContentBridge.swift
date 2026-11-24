@@ -65,6 +65,9 @@ enum BrowserCredentialContentBridge {
           // The form whose focused field Crest's popup is open for. Its arrow,
           // Return and Escape keys go to the popup instead of the page.
           let heldForm = null;
+          // The form whose focus Crest may answer with a popup, until the
+          // person types in it. Only its popup may hold the keys.
+          let offeredForm = null;
           let trackedField = null;
           let trackedFieldRect = null;
           let lastSubmissionFingerprint = "";
@@ -227,16 +230,23 @@ enum BrowserCredentialContentBridge {
 
           const textOf = (value, limit = maximumText) => (value || "").replace(/\s+/g, " ").trim().slice(0, limit);
 
-          const labelOf = (input) => {
-            const labels = input.labels ? Array.from(input.labels, (label) => label.textContent).join(" ") : "";
-            const root = input.getRootNode();
-            const named = (input.getAttribute("aria-labelledby") || "").split(/\s+/).filter(Boolean)
+          // The text of the elements `element` names with aria-labelledby.
+          const labelledByOf = (element) => {
+            const root = element.getRootNode();
+            return (element.getAttribute("aria-labelledby") || "").split(/\s+/).filter(Boolean)
               .map((id) => root.getElementById?.(id)?.textContent || "").join(" ");
-            return textOf(`${labels} ${input.getAttribute("aria-label") || ""} ${named}`);
           };
 
+          const labelOf = (input) => {
+            const labels = input.labels ? Array.from(input.labels, (label) => label.textContent).join(" ") : "";
+            return textOf(`${labels} ${input.getAttribute("aria-label") || ""} ${labelledByOf(input)}`);
+          };
+
+          // A control's name: the one it declares before its text, so a
+          // button showing an arrow but labelled Sign in reads as Sign in.
           const controlLabelOf = (control) => !control ? "" : textOf(
-            control.innerText || control.value || control.getAttribute("aria-label") || control.title || ""
+            textOf(control.getAttribute("aria-label")) || textOf(labelledByOf(control)) || control.innerText
+              || control.value || control.title || ""
           );
 
           const describe = (input, index) => {
@@ -375,11 +385,22 @@ enum BrowserCredentialContentBridge {
           // follow it. The listener and the testing hook go through here
           // together so the hook cannot drift away from the path a real focus
           // takes. A focus never carries a password.
+          // Closes the popup open, or loading, for the focused form and gives
+          // its keys back.
+          const dismissOffer = () => {
+            const formID = heldForm || offeredForm;
+            heldForm = null;
+            offeredForm = null;
+            if (formID) post({ event: "key", trusted: true, formID, key: "dismiss" });
+          };
+
           const reportFocus = (input) => {
             heldForm = null;
+            offeredForm = null;
             const reading = read(rootFor(input));
             const index = reading.inputs.indexOf(input);
             if (index < 0) return false;
+            offeredForm = reading.formID;
             const placement = placementOf(input);
             const rect = placement?.rect || null;
             trackedField = rect ? { input: new WeakRef(input), formID: reading.formID } : null;
@@ -450,17 +471,37 @@ enum BrowserCredentialContentBridge {
             focusAdjacent(step) {
               const skipped = ["button", "submit", "reset", "image", "checkbox", "radio", "file", "range", "color", "hidden"];
               const controls = Array.from(document.querySelectorAll("input, select, textarea, [contenteditable='true']"))
-                .filter((control) => !control.disabled && control.getClientRects().length
-                  && !(control instanceof HTMLInputElement && skipped.includes(control.type)));
-              const next = controls[controls.indexOf(document.activeElement) + step];
-              if (!next) return false;
-              next.focus();
-              return true;
+                .filter((control) => !control.disabled && !control.closest("[inert]") && control.tabIndex >= 0
+                  && control.getClientRects().length && !(control instanceof HTMLInputElement && skipped.includes(control.type)));
+              // A control that still can't take focus, such as a hidden one,
+              // is passed over for the one after it.
+              const start = controls.indexOf(document.activeElement);
+              if (start < 0) return false;
+              for (let index = start + step; index >= 0 && index < controls.length; index += step) {
+                controls[index].focus();
+                if (document.activeElement === controls[index]) return true;
+              }
+              return false;
+            },
+            // Offers the page's password field to Crest as if it were focused,
+            // for the password step after a username step where the person
+            // chose a login, which fills it. It moves no focus itself.
+            offerPasswordStep() {
+              const input = Array.from(document.querySelectorAll("input[type='password']")).find((field) =>
+                !field.disabled && !field.readOnly && isVisible(field)
+                  && !/new-password/i.test(field.getAttribute("autocomplete") || ""));
+              return input ? reportFocus(input) : false;
             },
             // Sends the focused field's arrow, Return and Escape keys to
             // Crest's popup while it is open for the form, or gives them back.
             holdKeys(formID, hold) {
-              heldForm = hold ? formID : null;
+              if (hold) {
+                // An offer the person typed past while it loaded takes no keys.
+                if (formID !== offeredForm) return false;
+                heldForm = formID;
+              } else if (heldForm === formID) {
+                heldForm = null;
+              }
               return true;
             },
             valueOf(formID, readingID, index) {
@@ -496,13 +537,10 @@ enum BrowserCredentialContentBridge {
             const input = inputFromEvent(event);
             if (!event.isTrusted || !input) return;
             enteredValues.set(input, input.value);
-            // Typing in the field closes the popup and gives its keys back,
-            // so Return sends what the person typed.
-            if (heldForm && idsByRoot.get(rootFor(input)) === heldForm) {
-              const formID = heldForm;
-              heldForm = null;
-              post({ event: "key", trusted: true, formID, key: "dismiss" });
-            }
+            // Typing in the field closes the popup, or the one still loading,
+            // and gives its keys back, so Return sends what the person typed.
+            const formID = heldForm || offeredForm;
+            if (formID && idsByRoot.get(rootFor(input)) === formID) dismissOffer();
           };
           document.addEventListener("input", noteEntered, true);
           addEventListener("input", (event) => {
@@ -517,6 +555,7 @@ enum BrowserCredentialContentBridge {
           // though its fields move with them. The frame holding the focus
           // hears of each move, once an animation frame, and passes it down.
           const frameMovedSignal = "crest-credential-frame-moved";
+          const pressedOutsideSignal = "crest-credential-pressed-outside";
           let frameMoveQueued = false;
           const tellFocusedFrame = () => {
             if (frameMoveQueued) return;
@@ -530,10 +569,32 @@ enum BrowserCredentialContentBridge {
           };
           addEventListener("scroll", tellFocusedFrame, { capture: true, passive: true });
           addEventListener("message", (event) => {
-            if (window === window.top || event.source !== window.parent || event.data !== frameMovedSignal) return;
-            reportFieldGeometry(true);
-            tellFocusedFrame();
+            if (window === window.top || event.source !== window.parent) return;
+            if (event.data === frameMovedSignal) {
+              reportFieldGeometry(true);
+              tellFocusedFrame();
+            } else if (event.data === pressedOutsideSignal) {
+              pressedOutside();
+            }
           });
+
+          // A press anywhere but the focused field closes its popup, as a
+          // menu closes. A frame holding the focus hears of presses around it.
+          const pressedOutside = () => {
+            if (heldForm || offeredForm) dismissOffer();
+            const frame = document.activeElement;
+            if (frame instanceof HTMLIFrameElement || frame instanceof HTMLFrameElement) {
+              try { frame.contentWindow?.postMessage(pressedOutsideSignal, "*"); } catch (_) {}
+            }
+          };
+          addEventListener("pointerdown", (event) => {
+            if (!event.isTrusted) return;
+            const path = pathOf(event);
+            const focused = document.activeElement;
+            const field = trackedField?.input.deref();
+            if ((field && path.includes(field)) || (focused && focused !== document.body && path.includes(focused))) return;
+            pressedOutside();
+          }, true);
 
           document.addEventListener("submit", (event) => {
             if (!event.isTrusted || !(event.target instanceof HTMLFormElement)) return;
@@ -554,10 +615,11 @@ enum BrowserCredentialContentBridge {
             queueMicrotask(() => capture(root, sendsForm ? "submitControl" : "button", control));
           }, true);
 
-          // Registered first, so a held key never reaches the page or the
-          // Return capture below.
+          // Captured at the window, ahead of the page's document listeners and
+          // of window listeners it adds later, so a held key never reaches
+          // the page or the Return capture below.
           const popupKeys = { ArrowDown: "down", ArrowUp: "up", Enter: "choose", Escape: "dismiss" };
-          document.addEventListener("keydown", (event) => {
+          addEventListener("keydown", (event) => {
             const key = popupKeys[event.key];
             if (!heldForm || !key || !event.isTrusted || event.isComposing) return;
             const input = inputFromEvent(event);

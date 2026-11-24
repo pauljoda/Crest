@@ -70,6 +70,10 @@ struct BrowserCredentialFillRequest: Identifiable, Equatable, Sendable {
     /// The address or card section a request from one of its fields offers.
     let autofill: BrowserAutofillOffer?
 
+    /// The login the person chose on the username step just before this
+    /// password step, which fills by itself instead of being offered.
+    let chosenCredentialID: UUID?
+
     init(
         id: UUID,
         origin: CredentialOrigin,
@@ -83,7 +87,8 @@ struct BrowserCredentialFillRequest: Identifiable, Equatable, Sendable {
         isQuietWithoutLogins: Bool = false,
         requirements: PasswordRequirements = .none,
         codeFields: OneTimeCodeFields? = nil,
-        autofill: BrowserAutofillOffer? = nil
+        autofill: BrowserAutofillOffer? = nil,
+        chosenCredentialID: UUID? = nil
     ) {
         self.id = id
         self.origin = origin
@@ -98,6 +103,7 @@ struct BrowserCredentialFillRequest: Identifiable, Equatable, Sendable {
         self.requirements = requirements
         self.codeFields = codeFields
         self.autofill = autofill
+        self.chosenCredentialID = chosenCredentialID
     }
 
     /// The same request, following its field to where the page just moved it.
@@ -119,7 +125,8 @@ struct BrowserCredentialFillRequest: Identifiable, Equatable, Sendable {
             isQuietWithoutLogins: isQuietWithoutLogins,
             requirements: requirements,
             codeFields: codeFields,
-            autofill: autofill
+            autofill: autofill,
+            chosenCredentialID: chosenCredentialID
         )
     }
 }

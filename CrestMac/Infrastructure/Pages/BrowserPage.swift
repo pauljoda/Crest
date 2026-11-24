@@ -435,7 +435,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             ) { [weak self] message in
                 guard let self else { return }
                 self.credentialSession.receive(
-                    message.body, from: message.frame, topLevelURL: self.pageEngine.currentURL)
+                    message.body, from: message.frame, topLevelURL: self.pageEngine.currentURL,
+                    evaluate: self.credentialEvaluator)
             }
         }
         if let scripting = pageEngine.contentScripting {

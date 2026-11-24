@@ -62,7 +62,8 @@ public sealed record PasswordRequirements(int? MinLength, int? MaxLength, string
 
     private StrongPasswordRecipe Composed(ReadRules rules, PasswordStyle style) {
         int shortest = Math.Max(MinLength ?? 0, rules.MinLength ?? 0);
-        int longest = Math.Min(MaxLength ?? StrongPasswordRecipe.MaximumLength, rules.MaxLength ?? StrongPasswordRecipe.MaximumLength);
+        int longest = Math.Min(StrongPasswordRecipe.MaximumLength,
+            Math.Min(MaxLength ?? StrongPasswordRecipe.MaximumLength, rules.MaxLength ?? StrongPasswordRecipe.MaximumLength));
         // A length Crest can't make, or one the site contradicts, is refused
         // rather than bent below the site's own minimum.
         if (longest < StrongPasswordRecipe.ShortestLength || shortest > longest) throw new Rejected(Unmakeable);
@@ -144,9 +145,9 @@ public sealed record PasswordRequirements(int? MinLength, int? MaxLength, string
     }
 
     /// The rules of `text`, split at each semicolon outside a bracketed set, so
-    /// a set such as `[!;@]` stays whole. A closing bracket right after the
-    /// opening one is the set's own only when another closes it, as in `[]]`;
-    /// otherwise `[]` is an empty set, which is ignored.
+    /// a set such as `[!;@]` stays whole. A doubled closing bracket ends a set
+    /// holding `]`, as in `[]]` or `[a]]`; `[]` is an empty set, which is
+    /// ignored.
     private static IEnumerable<string> RuleTexts(string text) {
         int start = 0;
         int index = 0;
@@ -165,11 +166,12 @@ public sealed record PasswordRequirements(int? MinLength, int? MaxLength, string
         yield return text[start..];
     }
 
-    /// Where the bracketed set opening at `open` closes, or the text's end.
+    /// Where the bracketed set opening at `open` closes, or the text's end. The
+    /// first of two closing brackets in a row is a member of the set.
     private static int SetEnd(string text, int open) {
-        bool leadingBracket = open + 2 < text.Length && text[open + 1] == ']' && text[open + 2] == ']';
-        int close = text.IndexOf(']', leadingBracket ? open + 2 : open + 1);
-        return close < 0 ? text.Length - 1 : close;
+        int close = text.IndexOf(']', open + 1);
+        if (close < 0) return text.Length - 1;
+        return close + 1 < text.Length && text[close + 1] == ']' ? close + 1 : close;
     }
 
     /// The characters a comma-separated list of classes names: `upper`,
@@ -180,7 +182,7 @@ public sealed record PasswordRequirements(int? MinLength, int? MaxLength, string
         int index = 0;
         while (index < value.Length) {
             char character = value[index];
-            if (character is ',' or ' ') { index++; continue; }
+            if (IsClassSeparator(character)) { index++; continue; }
             if (character == '[') {
                 int close = SetEnd(value, index);
                 if (close >= value.Length || value[close] != ']') break;
@@ -188,13 +190,16 @@ public sealed record PasswordRequirements(int? MinLength, int? MaxLength, string
                 index = close + 1;
                 continue;
             }
-            int end = value.IndexOfAny([',', ' ', '['], index);
-            if (end < 0) end = value.Length;
+            int end = index;
+            while (end < value.Length && !IsClassSeparator(value[end]) && value[end] != '[') end++;
             characters.UnionWith(ClassNamed(value[index..end].ToLowerInvariant()));
             index = end;
         }
         return characters;
     }
+
+    /// Whether `character` separates class names: a comma or ASCII whitespace.
+    private static bool IsClassSeparator(char character) => character == ',' || (char.IsAscii(character) && char.IsWhiteSpace(character));
 
     private static string ClassNamed(string name) => name switch {
         "upper" => Uppercase,

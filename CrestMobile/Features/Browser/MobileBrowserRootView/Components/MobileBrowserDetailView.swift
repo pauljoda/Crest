@@ -408,7 +408,8 @@ struct MobileBrowserDetailView: View {
         guard let request = page.credentialFillRequest, page.usesCredentialStrip else {
             return page.credentialFillRequest
         }
-        return request.id == page.credentialOfferRequestID ? request : nil
+        // A password step filling the login chosen for it needs no offer.
+        return request.id == page.credentialOfferRequestID || request.chosenCredentialID != nil ? request : nil
     }
 
     /// The four things a credential fill prompt asks, bound to the page it is

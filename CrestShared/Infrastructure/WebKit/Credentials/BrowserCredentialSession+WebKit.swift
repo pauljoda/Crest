@@ -18,7 +18,8 @@ extension BrowserCredentialSession {
                 port: origin.port,
                 handle: scriptMessage.frameInfo
             ),
-            topLevelURL: webView.url
+            topLevelURL: webView.url,
+            evaluate: Self.evaluator(in: webView)
         )
     }
 
@@ -40,6 +41,10 @@ extension BrowserCredentialSession {
 
     func holdKeys(_ hold: Bool, for requestID: UUID, in webView: WKWebView) async {
         await holdKeys(hold, for: requestID, evaluate: Self.evaluator(in: webView))
+    }
+
+    func focusAdjacentField(_ step: Int, in webView: WKWebView) async -> Bool? {
+        await focusAdjacentField(step, evaluate: Self.evaluator(in: webView))
     }
 
     static func evaluator(in webView: WKWebView) -> Evaluate {

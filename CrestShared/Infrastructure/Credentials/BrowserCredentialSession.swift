@@ -16,6 +16,13 @@ final class BrowserCredentialSession {
     private(set) var isEnabled: Bool
     @ObservationIgnored private let supportsAccess: Bool
     @ObservationIgnored private let httpAuthentication: BrowserHTTPAuthenticationSession
+    /// The request whose popup holds its field's keys, and where that field
+    /// is, kept until the popup gives them back: a closing popup's request
+    /// has already lost its fill target.
+    @ObservationIgnored private var heldKeys: (requestID: UUID, target: FillTarget)?
+    /// The frame whose field the person focused last, which the phone's
+    /// previous and next buttons move through.
+    @ObservationIgnored private var focusedFrame: BrowserContentFrame?
 
     init(
         spaceID: UUID,
@@ -40,7 +47,7 @@ final class BrowserCredentialSession {
         }
     }
 
-    func receive(_ body: Any, from frame: BrowserContentFrame, topLevelURL: URL?) {
+    func receive(_ body: Any, from frame: BrowserContentFrame, topLevelURL: URL?, evaluate: Evaluate? = nil) {
         guard isEnabled,
             let decoded = BrowserCredentialFormMessage(body: body),
             let frameOrigin = CredentialOrigin(
@@ -54,6 +61,7 @@ final class BrowserCredentialSession {
         // A frame the engine draws in its own view can't measure where it
         // sits in the page; the engine does, so its field can be pointed at.
         let message = frame.viewportOffset.map { decoded.placed(atFrameOffset: $0) } ?? decoded
+        if message.event == .focus { focusedFrame = frame }
 
         state.receive(
             message,
@@ -62,6 +70,16 @@ final class BrowserCredentialSession {
             isMainFrame: frame.isMainFrame,
             fillTarget: message.formID.flatMap { formID in message.readingID.map { (formID, $0, frame) } }
         )
+        // A password step that a login chosen on the username step waits for
+        // takes it as soon as it shows, even where the page focuses nothing.
+        if message.event == .documentState, message.hasVisiblePasswordField == true, state.fillRequest == nil,
+            state.awaitsPasswordStep(at: frameOrigin, now: .now), let evaluate
+        {
+            Task {
+                _ = try? await evaluate(
+                    "return globalThis.__crestCredentialBridge?.offerPasswordStep() === true;", [:], frame)
+            }
+        }
     }
 
     /// Fills a saved login into the fields the core chose: its username, and
@@ -117,12 +135,33 @@ final class BrowserCredentialSession {
     }
 
     /// Sends the request's field's arrow, Return and Escape keys to Crest's
-    /// popup while it is on show, or gives them back to the page.
+    /// popup while it is on show, or gives them back to the page. The keys go
+    /// back to the field they were taken from, and only for the request that
+    /// took them, so a stale release can't free a later popup's keys.
     func holdKeys(_ hold: Bool, for requestID: UUID, evaluate: Evaluate) async {
-        guard isEnabled, let target = state.fillTarget(for: requestID) else { return }
+        let target: FillTarget
+        if hold {
+            guard isEnabled, let current = state.fillTarget(for: requestID) else { return }
+            target = current
+            heldKeys = (requestID, current)
+        } else {
+            guard let held = heldKeys, held.requestID == requestID else { return }
+            target = held.target
+            heldKeys = nil
+        }
         _ = try? await evaluate(
             "return globalThis.__crestCredentialBridge?.holdKeys(formID, hold) === true;",
             ["formID": target.formID, "hold": hold], target.frame)
+    }
+
+    /// Moves focus to the form control before, -1, or after, 1, the focused
+    /// one, in the frame that holds it. Nil when no field has reported focus
+    /// or its frame is gone.
+    func focusAdjacentField(_ step: Int, evaluate: Evaluate) async -> Bool? {
+        guard let focusedFrame else { return nil }
+        return try? await evaluate(
+            "return globalThis.__crestCredentialBridge?.focusAdjacent(step) === true;", ["step": step], focusedFrame)
+            as? Bool
     }
 
     private func fill(

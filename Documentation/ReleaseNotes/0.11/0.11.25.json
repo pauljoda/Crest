@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "chosen-account-fills-password-step",
+      "category": "new",
+      "message": "On sites that ask for your email or username first, choosing an account fills its password on the next page as soon as it appears."
+    },
+    {
+      "id": "password-popup-closes-on-click-outside",
+      "category": "improved",
+      "message": "Clicking anywhere on the page outside the field closes Crest's passwords popup."
+    },
+    {
+      "id": "password-site-icons",
+      "category": "improved",
+      "message": "Saved passwords show each site's own icon in Settings and in the popup, fetched once from the site itself when Crest hasn't seen it yet."
+    }
+  ]
+}

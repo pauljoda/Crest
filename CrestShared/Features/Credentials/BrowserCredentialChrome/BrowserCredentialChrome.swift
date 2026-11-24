@@ -25,6 +25,10 @@ struct BrowserCredentialChrome: View {
     /// once known.
     @State private var namedAccount: (candidateID: UUID, account: CredentialDescriptor)?
 
+    /// A password step whose chosen login couldn't fill by itself, which
+    /// shows its popup instead.
+    @State private var unfilledChosenRequestID: UUID?
+
     var body: some View {
         ZStack {
             // On screen even while nothing shows, so the checks a held-back
@@ -39,6 +43,9 @@ struct BrowserCredentialChrome: View {
                 }
                 .task(id: unwantedCandidate?.id) {
                     if unwantedCandidate != nil { savePort.dismiss() }
+                }
+                .task(id: chosenAccountRequest?.id) {
+                    await fillChosenAccount()
                 }
             BrowserCredentialChromePlacement(
                 field: anchoredField,
@@ -71,10 +78,19 @@ struct BrowserCredentialChrome: View {
         return request
     }
 
+    /// A password step after a username step where the person chose a login,
+    /// which fills that login by itself.
+    private var chosenAccountRequest: BrowserCredentialFillRequest? {
+        guard case .suggestions(let request) = presentation, request.chosenCredentialID != nil else { return nil }
+        return request
+    }
+
     /// The prompt on show: the presentation, unless it is a quiet request not
-    /// yet known to have logins, which shows nothing and takes no room.
+    /// yet known to have logins, or a password step filling the login chosen
+    /// for it, which show nothing and take no room.
     private var shownPresentation: BrowserCredentialChromePresentation {
         if let quietRequest, revealedQuietRequestID != quietRequest.id { return .none }
+        if let chosenAccountRequest, unfilledChosenRequestID != chosenAccountRequest.id { return .none }
         if unwantedCandidate != nil { return .none }
         if let anonymousCandidate {
             guard let namedAccount, namedAccount.candidateID == anonymousCandidate.id else { return .none }
@@ -93,6 +109,21 @@ struct BrowserCredentialChrome: View {
             namedAccount = (candidate.id, account)
         } else {
             savePort.dismiss()
+        }
+    }
+
+    /// Fills the login chosen on the username step into its password step,
+    /// as the person asked by choosing it; if it can't, the popup shows.
+    private func fillChosenAccount() async {
+        guard let request = chosenAccountRequest, let credentialID = request.chosenCredentialID else { return }
+        do {
+            guard let credential = try await browser.credential(id: credentialID, in: fillPort.spaceID) else {
+                throw BrowserCredentialFillError.staleOrMismatchedRequest
+            }
+            try await fillPort.fill(credential, request.id)
+        } catch {
+            guard !Task.isCancelled, chosenAccountRequest?.id == request.id else { return }
+            unfilledChosenRequestID = request.id
         }
     }
 

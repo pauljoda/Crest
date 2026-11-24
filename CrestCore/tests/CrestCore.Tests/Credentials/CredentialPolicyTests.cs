@@ -243,6 +243,7 @@ public sealed class CredentialPolicyTests {
         Assert.Null(PasswordRequirements.None.Recipe(PasswordStyle.Grouped).SiteSymbols);
         // A minimum past what Crest makes is refused, never lowered.
         Assert.IsType<InvalidPasswordLength>(Refusal(() => new PasswordRequirements(129, 200, null).Recipe(PasswordStyle.Grouped)));
+        Assert.IsType<InvalidPasswordLength>(Refusal(() => new PasswordRequirements(null, 200, "minlength: 129").Recipe(PasswordStyle.Grouped)));
         // Every required set is kept: one met by another's characters folds into it.
         var tight = new PasswordRequirements(null, null, "required: [ab]; required: [a]; required: [b]; required: [c]; required: [d]; maxlength: 4")
             .Recipe(PasswordStyle.Grouped);
@@ -257,6 +258,11 @@ public sealed class CredentialPolicyTests {
         Assert.Equal(8, afterEmpty.Length);
         Assert.Equal(["23456789"], afterEmpty.Groups);
         Assert.Contains("]", new PasswordRequirements(null, 16, "required: []]; required: lower").Recipe(PasswordStyle.Grouped).Required);
+        // A doubled closing bracket keeps `]` in any set, and names may sit among spaces and tabs.
+        Assert.Equal(["a", "]"], new PasswordRequirements(null, null, "allowed: [a]]; minlength: 4; maxlength: 4; max-consecutive: 1")
+            .Recipe(PasswordStyle.Grouped).Groups);
+        Assert.Equal(["abcdefghijkmnopqrstuvwxyz", "ABCDEFGHJKLMNPQRSTUVWXYZ"],
+            new PasswordRequirements(null, null, "allowed: lower\t,\tupper; maxlength: 8").Recipe(PasswordStyle.Grouped).Groups);
         // Characters outside the named classes, and semicolons inside a set, are the page's own.
         Assert.Contains("/", new PasswordRequirements(null, null, "required: lower; required: [/]").Recipe(PasswordStyle.Grouped).Required);
         Assert.Contains(new PasswordRequirements(null, 16, "required: [!;@]; required: lower").Recipe(PasswordStyle.Grouped).Required,

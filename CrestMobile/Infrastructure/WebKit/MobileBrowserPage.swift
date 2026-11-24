@@ -916,14 +916,24 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         let actions = MobileCredentialStripActions(
             fill: { [weak self, weak browser] login, requestID in
                 Task { @MainActor in
-                    guard let self, let browser,
-                        let credential = try? await browser.credential(id: login.id, in: spaceID)
-                    else { return }
-                    try? await self.fillCredential(credential, for: requestID)
+                    guard let self, let browser else { return }
+                    do {
+                        guard let credential = try await browser.credential(id: login.id, in: spaceID) else {
+                            throw BrowserCredentialFillError.staleOrMismatchedRequest
+                        }
+                        try await self.fillCredential(credential, for: requestID)
+                    } catch {
+                        self.credentialFillFailed()
+                    }
                 }
             },
             fillValues: { [weak self] values, requestID in
-                Task { @MainActor in try? await self?.fillAutofillValues(values, for: requestID) }
+                Task { @MainActor in
+                    guard let self else { return }
+                    do { try await self.fillAutofillValues(values, for: requestID) } catch {
+                        self.credentialFillFailed()
+                    }
+                }
             },
             showOffer: { [weak self] requestID in self?.credentialOfferRequestID = requestID },
             focusAdjacentField: { [weak self] step in self?.focusAdjacentField(step) },
@@ -937,9 +947,18 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         webView.formAccessory = host.view
     }
 
-    /// Moves focus to the field before, -1, or after, 1, the focused one.
+    /// A fill from the strip that the page's form no longer fits: the person
+    /// hears so, and the stale offer goes.
+    private func credentialFillFailed() {
+        BrowserNoticeCenter.shared.post(.failure(String(localized: "Crest couldn’t fill this form.")))
+        credentialState.dismissFillRequest()
+    }
+
+    /// Moves focus to the field before, -1, or after, 1, the focused one, in
+    /// the frame that holds it, or the page's own when no field has said.
     private func focusAdjacentField(_ step: Int) {
-        Task { @MainActor [webView] in
+        Task { @MainActor [weak self, webView] in
+            if await self?.credentialSession.focusAdjacentField(step, in: webView) != nil { return }
             _ = try? await webView.callAsyncJavaScript(
                 "return globalThis.__crestCredentialBridge?.focusAdjacent(step) === true;",
                 arguments: ["step": step],

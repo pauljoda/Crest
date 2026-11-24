@@ -129,6 +129,13 @@ struct MobileCredentialStrip: View {
                 chip(Text("Use Strong Password"), systemImage: "key.horizontal.fill", isFirst: true, fitsTitle: true) {
                     actions.showOffer(request.id)
                 }
+            } else if model.hasFailed {
+                // The saved logins couldn't be read: the strip says so and
+                // reads them again on a tap.
+                chip(Text("Try Again"), systemImage: "arrow.clockwise", isFirst: true, fitsTitle: true) {
+                    Task { await model.load(request, in: state.spaceID, using: browser) }
+                }
+                .accessibilityHint(Text("Crest couldn’t read the saved passwords."))
             } else {
                 ForEach(Array(model.suggestions.prefix(Self.shownLogins).enumerated()), id: \.element.id) {
                     index, login in

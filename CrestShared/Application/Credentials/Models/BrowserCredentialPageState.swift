@@ -3,6 +3,17 @@ import Observation
 
 // MARK: - Types
 
+/// A login the person chose on a step that asked only for the username, which
+/// the site's password step after it fills.
+struct BrowserCredentialChosenAccount: Equatable, Sendable {
+    /// How long after the choice the password step may take it.
+    static let lifetime: TimeInterval = 5 * 60
+
+    let credentialID: UUID
+    let origin: CredentialOrigin
+    let chosenAt: Date
+}
+
 struct BrowserCredentialUsernameHint: Equatable, Sendable {
     let origin: CredentialOrigin
     let topLevelOrigin: CredentialOrigin
@@ -41,6 +52,10 @@ final class BrowserCredentialPageState<FillTarget> {
 
     /// The login the page last filled, whose code the next step offers first.
     @ObservationIgnored private(set) var lastFilledCredentialID: UUID?
+
+    /// The login chosen on the username step, for the password step after it,
+    /// once and only shortly after.
+    @ObservationIgnored private var chosenAccount: BrowserCredentialChosenAccount?
 
     /// Whether an extension handles passwords in the page's profile, so the
     /// page offers and saves no passwords or codes, though addresses and cards
@@ -221,6 +236,12 @@ final class BrowserCredentialPageState<FillTarget> {
     func completeFill(username: String, requestID: UUID, credentialID: UUID? = nil) {
         guard let request = fillRequest, request.id == requestID else { return }
         if let credentialID { lastFilledCredentialID = credentialID }
+        // A login chosen where only the username went in fills the password
+        // step that follows; one whose password went in is done.
+        chosenAccount = credentialID.flatMap { id in
+            request.fields.password == nil && request.fields.username != nil
+                ? BrowserCredentialChosenAccount(credentialID: id, origin: request.origin, chosenAt: .now) : nil
+        }
         let facts = CredentialFormFacts(
             event: .filled, frameOrigin: request.origin, topLevelOrigin: request.topLevelOrigin,
             isMainFrame: request.fieldRect != nil, hasFormID: fillFormID != nil, fields: [], focusedField: nil,
@@ -239,6 +260,13 @@ final class BrowserCredentialPageState<FillTarget> {
     func completeGeneratedPasswordFill(requestID: UUID) {
         guard fillRequest?.id == requestID else { return }
         dismissFillRequest()
+    }
+
+    /// Whether a login chosen on a username step waits for `origin`'s
+    /// password step.
+    func awaitsPasswordStep(at origin: CredentialOrigin, now: Date) -> Bool {
+        guard let chosenAccount, chosenAccount.origin == origin else { return false }
+        return now.timeIntervalSince(chosenAccount.chosenAt) < BrowserCredentialChosenAccount.lifetime
     }
 
     func dismissFillRequest() {
@@ -298,6 +326,7 @@ final class BrowserCredentialPageState<FillTarget> {
         dismissSaveCandidate()
         autofillSaveCandidate = nil
         heldSaveCandidate = nil
+        chosenAccount = nil
         clearUsernameHint()
     }
 
@@ -407,6 +436,17 @@ extension BrowserCredentialPageState: CredentialCapturePerformer {
         else { return }
         // A code request names no password; its kind only stands in.
         let passwordKind = decision.passwordKind ?? .current
+        // The password step after a username step where the person chose a
+        // login takes that login, on the same site and shortly after; a
+        // second focus in the same form keeps it.
+        let takesPassword =
+            decision.passwordKind == .current && decision.codeFields == nil && form.currentPassword != nil
+        let waiting = takesPassword && awaitsPasswordStep(at: observation.frameOrigin, now: observation.now)
+        let chosen =
+            waiting
+            ? chosenAccount?.credentialID
+            : takesPassword && fillFormID == formID ? fillRequest?.chosenCredentialID : nil
+        if waiting { chosenAccount = nil }
         // A hidden username field is the page's own record; a fill leaves it be.
         let usernameField = message.field(at: form.username)?.isVisible == true ? form.username : nil
         let request = BrowserCredentialFillRequest(
@@ -430,7 +470,8 @@ extension BrowserCredentialPageState: CredentialCapturePerformer {
             codeFields: decision.codeFields,
             autofill: decision.autofill.flatMap { section in
                 message.focusedField.map { BrowserAutofillOffer(section: section, fields: message.fields, focused: $0) }
-            }
+            },
+            chosenCredentialID: chosen
         )
         if let previousRequest = fillRequest {
             fillTargets[previousRequest.id] = nil

@@ -37,6 +37,7 @@ struct BrowserCredentialSuggestionRow: View {
                     kind: .suggestions,
                     iconData: context.iconData,
                     showsSiteIcon: context.iconData != nil,
+                    fallbackOrigins: suggestion.origins,
                     tint: CrestBrandTheme.accent
                 )
                 VStack(
@@ -97,11 +98,11 @@ struct BrowserCredentialSuggestionRow: View {
     /// would take, and otherwise where the login comes from, with the login
     /// itself when the name is not already it.
     private var detail: String {
-        if isSelected, context.fillsUsernameOnly {
-            return String(localized: "Fills the username now, the password on the next step")
-        }
-        guard title != suggestion.username else { return context.source }
-        return "\(suggestion.username) · \(context.source)"
+        let shown =
+            isSelected && context.fillsUsernameOnly
+            ? String(localized: "Fills the username now, the password on the next step") : context.source
+        guard title != suggestion.username else { return shown }
+        return "\(suggestion.username) · \(shown)"
     }
 }
 

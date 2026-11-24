@@ -51,11 +51,12 @@ struct BrowserStrongPasswordPrompt: View {
             )
         }
         .task(id: request.id) {
-            port.holdKeys(true, request.id)
             selectedIndex = 0
             let primary = draw(.grouped)
             let alternative = primary?.recipe.hasRandomAlternative == true ? draw(.random) : nil
             offers = [primary, alternative].compactMap(\.self)
+            // With nothing to choose, Return stays the page's.
+            if !offers.isEmpty { port.holdKeys(true, request.id) }
         }
         .onChange(of: port.keyPress) { _, press in
             press.map { answer($0.key) }
