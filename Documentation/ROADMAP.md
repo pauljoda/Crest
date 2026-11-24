@@ -45,7 +45,10 @@ the live status for each issue.
 - [ ] [feature: Share one extension install across chosen Spaces](https://github.com/crest-browser/Crest/issues/527)
 - [ ] [Keep a Quick Window from another app clear of a new tab's keyboard on iPhone](https://github.com/crest-browser/Crest/issues/563)
 - [ ] [Say so when a link from another app needs a locked Space](https://github.com/crest-browser/Crest/issues/564)
-- [ ] [Overhaul passwords and autofill: one-time codes, a new suggestion popup, and saved addresses and payment cards](https://github.com/crest-browser/Crest/issues/1344)
+
+#### Completed
+
+- [x] [Overhaul passwords and autofill: one-time codes, a new suggestion popup, and saved addresses and payment cards](https://github.com/crest-browser/Crest/issues/1344)
 
 <!-- crest-roadmap-sync:end -->
 
