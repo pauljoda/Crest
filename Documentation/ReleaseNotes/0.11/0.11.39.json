@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "add-password-reopened-keeps-its-draft",
+      "category": "internal",
+      "message": "Add Password opened again while a canceled one was still saving stays open with what's typed in it."
+    }
+  ]
+}

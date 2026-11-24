@@ -8,6 +8,14 @@ struct BrowserSettingsSpaceDataRequest: Equatable {
     let canRevealSpaceData: Bool
 }
 
+/// One showing of the editor for a password added by hand: the Space it
+/// saves to, and an identity of its own, so a save that finishes after its
+/// editor closed leaves a later one alone.
+struct BrowserNewPasswordPresentation: Identifiable, Equatable {
+    let id = UUID()
+    let assignment: BrowserSpaceRuntimeAssignment
+}
+
 /// The order Settings lists a Space's saved passwords in.
 struct BrowserPasswordSortOrder: Hashable, Identifiable, Sendable {
     static let name = BrowserPasswordSortOrder(id: "name", title: "Name") { $0.precedesInSettings($1) }
@@ -72,9 +80,8 @@ struct BrowserPasswordSettingsPane<Header: View>: View {
     /// Whether the list shows only the logins that make one-time codes.
     @State private var showsOnlyCodes = false
     @State private var exportsSelection = false
-    /// The Space a password being added by hand will be saved to, while
-    /// its editor is open.
-    @State private var newPasswordAssignment: BrowserSpaceRuntimeAssignment?
+    /// The editor for a password being added by hand, while it shows.
+    @State private var newPasswordPresentation: BrowserNewPasswordPresentation?
 
     init(
         browser: BrowserStore,
@@ -186,15 +193,15 @@ struct BrowserPasswordSettingsPane<Header: View>: View {
                 Task { await credentials.load(in: selectedSpaceID, accessController: spaceAccess) }
             }
         }
-        .sheet(isPresented: isAddingPassword) {
+        .sheet(item: $newPasswordPresentation) { presentation in
             BrowserNewPasswordEditor(
                 makeStrongPassword: {
                     (try? browser.strongPasswordRecipe()).flatMap {
                         try? BrowserStrongPasswordGenerator.generate(from: $0)
                     }
                 },
-                save: addPassword,
-                cancel: { newPasswordAssignment = nil })
+                save: { await addPassword($0, presentedBy: presentation) },
+                cancel: { newPasswordPresentation = nil })
         }
         .sheet(item: $credentials.importReview) { review in
             BrowserCredentialImportReviewView(
@@ -289,7 +296,9 @@ struct BrowserPasswordSettingsPane<Header: View>: View {
                         }
                         if !isSelectingCredentials {
                             Button("Add Password", systemImage: "plus") {
-                                newPasswordAssignment = credentialLoadRequest.assignment
+                                newPasswordPresentation = credentialLoadRequest.assignment.map {
+                                    BrowserNewPasswordPresentation(assignment: $0)
+                                }
                             }
                             .disabled(!space.settings.credentialPreferences.isEnabled || credentials.isLoading)
                             .accessibilityIdentifier("add-password")
@@ -625,16 +634,6 @@ struct BrowserPasswordSettingsPane<Header: View>: View {
         String(localized: "\(credentials.descriptors.count) passwords")
     }
 
-    private var isAddingPassword: Binding<Bool> {
-        Binding {
-            newPasswordAssignment != nil
-        } set: { isPresented in
-            if !isPresented {
-                newPasswordAssignment = nil
-            }
-        }
-    }
-
     private var deletionAlertIsPresented: Binding<Bool> {
         Binding {
             credentialPendingDeletion != nil
@@ -686,7 +685,7 @@ struct BrowserPasswordSettingsPane<Header: View>: View {
         selectedCredentialIDs.removeAll()
         confirmsSelectionDeletion = false
         confirmsUnreadableRemoval = false
-        newPasswordAssignment = nil
+        newPasswordPresentation = nil
         credentials.clearSensitiveData()
     }
 
@@ -713,16 +712,21 @@ struct BrowserPasswordSettingsPane<Header: View>: View {
     }
 
     /// Saves a password added by hand to the Space its editor opened on,
-    /// while that Space still shows and its passwords have loaded, unless the
-    /// account already has one there. Answers what went wrong, or nil.
-    private func addPassword(_ added: BrowserNewPassword) async -> String? {
-        guard let assignment = newPasswordAssignment, assignment == credentialLoadRequest.assignment else {
+    /// while that editor and Space still show and the Space's passwords have
+    /// loaded, unless the account already has one there. Answers what went
+    /// wrong, or nil.
+    private func addPassword(_ added: BrowserNewPassword, presentedBy presentation: BrowserNewPasswordPresentation)
+        async -> String?
+    {
+        guard newPasswordPresentation?.id == presentation.id,
+            presentation.assignment == credentialLoadRequest.assignment
+        else {
             return String(localized: "Crest couldn’t save this.")
         }
         guard !credentials.isLoading else {
             return String(localized: "Wait for this Space’s passwords to finish loading.")
         }
-        let spaceID = assignment.spaceID
+        let spaceID = presentation.assignment.spaceID
         let saved = credentials.descriptors.contains {
             $0.origins.contains(added.site) && $0.username.caseInsensitiveCompare(added.username) == .orderedSame
         }
@@ -734,7 +738,9 @@ struct BrowserPasswordSettingsPane<Header: View>: View {
         } catch {
             return String(localized: "Crest couldn’t save this.")
         }
-        newPasswordAssignment = nil
+        // An editor opened again while this one saved keeps its draft.
+        guard newPasswordPresentation?.id == presentation.id else { return nil }
+        newPasswordPresentation = nil
         await credentials.load(in: spaceID, accessController: spaceAccess)
         return nil
     }
