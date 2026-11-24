@@ -638,6 +638,10 @@ extension BrowserStore {
         let targetVault = try credentialVaultID(of: destination, keeping: nil)
         let synchronizes = target.settings.credentialPreferences.syncsCrestPasswordsWithICloud
         for id in ids {
+            // A login already on its way, from this window or another, is left
+            // to that move.
+            guard Self.credentialsBeingMoved.insert(id).inserted else { continue }
+            defer { Self.credentialsBeingMoved.remove(id) }
             guard let saved = try await credential(id: id, in: spaceID) else { continue }
             let sourceVault = saved.descriptor.spaceID
             guard sourceVault != targetVault else { continue }

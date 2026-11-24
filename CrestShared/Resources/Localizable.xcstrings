@@ -14702,6 +14702,9 @@
     "The password is saved in this Space, but the form changed before Crest could fill it." : {
 
     },
+    "The passwords were imported, but notes or codes for %lld of them couldn’t be saved. Import the file again to add them." : {
+
+    },
     "The pattern’s last band and the gradient’s end" : {
 
     },

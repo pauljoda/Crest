@@ -4,7 +4,8 @@ import UniformTypeIdentifiers
 
 /// Saved logins' site icons, fetched once from each site itself: never through
 /// another service, never with cookies, and never from an address on the
-/// local network. Icons are kept in Crest's caches so lists don't ask again,
+/// local network, whether a page names it, a redirect leads there or a name
+/// resolves to it. Icons are kept in Crest's caches so lists don't ask again,
 /// and a site without one isn't asked again this launch.
 actor BrowserSiteIconStore {
     // MARK: - Static Variables
@@ -24,6 +25,7 @@ actor BrowserSiteIconStore {
 
     // MARK: - Variables
 
+    private let redirects = BrowserSiteIconRedirects()
     private var icons: [String: Data] = [:]
     private var missing: Set<String> = []
     private var loading: [String: Task<Data?, Never>] = [:]
@@ -105,9 +107,10 @@ actor BrowserSiteIconStore {
     /// `url`'s body, if it answers with success in at most `limit` bytes, and
     /// the address it finally came from.
     private func fetch(_ url: URL, limit: Int) async -> (Data, URL)? {
+        guard await Self.mayFetch(url) else { return nil }
         var request = URLRequest(url: url)
         request.httpShouldHandleCookies = false
-        guard let (bytes, response) = try? await session.bytes(for: request),
+        guard let (bytes, response) = try? await session.bytes(for: request, delegate: redirects),
             let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
             http.expectedContentLength <= Int64(limit)
         else { return nil }
@@ -131,10 +134,7 @@ actor BrowserSiteIconStore {
     private static func siteURL(of origin: CredentialOrigin) -> URL? {
         guard origin.scheme == "https" || origin.scheme == "http" else { return nil }
         let host = origin.host.lowercased()
-        guard host.contains("."), !host.contains(":"), !localSuffixes.contains(where: { host.hasSuffix($0) }),
-            host.rangeOfCharacter(from: CharacterSet.letters) != nil,
-            !host.split(separator: ".").allSatisfy({ $0.allSatisfy(\.isNumber) })
-        else { return nil }
+        guard namesPublicHost(host) else { return nil }
         var components = URLComponents()
         components.scheme = origin.scheme
         components.host = host
@@ -142,6 +142,25 @@ actor BrowserSiteIconStore {
         if origin.port != defaultPort { components.port = origin.port }
         components.path = "/"
         return components.url
+    }
+
+    /// Whether `host` is a name the public internet knows: dotted, with a
+    /// letter, not an IP address and not a name only a local network knows.
+    static func namesPublicHost(_ host: String) -> Bool {
+        let host = host.lowercased()
+        return host.contains(".") && !host.contains(":") && !localSuffixes.contains(where: { host.hasSuffix($0) })
+            && host.rangeOfCharacter(from: CharacterSet.letters) != nil
+            && !host.split(separator: ".").allSatisfy({ $0.allSatisfy(\.isNumber) })
+    }
+
+    /// Whether Crest may ask `url` for an icon: a web address on a public
+    /// host whose every address is public, so neither a page's icon link nor
+    /// a redirect can reach the local network.
+    static func mayFetch(_ url: URL?) async -> Bool {
+        guard let url, url.scheme == "https" || url.scheme == "http", let host = url.host(percentEncoded: false),
+            namesPublicHost(host)
+        else { return false }
+        return await Task.detached { BrowserSiteIconAddress.allPublic(for: host) }.value
     }
 
     /// The icons a page's `<link>` tags declare, nearest the preferred size

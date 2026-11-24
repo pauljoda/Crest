@@ -427,19 +427,33 @@ final class BrowserCredentialSpaceStore {
         }
         // Notes and code links the file brought go beside the passwords now
         // written, keeping what a login kept where the file brought nothing.
+        // One that can't be read or written is counted, never guessed over.
+        var unsavedDetails = 0
         for (id, details) in resolution.details {
-            let saved = try? await browser.credentialExtras(id: id, in: plan.destination.spaceID)
-            try? await browser.saveCredentialExtras(
-                details.merged(into: saved), forCredential: id, in: plan.destination.spaceID)
+            do {
+                let saved = try await browser.credentialExtras(id: id, in: plan.destination.spaceID)
+                try await browser.saveCredentialExtras(
+                    details.merged(into: saved), forCredential: id, in: plan.destination.spaceID)
+            } catch {
+                unsavedDetails += 1
+            }
         }
         importReview = nil
         // The import is done; a Space chosen meanwhile shows its own passwords.
         guard isStillSelected(), browser.spaceModel(matching: plan.destination) != nil else { return }
-        BrowserNoticeCenter.shared.post(resolution.summary.notice)
+        if unsavedDetails == 0 {
+            BrowserNoticeCenter.shared.post(resolution.summary.notice)
+        }
         await load(
             in: plan.destination.spaceID,
             accessController: accessController
         )
+        if unsavedDetails > 0 {
+            errorMessage = String(
+                localized:
+                    "The passwords were imported, but notes or codes for \(unsavedDetails) of them couldn’t be saved. Import the file again to add them."
+            )
+        }
     }
 
     /// Authenticates and deletes the selected logins one by one, each with

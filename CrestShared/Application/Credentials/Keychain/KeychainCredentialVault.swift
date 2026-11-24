@@ -185,7 +185,9 @@ actor KeychainCredentialVault: CredentialVault {
         let service = service(for: spaceID)
         try await writing {
             let originalItems = try await store.items(in: service)
+            let extrasService = extrasService(for: spaceID)
             var migratedOriginalItems: [CredentialKeychainItem] = []
+            var migratedOriginalCompanions: [CredentialKeychainItem] = []
 
             do {
                 for item in originalItems
@@ -199,17 +201,20 @@ actor KeychainCredentialVault: CredentialVault {
                     migratedOriginalItems.append(item)
                 }
                 // A login's notes and code follow it into or out of iCloud.
-                let extrasService = extrasService(for: spaceID)
                 for item in try await store.items(in: extrasService)
                 where item.isSynchronizable != isSynchronizable && isCompanion(item) {
                     try await store.upsert(
                         codec.migratedExtrasItem(from: item, isSynchronizable: isSynchronizable), in: extrasService)
+                    migratedOriginalCompanions.append(item)
                 }
             } catch {
-                // Each item changes in place, so one that stays moved is still
-                // whole, and the next change moves the rest.
+                // What moved goes back, logins and companions alike, so the
+                // Space keeps the iCloud choice it had and a retry moves all.
                 for originalItem in migratedOriginalItems.reversed() {
                     try? await store.upsert(originalItem, in: service)
+                }
+                for originalCompanion in migratedOriginalCompanions.reversed() {
+                    try? await store.upsert(originalCompanion, in: extrasService)
                 }
                 throw error
             }

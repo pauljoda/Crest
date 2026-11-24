@@ -636,6 +636,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         minimizedInfoBarIDs = []
         developerPanel = nil
         webContentFailureMessage = nil
+        // Whether an extension handles passwords was the old engine's to say;
+        // the new one says again if it has such extensions.
+        credentialState.passwordsHandledElsewhere = false
         installEngine()
     }
 

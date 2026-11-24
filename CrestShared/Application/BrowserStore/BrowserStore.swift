@@ -16,6 +16,15 @@ struct BrowserCredentialSaveOperation {
 @Observable
 @MainActor
 final class BrowserStore {
+    // MARK: - Static Variables
+
+    /// The saved logins a move is carrying between Spaces now, from any
+    /// window: a login moves once at a time, so opposing moves can't each
+    /// delete the copy the other wrote.
+    @ObservationIgnored static var credentialsBeingMoved: Set<UUID> = []
+
+    // MARK: - Variables
+
     /// This window in the core's device, which owns what it shows.
     let windowID: UUID
     /// Advances each time this window shows another Space or tab by an
