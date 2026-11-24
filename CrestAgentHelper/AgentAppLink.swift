@@ -25,6 +25,8 @@ actor AgentAppLink {
                 "Crest isn't running, or agents are turned off in Crest's Settings › Agents. Ask the person to open Crest and turn on agents."
             case .refused(.staleHelper):
                 "Crest was updated since this connection started. Ask the person to restart Crest's MCP server in your agent."
+            case .refused(.full):
+                "Crest is connected to as many agents as it takes at once. Retry once another agent stops, or ask the person to close an agent they no longer use."
             case .closed:
                 "Crest closed the connection before the tool finished."
             case .tooLarge:

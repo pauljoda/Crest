@@ -75,6 +75,8 @@ enum AgentLinkRefusal: String, Codable, Sendable {
     case staleHelper
     /// The person has agents turned off.
     case agentsOff
+    /// Crest is connected to as many helpers as it takes at once.
+    case full
 }
 
 extension AgentLinkRequest {

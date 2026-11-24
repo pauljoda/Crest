@@ -194,7 +194,15 @@ final class BrowserMacAgents {
     // MARK: - Actions - Connections
 
     private func admit(_ connection: BrowserAgentConnection) {
-        guard listener != nil, links.count < Self.maximumConnections else {
+        guard listener != nil else {
+            connection.close()
+            return
+        }
+        guard links.count < Self.maximumConnections else {
+            // The helper says why instead of reporting Crest closed.
+            if let refusal = try? JSONEncoder().encode(AgentLinkResponse.refused(reason: .full)) {
+                connection.send(refusal)
+            }
             connection.close()
             return
         }

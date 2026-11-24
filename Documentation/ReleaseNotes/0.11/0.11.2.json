@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "agents-told-when-crest-is-full",
+      "category": "fixed",
+      "message": "When Crest is already connected to as many agents as it takes, another agent is told so instead of being told Crest isn't running.",
+      "platforms": ["mac"]
+    }
+  ]
+}
