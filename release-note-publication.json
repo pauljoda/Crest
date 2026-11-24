@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-11-new-look",
-    "development": "review-copies-keep-passwords-in-memory",
+    "development": "chromium-upstream-158-0-8127-89-bd1501dcdda5",
     "nightly": "opens-in-engine-logos"
   }
 }
