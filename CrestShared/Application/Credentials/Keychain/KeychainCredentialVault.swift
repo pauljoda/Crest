@@ -328,7 +328,11 @@ actor KeychainCredentialVault: CredentialVault {
             // Read again in the write's turn: a login written meanwhile keeps
             // its companion and sets its iCloud choice.
             let current = Self.synchronization(of: try await store.descriptorItems(in: service(for: spaceID)))
-            for stray in strays where current[stray.account] == nil {
+            // A companion moved into iCloud since the inventory read it is
+            // kept like any other in iCloud, so only one still local alone goes.
+            let companionsNow = Self.synchronization(
+                of: try await store.descriptorItems(in: extrasService).filter { codec.extrasSummary(from: $0) != nil })
+            for stray in strays where current[stray.account] == nil && companionsNow[stray.account] == false {
                 try await store.delete(account: stray.account, in: extrasService)
             }
             for companion in misaligned {

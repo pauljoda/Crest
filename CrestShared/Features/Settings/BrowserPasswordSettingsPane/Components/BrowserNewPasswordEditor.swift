@@ -55,6 +55,8 @@ struct BrowserNewPasswordEditor: View {
                 }
             }
             .formStyle(.grouped)
+            // What's saved is what was typed when Save was pressed.
+            .disabled(isSaving)
             .navigationTitle("New Password")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

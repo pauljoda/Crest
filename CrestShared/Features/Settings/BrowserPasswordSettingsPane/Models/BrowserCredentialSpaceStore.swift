@@ -451,7 +451,7 @@ final class BrowserCredentialSpaceStore {
         if unsavedDetails > 0 {
             errorMessage = String(
                 localized:
-                    "The passwords were imported, but notes or codes for \(unsavedDetails) of them couldn’t be saved. Import the file again to add them."
+                    "The passwords were imported, but notes or codes for \(unsavedDetails) of them couldn’t be saved. Add them to those passwords by hand."
             )
         }
     }

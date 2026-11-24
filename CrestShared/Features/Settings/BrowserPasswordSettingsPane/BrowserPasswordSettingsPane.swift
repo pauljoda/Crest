@@ -72,7 +72,9 @@ struct BrowserPasswordSettingsPane<Header: View>: View {
     /// Whether the list shows only the logins that make one-time codes.
     @State private var showsOnlyCodes = false
     @State private var exportsSelection = false
-    @State private var isAddingPassword = false
+    /// The Space a password being added by hand will be saved to, while
+    /// its editor is open.
+    @State private var newPasswordAssignment: BrowserSpaceRuntimeAssignment?
 
     init(
         browser: BrowserStore,
@@ -184,7 +186,7 @@ struct BrowserPasswordSettingsPane<Header: View>: View {
                 Task { await credentials.load(in: selectedSpaceID, accessController: spaceAccess) }
             }
         }
-        .sheet(isPresented: $isAddingPassword) {
+        .sheet(isPresented: isAddingPassword) {
             BrowserNewPasswordEditor(
                 makeStrongPassword: {
                     (try? browser.strongPasswordRecipe()).flatMap {
@@ -192,7 +194,7 @@ struct BrowserPasswordSettingsPane<Header: View>: View {
                     }
                 },
                 save: addPassword,
-                cancel: { isAddingPassword = false })
+                cancel: { newPasswordAssignment = nil })
         }
         .sheet(item: $credentials.importReview) { review in
             BrowserCredentialImportReviewView(
@@ -286,9 +288,11 @@ struct BrowserPasswordSettingsPane<Header: View>: View {
                             unreadablePasswords
                         }
                         if !isSelectingCredentials {
-                            Button("Add Password", systemImage: "plus") { isAddingPassword = true }
-                                .disabled(!space.settings.credentialPreferences.isEnabled)
-                                .accessibilityIdentifier("add-password")
+                            Button("Add Password", systemImage: "plus") {
+                                newPasswordAssignment = credentialLoadRequest.assignment
+                            }
+                            .disabled(!space.settings.credentialPreferences.isEnabled || credentials.isLoading)
+                            .accessibilityIdentifier("add-password")
                         }
                     } header: {
                         Text("Saved passwords")
@@ -621,6 +625,16 @@ struct BrowserPasswordSettingsPane<Header: View>: View {
         String(localized: "\(credentials.descriptors.count) passwords")
     }
 
+    private var isAddingPassword: Binding<Bool> {
+        Binding {
+            newPasswordAssignment != nil
+        } set: { isPresented in
+            if !isPresented {
+                newPasswordAssignment = nil
+            }
+        }
+    }
+
     private var deletionAlertIsPresented: Binding<Bool> {
         Binding {
             credentialPendingDeletion != nil
@@ -672,6 +686,7 @@ struct BrowserPasswordSettingsPane<Header: View>: View {
         selectedCredentialIDs.removeAll()
         confirmsSelectionDeletion = false
         confirmsUnreadableRemoval = false
+        newPasswordAssignment = nil
         credentials.clearSensitiveData()
     }
 
@@ -697,28 +712,35 @@ struct BrowserPasswordSettingsPane<Header: View>: View {
         }
     }
 
-    /// Opens the site's own page for changing a password, the address sites
-    /// agree on for it, in a new tab of the Space.
-    /// Saves a password added by hand to the Space on show, unless the
+    /// Saves a password added by hand to the Space its editor opened on,
+    /// while that Space still shows and its passwords have loaded, unless the
     /// account already has one there. Answers what went wrong, or nil.
     private func addPassword(_ added: BrowserNewPassword) async -> String? {
-        guard let selectedSpaceID else { return String(localized: "Crest couldn’t save this.") }
+        guard let assignment = newPasswordAssignment, assignment == credentialLoadRequest.assignment else {
+            return String(localized: "Crest couldn’t save this.")
+        }
+        guard !credentials.isLoading else {
+            return String(localized: "Wait for this Space’s passwords to finish loading.")
+        }
+        let spaceID = assignment.spaceID
         let saved = credentials.descriptors.contains {
             $0.origins.contains(added.site) && $0.username.caseInsensitiveCompare(added.username) == .orderedSame
         }
         guard !saved else { return String(localized: "This account already has a saved password.") }
         do {
             try await browser.saveCredential(
-                username: added.username, password: added.password, for: added.address, in: selectedSpaceID,
+                username: added.username, password: added.password, for: added.address, in: spaceID,
                 displayName: added.title)
         } catch {
             return String(localized: "Crest couldn’t save this.")
         }
-        isAddingPassword = false
-        await credentials.load(in: selectedSpaceID, accessController: spaceAccess)
+        newPasswordAssignment = nil
+        await credentials.load(in: spaceID, accessController: spaceAccess)
         return nil
     }
 
+    /// Opens the site's own page for changing a password, the address sites
+    /// agree on for it, in a new tab of the Space.
     private func openChangePasswordPage(for origin: CredentialOrigin, in spaceID: UUID) {
         guard let url = URL(string: "\(origin.description)/.well-known/change-password") else { return }
         credentialDetailRequest = nil
