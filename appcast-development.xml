@@ -6,12 +6,12 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.11.0</title>
-            <pubDate>Tue, 24 Nov 2026 02:51:54 +0000</pubDate>
+            <title>0.11.1</title>
+            <pubDate>Tue, 24 Nov 2026 09:29:52 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1703</sparkle:version>
-            <sparkle:shortVersionString>0.11.0</sparkle:shortVersionString>
+            <sparkle:version>1705</sparkle:version>
+            <sparkle:shortVersionString>0.11.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
@@ -23,11 +23,11 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[Release notes](https://crestbrowser.com/releases/mac/development/0.11.0/) · [View all changes](https://github.com/crest-browser/Crest/compare/4e969a6d403ebba253f3118ce10f39b8db806b11...4ac863356a5b005a00946c4aa005cc4c6a795435) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.11.0-2026-11-24-1703-r703.1/Installer-Crest-0.11.0-development-2026-11-24-4ac8633.dmg)
+[Release notes](https://crestbrowser.com/releases/mac/development/0.11.1/) · [View all changes](https://github.com/crest-browser/Crest/compare/4ac863356a5b005a00946c4aa005cc4c6a795435...bd1501dcdda50ac8c7ca573b2bb084a4dfccfc9e) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.11.1-2026-11-24-1705-r705.1/Installer-Crest-0.11.1-development-2026-11-24-bd1501d.dmg)
 
 [Browse Development releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.11.0-2026-11-24-1703-r703.1/Installer-Crest-0.11.0-development-2026-11-24-4ac8633.dmg" length="410459637" type="application/octet-stream" sparkle:edSignature="B61PdMxA7A5oMVBL1/KJ8oqHeP309YF4aGIgYh4f4HWHGMpN0hVNTiufNJcd2nXgMTUmknJhAEny63b8xqEUCw=="/>
+            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.11.1-2026-11-24-1705-r705.1/Installer-Crest-0.11.1-development-2026-11-24-bd1501d.dmg" length="410440180" type="application/octet-stream" sparkle:edSignature="7MhXqfSfJ7sXLYpPkQ/bERfAnoHhWsUJ4N7zHli6jXdbcccTfvnC8qRFpTGkG6/VQqGShZG1QAEg1d1HzxqdCw=="/>
         </item>
         <item>
             <title>0.10.138</title>
@@ -89,6 +89,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 5lF7IQwFfdNjHo1LVFQiNYKyVilT6yqCd4Gb+aIJOQt+bxKJWUBvZ6RaAUbY3YkkMwrm56acrtgPJkVN8q3rDw==
+edSignature: e/C+pJ5MrdQK1I8A/qv5CXYd2aH3PyL00m1FUGQ2baQXVQcVzZDnRxmZIhyaFpvefibczISVbRMaNTaRAfgpAQ==
 length: 6764
 -->

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-11-new-look",
-    "development": "crest-0-11-new-look",
+    "development": "review-copies-keep-passwords-in-memory",
     "nightly": "opens-in-engine-logos"
   }
 }
