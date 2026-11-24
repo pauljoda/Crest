@@ -2,10 +2,10 @@
   "schemaVersion": 2,
   "status": "source-preparation",
   "chromium": {
-    "version": "158.0.8127.37",
-    "sourceArchive": "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-158.0.8127.37-lite.tar.xz",
-    "hashManifest": "md5  d9dd6b457803f0f15a81a27b254634a9  chromium-158.0.8127.37-lite.tar.xz\nsha1  1bf1c63200b4ca787d34a0e242fef920674c1803  chromium-158.0.8127.37-lite.tar.xz\nsha224  11f1c1a732a70eafdd5cfecfc3b36aa6c3669bbab9df41ce961ce1ef  chromium-158.0.8127.37-lite.tar.xz\nsha256  d1b5866ce5e5d0b5c689c5f8416e3615aed299282253d03b45f55c4d2e9d79f6  chromium-158.0.8127.37-lite.tar.xz\nsha384  519b3d65587d48b5c6e741fd5c06f766cc7a599f6c1e0022b456a2fe3a229fcee4dce10dbc01e9754dd0d3c1ee0be7c4  chromium-158.0.8127.37-lite.tar.xz\nsha512  beec7aedfe2872e689a755b69b36231c6ed97dbeca163aa6f8d124d73df51dbccabd965548bb0307a75fb15df9887589a6ba2693307be288a6c71b78f218e827  chromium-158.0.8127.37-lite.tar.xz\n",
-    "sourceArchiveSha256": "d1b5866ce5e5d0b5c689c5f8416e3615aed299282253d03b45f55c4d2e9d79f6"
+    "version": "158.0.8127.89",
+    "sourceArchive": "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-158.0.8127.89-lite.tar.xz",
+    "hashManifest": "md5  7a45cf38a2845920652191d5538e410b  chromium-158.0.8127.89-lite.tar.xz\nsha1  c93bda8b0134126f3b85c118776e2cd4b9fa11f6  chromium-158.0.8127.89-lite.tar.xz\nsha224  c2039d07e8a94760d6b6d175ea3b4d230c1bf4541ed87b0c2312b71e  chromium-158.0.8127.89-lite.tar.xz\nsha256  c75aaa5bebf958c4dcca8a839a088a47cce5235c102feda67899ba13a5f9047d  chromium-158.0.8127.89-lite.tar.xz\nsha384  e1ba7592238de6cd08844d40a34d50ea602f6913d1dc86a4c38b845e8b92d9f20e9f038be6045e9e52bd70faf8cbdfc9  chromium-158.0.8127.89-lite.tar.xz\nsha512  abce2c2daf2363819836e1c679ef4958d28cd45eb03e55093db447e977efc47f1b20bb3dd52474270c82f060d629a7fe5629f4486c12fa24425ec11529a70166  chromium-158.0.8127.89-lite.tar.xz\n",
+    "sourceArchiveSha256": "c75aaa5bebf958c4dcca8a839a088a47cce5235c102feda67899ba13a5f9047d"
   },
   "dependencies": [
     "src/third_party/llvm-build/Release+Asserts",
