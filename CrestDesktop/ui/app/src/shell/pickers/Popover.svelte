@@ -123,11 +123,11 @@
   const arrow = $derived(hangs ? arrowPlace(place.side!, place.arrow!, panel?.offsetWidth ?? 0) : null);
 </script>
 
+<!-- It comes in as the Mac's popover does and goes at once, as the system popover crestPopover wraps does (D17). -->
 <div bind:this={panel} class={["crest-popover", className]} role="dialog" aria-label={label}
   style:left="{place.left}px" style:top="{place.top}px"
   style:transform-origin={hangs ? arrowOrigin(place.side!, place.arrow!) : undefined}
   in:presence|global={{ pose: { opacity: 0, scale: 0.96 }, timing: tokens.floatingPane }}
-  out:presence={{ pose: { opacity: 0, scale: 0.96 }, timing: tokens.floatingPane }}
   {@attach portal(() => document.querySelector(".browser-window") ?? document.body)}>
   {#if arrow}
     <svg class="crest-popover-arrow" width={popoverArrow.width} height="11" viewBox="0 0 28 11"

@@ -29,7 +29,7 @@
   import type { ShellTransport } from "@crest/core-client";
   import { motion as tokens } from "@crest/design";
 
-  import { presence } from "../motion";
+  import { presence, type Timing } from "../motion";
   import { noticeDuration, notices } from "../notices";
   import SymbolIcon from "../SymbolIcon.svelte";
 
@@ -66,6 +66,16 @@
     };
   });
 
+  /**
+   * The Mac's `.move(edge: .top)` with the fade: the notice, its inset from the top included, slides in from
+   * above the area's top edge and goes back up past it.
+   */
+  const fromTop = (node: Element, timing: Timing) => {
+    const element = node as HTMLElement;
+    const travel = element.offsetHeight + (element.parentElement?.offsetTop ?? 0) + element.offsetTop;
+    return presence(node, { pose: { opacity: 0, y: -travel }, timing });
+  };
+
   $effect(() => {
     const shown = notice;
     if (!shown) return;
@@ -80,8 +90,8 @@
   {#each notice ? [notice] : [] as shown (shown.id)}
     <div
       class="notice"
-      in:presence={{ pose: { opacity: 0, y: -12 }, timing: tokens.feedbackPresentation }}
-      out:presence={{ pose: { opacity: 0, y: -12 }, timing: tokens.dismissal }}
+      in:fromTop={tokens.feedbackPresentation}
+      out:fromTop={tokens.dismissal}
     >
       <SymbolIcon name={shown.symbol} size={15} />
       <span aria-label={shown.accessibilityLabel}>{shown.message}</span>

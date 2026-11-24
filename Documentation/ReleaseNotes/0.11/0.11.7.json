@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "windows-notices-popovers-match-mac",
+      "category": "internal",
+      "message": "On Windows, notices slide in from the top of the page as on the Mac, and Site Controls and other popovers close at once, as the Mac's do."
+    }
+  ]
+}

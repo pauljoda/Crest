@@ -160,6 +160,7 @@
   </div>
 {/snippet}
 
+<!-- It comes in as the Mac's popover does and goes at once, as the system popover crestPopover wraps does (D17). -->
 <div
   bind:this={panel}
   class="site-control-panel"
@@ -168,7 +169,6 @@
   tabindex="-1"
   style:--arrow-x={arrowX === null ? undefined : `${arrowX}px`}
   in:presence|global={{ pose: { opacity: 0, y: -6, scale: 0.97 }, timing: tokens.floatingPane }}
-  out:presence={{ pose: { opacity: 0, y: -4, scale: 0.98 }, timing: tokens.floatingPane }}
 >
   <svg class="site-control-arrow" width="28" height="11" viewBox="0 0 28 11" aria-hidden="true">
     <path d="M0 11c4 0 6.5-1.6 8.6-3.7l3.6-3.6a2.5 2.5 0 0 1 3.6 0l3.6 3.6C21.5 9.4 24 11 28 11z" fill="currentColor" />
