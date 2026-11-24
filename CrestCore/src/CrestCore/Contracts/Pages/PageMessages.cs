@@ -16,6 +16,12 @@ public sealed record PageHistoryList(IReadOnlyList<PageHistoryEntry> Back, IRead
 /// to the platform, or null for none.
 public sealed record PageHistoryArchive(byte[]? Archive);
 
+/// The HTTP(S) host whose zoom a page's address follows, and the zoom its
+/// profile keeps for that host, or null while the host follows the device's
+/// default. A host's schemes and ports share its zoom; an address without an
+/// HTTP(S) host has none.
+public sealed record SiteZoomPreference(string? Host, double? Factor);
+
 #endregion
 
 #region Changes
@@ -70,6 +76,11 @@ public sealed record PageRemoved(Guid PageId) : Change;
 /// `PageRemoved` also says.
 public sealed record PageUnloaded(Guid PageId, Guid WorkspaceId, Guid TabId) : Change;
 
+/// The profile `ProfileId` keeps `Factor` as `Host`'s zoom, or no zoom of its
+/// own when null, so the host follows the device's default. Every page of the
+/// profile showing the host follows it.
+public sealed record SiteZoomChanged(Guid ProfileId, string Host, double? Factor) : Change;
+
 /// The Quick Window's or Peek's page `PageId` names, in the workspace
 /// `WorkspaceId`, closed itself as a page another page opened may, or its
 /// engine closed it on its own authority. Whatever shows it closes, keeping
@@ -86,6 +97,12 @@ public sealed record TransientAlreadyCompleted(Guid PageId) : Rejection;
 
 /// A page with this identity is already open.
 public sealed record DuplicatePage(Guid PageId) : Rejection;
+
+/// A site's zoom is a number within the zoom a page may start at.
+public sealed record InvalidSiteZoom(double Factor) : Rejection;
+
+/// Only an HTTP(S) address's host keeps a zoom.
+public sealed record InvalidSiteZoomAddress(string Url) : Rejection;
 
 /// The page's engine holds no page to load into: it could not create it, or
 /// the page closed.

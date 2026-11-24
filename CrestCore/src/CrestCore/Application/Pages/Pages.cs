@@ -586,6 +586,14 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
         return session.Viewed(space);
     }
 
+    /// The Space `page` browses in, as `Hosting` reads it, which keeps the
+    /// page's profile. Refused like `Hosting`, and when the Space keeps
+    /// another profile.
+    internal SpaceState Browsing(Page page) {
+        var space = Hosting(device.Workspace(page.WorkspaceId), page.SpaceId);
+        return space.ProfileId == page.ProfileId ? space : throw new Rejected(new PageProfileMismatch(page.Id, space.Id));
+    }
+
     /// A window hosts one page for a tab at a time. Whether the workspace holds
     /// the tab is not checked yet: selection can present a tab before the
     /// core's session has it, and an `UnknownTab` rejection arrives with the

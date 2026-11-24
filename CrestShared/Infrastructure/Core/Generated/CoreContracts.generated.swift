@@ -177,6 +177,7 @@ enum Change: Equatable, Sendable {
     case siteContentBlockingChanged(SiteContentBlockingChanged)
     case siteControlTopActionsChanged(SiteControlTopActionsChanged)
     case sitePermissionsChanged(SitePermissionsChanged)
+    case siteZoomChanged(SiteZoomChanged)
     case spaceLockChanged(SpaceLockChanged)
     case spaceSettingsChanged(SpaceSettingsChanged)
     case spacesChanged(SpacesChanged)
@@ -462,6 +463,11 @@ enum Change: Equatable, Sendable {
         if case .sitePermissionsChanged(let value) = self { value } else { nil }
     }
 
+    /// The `SiteZoomChanged` this change carries, or nil for another member.
+    var siteZoomChanged: SiteZoomChanged? {
+        if case .siteZoomChanged(let value) = self { value } else { nil }
+    }
+
     /// The `SpaceLockChanged` this change carries, or nil for another member.
     var spaceLockChanged: SpaceLockChanged? {
         if case .spaceLockChanged(let value) = self { value } else { nil }
@@ -667,6 +673,8 @@ enum Rejection: Equatable, Error, Sendable {
     case invalidSiteOrigin(InvalidSiteOrigin)
     case invalidSitePermissionDetail(InvalidSitePermissionDetail)
     case invalidSitePermissionGrant(InvalidSitePermissionGrant)
+    case invalidSiteZoom(InvalidSiteZoom)
+    case invalidSiteZoomAddress(InvalidSiteZoomAddress)
     case invalidSpaceOrder(InvalidSpaceOrder)
     case invalidSplitColumnShares(InvalidSplitColumnShares)
     case invalidSplitIcon(InvalidSplitIcon)
@@ -1178,6 +1186,16 @@ enum Rejection: Equatable, Error, Sendable {
     /// The `InvalidSitePermissionGrant` this rejection carries, or nil for another member.
     var invalidSitePermissionGrant: InvalidSitePermissionGrant? {
         if case .invalidSitePermissionGrant(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSiteZoom` this rejection carries, or nil for another member.
+    var invalidSiteZoom: InvalidSiteZoom? {
+        if case .invalidSiteZoom(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidSiteZoomAddress` this rejection carries, or nil for another member.
+    var invalidSiteZoomAddress: InvalidSiteZoomAddress? {
+        if case .invalidSiteZoomAddress(let value) = self { value } else { nil }
     }
 
     /// The `InvalidSpaceOrder` this rejection carries, or nil for another member.
@@ -1949,6 +1967,7 @@ extension Change {
         case .siteContentBlockingChanged(let change): change.apply(to: state)
         case .siteControlTopActionsChanged(let change): change.apply(to: state)
         case .sitePermissionsChanged(let change): change.apply(to: state)
+        case .siteZoomChanged(let change): change.apply(to: state)
         case .spaceLockChanged(let change): change.apply(to: state)
         case .spaceSettingsChanged(let change): change.apply(to: state)
         case .spacesChanged(let change): change.apply(to: state)
@@ -2032,6 +2051,7 @@ extension Change {
         case .siteContentBlockingChanged(let change): change.apply(to: core, in: &batch)
         case .siteControlTopActionsChanged(let change): change.apply(to: core, in: &batch)
         case .sitePermissionsChanged(let change): change.apply(to: core, in: &batch)
+        case .siteZoomChanged(let change): change.apply(to: core, in: &batch)
         case .spaceLockChanged(let change): change.apply(to: core, in: &batch)
         case .spaceSettingsChanged(let change): change.apply(to: core, in: &batch)
         case .spacesChanged(let change): change.apply(to: core, in: &batch)
@@ -2115,6 +2135,7 @@ extension Change {
         case .siteContentBlockingChanged(let change): change.note(in: &receipts)
         case .siteControlTopActionsChanged(let change): change.note(in: &receipts)
         case .sitePermissionsChanged(let change): change.note(in: &receipts)
+        case .siteZoomChanged(let change): change.note(in: &receipts)
         case .spaceLockChanged(let change): change.note(in: &receipts)
         case .spaceSettingsChanged(let change): change.note(in: &receipts)
         case .spacesChanged(let change): change.note(in: &receipts)
@@ -5309,6 +5330,14 @@ struct InvalidSitePermissionGrant: Equatable, Sendable {
     let permission: SitePermission
 }
 
+struct InvalidSiteZoom: Equatable, Sendable {
+    let factor: Double
+}
+
+struct InvalidSiteZoomAddress: Equatable, Sendable {
+    let url: String
+}
+
 struct InvalidSpaceOrder: Equatable, Sendable {
 }
 
@@ -7519,6 +7548,13 @@ struct SavedCredentialOrigin: Equatable, Sendable, Identifiable {
     var origin: CredentialOrigin
 }
 
+struct SavedSiteZoom: Query, Equatable, Sendable {
+    typealias Answer = SiteZoomPreference
+
+    let pageID: UUID
+    let url: String
+}
+
 struct SchemeHandled: Equatable, Sendable {
     let disposition: ExternalSchemeDisposition
 }
@@ -7964,6 +8000,12 @@ struct SetSitePermission: PageRequest, Equatable, Sendable {
     let pageID: UUID
     let permission: SitePermission
     let allowed: Bool?
+}
+
+struct SetSiteZoom: Intent, PageIntent, Equatable, Sendable {
+    let pageID: UUID
+    let url: String
+    let factor: Double?
 }
 
 struct SetSpaceAccess: Intent, SessionIntent, Equatable, Sendable {
@@ -8412,6 +8454,17 @@ struct SitePermissionsChanged: CoreChange, Equatable, Sendable {
     let spaceID: UUID
     let records: [SitePermissionRecordState]
     let touched: [SitePermissionScope]
+}
+
+struct SiteZoomChanged: CoreChange, Equatable, Sendable {
+    let profileID: UUID
+    let host: String
+    let factor: Double?
+}
+
+struct SiteZoomPreference: Equatable, Sendable {
+    let host: String?
+    let factor: Double?
 }
 
 struct SpaceAlreadyExists: Equatable, Sendable {

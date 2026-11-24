@@ -192,10 +192,18 @@ internal sealed class DevicePart {
         (records, other) => records.SiteControlTopActions.SequenceEqual(other.SiteControlTopActions),
         (store, records, _) => store.WriteSiteControlTopActions(records.SiteControlTopActions));
 
+    public static readonly DevicePart SiteZoom = new(
+        [
+            "CREATE TABLE IF NOT EXISTS device_site_zoom (profile TEXT NOT NULL, host TEXT NOT NULL, factor REAL NOT NULL, "
+                + "position INTEGER NOT NULL, PRIMARY KEY (profile, host))"
+        ],
+        (records, other) => records.SiteZoom.SequenceEqual(other.SiteZoom),
+        (store, records, _) => store.WriteSiteZoom(records.SiteZoom));
+
     public static IReadOnlyList<DevicePart> All { get; } = [
         Windows, Reopening, SitePermissions, SiteEngines, DefaultEngine, Shortcuts, Links, SetupDraft, SetupCompleted, Adoptions,
         TabGroups, PaletteMemories, SearchCatalog, Agents, ReopeningPages, LaunchedRelease, ContentBlockingLevel, FilterListChoices,
-        BlockingSites, CustomFilterLists, CustomFilters, Pages, Downloads, SyncsWithICloud, SiteControlTopActions
+        BlockingSites, CustomFilterLists, CustomFilters, Pages, Downloads, SyncsWithICloud, SiteControlTopActions, SiteZoom
     ];
 
     #endregion

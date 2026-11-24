@@ -85,6 +85,10 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
     /// while they keep the defaults.
     public IReadOnlyList<SiteControlAction> SiteControlTopActions { get; init; } = [];
 
+    /// The zoom each profile the persistent session browses with keeps for
+    /// its hosts, least recent first.
+    public IReadOnlyList<SiteZoomChoice> SiteZoom { get; init; } = [];
+
     #endregion
 
     #region Actions - Adoption

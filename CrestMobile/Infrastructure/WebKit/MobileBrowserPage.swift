@@ -66,7 +66,9 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var findQuery: String { findSession.query }
     var findMatchState: BrowserFindMatchState { findSession.matchState }
     var findFocusRequest: Int { findSession.focusRequest }
-    private(set) var pageZoom: CGFloat = BrowserDefaultPageZoomStore.defaultLevel
+    var pageZoom: CGFloat { zoomSession.factor }
+    /// The page's zoom: its site's in the page's profile, or the default.
+    let zoomSession: BrowserPageZoomSession
     let translation = BrowserPageTranslation()
     /// The document whole-page translation rewrites.
     var translationDocument: BrowserTranslationDocument? { BrowserTranslationDocument(webView: webView) }
@@ -189,8 +191,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// every popup does. Installing the same script message handler twice on it
     /// throws, and removing one would strip it from the opener.
     @ObservationIgnored private let ownsUserContentController: Bool
-    @ObservationIgnored private var defaultPageZoom: CGFloat
-    @ObservationIgnored private var hasTemporaryPageZoomOverride = false
 
     /// The page hosting what WebKit's binding built as `webKitPage`, for
     /// `tab` in `space`. `contentRuleList` is a rule list the page applies
@@ -279,9 +279,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 )
             }
         )
-        let normalizedDefaultPageZoom = BrowserDefaultPageZoomStore.normalized(defaultPageZoom)
-        self.defaultPageZoom = normalizedDefaultPageZoom
-        pageZoom = normalizedDefaultPageZoom
+        zoomSession = BrowserPageZoomSession(
+            page: corePage, profileID: space.profileID, defaultZoom: defaultPageZoom, url: tab.url)
         let httpAuthenticationSession = BrowserHTTPAuthenticationSession(
             spaceID: space.id,
             allowsCredentialSaving: allowsCredentialAccess
@@ -314,8 +313,9 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
 
         super.init()
-        if normalizedDefaultPageZoom != BrowserDefaultPageZoomStore.defaultLevel {
-            webView.pageScale = normalizedDefaultPageZoom
+        zoomSession.apply = { [weak self] zoom in self?.enginePage.zoom(to: zoom) }
+        if pageZoom != BrowserDefaultPageZoomStore.defaultLevel {
+            webView.pageScale = pageZoom
         }
         #if DEBUG
             // iOS ships no developer tooling of its own, so an inspectable
@@ -712,33 +712,29 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         findSession.find(query, direction: direction, using: enginePage)
     }
 
+    /// Zooms the page in a step, which its site keeps in the page's profile.
     @discardableResult
     func zoomIn() -> Bool {
-        setTemporaryPageZoom(pageZoom.pageZoomIncreased)
+        zoomSession.set(pageZoom.pageZoomIncreased)
     }
 
+    /// Zooms the page out a step, which its site keeps in the page's profile.
     @discardableResult
     func zoomOut() -> Bool {
-        setTemporaryPageZoom(pageZoom.pageZoomDecreased)
+        zoomSession.set(pageZoom.pageZoomDecreased)
     }
 
+    /// Returns the page and its site to the default zoom.
     @discardableResult
     func resetZoom() -> Bool {
-        hasTemporaryPageZoomOverride = false
-        return setPageZoom(defaultPageZoom)
+        zoomSession.reset()
     }
 
+    /// The device's default zoom changed, which a site without a zoom of its
+    /// own follows.
     @discardableResult
     func applyDefaultPageZoom(_ zoom: CGFloat) -> Bool {
-        let normalized = BrowserDefaultPageZoomStore.normalized(zoom)
-        defaultPageZoom = normalized
-        if hasTemporaryPageZoomOverride {
-            if pageZoom.matchesPageZoom(normalized) {
-                hasTemporaryPageZoomOverride = false
-            }
-            return false
-        }
-        return setPageZoom(normalized)
+        zoomSession.applyDefault(zoom)
     }
 
     func refreshReaderModeAvailability() async {
@@ -1117,22 +1113,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         reportWebContentProcessStopped()
     }
 
-    private func setTemporaryPageZoom(_ zoom: CGFloat) -> Bool {
-        let changed = setPageZoom(zoom)
-        hasTemporaryPageZoomOverride = !pageZoom.matchesPageZoom(defaultPageZoom)
-        return changed
-    }
-
-    private func setPageZoom(_ zoom: CGFloat) -> Bool {
-        guard zoom != pageZoom else {
-            return false
-        }
-        pageZoom = zoom
-        enginePage.zoom(to: zoom)
-        return true
-    }
-
     func prepareForNavigation(to url: URL?) {
+        zoomSession.prepareForNavigation(to: url)
         // The site it goes to may have content blocking turned off, or on.
         if let url {
             contentRuleSession.navigating(to: url, in: webView)
