@@ -26,7 +26,6 @@ the live status for each issue.
 
 - [ ] [Reveal the collapsed iPad sidebar on pointer hover](https://github.com/crest-browser/Crest/issues/176)
 - [ ] [feature: Add Edit Pinned URL menu option and dialogue](https://github.com/crest-browser/Crest/issues/218)
-- [ ] [bug: white flash between loading screen in dark mode](https://github.com/crest-browser/Crest/issues/246)
 - [ ] [feature: Double-click a tab to rename](https://github.com/crest-browser/Crest/issues/264)
 - [ ] [Keep find in page in step with what you type](https://github.com/crest-browser/Crest/issues/278)
 - [ ] [Pointer reappears during playback and the sidebar opens on its own](https://github.com/crest-browser/Crest/issues/304)
@@ -45,8 +44,15 @@ the live status for each issue.
 - [ ] [feature: Share one extension install across chosen Spaces](https://github.com/crest-browser/Crest/issues/527)
 - [ ] [Keep a Quick Window from another app clear of a new tab's keyboard on iPhone](https://github.com/crest-browser/Crest/issues/563)
 - [ ] [Say so when a link from another app needs a locked Space](https://github.com/crest-browser/Crest/issues/564)
-- [ ] [feature: Show site favicons in address bar suggestions](https://github.com/crest-browser/Crest/issues/1079)
-- [ ] [Make Search the command palette's top row for text that isn't an address](https://github.com/crest-browser/Crest/issues/1236)
+- [ ] [feature: Compatibility with macOS 15 and older !](https://github.com/crest-browser/Crest/issues/951)
+
+#### Completed
+
+- [x] [bug: white flash between loading screen in dark mode](https://github.com/crest-browser/Crest/issues/246)
+- [x] [feature: Show site favicons in address bar suggestions](https://github.com/crest-browser/Crest/issues/1079)
+- [x] [Make Search the command palette's top row for text that isn't an address](https://github.com/crest-browser/Crest/issues/1236)
+- [x] [Let people choose how the selected tab looks, with a translucent default](https://github.com/crest-browser/Crest/issues/1290)
+- [x] [Command palette offers Search before an open tab that matches what you typed](https://github.com/crest-browser/Crest/issues/1313)
 
 <!-- crest-roadmap-sync:end -->
 

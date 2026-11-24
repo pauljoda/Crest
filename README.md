@@ -122,7 +122,7 @@ The same Spaces, shaped for each screen. iPad keeps the sidebar beside your page
 
 | Platform | Install |
 | --- | --- |
-| Mac · Apple silicon · macOS 15+ | [Signed, notarized download](https://github.com/crest-browser/Crest/releases/latest) with built-in Sparkle updates.<br><br>Or install via Homebrew:<br>`brew install --cask crest-browser` |
+| Mac · Apple silicon or Intel · macOS 15+ | [Signed, notarized download](https://github.com/crest-browser/Crest/releases/latest) with built-in Sparkle updates.<br><br>Or install via Homebrew:<br>`brew install --cask crest-browser` |
 | iPhone · iOS 26.1+ | [App Store](https://apps.apple.com/us/app/crest-browser/id6797335023) |
 | iPad · iPadOS 26.1+ | [App Store](https://apps.apple.com/us/app/crest-browser/id6797335023) |
 | iPhone & iPad beta | [TestFlight](https://testflight.apple.com/join/vV1CM49Q) |
@@ -164,10 +164,10 @@ Xcode builds and embeds the self-contained .NET core for Mac, iOS, and Simulator
 
 ## Releases and updates
 
-The [Crest 0.10 release notes](https://crestbrowser.com/releases/mac/stable/0.10.8/) describe three
-styles, the address bar above the page on Mac, and new sidebar and color
-settings. Crest requires Apple silicon and macOS 15 or later on Mac; iPhone
-and iPad use WebKit.
+The [Crest 0.11 release notes](https://crestbrowser.com/releases/mac/stable/0.11.0/) describe the
+new look, Site Controls, the new setup and Space looks made from a template,
+colors and an icon. Crest requires macOS 15 or later on Mac, on Apple silicon
+or Intel; iPhone and iPad use WebKit.
 
 When updating from a WebKit-only release, your Spaces, tabs, history, and Crest
 Passwords carry over. Chromium has separate website storage, so sites may ask
