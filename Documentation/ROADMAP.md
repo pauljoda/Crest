@@ -7,6 +7,7 @@ status; release milestones hold the actionable issue descriptions.
 
 ## Published releases
 
+- [Crest 0.11.0](https://github.com/crest-browser/Crest/releases/tag/v0.11.0) — [release scope and completed work](https://github.com/crest-browser/Crest/milestone/7?closed=1).
 - [Crest 0.10.24](https://github.com/crest-browser/Crest/releases/tag/v0.10.24) — [release scope and completed work](https://github.com/crest-browser/Crest/milestone/6?closed=1).
 - [Crest 0.9.1](https://github.com/crest-browser/Crest/releases/tag/v0.9.1) — [release scope and completed work](https://github.com/crest-browser/Crest/milestone/5?closed=1).
 - [Crest 0.8.50](https://github.com/crest-browser/Crest/releases/tag/v0.8.50) — [release scope and completed work](https://github.com/crest-browser/Crest/milestone/4?closed=1).
@@ -20,7 +21,7 @@ status; release milestones hold the actionable issue descriptions.
 Release milestones are shown from earliest to latest. The project board holds
 the live status for each issue.
 
-### [0.11](https://github.com/crest-browser/Crest/milestone/7)
+### [0.12](https://github.com/crest-browser/Crest/milestone/8)
 
 #### Planned and in progress
 
@@ -44,15 +45,7 @@ the live status for each issue.
 - [ ] [feature: Share one extension install across chosen Spaces](https://github.com/crest-browser/Crest/issues/527)
 - [ ] [Keep a Quick Window from another app clear of a new tab's keyboard on iPhone](https://github.com/crest-browser/Crest/issues/563)
 - [ ] [Say so when a link from another app needs a locked Space](https://github.com/crest-browser/Crest/issues/564)
-- [ ] [feature: Compatibility with macOS 15 and older !](https://github.com/crest-browser/Crest/issues/951)
-
-#### Completed
-
-- [x] [bug: white flash between loading screen in dark mode](https://github.com/crest-browser/Crest/issues/246)
-- [x] [feature: Show site favicons in address bar suggestions](https://github.com/crest-browser/Crest/issues/1079)
-- [x] [Make Search the command palette's top row for text that isn't an address](https://github.com/crest-browser/Crest/issues/1236)
-- [x] [Let people choose how the selected tab looks, with a translucent default](https://github.com/crest-browser/Crest/issues/1290)
-- [x] [Command palette offers Search before an open tab that matches what you typed](https://github.com/crest-browser/Crest/issues/1313)
+- [ ] [Overhaul passwords and autofill: one-time codes, a new suggestion popup, and saved addresses and payment cards](https://github.com/crest-browser/Crest/issues/1344)
 
 <!-- crest-roadmap-sync:end -->
 
