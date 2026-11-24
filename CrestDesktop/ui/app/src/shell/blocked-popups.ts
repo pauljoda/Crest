@@ -15,9 +15,9 @@ import {
   SitePermissionDecision,
 } from "@crest/contracts";
 import type { CrestCore } from "@crest/core-client";
-import { useSyncExternalStore } from "react";
+import { reader } from "../reactive";
 
-import { siteOriginOf } from "./site-control";
+import { siteOriginOf } from "./site-control.svelte";
 
 /** The one blocked pop-up indication a page may show, as the Mac's BrowserBlockedPopupNotice. */
 export interface BlockedPopupNotice {
@@ -163,7 +163,13 @@ class BlockedPopups {
 export const blockedPopups = new BlockedPopups();
 
 /** Redraws with the window's blocked pop-ups. */
+const readBlockedPopups = reader(blockedPopups.subscribe, () => blockedPopups.version);
+
+/**
+ * The window's blocked pop-ups, followed by the expression that reads them:
+ * call it inside the `$derived` or template expression that reads from it.
+ */
 export function useBlockedPopups(): BlockedPopups {
-  useSyncExternalStore(blockedPopups.subscribe, () => blockedPopups.version);
+  readBlockedPopups();
   return blockedPopups;
 }

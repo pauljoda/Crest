@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "npm run dev --workspace app",
     "build": "npm run build --workspace app",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b && npm run check --workspace app"
   },
   "devDependencies": {
     "typescript": "5.9.3"

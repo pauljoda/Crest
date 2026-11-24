@@ -8,7 +8,7 @@ import {
   type SpaceState,
 } from "@crest/contracts";
 import { type CrestCore, CoreRejection } from "@crest/core-client";
-import { useSyncExternalStore } from "react";
+import { reader } from "../reactive";
 
 import type { Session } from "../boot";
 import { failureNotice, notices } from "../notices";
@@ -34,11 +34,13 @@ function setFailure(next: SpaceAccessFailure | null) {
 }
 
 /** Why the last unlock failed, for the views that say so. */
+const readFailure = reader((listener) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}, () => failure);
+
 export function useAccessFailure(): SpaceAccessFailure | null {
-  return useSyncExternalStore((listener) => {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
-  }, () => failure);
+  return readFailure();
 }
 
 /**

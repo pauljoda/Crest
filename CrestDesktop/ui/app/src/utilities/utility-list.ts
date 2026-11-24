@@ -1,6 +1,6 @@
 import { type ArchivedTabState, ArchiveFilterGroup, type DownloadState, type HistoryEntryState, type SpaceState, TabSurface } from "@crest/contracts";
 
-import { downloadStatus } from "../downloads";
+import { downloadStatus } from "../downloads.svelte";
 
 /**
  * The Mac's utility lists (BrowserUtilitySurface and its list model): a

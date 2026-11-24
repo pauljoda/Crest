@@ -1,6 +1,6 @@
 import { FindInPage, type FindFinished, ZoomPage } from "@crest/contracts";
 import type { CrestCore } from "@crest/core-client";
-import { useSyncExternalStore } from "react";
+import { reader } from "../reactive";
 
 /** What a search has turned up so far, as the Mac's BrowserFindMatchState names it. */
 export type FindMatchState = "idle" | "searching" | "found" | "notFound";
@@ -163,8 +163,14 @@ class PageTools {
 export const pageTools = new PageTools();
 
 /** Redraws with the window's page work. */
+const readPageTools = reader(pageTools.subscribe, () => pageTools.version);
+
+/**
+ * The window's page tools, followed by the expression that reads them: call
+ * it inside the `$derived` or template expression that reads from it.
+ */
 export function usePageTools(): PageTools {
-  useSyncExternalStore(pageTools.subscribe, () => pageTools.version);
+  readPageTools();
   return pageTools;
 }
 

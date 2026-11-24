@@ -35,7 +35,7 @@ import type { Browsing } from "./browsing";
 import { CopiedLink } from "./copied-link";
 import { failureNotice, notices, urlCopiedNotice } from "./notices";
 import { pageTools, zoomPercentage } from "./shell/page-tools";
-import { toggleSiteContentBlocking } from "./shell/site-control";
+import { toggleSiteContentBlocking } from "./shell/site-control.svelte";
 import type { CommandHandlers } from "./shortcuts";
 import { showAdjacentSpace, showSpaceNow } from "./spaces/show-space";
 

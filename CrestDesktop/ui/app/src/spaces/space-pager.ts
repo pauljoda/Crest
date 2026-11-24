@@ -1,5 +1,5 @@
 import type { ShellWheel } from "@crest/core-client";
-import { useSyncExternalStore } from "react";
+import { reader } from "../reactive";
 
 /**
  * The window's Space pager, as the Mac's SpacePagerViewport: the strip of
@@ -845,16 +845,16 @@ function reducesMotion(): boolean {
 export const spacePager = new SpacePager();
 
 /** The pager's frame as of its last change of phase or pages; not every frame. */
+const readPager = reader(spacePager.subscribe, () => spacePager.frame);
+const readPagerFrames = reader((listener) => spacePager.subscribeFrames(() => listener()), () => spacePager.frame);
+
 export function useSpacePager(): PagerFrame {
-  return useSyncExternalStore(spacePager.subscribe, () => spacePager.frame);
+  return readPager();
 }
 
 /** Follows every frame of the pager, for a leaf that draws as it moves. */
 export function useSpacePagerFrames(): PagerFrame {
-  return useSyncExternalStore(
-    (listener) => spacePager.subscribeFrames(() => listener()),
-    () => spacePager.frame,
-  );
+  return readPagerFrames();
 }
 
 // MARK: - Swipes from the wheel

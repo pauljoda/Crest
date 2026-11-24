@@ -934,7 +934,7 @@ button {
 }
 
 /* While it morphs, the sidebar stands over the page, which moves beside it
-   or beneath it (SidebarSlot.tsx). */
+   or beneath it (SidebarSlot.svelte). */
 .sidebar-slot.morphing {
   z-index: 4;
 }
@@ -2090,7 +2090,7 @@ button {
 }
 
 /* A folder drawn as two flat faces in its own colour, which swing apart as
-   it opens (FolderArtwork.tsx). */
+   it opens (FolderArtwork.svelte). */
 .folder-artwork {
   position: relative;
   display: inline-block;
@@ -2435,7 +2435,7 @@ button {
 }
 
 /* The track: a well recessed into the sidebar, its black's strength set from
-   the picker's tone over each Space's sidebar (SpaceSwitcher.tsx). */
+   the picker's tone over each Space's sidebar (SpaceSwitcher.svelte). */
 .space-picker-track {
   position: relative;
   display: flex;

@@ -18,7 +18,7 @@ import {
 } from "@crest/contracts";
 
 import type { Session } from "../boot";
-import { bundledTabIcons } from "../page-icon";
+import { bundledTabIcons } from "../page-icon.svelte";
 import { send } from "../shell/sidebar-menus";
 import { type SpaceCards, spaceCards } from "../shell/shown-cards";
 

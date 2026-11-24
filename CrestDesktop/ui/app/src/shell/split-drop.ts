@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { reader } from "../reactive";
 
 /**
  * Where a lift from the sidebar would join a window's cards, as the Mac's
@@ -20,11 +20,14 @@ export const splitDrop = {
 };
 
 /** The slot a lift in `windowId` would join its cards at, or null. */
+const readAimed = reader((listener) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}, () => aimed);
+
 export function useSplitDropIndex(windowId: string): number | null {
-  return useSyncExternalStore((listener) => {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
-  }, () => (aimed.windowId === windowId ? aimed.index : null));
+  const current = readAimed();
+  return current.windowId === windowId ? current.index : null;
 }
 
 /**

@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { reader } from "../reactive";
 
 /**
  * Whether the page cards take changes of size at once rather than animating
@@ -38,9 +38,11 @@ export function holdCards(): () => void {
 }
 
 /** Whether the cards take a change of size at once now. */
+const readCardsSnap = reader((listener) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}, () => holds > 0 || settling);
+
 export function useCardsSnap(): boolean {
-  return useSyncExternalStore((listener) => {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
-  }, () => holds > 0 || settling);
+  return readCardsSnap();
 }

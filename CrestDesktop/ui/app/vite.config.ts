@@ -1,4 +1,4 @@
-import react from "@vitejs/plugin-react";
+import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { defineConfig, searchForWorkspaceRoot } from "vite";
@@ -19,7 +19,7 @@ const version = /MARKETING_VERSION\s*=\s*(\S+)/.exec(
   readFileSync(fileURLToPath(new URL("../../../Config/Version.xcconfig", import.meta.url)), "utf8"))?.[1] ?? "";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [svelte()],
   define: { __CREST_VERSION__: JSON.stringify(version) },
   server: {
     port: 5173,

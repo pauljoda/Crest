@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { reader } from "../reactive";
 
 /**
  * Whether the interface holds the pointer for a drag of its own: resizing
@@ -27,9 +27,11 @@ export function holdPointer(): () => void {
 }
 
 /** Whether a drag holds the pointer now. */
+const readPointerHeld = reader((listener) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}, () => holds > 0);
+
 export function usePointerHeld(): boolean {
-  return useSyncExternalStore((listener) => {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
-  }, () => holds > 0);
+  return readPointerHeld();
 }

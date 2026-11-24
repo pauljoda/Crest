@@ -1,6 +1,5 @@
 {
   "extends": "../tsconfig.base.json",
-  "compilerOptions": { "rootDir": "src", "outDir": "../node_modules/.cache/tsc/app", "tsBuildInfoFile": "../node_modules/.cache/tsc/app.tsbuildinfo", "types": ["vite/client"] },
-  "include": ["src"],
-  "references": [{ "path": "../packages/contracts" }, { "path": "../packages/core-client" }, { "path": "../packages/design" }]
+  "compilerOptions": { "composite": false, "declaration": false, "noEmit": true, "verbatimModuleSyntax": true, "types": ["vite/client", "svelte"] },
+  "include": ["src/**/*.ts", "src/**/*.svelte"]
 }

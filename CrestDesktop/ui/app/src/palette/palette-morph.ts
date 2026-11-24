@@ -1,5 +1,5 @@
 import { motion as tokens, springEasing } from "@crest/design";
-import { useSyncExternalStore } from "react";
+import { reader } from "../reactive";
 
 /**
  * The overlay palette growing out of the sidebar's address field and
@@ -209,11 +209,14 @@ export function setOverlayPresent(value: boolean) {
   for (const listener of overlayListeners) listener();
 }
 
+const readOverlayPresent = reader((listener) => {
+  overlayListeners.add(listener);
+  return () => overlayListeners.delete(listener);
+}, () => overlayPresent);
+
+/** Whether the overlay palette is up, followed by the expression that reads it. */
 export function useOverlayPresent(): boolean {
-  return useSyncExternalStore((listener) => {
-    overlayListeners.add(listener);
-    return () => overlayListeners.delete(listener);
-  }, () => overlayPresent);
+  return readOverlayPresent();
 }
 
 // MARK: - The field's hand-off
@@ -233,9 +236,11 @@ function setFieldHandedOff(value: boolean) {
 }
 
 /** Whether the address field is handed off to an open palette now. */
+const readFieldHandedOff = reader((listener) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}, () => handedOff);
+
 export function useFieldHandedOff(): boolean {
-  return useSyncExternalStore((listener) => {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
-  }, () => handedOff);
+  return readFieldHandedOff();
 }

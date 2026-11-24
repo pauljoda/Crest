@@ -11,7 +11,7 @@ import { CoreRejection } from "@crest/core-client";
 
 import type { Session } from "../boot";
 import { failureNotice, notices } from "../notices";
-import { deletion as erasure } from "../shell/site-control";
+import { deletion as erasure } from "../shell/site-control.svelte";
 import { forgetTabIcons } from "../tab-icon-store";
 
 /** A Space the person asked to delete, and whether its Sub-Spaces go with it. */

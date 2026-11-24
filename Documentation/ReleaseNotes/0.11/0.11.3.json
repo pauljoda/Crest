@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "windows-interface-svelte",
+      "category": "internal",
+      "message": "The Windows interface is built with Svelte instead of React, its motion Svelte's transitions on Crest's springs."
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import { CapturePage, type PageCaptured } from "@crest/contracts";
 import type { CrestCore } from "@crest/core-client";
-import { useSyncExternalStore } from "react";
+import { reader } from "../reactive";
 
 /** A page the window shows that a picture may be taken of. */
 export interface PicturedPage {
@@ -83,6 +83,14 @@ export class TabPictures {
 }
 
 /** Follows the pictures a window keeps. */
+const pictureReaders = new WeakMap<TabPictures, () => number>();
+
+/** The pictures' version, followed by the expression that reads it. */
 export function useTabPictures(pictures: TabPictures): number {
-  return useSyncExternalStore((listener) => pictures.subscribe(listener), () => pictures.version);
+  let read = pictureReaders.get(pictures);
+  if (!read) {
+    read = reader((listener) => pictures.subscribe(listener), () => pictures.version);
+    pictureReaders.set(pictures, read);
+  }
+  return read();
 }
