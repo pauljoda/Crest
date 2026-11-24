@@ -78,6 +78,8 @@ export interface Lift {
   readonly width: number;
   readonly height: number;
   readonly grab: { readonly x: number; readonly y: number };
+  /** How much room the lift makes where it would land: its rows' slots together, as the Mac's batch height. */
+  readonly room: number;
   readonly pointer: { readonly x: number; readonly y: number };
   readonly aim: DropAim | null;
   /** Why the aimed drop, or the lift itself, is refused, or null. */
@@ -146,6 +148,31 @@ function resting(element: Element): DOMRect {
   const box = element.getBoundingClientRect();
   const shift = shiftOf(element);
   return shift ? new DOMRect(box.x, box.y - shift, box.width, box.height) : box;
+}
+
+/**
+ * The room a lift makes: the lifted row's slot, or, for a lifted selection,
+ * every carried row's slot together, each a row and the list's 2px gap, as
+ * the Mac's batch height adds its rows up. A carried folder brings its
+ * contents' height with it.
+ */
+function roomFor(item: LiftItem, page: Element | null | undefined, height: number): number {
+  if (!page) return height + 2;
+  const folderSlot = (id: string) => {
+    const row = page.querySelector<HTMLElement>(`[data-folder="${id}"]`);
+    if (!row || row.offsetParent === null) return 0;
+    const contents = page.querySelector<HTMLElement>(`[data-list-folder="${id}"]`);
+    return row.offsetHeight + 2 + (contents && contents.offsetHeight > 0 ? contents.offsetHeight + 2 : 0);
+  };
+  const carried = item.carried;
+  if (!carried) return item.kind === "folder" ? folderSlot(item.id) || height + 2 : height + 2;
+  let room = 0;
+  for (const id of carried.tabIds) {
+    const row = page.querySelector<HTMLElement>(`[data-row="${id}"], [data-before-tab="${id}"]`);
+    if (row && row.offsetParent !== null && !row.closest(".pinned-grid")) room += row.offsetHeight + 2;
+  }
+  for (const id of carried.folderIds) room += folderSlot(id);
+  return room || height + 2;
 }
 
 /** Shifts `element` down by `room`, or back, easing as the stylesheet's transition does unless `instant`. */
@@ -218,8 +245,7 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
         const anchor = aim.gapBefore ? rows.find((row) => row.dataset.row === aim.gapBefore) ?? null : null;
         const last = rows.at(-1);
         const top = anchor ? anchor.offsetTop : last ? last.offsetTop + last.offsetHeight + 1 : list.offsetTop;
-        const slot = next.height + 2;
-        for (const [element, at] of layoutOf(page)) if (at.top >= top - 0.5) room.set(element, slot);
+        for (const [element, at] of layoutOf(page)) if (at.top >= top - 0.5) room.set(element, next.room);
       }
     }
     for (const element of roomy) if (!room.has(element)) shift(element, 0, instant);
@@ -408,7 +434,7 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
       const before = drawnOf(shownPage());
       update({
         item, width: bounds.width, height: bounds.height, grab: { x: start.x - bounds.left, y: start.y - bounds.top },
-        pointer: { x, y }, aim: null, refusal: null,
+        room: roomFor(item, shownPage(), bounds.height), pointer: { x, y }, aim: null, refusal: null,
       });
       void tick().then(() => easeFrom(before, current));
       scrolling = requestAnimationFrame(scroll);

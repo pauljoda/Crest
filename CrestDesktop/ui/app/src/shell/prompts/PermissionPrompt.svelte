@@ -35,13 +35,13 @@
 </script>
 
 {#each shown ? [shown] : [] as prompt (prompt.promptId)}
+  <!-- The Mac asks in Site Controls' popover, which comes in on floatingPane and goes at once (D17, D18). -->
   <!-- svelte-ignore a11y_interactive_supports_focus -->
   <div
     class="permission-prompt"
     role="dialog"
     aria-label="{originName(prompt.question.origin)} {prompt.question.permission.requestTitle}"
     in:presence|global={{ pose: { opacity: 0, y: -6, scale: 0.97 }, timing: tokens.floatingPane }}
-    out:presence={{ pose: { opacity: 0, y: -4, scale: 0.98 }, timing: tokens.floatingPane }}
     onkeydown={(event) => event.key === "Escape" && answer(false, false)}
   >
     <div class="permission-heading">

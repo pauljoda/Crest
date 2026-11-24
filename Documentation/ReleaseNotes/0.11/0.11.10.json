@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "windows-multi-row-drag-room-permission-close",
+      "category": "internal",
+      "message": "On Windows, dragging several rows or a folder makes room for all of them, and a site's permission request closes at once, as on the Mac."
+    }
+  ]
+}
