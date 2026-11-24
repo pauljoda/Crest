@@ -14,8 +14,10 @@ import {
   type TabSelection,
 } from "@crest/contracts";
 import { CoreRejection } from "@crest/core-client";
+import { tick, untrack } from "svelte";
 
 import type { Session } from "../boot";
+import { reducesMotion } from "../motion";
 import { failureNotice, notices } from "../notices";
 import { holdPointer } from "./pointer-hold";
 import { inOtherSpace } from "./sidebar-selection";
@@ -96,6 +98,70 @@ const unplaceable = "These items cannot be placed here. Choose another destinati
 
 let quietUntil = 0;
 
+// MARK: - Room for a lift
+
+/** What moves in a sidebar's list: each row, split card and divider, whichever stands outermost. */
+export const movingRows = ".sidebar-row, .split-card, .current-tabs-divider, .practice-saved-caption";
+
+/**
+ * Where each outermost moving element of `page` is laid out, by its offsets:
+ * scrolling the list moves none of them, and nor does the shift a lift makes
+ * room with. One a lift hid stands nowhere.
+ */
+export function layoutOf(page: Element | null | undefined): Map<HTMLElement, { readonly left: number; readonly top: number }> {
+  const laid = new Map<HTMLElement, { left: number; top: number }>();
+  for (const element of page?.querySelectorAll<HTMLElement>(movingRows) ?? []) {
+    if (element.offsetParent === null || element.parentElement?.closest(movingRows)) continue;
+    laid.set(element, { left: element.offsetLeft, top: element.offsetTop });
+  }
+  return laid;
+}
+
+/** Where each outermost moving element of `page` is drawn now: its layout and its shift, as far as the shift has eased. */
+function drawnOf(page: Element | null | undefined): Map<HTMLElement, { readonly left: number; readonly top: number }> {
+  const drawn = new Map<HTMLElement, { left: number; top: number }>();
+  for (const [element, at] of layoutOf(page)) drawn.set(element, { left: at.left, top: at.top + easedShift(element) });
+  return drawn;
+}
+
+/** How far `element` is drawn from its layout now by its translate, eased as far as it has. */
+function easedShift(element: Element): number {
+  const translate = getComputedStyle(element).translate;
+  if (!translate || translate === "none") return 0;
+  return Number.parseFloat(translate.split(" ")[1] ?? "0") || 0;
+}
+
+/** How far `element`, or the row it is in, is drawn from where it rests, as far as its shift has eased. */
+function shiftOf(element: Element): number {
+  for (let node: Element | null = element; node; node = node.parentElement) {
+    if (!node.matches(movingRows)) continue;
+    const shift = easedShift(node);
+    if (shift) return shift;
+  }
+  return 0;
+}
+
+/** Where `element` rests, the room a lift made taken back out. */
+function resting(element: Element): DOMRect {
+  const box = element.getBoundingClientRect();
+  const shift = shiftOf(element);
+  return shift ? new DOMRect(box.x, box.y - shift, box.width, box.height) : box;
+}
+
+/** Shifts `element` down by `room`, or back, easing as the stylesheet's transition does unless `instant`. */
+function shift(element: HTMLElement, room: number, instant: boolean) {
+  const value = room ? `0px ${room}px` : "";
+  if (instant || reducesMotion()) {
+    // Applied even when unchanged, which stops any easing still under way.
+    element.style.transition = "none";
+    element.style.translate = value;
+    void element.offsetHeight;
+    element.style.transition = "";
+  } else if (element.style.translate !== value) {
+    element.style.translate = value;
+  }
+}
+
 /** Whether a row should ignore a click now: the release of a drop that just landed. */
 export function droppedJustNow(): boolean {
   return performance.now() < quietUntil;
@@ -127,6 +193,64 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
   // Getting Started practice window holding it, whose cards it joins in
   // place of the window's.
   let scope: { sidebar: HTMLElement | null; practice: HTMLElement | null } = { sidebar: null, practice: null };
+  // What makes room for the lift now.
+  let roomy: HTMLElement[] = [];
+
+  /** The page of the lift's sidebar the window shows. */
+  const shownPage = () => scope.sidebar?.querySelector(".space-page:not([aria-hidden])") ?? scope.sidebar;
+
+  /**
+   * The room the Mac's reorder layout makes (BrowserSidebarReorderLayout):
+   * aimed between a list's rows, everything from the aimed row down moves
+   * aside by the lifted row's slot, on dragSource, so the lift shows where it
+   * lands; elsewhere, or refused, the room closes. The lifted row's own slot
+   * has closed already. Aiming reads the rows where they rest.
+   */
+  const makeRoom = (next: Lift | null, instant = false) => {
+    const page = shownPage();
+    const room = new Map<HTMLElement, number>();
+    const aim = next?.aim;
+    if (next && aim?.kind === "list" && !next.refusal && page) {
+      const list = [...page.querySelectorAll<HTMLElement>("[data-list-section]")]
+        .find((element) => element.dataset.listSection === aim.section.name && (element.dataset.listFolder || null) === aim.folderId);
+      if (list && !list.classList.contains("pinned-grid")) {
+        const rows = [...list.querySelectorAll<HTMLElement>(":scope > [data-row]")].filter((row) => row.offsetParent !== null);
+        const anchor = aim.gapBefore ? rows.find((row) => row.dataset.row === aim.gapBefore) ?? null : null;
+        const last = rows.at(-1);
+        const top = anchor ? anchor.offsetTop : last ? last.offsetTop + last.offsetHeight + 1 : list.offsetTop;
+        const slot = next.height + 2;
+        for (const [element, at] of layoutOf(page)) if (at.top >= top - 0.5) room.set(element, slot);
+      }
+    }
+    for (const element of roomy) if (!room.has(element)) shift(element, 0, instant);
+    for (const [element, slot] of room) shift(element, slot, instant);
+    roomy = [...room.keys()];
+  };
+
+  /**
+   * Keeps every row drawn where it was before the lift's slot closed or came
+   * back, then lets the room ease each to where it now belongs, so closing,
+   * opening and putting back are one motion.
+   */
+  const easeFrom = (before: ReadonlyMap<HTMLElement, { readonly left: number; readonly top: number }>, next: Lift | null) => {
+    const page = shownPage();
+    const held = new Set(roomy);
+    for (const [element, at] of layoutOf(page)) {
+      const from = before.get(element);
+      if (!from) continue;
+      // Pinned where it was drawn, which also stops any easing still under way.
+      shift(element, Math.abs(from.top - at.top) < 0.5 ? 0 : from.top - at.top, true);
+      held.add(element);
+    }
+    roomy = [...held];
+    makeRoom(next);
+  };
+
+  // The room follows the lift's aim as it draws; ending the lift lets go of the room itself.
+  $effect(() => {
+    const next = lift;
+    if (next) untrack(() => makeRoom(next));
+  });
 
   const update = (next: Lift | null) => {
     current = next;
@@ -140,7 +264,20 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
     cleanup = null;
     plan = null;
     checked.clear();
+    makeRoom(null, true);
     update(null);
+  };
+
+  /** Puts the lift back: the lifted row returns to its slot and the rows around it move back, as the Mac's do. */
+  const putBack = async () => {
+    const before = drawnOf(shownPage());
+    cleanup?.();
+    cleanup = null;
+    plan = null;
+    checked.clear();
+    update(null);
+    await tick();
+    easeFrom(before, null);
   };
 
   // A lift ends with the Space it started in, and with the sidebar.
@@ -203,11 +340,15 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
   const drop = async () => {
     const lifted = current;
     const planned = plan;
-    end();
-    if (!lifted?.aim || !planned || lifted.refusal) return;
+    if (!lifted?.aim || !planned || lifted.refusal) return void putBack();
     quietUntil = performance.now() + activationQuiet;
+    // The lift holds its room until the drop's change has drawn the rows where the room was.
+    cleanup?.();
+    cleanup = null;
+    let landed = false;
     try {
       const changes = await session.core.send(intentFor(lifted.aim, planned.selected.selection));
+      landed = true;
       // A lifted selection stays selected where it landed, its copies in
       // place of the tabs that stayed behind; one that left the Space is let go.
       if (lifted.item.carried) {
@@ -219,6 +360,13 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
     } catch (error) {
       if (!(error instanceof CoreRejection)) throw error;
       notices.post(failureNotice(messageOfRejection(error.rejection) ?? unplaceable));
+    } finally {
+      if (landed) {
+        await tick();
+        end();
+      } else {
+        void putBack();
+      }
     }
   };
 
@@ -256,10 +404,13 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
       letGo = holdPointer();
       element.setPointerCapture(pointerId);
       const bounds = element.getBoundingClientRect();
+      // The lifted row's slot closes as it rises, the rows under it moving up.
+      const before = drawnOf(shownPage());
       update({
         item, width: bounds.width, height: bounds.height, grab: { x: start.x - bounds.left, y: start.y - bounds.top },
         pointer: { x, y }, aim: null, refusal: null,
       });
+      void tick().then(() => easeFrom(before, current));
       scrolling = requestAnimationFrame(scroll);
       const { workspaceId, windowId } = session;
       const previewOf = (tabIds: readonly string[], folderIds: readonly string[]) =>
@@ -307,7 +458,7 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
     const key = (pressed: KeyboardEvent) => {
       if (pressed.key === "Escape" && lifted) {
         pressed.preventDefault();
-        end();
+        void putBack();
       }
     };
     const stop = () => {
@@ -320,7 +471,7 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
       window.removeEventListener("keydown", key, true);
       window.removeEventListener("contextmenu", cancel, true);
     };
-    const cancel = () => end();
+    const cancel = () => void putBack();
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", release);
     window.addEventListener("pointercancel", cancel);
@@ -350,10 +501,18 @@ function aimUnder(x: number, y: number, item: LiftItem, targets: DropTargetList,
   const slot = splitInsertionIndex(x, y, scope.practice);
   if (slot !== null) return targets.split ? { kind: "split", targetTabId: targets.split.tabId, index: slot } : null;
   // Only the lift's own sidebar takes it: the guide's practice sidebar and the window's are apart.
-  const under = document.elementsFromPoint(x, y).filter((element) => !scope.sidebar || scope.sidebar.contains(element));
+  // Rows moved aside to make room are read where they rest, so the room
+  // never moves what the pointer aims at.
+  const under = document.elementsFromPoint(x, y)
+    .filter((element) => (!scope.sidebar || scope.sidebar.contains(element)) && !shiftOf(element));
   const find = (selector: string) => under.map((element) => element.closest<HTMLElement>(selector)).find((element) => element) ?? null;
+  const restingAt = (selector: string) => [...(scope.sidebar ?? document).querySelectorAll<HTMLElement>(selector)].find((element) => {
+    if (element.offsetParent === null || inOtherSpace(element)) return false;
+    const bounds = resting(element);
+    return x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom;
+  }) ?? null;
   const middle = (element: HTMLElement) => {
-    const bounds = element.getBoundingClientRect();
+    const bounds = resting(element);
     return y >= bounds.top + bounds.height / 4 && y <= bounds.bottom - bounds.height / 4;
   };
   // What the lift carries is no place to drop it.
@@ -363,13 +522,13 @@ function aimUnder(x: number, y: number, item: LiftItem, targets: DropTargetList,
   const space = find("[data-space]");
   if (space && targets.spaceIds.includes(space.dataset.space!)) return { kind: "space", spaceId: space.dataset.space! };
 
-  const folder = find("[data-folder]");
+  const folder = restingAt("[data-folder]");
   if (folder && folder.dataset.collapsed === "true" && middle(folder) && !carriesFolder(folder.dataset.folder!)) {
     const section = TabPlacement.named(folder.dataset.location)!;
     return { kind: "folder", folderId: folder.dataset.folder!, section };
   }
 
-  const tab = find("[data-around-tab]");
+  const tab = restingAt("[data-around-tab]");
   if (tab && middle(tab) && targets.folderAroundTabIds.includes(tab.dataset.aroundTab!) && !carriesTab(tab.dataset.aroundTab!)) {
     return { kind: "aroundTab", tabId: tab.dataset.aroundTab! };
   }
@@ -395,7 +554,7 @@ function aimUnder(x: number, y: number, item: LiftItem, targets: DropTargetList,
   const rows = [...list.querySelectorAll<HTMLElement>(":scope > [data-row]")].filter((row) => row.offsetParent !== null);
   const grid = list.classList.contains("pinned-grid");
   const before = rows.find((row) => {
-    const bounds = row.getBoundingClientRect();
+    const bounds = resting(row);
     if (!grid) return y < bounds.top + bounds.height / 2;
     // The grid reads by lines: an earlier line, or this line left of the tile's middle.
     return y < bounds.top || (y <= bounds.bottom && x < bounds.left + bounds.width / 2);

@@ -255,6 +255,10 @@ export function cssVariables(): Record<string, string> {
     variables[`--crest-sidebar-${name}-duration`] = `${duration}ms`;
     variables[`--crest-sidebar-${name}-easing`] = easing;
   }
+  // Rows making room for a lift, which the stylesheet runs as transitions.
+  const dragSource = springEasing(motion.dragSource);
+  variables["--crest-drag-source-duration"] = `${dragSource.duration}ms`;
+  variables["--crest-drag-source-easing"] = dragSource.easing;
   variables["--crest-opacity-hover"] = `${opacity.hover}`;
   variables["--crest-opacity-selection"] = `${opacity.selection}`;
   variables["--crest-opacity-border"] = `${opacity.border}`;

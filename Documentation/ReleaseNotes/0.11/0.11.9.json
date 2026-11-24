@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "windows-sidebar-drag-makes-room",
+      "category": "internal",
+      "message": "Dragging rows in the Windows sidebar makes room where they will land, the rows around easing aside and the dragged row's place closing, as on the Mac."
+    }
+  ]
+}

@@ -1762,7 +1762,8 @@ button {
   border-radius: max(9px, calc(13px - 4px * var(--row-depth, 0)));
   text-align: start;
   color: var(--fg);
-  transition: background 100ms ease-in-out, box-shadow 100ms ease-in-out;
+  transition: background 100ms ease-in-out, box-shadow 100ms ease-in-out,
+    translate var(--crest-drag-source-duration) var(--crest-drag-source-easing);
 }
 
 .row-glyph {
@@ -1908,10 +1909,24 @@ button {
   40%, 80% { translate: 3px 0; }
 }
 
-/* Where a lift would land: a 2pt line above the row it would land before, or
-   at the end of its list, as the Mac's insertion line; across in lists, and
-   upright between the pinned grid's tiles. Drawing it moves nothing, so the
-   rows the pointer aims at stay where they are. */
+/* Rows a lift moves aside to make room ease there on the Mac's dragSource
+   spring (sidebar-drag.svelte.ts's makeRoom sets their translate). */
+.current-tabs-divider,
+.practice-saved-caption {
+  transition: translate var(--crest-drag-source-duration) var(--crest-drag-source-easing);
+}
+
+/* Between a list's rows the room the lift makes shows where it lands, as on
+   the Mac, so no line is drawn there; the pinned grid keeps its line. */
+.sidebar-row.drop-before::before,
+.split-card.drop-before::before,
+.tab-section.drop-at-end::after {
+  content: none;
+}
+
+/* Where a lift would land among the pinned grid's tiles: an upright 2pt line
+   between them, as the Mac's insertion line, which moves no tile. In lists
+   the rows make room instead (above). */
 .drop-before,
 .drop-at-end,
 .split-card {
@@ -2088,7 +2103,8 @@ button {
   gap: 2px;
   padding: 4px 4px 5px;
   border-radius: 13px;
-  transition: background 100ms ease-in-out, box-shadow 100ms ease-in-out;
+  transition: background 100ms ease-in-out, box-shadow 100ms ease-in-out,
+    translate var(--crest-drag-source-duration) var(--crest-drag-source-easing);
 }
 
 .split-card:hover {

@@ -4,6 +4,7 @@ import { untrack } from "svelte";
 
 import type { Session } from "../../boot";
 import { reducesMotion, timed } from "../../motion";
+import { layoutOf } from "../sidebar-drag.svelte";
 import { insideCrest } from "../../environment";
 import { bundledTabIcons, useTabIcon } from "../../page-icon.svelte";
 import { rowPlacement } from "../sidebar-layout";
@@ -126,25 +127,6 @@ export function useAltHeld(): { readonly current: boolean } {
 
 // MARK: - Rows moving
 
-/** What moves as rows come and go: each row, split card and divider, whichever stands outermost. */
-const moving = ".sidebar-row, .split-card, .current-tabs-divider, .practice-saved-caption";
-
-/** Where each outermost moving element of `page` stands in its list, so scrolling the list moves nothing. */
-function laidOut(page: Element | null | undefined): Map<Element, { readonly left: number; readonly top: number }> {
-  const laid = new Map<Element, { left: number; top: number }>();
-  if (!page) return laid;
-  const list = page.querySelector(".tab-list");
-  const origin = list?.getBoundingClientRect();
-  for (const element of page.querySelectorAll(moving)) {
-    if (element.parentElement?.closest(moving)) continue;
-    const box = element.getBoundingClientRect();
-    laid.set(element, origin && list!.contains(element)
-      ? { left: box.left - origin.left, top: box.top - origin.top + list!.scrollTop }
-      : { left: box.left, top: box.top });
-  }
-  return laid;
-}
-
 /**
  * The Mac's motion for the sidebar's rows as they come and go. A folder,
  * group, split or the saved tabs opening or closing moves the rows around it
@@ -160,12 +142,12 @@ function laidOut(page: Element | null | undefined): Map<Element, { readonly left
  */
 export function useRowMotion(page: () => Element | null | undefined, version: () => number, lifting: () => boolean):
   { prepare(): void } {
-  let disclosed: Map<Element, { left: number; top: number }> | null = null;
-  let last: Map<Element, { left: number; top: number }> | null = null;
+  let disclosed: Map<HTMLElement, { readonly left: number; readonly top: number }> | null = null;
+  let last: Map<HTMLElement, { readonly left: number; readonly top: number }> | null = null;
   $effect(() => {
     version();
     untrack(() => {
-      const now = laidOut(page());
+      const now = layoutOf(page());
       const before = disclosed ?? last;
       const timing = disclosed ? tokens.disclosure : tokens.dragSource;
       const changed = disclosed !== null || (last !== null && rowsChanged(last, now));
@@ -189,7 +171,7 @@ export function useRowMotion(page: () => Element | null | undefined, version: ()
   });
   return {
     prepare() {
-      disclosed = laidOut(page());
+      disclosed = layoutOf(page());
     },
   };
 }
