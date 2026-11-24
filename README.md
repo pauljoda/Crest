@@ -177,7 +177,8 @@ WebKit extensions from the Chrome Web Store in each Space. The
 explains these changes and the engine feature limits.
 
 macOS releases are distributed directly through GitHub Releases as signed,
-notarized Apple-silicon disk images, one app with both engines. Crest uses
+notarized disk images of one universal app for Apple silicon and Intel, with
+both engines. Crest uses
 Sparkle 2 with a native SwiftUI update interface. Stable and nightly builds
 share a signed appcast, and development builds have their own; choosing Nightly
 or Development is an explicit choice in Settings → About.
