@@ -6,6 +6,81 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
+            <title>0.11.0</title>
+            <pubDate>Tue, 24 Nov 2026 03:52:02 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:version>1704</sparkle:version>
+            <sparkle:shortVersionString>0.11.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+Crest 0.11 has a new look: a new mark and app icons, warm paper, Crest blue and the Allo typeface. It brings Site Controls to Mac, iPhone and iPad, a new setup, and Space looks made from a template, colors and an icon. Crest for Mac now runs on Intel Macs and on macOS 15 Sequoia, with Chromium 158.
+
+### Added
+
+- Setting up Crest is a short walkthrough beside a live preview of the window you're building: bring tabs from another browser, choose your first Space's name, template, colors and icon, add more Spaces and Sub-Spaces, then make Crest your default browser and choose its search and ad blocking in Make It Home. Tabs and folders you close, move or file in the preview stay that way when you start browsing.
+- Site Controls gather the page's actions and the site's settings in one place: the page and its connection, the actions you use most on top, extensions, ads and trackers, Reader, Translate and zoom, then permissions, the engine the site opens in, site data and downloads. Drag actions into, along and out of the row on top, or choose them in Edit; each device keeps its own.
+- On Mac, Site Controls open from the button in the address field. A blocked pop-up, a permission request or Developer Mode waits in its own section with Allow, Deny or Turn Off, instead of replacing the whole panel.
+- Copy Page Title, Show QR Code and Open Page in Private Window are new commands in the menu bar and the command palette. Show QR Code shows the page's address as a QR code in Site Controls.
+- Templates start a Space's look, each setting an icon and colors together, and Undo puts back colors a template replaced. New Simple crests, Crest, Moon, Summit, Lens, Spark and Grove, sit beside the Heraldic ones, and new Spaces start in the Crest look.
+- Give any Space color an exact hex code, or pick it with the system color picker.
+- After Crest updates, the first window opens the new release's notes on crestbrowser.com in a new tab.
+- Crest for Mac runs on Intel Macs as well as Apple silicon, as one universal app with its Chromium engine built for both.
+- Crest for Mac runs on macOS 15 Sequoia and later. On macOS 15, controls that stand on Liquid Glass on macOS 26 stand on Crest's own material instead, and pages translate when you choose Translate rather than automatically.
+
+### Changed
+
+- Crest has a new look: a three-banner mark, warm paper surfaces, Crest blue kept for actions, and Allo, a rounded typeface, for headings, buttons and labels across setup, Settings, the Start Page and Getting Started. The app icon and each alternative icon follow your light, dark, tinted and clear icon style.
+- The selected tab is a sheet of translucent white, and a selected pin shows its site's color through it. In Settings › Appearance › More Customization you can set how opaque the white is, turn off the pin's tint, or choose Material for the earlier look.
+- In dark mode, Settings, the space behind pages, Getting Started and the command palette are black and charcoal instead of navy. Setup lies on Crest's navy in light and dark mode.
+- Panels, prompts, hover previews and notices sit on paper in light mode and on charcoal in dark mode. Crest's own buttons, fields and surfaces replace glass and the system accent color throughout, with one set of shadows and the same hover and press highlights everywhere.
+- Menus show an icon on every row, and Settings shows solid icons in Crest's colors.
+- When a page can't read files you chose, or a download starts with the sidebar hidden, Crest says so in the notice at the top of the window instead of an alert or a box in the corner.
+- A Space's colors are a Background and an Accent, each one color or a gradient of up to three, from a preset or a color wheel with brightness and texture. They replace the Heraldic, Modern and Simple styles. A Space's appearance reads template, then colors, then icon, and choosing a crest, symbol or emoji as the icon keeps the Space's colors. More Customization opens as its own page, with the crest's colors at the top.
+- Spaces brought in from another browser keep their own icon, set on a round crest in the Space's color. The Space picker shows your Spaces in a well with a lighter mark for Sub-Spaces.
+- In the command palette, Return searches a phrase or anything else that isn't an address, while one word that starts an open or pinned tab's name or site, or a site you use, goes there. History results show their site's icon with a small clock badge, and the selected row looks like the selected tab, or wears the Space's accent if you turn that on in Appearance.
+- Animations are quicker throughout, switching Spaces is a little faster, and Peek opens much faster, with Peek animation time in Settings › Links. Cards and controls that appear in place grow from 80% of their size, and every long press takes the same half second.
+- What's New in Settings › About and on the update card opens the release's notes on crestbrowser.com.
+- Update notes leave out changes that only reach iPhone and iPad, and link to the release's page.
+- Download badges show how far your downloads are together, as the Dock does.
+- Addresses ending in .test count as local everywhere: the developer toolbar turns on for them, and a typed one opens over HTTP first.
+- Counts such as selected tabs, passwords and downloads in progress follow each language's plural rules.
+
+### Fixed
+
+- Saved, pinned, reopened and imported tabs whose address holds characters such as { or [ return to the exact page they were saved at, instead of a broken search.
+- An address you type or paste in the command palette opens at the #section you gave it, even on a page you've visited before.
+- Pages opening in dark mode go straight from the loading screen to the page, without a flash of white in between.
+- Crest no longer crashes when a page closes while it's loading another site, on Mac in WebKit and on iPhone and iPad.
+- Scrolling down a sidebar with long open folders no longer jumps back up, and folders inside them no longer shrink to their title and grow again as they scroll into view.
+- A new window that opens on Getting Started or Settings shows it at once instead of after a blank pause.
+- Importing another browser's passwords brings those for sites without HTTPS too, and says Crest won't fill them in.
+- Search provider chips in the command palette show their text in white or black, whichever reads better on the chip's color.
+- Making a Split View from a single tab asks you to select at least 2 tabs.
+- When Crest can't save your session, Sync settings says why in plain words instead of an internal code.
+- A folder or Space without a name is called Untitled Folder or Untitled Space everywhere, including sync.
+- A page in a language written in another script, such as Traditional Chinese for a reader of Simplified Chinese, is offered translation.
+- A custom search engine on localhost or a .local name is refused even when it's written with a trailing or full-width dot.
+
+### Security
+
+- Chromium is updated to 158.0.8127.37, with 204 upstream security fixes, six of them critical. Pages in WebKit, and Crest on iPhone and iPad, don't use Chromium.
+
+### Upgrading
+
+- Mac requires macOS 15 Sequoia or later, on Apple silicon or Intel. iPhone and iPad require iOS or iPadOS 26.1 or later.
+
+---
+
+Stable releases are signed, notarized, and ready for everyday use.
+
+[Release notes](https://crestbrowser.com/releases/mac/stable/0.11.0/) · [View all changes](https://github.com/crest-browser/Crest/compare/0f3dc204d036d202431b465eff60857a493a4092...4ac863356a5b005a00946c4aa005cc4c6a795435) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/v0.11.0/Installer-Crest-0.11.0.dmg)
+
+[Browse Stable releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Afalse)
+]]></description>
+            <enclosure url="https://github.com/crest-browser/Crest/releases/download/v0.11.0/Installer-Crest-0.11.0.dmg" length="410483116" type="application/octet-stream" sparkle:edSignature="hD2Xx0GVUlV6r8ALMQqKloz6bS+eXnmO35BS3RT8j1FJSK4HhkT7wchmHvUKxwAmnWrjTsn8C6QtBu6rHHCkAA=="/>
+        </item>
+        <item>
             <title>0.10.169</title>
             <pubDate>Mon, 23 Nov 2026 22:12:04 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
@@ -170,6 +245,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 9wgP3UpSwqV6Us+zUW3hLPxSlZ6+rWDvHpAkuqy2yZthJnMqVoZIRIUNU2HhZ8b5pzv+qVoVLS7bENdqoxxpBA==
-length: 14208
+edSignature: wpSZC7p/3xD2Eavi1KxObGfdL4BESSn3pPUSP1btpH8CU7KQVMceped2ZjMxBf6Vup+8s+eoe22aTSJx4+QoDg==
+length: 22775
 -->
