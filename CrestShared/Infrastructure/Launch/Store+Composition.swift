@@ -82,9 +82,14 @@ extension BrowserStore {
         let stored = try migratedStorage(
             core: core, legacy: BrowserLegacySessionDefaults(defaults: defaults, journalDefaults: []),
             favicons: favicons, seed: isolatedFixtureSeed(for: launchEnvironment))
+        // A review package signed without the app's provisioning profile
+        // can't reach the Keychain, so a launch that asks keeps its
+        // passwords in memory while the rest of its store persists.
+        let credentialVault: any CredentialVault =
+            launchEnvironment.usesInMemoryCredentialVault
+            ? InMemoryCredentialVault() : KeychainCredentialVault(core: core, servicePrefix: namespace)
         return production(
-            stored: stored, core: core, favicons: favicons,
-            credentialVault: KeychainCredentialVault(core: core, servicePrefix: namespace))
+            stored: stored, core: core, favicons: favicons, credentialVault: credentialVault)
     }
 
     /// Where the core keeps this launch's session file: the installed app's

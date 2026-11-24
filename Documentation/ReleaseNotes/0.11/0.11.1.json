@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "review-copies-keep-passwords-in-memory",
+      "category": "internal",
+      "message": "A review copy launched with in-memory passwords keeps them in memory beside its persistent store, so saving and filling work without Keychain access."
+    }
+  ]
+}

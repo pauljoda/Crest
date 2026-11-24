@@ -20,6 +20,8 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
     /// An isolated launch opens a session whose Work Space leads two
     /// Sub-Spaces, for reviewing groups.
     let presentsSubSpacesSession: Bool
+    /// Keeps passwords in memory, even beside a persistent isolated store,
+    /// for a review package that can't reach the Keychain.
     let usesInMemoryCredentialVault: Bool
     let forcesOnboardingWelcome: Bool
     let forcesMacOnboardingSetup: Bool
