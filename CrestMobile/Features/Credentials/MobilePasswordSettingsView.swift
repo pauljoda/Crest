@@ -36,6 +36,7 @@ struct MobilePasswordSettingsView: View {
 
     /// Set Up Code reads a QR code with the camera, where the device has one.
     private var codeScanning: BrowserCodeScanning {
-        BrowserCodeScanning(scanWithCamera: MobileCodeCameraScanner.isAvailable ? { await MobileCodeCameraScanner.scan() } : nil)
+        BrowserCodeScanning(
+            scanWithCamera: MobileCodeCameraScanner.isAvailable ? { await MobileCodeCameraScanner.scan() } : nil)
     }
 }

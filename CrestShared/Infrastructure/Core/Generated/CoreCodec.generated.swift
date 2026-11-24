@@ -7,11 +7,11 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x48, 0x4c, 0x32, 0x70, 0xda, 0xdb, 0xcf, 0x21, 0x14, 0xeb, 0x37, 0x75, 0x87, 0x48, 0x0c, 0x5a, 0x66, 0xf2, 0x3b, 0x66, 0xf2, 0x2f, 0x99, 0x8f, 0x21, 0x0c, 0x83, 0x88, 0xad, 0xf1, 0xf7, 0xc6
+        0x41, 0x42, 0x96, 0x4d, 0x24, 0x71, 0x5f, 0xd5, 0xdf, 0x41, 0xc3, 0xd7, 0xef, 0xb2, 0x92, 0xa9, 0xc8, 0x30, 0xb7, 0x4a, 0xdb, 0xab, 0x68, 0x8d, 0x3c, 0x35, 0x0f, 0xed, 0x25, 0x10, 0xcd, 0xe7
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
-        0x27, 0xe6, 0xdb, 0x79, 0xae, 0x8b, 0xf9, 0xe3, 0x48, 0x4d, 0xbb, 0xba, 0xa2, 0x6b, 0x39, 0x04, 0xeb, 0x82, 0xa0, 0xe7, 0x59, 0x9d, 0xd5, 0x68, 0x65, 0x04, 0x32, 0xfe, 0xf2, 0x24, 0x80, 0x0a
+        0x63, 0x6a, 0x5e, 0xf5, 0xa5, 0x1f, 0x68, 0x9b, 0xc7, 0xa2, 0xb0, 0xf9, 0x4f, 0xe1, 0xd1, 0x9d, 0x9e, 0x67, 0x82, 0xd9, 0xf7, 0xcf, 0xcf, 0x1c, 0x75, 0x6c, 0x5c, 0x21, 0xdb, 0x1d, 0x13, 0xf4
     ]
 
     static func decodeIntent(from reader: inout WireReader) throws(WireError) -> any Intent {
@@ -1877,26 +1877,27 @@ extension EnginePresentation {
         case 18: self = .pageNavigationCommitted(try PageNavigationCommitted(from: &reader))
         case 19: self = .pageNavigationFailed(try PageNavigationFailed(from: &reader))
         case 20: self = .pageNavigationStarted(try PageNavigationStarted(from: &reader))
-        case 21: self = .pageRendererGone(try PageRendererGone(from: &reader))
-        case 22: self = .pageScriptEvaluated(try PageScriptEvaluated(from: &reader))
-        case 23: self = .pageThemeChanged(try PageThemeChanged(from: &reader))
-        case 24: self = .pageViewClosed(try PageViewClosed(from: &reader))
-        case 25: self = .pageViewReady(try PageViewReady(from: &reader))
-        case 26: self = .pageViewUnavailable(try PageViewUnavailable(from: &reader))
-        case 27: self = .peekRequested(try PeekRequested(from: &reader))
-        case 28: self = .popupBlocked(try PopupBlocked(from: &reader))
-        case 29: self = .profileNotificationClosed(try ProfileNotificationClosed(from: &reader))
-        case 30: self = .profileNotificationPosted(try ProfileNotificationPosted(from: &reader))
-        case 31: self = .profileReleased(try ProfileReleased(from: &reader))
-        case 32: self = .screenCaptureAccessMissing(try ScreenCaptureAccessMissing(from: &reader))
-        case 33: self = .shareSourcesOffered(try ShareSourcesOffered(from: &reader))
-        case 34: self = .shareSourcesWithdrawn(try ShareSourcesWithdrawn(from: &reader))
-        case 35: self = .sidePanelRequested(try SidePanelRequested(from: &reader))
-        case 36: self = .storeInstallRequested(try StoreInstallRequested(from: &reader))
-        case 37: self = .storeRemovalRequested(try StoreRemovalRequested(from: &reader))
-        case 38: self = .tabSharingChanged(try TabSharingChanged(from: &reader))
-        case 39: self = .webNotificationClosed(try WebNotificationClosed(from: &reader))
-        case 40: self = .webNotificationPosted(try WebNotificationPosted(from: &reader))
+        case 21: self = .pagePasswordControlChanged(try PagePasswordControlChanged(from: &reader))
+        case 22: self = .pageRendererGone(try PageRendererGone(from: &reader))
+        case 23: self = .pageScriptEvaluated(try PageScriptEvaluated(from: &reader))
+        case 24: self = .pageThemeChanged(try PageThemeChanged(from: &reader))
+        case 25: self = .pageViewClosed(try PageViewClosed(from: &reader))
+        case 26: self = .pageViewReady(try PageViewReady(from: &reader))
+        case 27: self = .pageViewUnavailable(try PageViewUnavailable(from: &reader))
+        case 28: self = .peekRequested(try PeekRequested(from: &reader))
+        case 29: self = .popupBlocked(try PopupBlocked(from: &reader))
+        case 30: self = .profileNotificationClosed(try ProfileNotificationClosed(from: &reader))
+        case 31: self = .profileNotificationPosted(try ProfileNotificationPosted(from: &reader))
+        case 32: self = .profileReleased(try ProfileReleased(from: &reader))
+        case 33: self = .screenCaptureAccessMissing(try ScreenCaptureAccessMissing(from: &reader))
+        case 34: self = .shareSourcesOffered(try ShareSourcesOffered(from: &reader))
+        case 35: self = .shareSourcesWithdrawn(try ShareSourcesWithdrawn(from: &reader))
+        case 36: self = .sidePanelRequested(try SidePanelRequested(from: &reader))
+        case 37: self = .storeInstallRequested(try StoreInstallRequested(from: &reader))
+        case 38: self = .storeRemovalRequested(try StoreRemovalRequested(from: &reader))
+        case 39: self = .tabSharingChanged(try TabSharingChanged(from: &reader))
+        case 40: self = .webNotificationClosed(try WebNotificationClosed(from: &reader))
+        case 41: self = .webNotificationPosted(try WebNotificationPosted(from: &reader))
         default: throw WireError.malformed("Unknown EnginePresentation tag \(tag)")
         }
     }
@@ -1966,65 +1967,68 @@ extension EnginePresentation {
         case .pageNavigationStarted(let value):
             writer.writeTag(20)
             value.encode(into: &writer)
-        case .pageRendererGone(let value):
+        case .pagePasswordControlChanged(let value):
             writer.writeTag(21)
             value.encode(into: &writer)
-        case .pageScriptEvaluated(let value):
+        case .pageRendererGone(let value):
             writer.writeTag(22)
             value.encode(into: &writer)
-        case .pageThemeChanged(let value):
+        case .pageScriptEvaluated(let value):
             writer.writeTag(23)
             value.encode(into: &writer)
-        case .pageViewClosed(let value):
+        case .pageThemeChanged(let value):
             writer.writeTag(24)
             value.encode(into: &writer)
-        case .pageViewReady(let value):
+        case .pageViewClosed(let value):
             writer.writeTag(25)
             value.encode(into: &writer)
-        case .pageViewUnavailable(let value):
+        case .pageViewReady(let value):
             writer.writeTag(26)
             value.encode(into: &writer)
-        case .peekRequested(let value):
+        case .pageViewUnavailable(let value):
             writer.writeTag(27)
             value.encode(into: &writer)
-        case .popupBlocked(let value):
+        case .peekRequested(let value):
             writer.writeTag(28)
             value.encode(into: &writer)
-        case .profileNotificationClosed(let value):
+        case .popupBlocked(let value):
             writer.writeTag(29)
             value.encode(into: &writer)
-        case .profileNotificationPosted(let value):
+        case .profileNotificationClosed(let value):
             writer.writeTag(30)
             value.encode(into: &writer)
-        case .profileReleased(let value):
+        case .profileNotificationPosted(let value):
             writer.writeTag(31)
             value.encode(into: &writer)
-        case .screenCaptureAccessMissing(let value):
+        case .profileReleased(let value):
             writer.writeTag(32)
             value.encode(into: &writer)
-        case .shareSourcesOffered(let value):
+        case .screenCaptureAccessMissing(let value):
             writer.writeTag(33)
             value.encode(into: &writer)
-        case .shareSourcesWithdrawn(let value):
+        case .shareSourcesOffered(let value):
             writer.writeTag(34)
             value.encode(into: &writer)
-        case .sidePanelRequested(let value):
+        case .shareSourcesWithdrawn(let value):
             writer.writeTag(35)
             value.encode(into: &writer)
-        case .storeInstallRequested(let value):
+        case .sidePanelRequested(let value):
             writer.writeTag(36)
             value.encode(into: &writer)
-        case .storeRemovalRequested(let value):
+        case .storeInstallRequested(let value):
             writer.writeTag(37)
             value.encode(into: &writer)
-        case .tabSharingChanged(let value):
+        case .storeRemovalRequested(let value):
             writer.writeTag(38)
             value.encode(into: &writer)
-        case .webNotificationClosed(let value):
+        case .tabSharingChanged(let value):
             writer.writeTag(39)
             value.encode(into: &writer)
-        case .webNotificationPosted(let value):
+        case .webNotificationClosed(let value):
             writer.writeTag(40)
+            value.encode(into: &writer)
+        case .webNotificationPosted(let value):
+            writer.writeTag(41)
             value.encode(into: &writer)
         }
     }
@@ -6441,7 +6445,10 @@ extension ContentFrame {
         let `protocol` = try reader.readString()
         let host = try reader.readString()
         let port = try reader.readInt()
-        self.init(id: id, isMainFrame: isMainFrame, protocol: `protocol`, host: host, port: port)
+        let hasViewportOffset = try reader.readBool()
+        let viewportOffsetX = try reader.readDouble()
+        let viewportOffsetY = try reader.readDouble()
+        self.init(id: id, isMainFrame: isMainFrame, protocol: `protocol`, host: host, port: port, hasViewportOffset: hasViewportOffset, viewportOffsetX: viewportOffsetX, viewportOffsetY: viewportOffsetY)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -6450,6 +6457,9 @@ extension ContentFrame {
         writer.writeString(`protocol`)
         writer.writeString(host)
         writer.writeInt(port)
+        writer.writeBool(hasViewportOffset)
+        writer.writeDouble(viewportOffsetX)
+        writer.writeDouble(viewportOffsetY)
     }
 }
 
@@ -18032,6 +18042,19 @@ extension PageOpened {
 
     func encode(into writer: inout WireWriter) {
         page.encode(into: &writer)
+    }
+}
+
+extension PagePasswordControlChanged {
+    init(from reader: inout WireReader) throws(WireError) {
+        let pageID = try reader.readUUID()
+        let extensionControlsPasswords = try reader.readBool()
+        self.init(pageID: pageID, extensionControlsPasswords: extensionControlsPasswords)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(pageID)
+        writer.writeBool(extensionControlsPasswords)
     }
 }
 

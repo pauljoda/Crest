@@ -9,6 +9,10 @@ struct BrowserContentFrame {
     let host: String
     let port: Int
     let handle: AnyObject
+    /// Where the frame's own viewport's corner sits in the top page's, in
+    /// CSS pixels, where the engine draws the frame in a view of its own and
+    /// says so; nil otherwise.
+    var viewportOffset: (x: Double, y: Double)? = nil
 }
 
 struct BrowserContentMessage {

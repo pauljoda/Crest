@@ -83,6 +83,9 @@
         }
       }
     },
+    "“%@” isn’t a website address." : {
+
+    },
     "“%@” locked again. Try again." : {
 
     },
@@ -124,6 +127,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%@ · %lld sites" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$lld sites"
           }
         }
       }
@@ -670,6 +683,16 @@
     "%lld / %lld" : {
 
     },
+    "%lld %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@"
+          }
+        }
+      }
+    },
     "%lld additional rejected rows are included in the final count." : {
 
     },
@@ -1126,6 +1149,9 @@
           }
         }
       }
+    },
+    "%lld seconds left" : {
+
     },
     "%lld symbols" : {
 
@@ -1795,6 +1821,19 @@
         }
       }
     },
+    "%lld with codes" : {
+
+    },
+    "%lld–%lld characters" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld–%2$lld characters"
+          }
+        }
+      }
+    },
     "%lld/%lld" : {
       "localizations" : {
         "en" : {
@@ -1861,6 +1900,9 @@
     "A little room to read" : {
 
     },
+    "A login needs a password." : {
+
+    },
     "A Mac can read the browsers installed on it. Bring their Spaces and tabs into Crest there, and iCloud brings them here." : {
 
     },
@@ -1883,6 +1925,9 @@
 
     },
     "A rule for a site doesn’t include its subdomains." : {
+
+    },
+    "A saved picture of the QR code" : {
 
     },
     "A secure connection couldn’t be made" : {
@@ -2023,6 +2068,9 @@
     "Add Accent Color" : {
 
     },
+    "Add Address" : {
+
+    },
     "Add Background Color" : {
       "localizations" : {
         "ar" : {
@@ -2032,6 +2080,12 @@
           }
         }
       }
+    },
+    "Add Card" : {
+
+    },
+    "Add Code" : {
+
     },
     "Add Color" : {
 
@@ -2103,6 +2157,9 @@
         }
       }
     },
+    "Add Website" : {
+
+    },
     "Add Website Rule" : {
 
     },
@@ -2144,6 +2201,9 @@
     "Address field preview" : {
 
     },
+    "Address Saved" : {
+
+    },
     "Address, %@" : {
       "localizations" : {
         "ar" : {
@@ -2153,6 +2213,12 @@
           }
         }
       }
+    },
+    "Addresses" : {
+
+    },
+    "Addresses…" : {
+
     },
     "Adds or removes this password from the selection." : {
 
@@ -2426,6 +2492,9 @@
     "Always Translate %@" : {
 
     },
+    "American Express" : {
+      "comment" : "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."
+    },
     "An export is already in progress for this page." : {
 
     },
@@ -2461,6 +2530,9 @@
     "Another copy of Crest is already open to agents. Quit it, then turn agents off and on again." : {
 
     },
+    "Another Password" : {
+
+    },
     "Another search provider already uses this name." : {
 
     },
@@ -2474,6 +2546,9 @@
 
     },
     "Antique Gold" : {
+
+    },
+    "Apartment, suite, etc." : {
 
     },
     "App icon" : {
@@ -2650,6 +2725,9 @@
     "Asked by this site" : {
 
     },
+    "At least %lld characters" : {
+
+    },
     "Audio visualizer" : {
 
     },
@@ -2680,6 +2758,9 @@
     "Authenticate to delete selected passwords from %@." : {
 
     },
+    "Authenticate to edit the Crest password for %@." : {
+
+    },
     "Authenticate to export passwords from %@." : {
       "localizations" : {
         "ar" : {
@@ -2701,8 +2782,21 @@
         }
       }
     },
+    "Authenticate to fill %@." : {
+
+    },
     "Authenticate to import passwords into %@." : {
 
+    },
+    "Authenticate to move passwords from %@ to %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Authenticate to move passwords from %1$@ to %2$@."
+          }
+        }
+      }
     },
     "Authenticate to reveal the Crest password for %@." : {
       "localizations" : {
@@ -2725,6 +2819,9 @@
         }
       }
     },
+    "Authenticate to show %@." : {
+
+    },
     "Authenticate to unlock the %@ Space in Crest." : {
       "localizations" : {
         "ar" : {
@@ -2734,6 +2831,9 @@
           }
         }
       }
+    },
+    "Authenticate to view the notes and code for %@." : {
+
     },
     "Authenticate to view this Crest password." : {
       "localizations" : {
@@ -2786,6 +2886,9 @@
           }
         }
       }
+    },
+    "Autofill" : {
+
     },
     "Automatic" : {
 
@@ -3063,6 +3166,9 @@
       }
     },
     "Best Match" : {
+
+    },
+    "Billing address" : {
 
     },
     "Bird" : {
@@ -3364,6 +3470,15 @@
     "Capture Window" : {
 
     },
+    "Card" : {
+      "comment" : "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."
+    },
+    "Card number" : {
+
+    },
+    "Card Saved" : {
+
+    },
     "Castle" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3401,6 +3516,12 @@
 
     },
     "Change Icon…" : {
+
+    },
+    "Change Password on Website" : {
+
+    },
+    "changed %@" : {
 
     },
     "Changed Only" : {
@@ -3657,6 +3778,9 @@
     "Choose Folder…" : {
 
     },
+    "Choose Image…" : {
+
+    },
     "Choose Language" : {
 
     },
@@ -3712,6 +3836,9 @@
 
     },
     "Citrus" : {
+
+    },
+    "City" : {
 
     },
     "Claude Code" : {
@@ -4059,6 +4186,9 @@
     "Code" : {
 
     },
+    "Code for %@" : {
+
+    },
     "Codex" : {
 
     },
@@ -4257,6 +4387,9 @@
     "Console" : {
 
     },
+    "Contact" : {
+
+    },
     "Contains" : {
 
     },
@@ -4326,6 +4459,9 @@
       }
     },
     "Copy" : {
+
+    },
+    "Copy Code" : {
 
     },
     "Copy Full Page Capture" : {
@@ -4460,6 +4596,9 @@
     "Country" : {
 
     },
+    "Country or region" : {
+
+    },
     "Create folders and nested folders" : {
 
     },
@@ -4513,6 +4652,9 @@
           }
         }
       }
+    },
+    "Crest addresses" : {
+
     },
     "Crest Browser" : {
 
@@ -4647,6 +4789,12 @@
         }
       }
     },
+    "Crest couldn’t delete every selected password." : {
+
+    },
+    "Crest couldn’t fill this form." : {
+
+    },
     "Crest couldn’t find another browser. Not every browser can be found." : {
 
     },
@@ -4666,7 +4814,13 @@
     "Crest couldn’t import these passwords. This Space’s passwords are unchanged." : {
 
     },
+    "Crest couldn’t move every selected password." : {
+
+    },
     "Crest couldn’t open itself to agents. Turn agents off and on again to try again." : {
+
+    },
+    "Crest couldn’t open that image." : {
 
     },
     "Crest couldn’t open the selected files." : {
@@ -4676,6 +4830,9 @@
 
     },
     "Crest couldn’t prepare this import." : {
+
+    },
+    "Crest couldn’t read that card." : {
 
     },
     "Crest couldn’t read that password file." : {
@@ -4700,10 +4857,22 @@
     "Crest couldn’t read this Space’s passwords. Nothing was imported." : {
 
     },
+    "Crest couldn’t read your addresses." : {
+
+    },
+    "Crest couldn’t read your payment cards." : {
+
+    },
     "Crest couldn’t remove the passwords it can’t read." : {
 
     },
     "Crest couldn’t save a strong password. Nothing was filled." : {
+
+    },
+    "Crest couldn’t save that address." : {
+
+    },
+    "Crest couldn’t save that card." : {
 
     },
     "Crest couldn’t save this change. Try again." : {
@@ -4729,6 +4898,12 @@
         }
       }
     },
+    "Crest couldn’t save this." : {
+
+    },
+    "Crest couldn’t save those changes." : {
+
+    },
     "Crest couldn’t save your session because another app is using its file." : {
 
     },
@@ -4742,6 +4917,9 @@
 
     },
     "Crest couldn’t save your session." : {
+
+    },
+    "Crest couldn’t see the page." : {
 
     },
     "Crest couldn’t tell which program this agent is." : {
@@ -4768,6 +4946,18 @@
       }
     },
     "Crest doesn’t block ads or trackers." : {
+
+    },
+    "Crest doesn’t support counter-based codes." : {
+
+    },
+    "Crest doesn’t support this code interval." : {
+
+    },
+    "Crest doesn’t support this code length." : {
+
+    },
+    "Crest doesn’t support this setup key’s algorithm." : {
 
     },
     "Crest encountered an unexpected problem while opening %@." : {
@@ -4822,6 +5012,9 @@
     "Crest needs at least one Space." : {
 
     },
+    "Crest one-time codes" : {
+
+    },
     "Crest password suggestions" : {
       "localizations" : {
         "ar" : {
@@ -4841,6 +5034,9 @@
           }
         }
       }
+    },
+    "Crest payment cards" : {
+
     },
     "Crest preview" : {
       "extractionState" : "manual"
@@ -5313,6 +5509,18 @@
         }
       }
     },
+    "Delete Address?" : {
+
+    },
+    "Delete Address…" : {
+
+    },
+    "Delete Card?" : {
+
+    },
+    "Delete Card…" : {
+
+    },
     "Delete Folder" : {
       "localizations" : {
         "ar" : {
@@ -5342,6 +5550,9 @@
           }
         }
       }
+    },
+    "Delete Password…" : {
+
     },
     "Delete Route" : {
       "localizations" : {
@@ -5551,6 +5762,9 @@
     "Dim the page behind Peek" : {
 
     },
+    "Diners Club" : {
+      "comment" : "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."
+    },
     "Direction" : {
 
     },
@@ -5579,6 +5793,9 @@
     },
     "Disconnect Agent" : {
       "comment" : "Disconnects the agent using a tab from Crest."
+    },
+    "Discover" : {
+      "comment" : "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."
     },
     "Discussions" : {
 
@@ -5638,6 +5855,9 @@
           }
         }
       }
+    },
+    "Done Selecting" : {
+
     },
     "Dots" : {
 
@@ -6038,6 +6258,9 @@
     "Edit…" : {
 
     },
+    "Email" : {
+
+    },
     "Embedded password form from %@" : {
       "localizations" : {
         "ar" : {
@@ -6181,6 +6404,9 @@
     "Every Space of %@’s group shows %@’s pinned tabs." : {
 
     },
+    "Everyday" : {
+
+    },
     "Everyday Use" : {
       "localizations" : {
         "ar" : {
@@ -6254,6 +6480,9 @@
 
     },
     "Experimental" : {
+
+    },
+    "Expires" : {
 
     },
     "Explore" : {
@@ -6455,7 +6684,13 @@
     "Fill" : {
 
     },
+    "Filling a card always asks for Touch ID or your device password." : {
+
+    },
     "Fills the address without opening it. Press Tab or Right Arrow to accept." : {
+
+    },
+    "Fills the username now, the password on the next step" : {
 
     },
     "Filter" : {
@@ -6532,6 +6767,9 @@
     "Finds Settings pages by name." : {
 
     },
+    "Finds the QR code on %@" : {
+
+    },
     "Finish" : {
       "localizations" : {
         "ar" : {
@@ -6569,6 +6807,9 @@
       }
     },
     "Firefox CSV" : {
+
+    },
+    "First name" : {
 
     },
     "Fish" : {
@@ -6962,6 +7203,9 @@
           }
         }
       }
+    },
+    "Has notes" : {
+
     },
     "Height" : {
 
@@ -7630,6 +7874,12 @@
     "Its content is still saved. Update Crest to open it." : {
 
     },
+    "JBSW Y3DP or otpauth://…" : {
+
+    },
+    "JCB" : {
+      "comment" : "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."
+    },
     "Joins your %@ · %lld tabs" : {
 
     },
@@ -7727,6 +7977,9 @@
     "Kraken Gold" : {
 
     },
+    "Label" : {
+
+    },
     "Lagoon" : {
 
     },
@@ -7767,6 +8020,9 @@
         }
       }
     },
+    "Last Changed" : {
+
+    },
     "Last download batch" : {
       "localizations" : {
         "ar" : {
@@ -7778,6 +8034,9 @@
       }
     },
     "Last Hour" : {
+
+    },
+    "Last name" : {
 
     },
     "Last successful sync" : {
@@ -7799,6 +8058,9 @@
           }
         }
       }
+    },
+    "Last Used" : {
+
     },
     "Last viewed" : {
 
@@ -8080,6 +8342,9 @@
     "macOS will quarantine the completed file. Open it only if you trust its source." : {
 
     },
+    "Maestro" : {
+      "comment" : "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."
+    },
     "Make “%@” a Sub-Space of “%@”?" : {
 
     },
@@ -8112,6 +8377,9 @@
       }
     },
     "Makes every site ask again in this Space and the others of its group" : {
+
+    },
+    "Makes one-time codes" : {
 
     },
     "Manage" : {
@@ -8161,6 +8429,9 @@
     },
     "Market" : {
 
+    },
+    "Mastercard" : {
+      "comment" : "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."
     },
     "Match" : {
       "localizations" : {
@@ -8234,6 +8505,9 @@
     "Microphone" : {
 
     },
+    "Middle name" : {
+
+    },
     "Midnight" : {
 
     },
@@ -8242,6 +8516,9 @@
     },
     "Mint" : {
 
+    },
+    "Mir" : {
+      "comment" : "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."
     },
     "Model" : {
 
@@ -8262,6 +8539,9 @@
           }
         }
       }
+    },
+    "Month" : {
+
     },
     "More" : {
 
@@ -8409,6 +8689,16 @@
         }
       }
     },
+    "Moved %lld passwords to %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Moved %1$lld passwords to %2$@"
+          }
+        }
+      }
+    },
     "Moves all open tabs to Archive" : {
 
     },
@@ -8436,6 +8726,9 @@
           }
         }
       }
+    },
+    "Name on card" : {
+
     },
     "Name your Space" : {
 
@@ -8503,6 +8796,12 @@
           }
         }
       }
+    },
+    "Never for This Site" : {
+
+    },
+    "Never saved" : {
+
     },
     "New" : {
 
@@ -8646,6 +8945,9 @@
     "Next chapter" : {
 
     },
+    "Next Field" : {
+
+    },
     "Next Match" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -8694,6 +8996,9 @@
 
     },
     "Next Widget" : {
+
+    },
+    "Nickname" : {
 
     },
     "Night" : {
@@ -8784,6 +9089,9 @@
         }
       }
     },
+    "No HTTPS" : {
+
+    },
     "No items match the selected filter." : {
       "localizations" : {
         "ar" : {
@@ -8824,6 +9132,9 @@
 
     },
     "No other Spaces are available. Unlock a Space to include it; Spaces that already have this extension are excluded." : {
+
+    },
+    "No passwords saved" : {
 
     },
     "No passwords saved for this site" : {
@@ -8878,6 +9189,9 @@
       }
     },
     "No supported page text was found. Editable fields, embedded pages, and images are excluded." : {
+
+    },
+    "No symbols" : {
 
     },
     "No Tabs" : {
@@ -8955,6 +9269,9 @@
 
     },
     "Not yet" : {
+
+    },
+    "Notes" : {
 
     },
     "Notes why each result is there, such as “Often visited” or “Already open”." : {
@@ -9089,6 +9406,12 @@
 
     },
     "One rule per line, as filter lists write them. Block Element adds its rules here." : {
+
+    },
+    "One-time code" : {
+
+    },
+    "Only %@" : {
 
     },
     "Only a Sub-Space can be separated." : {
@@ -9554,6 +9877,9 @@
         }
       }
     },
+    "Organisation" : {
+
+    },
     "Organize with folders" : {
 
     },
@@ -9747,7 +10073,13 @@
         }
       }
     },
+    "Passwords and Autofill" : {
+
+    },
     "passwords credentials autofill iCloud Keychain import export" : {
+
+    },
+    "passwords credentials autofill iCloud Keychain passkeys synchronization one-time codes authenticator two-factor addresses payment cards credit" : {
 
     },
     "Passwords for sites without HTTPS come in, but Crest won’t fill them in." : {
@@ -9787,6 +10119,12 @@
     "Passwords remain encrypted in this Space’s Keychain and never appear in logs, notifications, or diagnostics." : {
 
     },
+    "Passwords, codes, addresses and cards" : {
+
+    },
+    "Passwords…" : {
+
+    },
     "Past Month" : {
       "localizations" : {
         "ar" : {
@@ -9814,6 +10152,9 @@
 
     },
     "Paste and Match Style" : {
+
+    },
+    "Paste setup key or link" : {
 
     },
     "Paste the setup in your agent’s terminal or settings. Crest must be open while the agent works." : {
@@ -9855,6 +10196,15 @@
           }
         }
       }
+    },
+    "Payment cards" : {
+
+    },
+    "Payment Cards" : {
+
+    },
+    "Payment Cards…" : {
+
     },
     "PDF" : {
 
@@ -10195,6 +10545,9 @@
     "Podcasts & Shows" : {
 
     },
+    "Point the camera at the QR code" : {
+
+    },
     "Pop-up blocked" : {
 
     },
@@ -10208,6 +10561,9 @@
 
     },
     "Popular" : {
+
+    },
+    "Postal code" : {
 
     },
     "Practice" : {
@@ -10329,6 +10685,9 @@
 
     },
     "Previous" : {
+
+    },
+    "Previous Field" : {
 
     },
     "Previous Match" : {
@@ -10661,6 +11020,9 @@
     "Ran a script" : {
 
     },
+    "Random with Symbols" : {
+
+    },
     "Raven" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -10671,6 +11033,9 @@
           }
         }
       }
+    },
+    "Read Key" : {
+
     },
     "Readability fade" : {
       "localizations" : {
@@ -10922,6 +11287,9 @@
     "Remember in %@" : {
 
     },
+    "Remember security code" : {
+
+    },
     "Remember the chosen Space for each site" : {
       "localizations" : {
         "ar" : {
@@ -10976,6 +11344,9 @@
           }
         }
       }
+    },
+    "Remove Code" : {
+
     },
     "Remove Color" : {
 
@@ -11087,6 +11458,9 @@
           }
         }
       }
+    },
+    "Remove Website" : {
+
     },
     "Remove…" : {
 
@@ -11530,6 +11904,9 @@
         }
       }
     },
+    "Reused" : {
+
+    },
     "Reveal Password" : {
       "localizations" : {
         "ar" : {
@@ -11776,6 +12153,12 @@
     "Save A weekend away" : {
 
     },
+    "Save address?" : {
+
+    },
+    "Save card?" : {
+
+    },
     "Save Download" : {
 
     },
@@ -11816,6 +12199,9 @@
 
     },
     "Save Page as Web Archive" : {
+
+    },
+    "Save Password" : {
 
     },
     "Save password?" : {
@@ -11886,6 +12272,9 @@
     "SAVED" : {
       "comment" : "A section heading in a browser import review. Keep it uppercase."
     },
+    "Saved %@" : {
+
+    },
     "Saved and current tabs" : {
       "localizations" : {
         "ar" : {
@@ -11895,6 +12284,9 @@
           }
         }
       }
+    },
+    "Saved for" : {
+
     },
     "Saved in %@" : {
       "localizations" : {
@@ -12001,6 +12393,15 @@
     "Scams" : {
 
     },
+    "Scan QR Code" : {
+
+    },
+    "Scan This Page" : {
+
+    },
+    "Scan with Camera" : {
+
+    },
     "Scarlet" : {
 
     },
@@ -12067,6 +12468,9 @@
           }
         }
       }
+    },
+    "Search addresses" : {
+
     },
     "Search Archive…" : {
       "localizations" : {
@@ -12163,6 +12567,9 @@
     "Search Passwords" : {
 
     },
+    "Search payment cards" : {
+
+    },
     "Search providers" : {
 
     },
@@ -12255,6 +12662,9 @@
           }
         }
       }
+    },
+    "Security code" : {
+
     },
     "Select" : {
 
@@ -12442,6 +12852,12 @@
     "Services" : {
 
     },
+    "Set Up Code" : {
+
+    },
+    "Set Up Code…" : {
+
+    },
     "Settings" : {
       "localizations" : {
         "ar" : {
@@ -12475,6 +12891,9 @@
 
     },
     "Setup is no longer open. Open it again." : {
+
+    },
+    "Setup key or link" : {
 
     },
     "Setup progress" : {
@@ -12559,6 +12978,12 @@
       "comment" : "A tab's mark while another page shares it."
     },
     "Shared by %@’s Sub-Spaces." : {
+
+    },
+    "Shared with all Spaces" : {
+
+    },
+    "Shared with all Spaces." : {
 
     },
     "Sharing a Tab" : {
@@ -12658,6 +13083,12 @@
     "Show Blocked Elements" : {
 
     },
+    "Show Code" : {
+
+    },
+    "Show Details" : {
+
+    },
     "Show Developer Toolbar" : {
 
     },
@@ -12713,6 +13144,9 @@
 
     },
     "Show Next Spaces" : {
+
+    },
+    "Show Notes" : {
 
     },
     "Show or Hide Developer Toolbar" : {
@@ -13475,6 +13909,9 @@
     "State for %@" : {
 
     },
+    "State or region" : {
+
+    },
     "Status" : {
       "localizations" : {
         "ar" : {
@@ -13617,6 +14054,9 @@
       }
     },
     "Storm Gold" : {
+
+    },
+    "Street" : {
 
     },
     "Stretch pins to fill the row" : {
@@ -14171,6 +14611,9 @@
     "The CSV file will contain readable usernames and passwords from only the selected Space. Anyone with the file can read them. Crest will authenticate you before opening the %@." : {
 
     },
+    "The CSV file will contain readable usernames, passwords and notes from only the selected Space. Anyone with the file can read them. Crest will authenticate you before opening the %@." : {
+
+    },
     "The destination Space changed. Choose the file again." : {
 
     },
@@ -14199,6 +14642,9 @@
 
     },
     "The folder is empty." : {
+
+    },
+    "The form changed before Crest could fill it." : {
 
     },
     "The iCloud account changed during the download." : {
@@ -14287,7 +14733,28 @@
     "The sidebar behind your tabs" : {
 
     },
+    "The site is empty." : {
+
+    },
     "The site is not a valid web address." : {
+
+    },
+    "The site is not an http or https address." : {
+
+    },
+    "The site’s address in brackets is not an IPv6 address." : {
+
+    },
+    "The site’s IP address is not a valid IPv4 address." : {
+
+    },
+    "The site’s IPv6 address names a network interface, which a web page’s address never does." : {
+
+    },
+    "The site’s name mixes right-to-left and left-to-right text in a way web addresses don’t allow." : {
+
+    },
+    "The site’s port is not a number from 1 to 65535." : {
 
     },
     "The Space is locked or no longer active. Unlock it and select the tabs again." : {
@@ -14326,6 +14793,9 @@
 
     },
     "There isn’t enough disk space to save the file." : {
+
+    },
+    "There’s no QR code there." : {
 
     },
     "These credentials are valid and will be imported. Review the security limitation before continuing." : {
@@ -14417,6 +14887,9 @@
       }
     },
     "This clears the history %@ and its Sub-Spaces share." : {
+
+    },
+    "This code doesn’t fit the page’s fields." : {
 
     },
     "This credential belongs to the embedded %@ frame, not %@." : {
@@ -14560,6 +15033,9 @@
         }
       }
     },
+    "This isn’t a setup key." : {
+
+    },
     "This media file couldn’t be played." : {
 
     },
@@ -14668,6 +15144,12 @@
     "This password file is not valid UTF-8 text." : {
 
     },
+    "This password is also used for other accounts." : {
+
+    },
+    "This password is easy to guess." : {
+
+    },
     "This password was imported from an insecure HTTP site. Crest keeps it available to view or copy but will not autofill it on an insecure connection." : {
 
     },
@@ -14712,6 +15194,12 @@
     "This session was saved by a newer version of Crest. Update Crest before opening it." : {
 
     },
+    "This setup key is too short." : {
+
+    },
+    "This setup key isn’t valid." : {
+
+    },
     "This sign-in belongs only to the %@ Space and cannot be saved because the connection is not protected by HTTPS." : {
 
     },
@@ -14747,6 +15235,9 @@
     "This site’s certificate is not trusted. Information you send could be read by others." : {
 
     },
+    "This site’s rules leave no password Crest can make." : {
+
+    },
     "this Space" : {
 
     },
@@ -14763,6 +15254,9 @@
 
     },
     "This type of file can change your computer. Keep it only if you trust its source." : {
+
+    },
+    "This website doesn’t use an encrypted connection." : {
 
     },
     "Three" : {
@@ -14795,6 +15289,9 @@
 
     },
     "Tint selected pins" : {
+
+    },
+    "Title" : {
 
     },
     "Titles" : {
@@ -15270,6 +15767,9 @@
         }
       }
     },
+    "UnionPay" : {
+      "comment" : "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."
+    },
     "Unlink Colors" : {
 
     },
@@ -15435,10 +15935,16 @@
     "Up to %lld" : {
 
     },
+    "Up to %lld characters" : {
+
+    },
     "Up to %lld per row" : {
 
     },
     "Up to date" : {
+
+    },
+    "Update" : {
 
     },
     "Update & Offer to Passwords" : {
@@ -15672,6 +16178,9 @@
     "Use your microphone?" : {
 
     },
+    "used %@" : {
+
+    },
     "Used by %@" : {
       "comment" : "A tab's mark while an agent uses it."
     },
@@ -15790,6 +16299,9 @@
     "Violet" : {
 
     },
+    "Visa" : {
+      "comment" : "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."
+    },
     "visited pages history" : {
       "localizations" : {
         "ar" : {
@@ -15856,6 +16368,9 @@
           }
         }
       }
+    },
+    "Weak" : {
+
     },
     "Web Access" : {
 
@@ -16051,6 +16566,9 @@
         }
       }
     },
+    "Year" : {
+
+    },
     "Yellow" : {
 
     },
@@ -16114,6 +16632,9 @@
 
     },
     "Your Lists" : {
+
+    },
+    "Your password manager extension handles passwords here" : {
 
     },
     "Your pinned and saved tabs are still in the sidebar." : {

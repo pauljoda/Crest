@@ -134,7 +134,10 @@ enum BrowserCredentialContentBridge {
           // WebKit already delivers scroll events at most once per rendering
           // update, so the change gate below is the whole of the throttling:
           // a page that scrolls without moving the field posts nothing.
-          const reportFieldGeometry = () => {
+          // `frameMoved` is true when a page out of this frame's reach moved
+          // it: the field stays put in the frame's own viewport, and the
+          // engine adds the frame's new place to the rect.
+          const reportFieldGeometry = (frameMoved) => {
             if (!trackedField) return;
             const input = trackedField.input.deref();
             if (!input || !input.isConnected || !isVisible(input)) {
@@ -143,7 +146,9 @@ enum BrowserCredentialContentBridge {
               return;
             }
             const placement = placementOf(input);
-            if (!placement || !rectsDiffer(placement.rect, trackedFieldRect)) return;
+            if (!placement) return;
+            const movedOutOfReach = frameMoved === true && !placement.inTopViewport;
+            if (!movedOutOfReach && !rectsDiffer(placement.rect, trackedFieldRect)) return;
             trackedFieldRect = placement.rect;
             post({
               event: "fieldGeometry",
@@ -507,6 +512,28 @@ enum BrowserCredentialContentBridge {
 
           addEventListener("scroll", reportFieldGeometry, { capture: true, passive: true });
           addEventListener("resize", reportFieldGeometry, { passive: true });
+
+          // A frame from another site can't see the pages around it scroll,
+          // though its fields move with them. The frame holding the focus
+          // hears of each move, once an animation frame, and passes it down.
+          const frameMovedSignal = "crest-credential-frame-moved";
+          let frameMoveQueued = false;
+          const tellFocusedFrame = () => {
+            if (frameMoveQueued) return;
+            const frame = document.activeElement;
+            if (!(frame instanceof HTMLIFrameElement || frame instanceof HTMLFrameElement)) return;
+            frameMoveQueued = true;
+            requestAnimationFrame(() => {
+              frameMoveQueued = false;
+              try { frame.contentWindow?.postMessage(frameMovedSignal, "*"); } catch (_) {}
+            });
+          };
+          addEventListener("scroll", tellFocusedFrame, { capture: true, passive: true });
+          addEventListener("message", (event) => {
+            if (window === window.top || event.source !== window.parent || event.data !== frameMovedSignal) return;
+            reportFieldGeometry(true);
+            tellFocusedFrame();
+          });
 
           document.addEventListener("submit", (event) => {
             if (!event.isTrusted || !(event.target instanceof HTMLFormElement)) return;

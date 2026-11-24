@@ -31,6 +31,11 @@ public sealed record PageExported(Guid PageId, Guid ExportId, byte[]? Document, 
 /// second, for timers that close pages left idle.
 public sealed record PageInteracted(Guid PageId) : EnginePagePresentation(PageId);
 
+/// Whether an extension controls the engine's password saving in the page's
+/// profile, as a password manager's does, so Crest leaves passwords and codes
+/// to it there. Presented when the page goes live and when it changes.
+public sealed record PagePasswordControlChanged(Guid PageId, bool ExtensionControlsPasswords) : EnginePagePresentation(PageId);
+
 /// The page started or stopped loading.
 public sealed record PageLoadingChanged(Guid PageId, bool IsLoading) : EnginePagePresentation(PageId);
 
@@ -86,8 +91,13 @@ public sealed record ContentMessagePosted(Guid PageId, string Handler, string Bo
     : EnginePagePresentation(PageId);
 
 /// A frame of a page's document: the identity `EvaluateContentScript` takes,
-/// whether it is the main frame, and the origin of what it shows.
-public sealed record ContentFrame(string Id, bool IsMainFrame, string Protocol, string Host, int Port);
+/// whether it is the main frame, and the origin of what it shows. A frame
+/// drawn in a view of its own, as one from another site is, has its view's
+/// top leading corner `ViewportOffsetX`, `ViewportOffsetY` CSS pixels into the
+/// main frame's viewport when `HasViewportOffset`; a frame its page draws
+/// itself measures that in its own script.
+public sealed record ContentFrame(string Id, bool IsMainFrame, string Protocol, string Host, int Port, bool HasViewportOffset,
+    double ViewportOffsetX, double ViewportOffsetY);
 
 /// What `EvaluateContentScript` answered, as JSON, or nothing when its
 /// document went away first.

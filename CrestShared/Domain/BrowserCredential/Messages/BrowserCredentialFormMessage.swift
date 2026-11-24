@@ -118,11 +118,22 @@ struct BrowserCredentialFormMessage: Sendable, Decodable, CustomStringConvertibl
     /// Where the focused field sits in its frame's viewport, where the page
     /// reported it. Optional on a focus: a field the bridge cannot measure
     /// still deserves a prompt, just not an anchored one.
-    let fieldRect: BrowserCredentialFieldRect?
+    private(set) var fieldRect: BrowserCredentialFieldRect?
 
     /// Whether `fieldRect` is in the top page's viewport: a frame the top
-    /// page can reach adds its own place in the page to its field's.
-    let fieldRectInTopViewport: Bool
+    /// page can reach adds its own place in the page to its field's, and the
+    /// engine places a frame it draws in its own view.
+    private(set) var fieldRectInTopViewport: Bool
+
+    /// The message with its field placed in the top page's viewport, for a
+    /// frame whose own viewport's corner sits `offset` CSS pixels into it.
+    func placed(atFrameOffset offset: (x: Double, y: Double)) -> Self {
+        guard let fieldRect, !fieldRectInTopViewport else { return self }
+        var placed = self
+        placed.fieldRect = fieldRect.offset(x: offset.x, y: offset.y)
+        placed.fieldRectInTopViewport = true
+        return placed
+    }
 
     var description: String {
         "BrowserCredentialFormMessage(event: \(event.name), formID: \(formID ?? "none"), fields: \(fields.count), values: <redacted>)"

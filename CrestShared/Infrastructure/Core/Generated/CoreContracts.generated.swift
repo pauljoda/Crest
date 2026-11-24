@@ -1826,6 +1826,7 @@ enum EnginePresentation: Equatable, Sendable {
     case pageNavigationCommitted(PageNavigationCommitted)
     case pageNavigationFailed(PageNavigationFailed)
     case pageNavigationStarted(PageNavigationStarted)
+    case pagePasswordControlChanged(PagePasswordControlChanged)
     case pageRendererGone(PageRendererGone)
     case pageScriptEvaluated(PageScriptEvaluated)
     case pageThemeChanged(PageThemeChanged)
@@ -1870,6 +1871,7 @@ enum EnginePresentation: Equatable, Sendable {
         case .pageNavigationCommitted(let value): value.pageID
         case .pageNavigationFailed(let value): value.pageID
         case .pageNavigationStarted(let value): value.pageID
+        case .pagePasswordControlChanged(let value): value.pageID
         case .pageRendererGone(let value): value.pageID
         case .pageScriptEvaluated(let value): value.pageID
         case .pageThemeChanged(let value): value.pageID
@@ -3388,6 +3390,9 @@ struct ContentFrame: Equatable, Sendable, Identifiable {
     let `protocol`: String
     let host: String
     let port: Int
+    let hasViewportOffset: Bool
+    let viewportOffsetX: Double
+    let viewportOffsetY: Double
 }
 
 struct ContentFullscreenChanged: Equatable, Sendable {
@@ -6450,6 +6455,11 @@ struct PageOffered: EngineEvent, Equatable, Sendable {
 
 struct PageOpened: CoreChange, Equatable, Sendable {
     let page: PageState
+}
+
+struct PagePasswordControlChanged: Equatable, Sendable {
+    let pageID: UUID
+    let extensionControlsPasswords: Bool
 }
 
 struct PagePoint: Equatable, Sendable {

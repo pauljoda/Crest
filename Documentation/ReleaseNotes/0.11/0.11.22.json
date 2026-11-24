@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "id": "engine-password-manager-stays-off",
+      "category": "fixed",
+      "message": "On Chromium pages, only Crest offers to save and fill passwords, even if the engine's own password setting was turned back on.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "password-extensions-handle-passwords",
+      "category": "improved",
+      "message": "When a password manager extension handles passwords in a Space, Crest leaves passwords and codes to it and says so once. Addresses and cards still fill.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "engine-password-pages-open-autofill",
+      "category": "improved",
+      "message": "The engine's own password, payment and address settings pages open Settings › Autofill instead.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "suggestions-in-other-site-frames",
+      "category": "fixed",
+      "message": "On Chromium pages, suggestions point at sign-in fields inside a frame from another site, and follow the page as it scrolls.",
+      "platforms": ["mac"]
+    }
+  ]
+}

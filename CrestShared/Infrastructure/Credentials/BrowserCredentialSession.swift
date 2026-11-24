@@ -42,7 +42,7 @@ final class BrowserCredentialSession {
 
     func receive(_ body: Any, from frame: BrowserContentFrame, topLevelURL: URL?) {
         guard isEnabled,
-            let message = BrowserCredentialFormMessage(body: body),
+            let decoded = BrowserCredentialFormMessage(body: body),
             let frameOrigin = CredentialOrigin(
                 securityProtocol: frame.securityProtocol,
                 host: frame.host,
@@ -51,6 +51,9 @@ final class BrowserCredentialSession {
             let topLevelURL,
             let topLevelOrigin = CredentialOrigin(url: topLevelURL)
         else { return }
+        // A frame the engine draws in its own view can't measure where it
+        // sits in the page; the engine does, so its field can be pointed at.
+        let message = frame.viewportOffset.map { decoded.placed(atFrameOffset: $0) } ?? decoded
 
         state.receive(
             message,

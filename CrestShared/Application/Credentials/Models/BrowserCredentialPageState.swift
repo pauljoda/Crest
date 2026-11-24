@@ -42,6 +42,18 @@ final class BrowserCredentialPageState<FillTarget> {
     /// The login the page last filled, whose code the next step offers first.
     @ObservationIgnored private(set) var lastFilledCredentialID: UUID?
 
+    /// Whether an extension handles passwords in the page's profile, so the
+    /// page offers and saves no passwords or codes, though addresses and cards
+    /// still fill.
+    @ObservationIgnored var passwordsHandledElsewhere = false {
+        didSet {
+            guard passwordsHandledElsewhere else { return }
+            dismissFillRequest()
+            dismissSaveCandidate()
+            heldSaveCandidate = nil
+        }
+    }
+
     /// An address or card a sent form proposed to keep, until the person
     /// answers.
     private(set) var autofillSaveCandidate: BrowserAutofillSaveCandidate?
@@ -386,7 +398,10 @@ extension BrowserCredentialPageState: CredentialCapturePerformer {
         let message = observation.message
         let decision = observation.decision
         let form = decision.form
-        guard decision.passwordKind != nil || decision.codeFields != nil || decision.autofill != nil,
+        // An extension that handles passwords keeps them and codes to itself.
+        guard
+            (decision.passwordKind != nil || decision.codeFields != nil) && !passwordsHandledElsewhere
+                || decision.autofill != nil,
             let formID = message.formID,
             let fillTarget = observation.fillTarget
         else { return }
@@ -428,6 +443,7 @@ extension BrowserCredentialPageState: CredentialCapturePerformer {
     /// Keeps the password the form sent as a candidate, once every new
     /// password field agrees with it.
     func captureCandidate(_ observation: BrowserCredentialObservation<FillTarget>) {
+        guard !passwordsHandledElsewhere else { return }
         let message = observation.message
         let decision = observation.decision
         let form = decision.form

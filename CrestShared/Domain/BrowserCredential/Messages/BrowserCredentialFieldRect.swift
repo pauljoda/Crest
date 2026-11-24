@@ -47,6 +47,12 @@ struct BrowserCredentialFieldRect: Equatable, Sendable, Decodable {
         self.height = height
     }
 
+    /// The same rect moved by `x` and `y`, as a frame's field placed in the
+    /// top page's viewport.
+    func offset(x dx: Double, y dy: Double) -> Self {
+        Self(x: x + dx, y: y + dy, width: width, height: height)
+    }
+
     init(x: Double, y: Double, width: Double, height: Double) {
         self.x = x
         self.y = y

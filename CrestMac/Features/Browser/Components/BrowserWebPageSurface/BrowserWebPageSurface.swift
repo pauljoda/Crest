@@ -140,6 +140,16 @@ struct BrowserWebPageSurface: View {
             }
         }
         .animation(reduceMotion ? nil : CrestMotion.step, value: page.elementPicker.isActive)
+        .onChange(of: page.live.documentURL) {
+            // The engine's own passwords and autofill pages belong to Crest's
+            // Settings › Autofill, which opens instead; the page steps away.
+            guard page.showsEngineAutofillPage, let openPasswordSettings else { return }
+            let leaving = page.leaveEngineAutofillPage { [browser, page] in
+                guard let tabID = page.navigationContext?.tabID else { return }
+                browser.closeTab(tabID, in: page.spaceID)
+            }
+            if leaving { openPasswordSettings() }
+        }
     }
 
     /// The questions the find bar asks, bound to this surface's page.

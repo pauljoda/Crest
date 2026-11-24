@@ -322,6 +322,7 @@ class EnginePage final : public content::WebContentsObserver,
   void MovedWithinDocument(const std::string& url);
   void TitleChanged();
   void NoteTitle();
+  void NotePasswordControl();
   void FinishIfLoaded();
   void Settle();
   void CancelSettling();
@@ -420,6 +421,8 @@ class EnginePage final : public content::WebContentsObserver,
   std::optional<std::optional<engine::BrandColor>> presented_theme_;
   // How many pop-ups the engine blocked in the document when last presented.
   size_t presented_blocked_popups_ = 0;
+  // Whether an extension controlled password saving when last presented.
+  std::optional<bool> presented_password_control_;
   // How often each server and realm asked for a password in this document.
   std::map<std::string, int> authentication_attempts_;
   base::TimeTicks last_interaction_;

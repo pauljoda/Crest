@@ -65,6 +65,11 @@ struct BrowserNotice: Equatable, Hashable {
         )
     }
 
+    /// An extension handles passwords in the Space, so Crest leaves them to it.
+    static let passwordsLeftToExtension = BrowserNotice(
+        message: String(localized: "Your password manager extension handles passwords here"),
+        systemImage: "puzzlepiece.extension.fill")
+
     static let cardSaved = BrowserNotice(
         message: String(localized: "Card Saved"), systemImage: "checkmark.circle.fill")
 

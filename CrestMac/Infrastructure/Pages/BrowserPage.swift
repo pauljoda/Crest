@@ -33,6 +33,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// How long after its first commit a page waits to paint content of its
     /// own before its surface shows it anyway.
     @ObservationIgnored private static let firstPaintWaitLimit: Duration = .milliseconds(1500)
+    /// The Spaces this launch already told an extension handles passwords in.
+    @ObservationIgnored private static var spacesToldOfPasswordExtension: Set<UUID> = []
+    /// The engine's settings pages for passwords, payment methods and
+    /// addresses, under its `settings` host.
+    @ObservationIgnored private static let engineAutofillSettingsPaths = [
+        "/passwords", "/autofill", "/payments", "/addresses", "/contactInfo",
+    ]
 
     // MARK: - Variables
 
@@ -282,6 +289,18 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             blue: Double(color.blueComponent)
         )
     }
+
+    /// Whether the page shows one of the engine's own pages for passwords,
+    /// payment methods or addresses, which Settings › Autofill stands in for.
+    var showsEngineAutofillPage: Bool {
+        guard let url = live.documentURL, url.scheme == "crest" else { return false }
+        if url.host() == "password-manager" { return true }
+        guard url.host() == "settings" else { return false }
+        return Self.engineAutofillSettingsPaths.contains { url.path().hasPrefix($0) }
+    }
+
+    /// Whether the page is already on its way off an engine autofill page.
+    @ObservationIgnored private var isLeavingEngineAutofillPage = false
 
     // MARK: - Initializers
 
@@ -884,6 +903,33 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     func dismissCredentialSaveCandidate() {
         credentialState.dismissSaveCandidate()
+    }
+
+    /// Leaves passwords and codes to an extension that controls password
+    /// saving in the page's profile, and says so once for the Space.
+    func setPasswordsHandledByExtension(_ handled: Bool) {
+        credentialState.passwordsHandledElsewhere = handled
+        guard handled, Self.spacesToldOfPasswordExtension.insert(spaceID).inserted else { return }
+        BrowserNoticeCenter.shared.post(.passwordsLeftToExtension)
+    }
+
+    /// Leaves one of the engine's own autofill pages, which Settings stands
+    /// in for: back to the page before it, or, for a tab opened on it alone,
+    /// `closeTab`. The engine reports the tab's history a moment after its
+    /// address, and may rewrite the address, so the page decides once both
+    /// have arrived. Answers false when it was already leaving.
+    @discardableResult
+    func leaveEngineAutofillPage(closeTab: @escaping @MainActor () -> Void) -> Bool {
+        guard !isLeavingEngineAutofillPage else { return false }
+        isLeavingEngineAutofillPage = true
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard let self else { return }
+            isLeavingEngineAutofillPage = false
+            guard showsEngineAutofillPage else { return }
+            if live.canGoBack { goBack() } else { closeTab() }
+        }
+        return true
     }
 
     /// Not Now: the offer goes, and the key in the address field keeps it.
