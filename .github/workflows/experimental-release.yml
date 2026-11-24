@@ -89,7 +89,7 @@ jobs:
 
           # The installed artifact must understand the experimental Sparkle channel.
           # This intentionally fails rather than silently falling back to Stable.
-          if ! grep -Eq 'case[[:space:]]+experimental' \
+          if ! grep -Eq '(case|static let)[[:space:]]+experimental([^[:alnum:]_]|$)' \
               CrestMac/Features/SoftwareUpdates/Models/BrowserSoftwareUpdateChannel.swift \
               || ! grep -Fq 'appcast-experimental' \
               CrestMac/Features/SoftwareUpdates/Models/BrowserSoftwareUpdateChannel.swift; then
@@ -205,7 +205,7 @@ jobs:
 
           release_tag="experimental-${marketing_version}-${branch_slug}-${release_date}-${build_number}-r${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
           release_title="Crest Experimental ${marketing_version} · ${branch_name} · ${release_date} · Build ${build_number}"
-          asset_base="Crest-${marketing_version}-experimental-${release_date}-${short_sha}-arm64"
+          asset_base="Crest-${marketing_version}-experimental-${release_date}-${short_sha}"
 
           {
             printf 'asset_base=%s\n' "$asset_base"
@@ -276,6 +276,13 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
 
+          # Crest signs as the team project.yml builds with.
+          team_id="$(sed -n 's/^    DEVELOPMENT_TEAM: //p' project.yml)"
+          if [[ -z "$team_id" ]]; then
+            print -u2 "project.yml names no DEVELOPMENT_TEAM."
+            exit 1
+          fi
+
           release_root="$RUNNER_TEMP/crest-experimental-release"
           archive_path="$release_root/Crest.xcarchive"
           export_path="$release_root/export"
@@ -335,7 +342,7 @@ jobs:
 
           identity_hash="$(
             security find-identity -v -p codesigning "$keychain_path" \
-              | awk '/Developer ID Application: .*\(3U2R97HLXF\)/ { print $2; exit }'
+              | awk -v team="($team_id)" '/Developer ID Application: / && index($0, team) { print $2; exit }'
           )"
           if [[ -z "$identity_hash" ]]; then
             print -u2 "The imported archive does not contain Crest's Developer ID Application identity."
@@ -382,7 +389,7 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/crest-experimental-derived-data" \
             CURRENT_PROJECT_VERSION="$RELEASE_BUILD_NUMBER" \
             CREST_DEFAULT_UPDATE_CHANNEL=development \
-            DEVELOPMENT_TEAM=3U2R97HLXF \
+            DEVELOPMENT_TEAM="$team_id" \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Developer ID Application" \
             CREST_PROVISIONING_PROFILE_SPECIFIER="Crest Developer ID"
@@ -397,19 +404,20 @@ jobs:
           codesign --verify --deep --strict --verbose=2 "$app_path"
           test "$(defaults read "$app_path/Contents/Info" CFBundleIdentifier)" = "com.pauldavis.crest"
           test "$(defaults read "$app_path/Contents/Info" CrestDefaultUpdateChannel)" = "development"
-          test "$(lipo -archs "$app_path/Contents/MacOS/Crest")" = "arm64"
+          # The Mac app is universal.
+          for arch in arm64 x86_64; do lipo "$app_path/Contents/MacOS/Crest" -verify_arch "$arch"; done
 
           exported_entitlements="$release_root/exported-entitlements.plist"
           codesign -d --entitlements :- "$app_path" \
             > "$exported_entitlements" 2>/dev/null
           test "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.application-identifier' "$exported_entitlements")" \
-            = "3U2R97HLXF.com.pauldavis.crest"
+            = "$team_id.com.pauldavis.crest"
           test "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.developer.aps-environment' "$exported_entitlements")" \
             = "production"
           test "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.developer.icloud-container-identifiers:0' "$exported_entitlements")" \
             = "iCloud.com.pauldavis.crest"
           test "$(/usr/libexec/PlistBuddy -c 'Print :keychain-access-groups:0' "$exported_entitlements")" \
-            = "3U2R97HLXF.com.pauldavis.crest"
+            = "$team_id.com.pauldavis.crest"
           if /usr/libexec/PlistBuddy -c 'Print :com.apple.security.app-sandbox' "$exported_entitlements" >/dev/null 2>&1; then
             print -u2 "The product entitlements must not enable the app sandbox; it would strand installed data."
             exit 1
@@ -437,10 +445,9 @@ jobs:
           test -d "$engine_root/Chromium.app"
 
           # The native core the UI framework links against, then the framework.
-          (cd CrestCore && "$HOME/.dotnet/dotnet" publish src/CrestCore.Native \
-            -c Release -r osx-arm64 --nologo)
-          core_library="$PWD/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish/CrestCore.Native.dylib"
-          test -f "$core_library"
+          CREST_DOTNET="$HOME/.dotnet/dotnet" python3 Scripts/control-plane/mac_core.py --output "$release_root/core"
+          core_library="$release_root/core/CrestCore.Native.dylib"
+          for arch in arm64 x86_64; do lipo "$core_library" -verify_arch "$arch"; done
           xcodebuild build \
             -project Crest.xcodeproj \
             -scheme CrestChromiumUIProduct \
@@ -465,6 +472,12 @@ jobs:
             --signing-identity "$identity_hash" \
             --output "$chromium_app"
           codesign --verify --deep --strict --verbose=2 "$chromium_app"
+          # Both engines and Crest's interface run on Apple silicon and Intel.
+          for arch in arm64 x86_64; do
+            lipo "$chromium_app/Contents/MacOS/Chromium" -verify_arch "$arch"
+            lipo "$chromium_app/Contents/Frameworks/CrestChromiumUIProduct.framework/CrestChromiumUIProduct" \
+              -verify_arch "$arch"
+          done
           test "$(defaults read "$chromium_app/Contents/Info" CFBundleIdentifier)" = "com.pauldavis.crest"
           test "$(defaults read "$chromium_app/Contents/Info" CrestDefaultUpdateChannel)" = "development"
           test "$(defaults read "$chromium_app/Contents/Info" CFBundleVersion)" = "$RELEASE_BUILD_NUMBER"

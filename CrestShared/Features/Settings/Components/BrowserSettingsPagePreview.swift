@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Local sample content reflows at the chosen zoom without opening a webpage.
+/// Local sample content reflows at the chosen zoom without opening a webpage:
+/// ink on Crest's paper, with a wash of Crest blue standing in for an image.
 struct BrowserSettingsPagePreview: View {
     var zoom: Double = 1
 
@@ -8,23 +9,23 @@ struct BrowserSettingsPagePreview: View {
         GeometryReader { geometry in
             VStack(alignment: .leading, spacing: 10) {
                 Text("Sample page")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(CrestTypography.sans(18, weight: .semibold))
                 Text("A little room to read")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(CrestTypography.sans(14, weight: .medium))
                 Text("Text and images grow together. Choose a comfortable size for your everyday browsing.")
-                    .font(.system(size: 12))
+                    .font(CrestTypography.sans(12))
                     .fixedSize(horizontal: false, vertical: true)
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(.blue.opacity(0.16))
+                    .fill(CrestBrandPalette.crestBlue.opacity(0.16))
                     .frame(height: 36)
             }
             .padding(16)
             .frame(width: geometry.size.width / zoom, alignment: .topLeading)
             .scaleEffect(zoom, anchor: .topLeading)
         }
-        .foregroundStyle(Color.black.opacity(0.85))
+        .foregroundStyle(CrestBrandPalette.ink)
         .frame(height: 170)
-        .background(Color(white: 0.98))
+        .background(CrestBrandPalette.paper)
         .clipped()
         .allowsHitTesting(false)
         .accessibilityElement(children: .ignore)

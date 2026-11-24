@@ -29,7 +29,7 @@ struct SiteContentBlockingSwitch: Equatable {
     /// nothing.
     @MainActor
     init?(core: CrestCore, spaceID: UUID?, url: URL?) {
-        guard let spaceID, let url, ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
+        guard let spaceID, let url, url.webScheme != nil,
             let origin = SiteOrigin(url: url),
             (try? core.query(ContentBlockingApplies(spaceID: spaceID, origin: nil))) == true
         else { return nil }

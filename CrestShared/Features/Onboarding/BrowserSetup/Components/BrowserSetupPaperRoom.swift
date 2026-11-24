@@ -17,13 +17,13 @@ struct BrowserSetupPaperRoom: View {
     // MARK: - Actions - Drawing
 
     var body: some View {
-        let ground =
-            colorScheme == .dark ? BrowserSetupPaperRoomMetrics.darkGround : BrowserSetupPaperRoomMetrics.lightGround
+        let ground = (colorScheme == .dark ? CrestBrandPalette.slateComponents : CrestBrandPalette.parchmentComponents)
+            .brandColor
         let tones = BrowserSetupPaperRoomTones(look: look ?? SpaceHouse.crest.look, ground: ground)
         ZStack {
             Rectangle()
                 .fill(CrestColorFill(tones.colors, degrees: tones.degrees).style)
-            CrestGrain()
+            CrestGrain(density: BrowserSetupPaperRoomMetrics.grainDensity)
                 .blendMode(.softLight)
                 .opacity(BrowserSetupPaperRoomMetrics.grain)
         }
@@ -50,11 +50,10 @@ private struct BrowserSetupPaperRoomTones: Equatable {
 }
 
 enum BrowserSetupPaperRoomMetrics {
-    /// The paper the look's colors soften toward: parchment in the light,
-    /// slate in the dark.
-    static let lightGround = BrandColor(red: 0.965, green: 0.933, blue: 0.859)
-    static let darkGround = BrandColor(red: 0.169, green: 0.227, blue: 0.361)
     /// How far the look's colors soften toward the ground.
     static let softening = 0.35
     static let grain = 0.45
+    /// The room's grain is sparser than a sidebar's, as it always drew it
+    /// across a whole window.
+    static let grainDensity = 1.0 / 60
 }

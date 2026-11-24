@@ -82,7 +82,7 @@ struct BrowserExtensionTileLiftFloatingPreview: View {
             .frame(width: Self.glyphSize, height: Self.glyphSize)
         }
         .frame(width: lift.originFrame.width, height: lift.originFrame.height)
-        .shadow(color: .black.opacity(0.22), radius: 10, y: 5)
+        .crestElevation(.dragged)
         .modifier(SurfaceToneAppearance())
     }
 

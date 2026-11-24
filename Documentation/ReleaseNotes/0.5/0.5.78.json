@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-06-sidebar-registry-build-initializer",
+      "category": "internal",
+      "message": "Restore iOS builds with an explicit extension sidebar registry initializer"
+    }
+  ]
+}

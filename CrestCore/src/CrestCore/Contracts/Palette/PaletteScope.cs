@@ -9,8 +9,8 @@ public sealed class PaletteScope {
 
     public static readonly PaletteScope Tabs = new(name: "tabs", keyword: "@tabs", title: "Tabs", symbol: "square.on.square",
         source: PaletteSource.OpenTabs);
-    public static readonly PaletteScope Saved = new(name: "saved", keyword: "@saved", title: "Pinned & Saved", symbol: "pin",
-        source: PaletteSource.Saved);
+    public static readonly PaletteScope Saved = new(name: "saved", keyword: "@saved", title: "Pinned & Saved",
+        symbol: TabPlacement.Pinned.Symbol, source: PaletteSource.Saved);
     public static readonly PaletteScope History = new(name: "history", keyword: "@history", title: "History", symbol: "clock",
         source: PaletteSource.History);
     public static readonly PaletteScope Actions = new(name: "actions", keyword: "@actions", title: "Actions", symbol: "command",

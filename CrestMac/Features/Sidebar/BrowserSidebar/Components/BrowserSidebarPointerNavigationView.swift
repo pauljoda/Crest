@@ -14,9 +14,9 @@ final class BrowserSidebarPointerNavigationView: NSView, BrowserMacWindowPointer
     var perform: @MainActor @Sendable (BrowserSidebarMouseButtonAction) -> Void
     /// The window's live pages, asked for at event time so a page created or
     /// released since the last SwiftUI update is never consulted.
-    var navigationTargets: @MainActor @Sendable () -> [any BrowserSidebarMouseNavigationTarget]
+    var navigationTargets: @MainActor @Sendable () -> [BrowserPage]
     /// The page the window shows, which a swipe over no page moves.
-    var activeTarget: @MainActor @Sendable () -> (any BrowserSidebarMouseNavigationTarget)?
+    var activeTarget: @MainActor @Sendable () -> BrowserPage?
 
     // MARK: - Initializers
 
@@ -24,8 +24,8 @@ final class BrowserSidebarPointerNavigationView: NSView, BrowserMacWindowPointer
         perform: @escaping @MainActor @Sendable (BrowserSidebarMouseButtonAction) -> Void,
         navigationTargets:
             @escaping @MainActor @Sendable ()
-            -> [any BrowserSidebarMouseNavigationTarget],
-        activeTarget: @escaping @MainActor @Sendable () -> (any BrowserSidebarMouseNavigationTarget)?
+            -> [BrowserPage],
+        activeTarget: @escaping @MainActor @Sendable () -> BrowserPage?
     ) {
         self.perform = perform
         self.navigationTargets = navigationTargets
@@ -89,7 +89,7 @@ final class BrowserSidebarPointerNavigationView: NSView, BrowserMacWindowPointer
 
     private func pointerScope(
         for event: NSEvent,
-        page: (any BrowserSidebarMouseNavigationTarget)?
+        page: BrowserPage?
     ) -> BrowserSidebarMousePointerScope {
         if page != nil { return .webpage }
         guard !isHidden else { return .unowned }
@@ -99,7 +99,7 @@ final class BrowserSidebarPointerNavigationView: NSView, BrowserMacWindowPointer
 
     private func canNavigate(
         _ action: BrowserSidebarMouseButtonAction,
-        in page: (any BrowserSidebarMouseNavigationTarget)?
+        in page: BrowserPage?
     ) -> Bool {
         guard let page else { return false }
         return action.canNavigate(page)
@@ -108,7 +108,7 @@ final class BrowserSidebarPointerNavigationView: NSView, BrowserMacWindowPointer
     /// Moves `page`, if there is one, the way `action` asks.
     func navigate(
         _ action: BrowserSidebarMouseButtonAction,
-        in page: (any BrowserSidebarMouseNavigationTarget)?
+        in page: BrowserPage?
     ) {
         guard let page else { return }
         action.navigate(page)
@@ -118,7 +118,7 @@ final class BrowserSidebarPointerNavigationView: NSView, BrowserMacWindowPointer
     /// view class, so every engine's page content answers the same way.
     private func pageUnderPointer(
         for event: NSEvent
-    ) -> (any BrowserSidebarMouseNavigationTarget)? {
+    ) -> BrowserPage? {
         guard let contentView = window?.contentView else { return nil }
         let targets = navigationTargets()
         guard !targets.isEmpty else { return nil }

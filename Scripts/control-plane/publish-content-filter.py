@@ -17,6 +17,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import content_filter  # noqa: E402
+from repository import REPOSITORY  # noqa: E402
 
 
 def run(*command, **kwargs):
@@ -28,7 +29,7 @@ def main():
     parser.add_argument("--archive", type=Path, help="The built archive (default: the crate's target/artifact)")
     parser.add_argument("--family", choices=sorted(content_filter.FAMILY_HOSTS),
                         help="The family to publish (default: this machine's)")
-    parser.add_argument("--repository", default="pauljoda/Crest")
+    parser.add_argument("--repository", default=REPOSITORY)
     parser.add_argument("--dry-run", action="store_true", help="Verify without uploading")
     args = parser.parse_args()
 

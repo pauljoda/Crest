@@ -6,7 +6,11 @@ import SwiftUI
 /// direction at the leading end and the link at the trailing end, fading in;
 /// then the chosen color's brightness, and the texture where the well has
 /// one, then the spectrum, a hue for each
-/// step round the wheel, which sets the chosen handle. Every gradient runs
+/// step round the wheel, which sets the chosen handle, and last the chosen
+/// handle's hex code, beside the system's own color picker for it, so a
+/// person can give each color an exact code. On iPhone and iPad the code
+/// comes first, and while a person types one it is all the popover shows, so
+/// it stays in view above the keyboard. Every gradient runs
 /// straight, toward its direction. Nothing but the color: strength, texture and pattern stay
 /// with the editor the well sits in. The popover edits its own copy, which
 /// reaches the well's fill at most `commitInterval` apart, and further apart
@@ -52,6 +56,8 @@ struct CrestColorPopover: View {
     /// while the app keeps up, longer while it is still drawing the last
     /// change.
     @State private var commitPace = CrestColorPopoverMetrics.commitInterval
+    /// Whether a person is typing a hex code.
+    @State private var editsCode = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     // MARK: - Initializers
@@ -66,21 +72,23 @@ struct CrestColorPopover: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: CrestSpacing.medium) {
-            VStack(spacing: CrestSpacing.small) {
-                CrestColorWheel(fill: $draft, selection: $selection, stops: $stops, isLinked: isLinked)
-                    .frame(height: CrestColorPopoverMetrics.wheelHeight)
-                controls
-            }
-            brightness
-            if let texture {
-                CrestColorSlider(
-                    title: "Texture", value: texture, track: [draft.colors[0], draft.colors[0]], thumb: draft.colors[0],
-                    showsGrain: true)
-            }
-            spectrum
+            #if os(iOS)
+                exactColor
+                if !editsCode {
+                    colorControls
+                }
+            #else
+                colorControls
+                exactColor
+            #endif
         }
-        .padding(CrestSpacing.medium)
-        .frame(width: CrestColorPopoverMetrics.width)
+        .padding(CrestColorPopoverMetrics.inset)
+        // Narrower where the popover opens beside a well on a phone, the
+        // wheel and the rows under it taking the width there is.
+        .frame(
+            minWidth: CrestColorPopoverMetrics.smallestWidth, idealWidth: CrestColorPopoverMetrics.width,
+            maxWidth: CrestColorPopoverMetrics.width
+        )
         // The popover takes its new size in one step rather than animating
         // its frame against the content, so nothing in it moves as it grows.
         .modifier(CrestPlatformInstantPopoverResizing())
@@ -100,6 +108,30 @@ struct CrestColorPopover: View {
         .onChange(of: draft.colors.count) { _, count in selection = min(selection, count - 1) }
         .onChange(of: isLinked) { _, _ in stops.releaseShape() }
         .onDisappear(perform: commitNow)
+    }
+
+    /// Everything that picks the color by eye: the wheel and the row under
+    /// it, the chosen color's brightness, the texture where the well has one,
+    /// and the spectrum.
+    @ViewBuilder private var colorControls: some View {
+        VStack(spacing: CrestSpacing.small) {
+            // Where the screen leaves the popover less room than it asks
+            // for, as on a phone, the wheel gives up the difference and
+            // everything under it keeps its size.
+            CrestColorWheel(fill: $draft, selection: $selection, stops: $stops, isLinked: isLinked)
+                .frame(
+                    minHeight: CrestColorPopoverMetrics.smallestWheelHeight,
+                    idealHeight: CrestColorPopoverMetrics.wheelHeight,
+                    maxHeight: CrestColorPopoverMetrics.wheelHeight)
+            controls
+        }
+        brightness
+        if let texture {
+            CrestColorSlider(
+                title: "Texture", value: texture, track: [draft.colors[0], draft.colors[0]], thumb: draft.colors[0],
+                showsGrain: true)
+        }
+        spectrum
     }
 
     /// The chosen color as the wheel reads it.
@@ -135,12 +167,12 @@ struct CrestColorPopover: View {
             HStack {
                 if draft.isGradient {
                     CrestAngleKnob(degrees: $draft.degrees, diameter: CrestColorPopoverMetrics.control.height)
-                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                        .transition(.scale(scale: CrestMotion.entranceScale).combined(with: .opacity))
                 }
                 Spacer(minLength: 0)
                 if draft.isGradient {
                     CrestColorLinkToggle(isLinked: $isLinked)
-                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                        .transition(.scale(scale: CrestMotion.entranceScale).combined(with: .opacity))
                 }
             }
         }
@@ -149,9 +181,48 @@ struct CrestColorPopover: View {
 
     /// The spectrum: a named hue every step round the wheel, each setting
     /// the chosen handle, which the wheel and Brightness then tune.
+    /// One row where the popover is wide enough for every hue, two of half
+    /// as many where it is narrower, as beside a well on a phone.
     private var spectrum: some View {
+        let hues = Array(zip(Self.spectrum, Self.spectrumNames))
+        let half = hues.count / 2
+        return ViewThatFits(in: .horizontal) {
+            spectrumRow(hues[...])
+            VStack(spacing: CrestSpacing.extraSmall) {
+                spectrumRow(hues[..<half])
+                spectrumRow(hues[half...])
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text("Spectrum"))
+    }
+
+    /// The chosen handle's hex code, which sets it exactly, and the system's
+    /// color picker, which sets it the same way. Neither moves the other
+    /// colors, linked or not, so each color of a gradient can take a code
+    /// of its own.
+    private var exactColor: some View {
+        HStack(spacing: CrestSpacing.small) {
+            CrestColorHexField(color: draft.colors[chosenIndex], isEditing: $editsCode) { color in
+                stops.set(color, at: chosenIndex, in: &draft)
+            }
+            Spacer(minLength: 0)
+            ColorPicker(
+                "More Colors",
+                selection: Binding(
+                    get: { draft.colors[chosenIndex].color },
+                    set: { stops.set(BrandColor(color: $0), at: chosenIndex, in: &draft) }),
+                supportsOpacity: false
+            )
+            .labelsHidden()
+            .help(Text("More Colors"))
+            .accessibilityIdentifier("crest-color-system-picker")
+        }
+    }
+
+    private func spectrumRow(_ hues: ArraySlice<(BrandColor, LocalizedStringResource)>) -> some View {
         HStack(spacing: 0) {
-            ForEach(Array(zip(Self.spectrum, Self.spectrumNames)), id: \.0) { color, name in
+            ForEach(hues, id: \.0) { color, name in
                 CrestSelectableCard(
                     isSelected: draft.colors[chosenIndex].matches(color),
                     accessibilityLabel: Text(name), density: .swatch, tint: nil
@@ -171,8 +242,6 @@ struct CrestColorPopover: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text("Spectrum"))
     }
 
     // MARK: - Mutators
@@ -215,9 +284,22 @@ struct CrestColorPopover: View {
 
 enum CrestColorPopoverMetrics {
     static let width: CGFloat = 320
+    #if os(macOS)
+        /// The room between the popover's edge and what it holds.
+        static let inset = CrestSpacing.medium
+    #else
+        /// The room between the popover's edge and what it holds, more on a
+        /// phone or iPad, whose popover corners are much rounder.
+        static let inset = CrestSpacing.large
+    #endif
+    /// The narrowest the popover gets where the screen leaves it less room.
+    static let smallestWidth: CGFloat = 260
     /// The wheel's room, as wide as the popover's content: its diameter and
     /// the chosen handle's overhang at the rim.
-    static let wheelHeight: CGFloat = width - 2 * CrestSpacing.medium
+    static let wheelHeight: CGFloat = width - 2 * inset
+    /// The least room the wheel shrinks to where the popover has to fit a
+    /// smaller space.
+    static let smallestWheelHeight: CGFloat = 120
     /// Every control in the row under the wheel.
     static let control = CGSize(width: 36, height: 32)
     /// A spectrum swatch, small enough that all of them fit the popover's

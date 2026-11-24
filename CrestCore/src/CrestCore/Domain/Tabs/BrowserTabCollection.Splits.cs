@@ -3,12 +3,6 @@ using CrestCore.Contracts;
 namespace CrestCore.Domain;
 
 public sealed partial class BrowserTabCollection {
-    #region Variables
-
-    public const int MaximumSplitMembers = 4;
-
-    #endregion
-
     #region Actions - Splits
 
     private BrowserTab CopyTab(BrowserTab source, Guid id, DateTimeOffset now) => BrowserTab.Restore(source.State.SavedAt(null) with {
@@ -42,7 +36,7 @@ public sealed partial class BrowserTabCollection {
         var targetMembers = SplitMembers(targetId);
         bool sameGroup = targetMembers.Any(t => t.Id == sourceId);
         if (sameGroup && memberIndex is null) throw new Rejected(new AlreadyInSplit(sourceId));
-        if (!sameGroup && targetMembers.Count >= MaximumSplitMembers) throw new Rejected(new SplitLimitReached(MaximumSplitMembers));
+        if (!sameGroup && targetMembers.Count >= SplitGroupState.MaximumMembers) throw new Rejected(new SplitLimitReached(SplitGroupState.MaximumMembers));
         bool copyTarget = target.Placement.IsDurable && !sameGroup;
         bool copySource = source.Placement.IsDurable && !sameGroup;
         int copyCount = (copyTarget ? targetMembers.Count : 0) + (copySource ? 1 : 0);

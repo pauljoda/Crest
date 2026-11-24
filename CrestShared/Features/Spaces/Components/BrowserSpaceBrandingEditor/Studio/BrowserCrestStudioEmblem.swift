@@ -22,7 +22,7 @@ struct BrowserCrestStudioEmblem: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) { controls }
+        VStack(alignment: .leading, spacing: CrestSpacing.large) { controls }
             .onAppear { load(context.value.crest.resolvedCharge) }
             .onChange(of: source) { _, _ in commitSource() }
             .onChange(of: context.value.crest.resolvedCharge) { _, charge in

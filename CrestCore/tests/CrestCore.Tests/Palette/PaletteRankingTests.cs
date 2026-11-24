@@ -10,7 +10,8 @@ namespace CrestCore.Tests;
 
 /// How the palette decides what leads and in what order: inline completion
 /// follows other browsers and Return opens what the field shows, text that
-/// names no address searches first, a typed fragment survives, a place shows
+/// names no address searches first unless it is one word that names a tab or
+/// a site the person uses, a typed fragment survives, a place shows
 /// once as its strongest kind, picks for the same text lead and can be
 /// forgotten, a private window remembers nothing, site searches answer only
 /// to their exact shortcut and search only their site, and what the palette
@@ -67,55 +68,79 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("https://www.example.org/wiki/Page", Opens("example.org/wiki/Page"));
     }
 
-    /// Return searches any text that names no address, a single word too,
-    /// however strongly a known page matches it, and the field completes
-    /// none of it; an address, a partial one the field completes and a
-    /// calculation still lead.
-    [Fact]
-    public void TextThatNamesNoAddressSearchesFirstWhileAnAddressStillOpens() {
-        var (session, space) = PaletteSession([], ("https://crest.example/notes", "Crest Browser Notes", 12, 40, 1));
-        using var device = new TestDevice(session);
-        var window = device.Open(space);
-        (PaletteRow First, AddressCompletion? Completion, IReadOnlyList<PaletteRow> Rows) Asked(string text) {
-            var answer = device.Query(Asking(window, text));
-            var rows = answer.Groups.SelectMany(group => group.Rows).ToList();
-            return (rows[0], answer.Completion, rows);
-        }
+    /// The row Return runs for each text typed into `RankingSpace`, with what
+    /// the field completes: a word that names a site the field completes
+    /// leads from two letters, as the tab on that site, an open one before a
+    /// saved one however much more the saved one was used, and a word that
+    /// starts a tab's title, the site name its title ends with, or the page
+    /// title behind a name the person gave it, from three. Every other text
+    /// that names no address searches first: a single letter, a word followed
+    /// by a space, a match inside a word or with its letters out of order, a
+    /// phrase, a word further into a title, a page history knows only by its
+    /// title, and a site visited too little to complete. An address, a
+    /// partial one and a calculation lead as before.
+    private static readonly Dictionary<string, (PaletteRowKind Kind, string? Title, string? Completes)> LeadingCases = new() {
+        ["pa"] = (PaletteRowKind.Tab, "#general - Parlor", "parlor.example"),
+        ["parl"] = (PaletteRowKind.Tab, "#general - Parlor", "parlor.example"),
+        ["forge"] = (PaletteRowKind.Tab, "Pull requests · crest · Forge", "forge.example"),
+        ["pull"] = (PaletteRowKind.Tab, "Pull requests · crest · Forge", null),
+        ["mail"] = (PaletteRowKind.Tab, "Inbox (3) – Post", "mail.post.example"),
+        ["inbox"] = (PaletteRowKind.Tab, "Inbox (3) – Post", null),
+        ["post"] = (PaletteRowKind.Tab, "Inbox (3) – Post", null),
+        ["mixer"] = (PaletteRowKind.Tab, "Studio", null),
+        ["cal"] = (PaletteRowKind.PinnedTab, "Calendar", "calendar.post.example"),
+        ["meeting"] = (PaletteRowKind.SavedTab, "Meeting notes | Pages", null),
+        ["news"] = (PaletteRowKind.OpenAddress, "Open news.example", "news.example"),
+        ["crest"] = (PaletteRowKind.OpenAddress, "Open crest.example", "crest.example"),
+        ["p"] = (PaletteRowKind.Search, null, null),
+        ["pu"] = (PaletteRowKind.Search, null, null),
+        ["po"] = (PaletteRowKind.Search, null, null),
+        ["parl "] = (PaletteRowKind.Search, null, null),
+        ["rlor"] = (PaletteRowKind.Search, null, null),
+        ["pralor"] = (PaletteRowKind.Search, null, null),
+        ["pull requests"] = (PaletteRowKind.Search, null, null),
+        ["requests"] = (PaletteRowKind.Search, null, null),
+        ["notes"] = (PaletteRowKind.Search, null, null),
+        ["tech"] = (PaletteRowKind.Search, null, null),
+        ["weather"] = (PaletteRowKind.Search, null, null),
+        ["crest browser"] = (PaletteRowKind.Search, null, null),
+        ["crest.ex"] = (PaletteRowKind.OpenAddress, "Open crest.example", "crest.example"),
+        ["localhost:3000"] = (PaletteRowKind.OpenAddress, "Open localhost", null),
+        ["24 * 7"] = (PaletteRowKind.Calculation, "168", null)
+    };
 
-        foreach (var text in new[] { "crest browser", "crest" }) {
-            var searched = Asked(text);
-            Assert.Equal((PaletteRowKind.Search, (AddressCompletion?)null), (searched.First.Kind, searched.Completion));
-            Assert.Contains(searched.Rows, row => row.Kind == PaletteRowKind.History && row.Title == "Crest Browser Notes");
-        }
-        var partial = Asked("crest.ex");
-        Assert.Equal(("crest.example", PaletteRowKind.OpenAddress), (partial.Completion?.Accepted, partial.First.Kind));
-        Assert.Equal(("http://localhost:3000", PaletteRowKind.OpenAddress), (Asked("localhost:3000").First.Address,
-            Asked("localhost:3000").First.Kind));
-        Assert.Equal(PaletteRowKind.Calculation, Asked("24 * 7").First.Kind);
+    public static TheoryData<string> LeadingTexts { get; } = [.. LeadingCases.Keys];
+
+    [Theory]
+    [MemberData(nameof(LeadingTexts))]
+    public void AWordThatNamesAPlaceLeadsWhileOtherTextSearchesFirst(string text) {
+        var (session, space, shown) = RankingSpace();
+        using var device = new TestDevice(session);
+        var window = device.Open(space, (space, shown));
+        var answer = device.Query(Asking(window, text));
+        var first = answer.Groups.SelectMany(group => group.Rows).First();
+        var (kind, title, completes) = LeadingCases[text];
+
+        Assert.Equal((kind, title ?? first.Title, completes), (first.Kind, first.Title, answer.Completion?.Accepted));
     }
 
-    /// A history row names the tabs whose icon it may wear for its site, best
-    /// first: tabs on its page, whatever their fragment, archived ones too,
-    /// then the rest of the site, `www.` aside. A tab on another port or
-    /// another site is never one.
+    /// Text that searches first still lists what matches it below the
+    /// search, a word whose completion the person deleted searches too, and
+    /// `localhost:3000` opens as typed.
     [Fact]
-    public void AHistoryRowWearsTheIconOfATabOnItsPageFirstThenOfItsSite() {
-        Guid samePage = Guid.NewGuid(), sameSite = Guid.NewGuid(), otherPort = Guid.NewGuid(), otherSite = Guid.NewGuid();
-        var (session, space) = PaletteSession(
-            [OpenTab(sameSite, "Pears", "https://www.orchard.example/pears"), OpenTab(otherPort, "Apples", "https://orchard.example:8443/apples"),
-                OpenTab(otherSite, "Apples", "https://harbor.example/apples")],
-            ("https://orchard.example/apples", "Orchard Apples", 3, 2, 1));
-        session["spaces"]![0]!["archivedTabs"] = new JsonArray(new JsonObject {
-            ["tab"] = OpenTab(samePage, "Apples", "https://orchard.example/apples#core"),
-            ["reason"] = "closed",
-            ["archivedAt"] = (DateTimeOffset.UtcNow.AddHours(-1) - new DateTimeOffset(2001, 1, 1, 0, 0, 0, TimeSpan.Zero)).TotalSeconds
-        });
+    public void SearchingTextStillListsItsMatchesAndADeletedCompletionSearches() {
+        var (session, space, shown) = RankingSpace();
         using var device = new TestDevice(session);
-        var window = device.Open(space);
+        var window = device.Open(space, (space, shown));
+        IReadOnlyList<PaletteRow> Rows(PaletteSuggestions question) => [.. device.Query(question).Groups.SelectMany(group => group.Rows)];
 
-        var history = device.Query(Asking(window, "orchard apples")).Groups.SelectMany(group => group.Rows)
-            .First(row => row.Kind == PaletteRowKind.History);
-        Assert.Equal([samePage, sameSite], history.IconTabIds);
+        var phrase = Rows(Asking(window, "crest browser"));
+        Assert.Equal(PaletteRowKind.Search, phrase[0].Kind);
+        Assert.Contains(phrase, row => row.Kind == PaletteRowKind.History && row.Title == "Crest Browser Notes");
+        var deleted = Rows(Asking(window, "parl") with { AllowsCompletion = false });
+        Assert.Equal(PaletteRowKind.Search, deleted[0].Kind);
+        Assert.Contains(deleted, row => row.Kind == PaletteRowKind.Tab && row.Title == "#general - Parlor");
+        Assert.Equal("http://localhost:3000", Rows(Asking(window, "localhost:3000"))[0].Address);
     }
 
     [Fact]
@@ -147,7 +172,7 @@ public sealed partial class BrowserContractsTests {
         saved["tabs"] = new JsonArray(tabs);
         saved["folders"] = new JsonArray();
         saved.AsObject().Remove("selectedTabID");
-        double now = (DateTimeOffset.UtcNow - new DateTimeOffset(2001, 1, 1, 0, 0, 0, TimeSpan.Zero)).TotalSeconds;
+        double now = (DateTimeOffset.UtcNow - StoredSessionCodec.ReferenceEpoch).TotalSeconds;
         saved["history"] = new JsonArray([.. history.OrderBy(entry => entry.LastDaysAgo).Select(entry => (JsonNode)new JsonObject {
             ["id"] = Guid.NewGuid().ToString().ToUpperInvariant(),
             ["url"] = entry.Url,
@@ -159,6 +184,45 @@ public sealed partial class BrowserContractsTests {
         return (document["session"]!, space);
     }
 
+    /// A Space showing a home page, with open tabs on a chat, a code forge, a
+    /// mail site and a music board the person renamed "Studio", a pinned
+    /// calendar, saved meeting notes and the forge's settings, saved and used
+    /// more than its open tab, and a history the palette has no memory of
+    /// yet: the chat, a news site and the forge's settings visited often, an
+    /// article about the chat once, Crest's notes twelve times and a weather
+    /// site three times. Answers the session, the Space and the tab it shows.
+    private static (JsonNode Session, Guid Space, Guid Shown) RankingSpace() {
+        Guid shown = Guid.NewGuid();
+        JsonObject Tab(Guid id, string title, string url, string placement, double hoursAgo) {
+            var tab = OpenTab(id, title, url);
+            tab["placement"] = placement;
+            tab["lastActivatedAt"] = (DateTimeOffset.UtcNow.AddHours(-hoursAgo) - StoredSessionCodec.ReferenceEpoch).TotalSeconds;
+            if (placement != "current") tab["savedURL"] = url;
+            return tab;
+        }
+        static JsonObject Renamed(JsonObject tab, string name) {
+            tab["customTitle"] = name;
+            return tab;
+        }
+        var (session, space) = PaletteSession([
+                Tab(shown, "Home", "https://home.example/", "current", 0),
+                Tab(Guid.NewGuid(), "#general - Parlor", "https://parlor.example/channels/1/2", "current", 3),
+                Tab(Guid.NewGuid(), "Pull requests · crest · Forge", "https://forge.example/crest/pulls", "current", 0.3),
+                Tab(Guid.NewGuid(), "Inbox (3) – Post", "https://mail.post.example/inbox", "current", 1),
+                Renamed(Tab(Guid.NewGuid(), "Mixer - Board | Tunes", "https://tunes.example/board", "current", 2), "Studio"),
+                Tab(Guid.NewGuid(), "Calendar", "https://calendar.post.example/", "pinned", 30),
+                Tab(Guid.NewGuid(), "Meeting notes | Pages", "https://pages.example/doc/1", "saved", 72),
+                Tab(Guid.NewGuid(), "Settings | Forge", "https://forge.example/settings", "saved", 0.05)
+            ],
+            ("https://parlor.example/channels/1/2", "#general - Parlor", 40, 60, 0.1),
+            ("https://wiki.example/Parlor", "Parlor - Wiki", 1, 3, 3),
+            ("https://news.example/", "Tech Digest", 50, 100, 0.2),
+            ("https://crest.example/notes", "Crest Browser Notes", 12, 40, 1),
+            ("https://weather.example/", "Weather Forecast", 3, 9, 2),
+            ("https://forge.example/settings", "Settings | Forge", 30, 60, 0.05));
+        return (session, space, shown);
+    }
+
     /// An open tab showing `url`, last used a week ago.
     private static JsonObject OpenTab(Guid id, string title, string url) => new() {
         ["id"] = SwiftId(id),
@@ -166,6 +230,6 @@ public sealed partial class BrowserContractsTests {
         ["url"] = url,
         ["placement"] = "current",
         ["symbol"] = "globe",
-        ["lastActivatedAt"] = (DateTimeOffset.UtcNow.AddDays(-7) - new DateTimeOffset(2001, 1, 1, 0, 0, 0, TimeSpan.Zero)).TotalSeconds
+        ["lastActivatedAt"] = (DateTimeOffset.UtcNow.AddDays(-7) - StoredSessionCodec.ReferenceEpoch).TotalSeconds
     };
 }

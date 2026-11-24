@@ -19,7 +19,7 @@ struct BrowserCommandPalettePresentation: Equatable, Sendable {
         static let prominent = Input(
             textStyle: .title2, platformTextStyle: .title2, fieldHeight: 32,
             minimumHeight: BrowserCommandPaletteMetrics.searchFieldMinimumHeight,
-            horizontalPadding: BrowserCommandPaletteMetrics.searchFieldHorizontalPadding, showsSearchGlyph: true)
+            horizontalPadding: CrestSpacing.extraLarge, showsSearchGlyph: true)
         #if os(macOS)
             static let inline = Input(
                 textStyle: .body, platformTextStyle: .body, fieldHeight: 22,

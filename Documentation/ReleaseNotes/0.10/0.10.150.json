@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "large-text-welcome-scrolls",
+      "category": "improved",
+      "message": "At the largest text sizes, setup's welcome on iPad scrolls so Continue stays in reach.",
+      "platforms": ["ios"]
+    }
+  ]
+}

@@ -1,10 +1,13 @@
 import SwiftUI
 
-/// A Space's appearance: its crest or icon on the Space's own sidebar field,
-/// beside the Space's Background and Accent, then palettes to take in one
-/// tap, then its icon, a crest started from a house or a plain symbol or
-/// emoji. More Customization holds the
-/// rest: the sidebar's pattern and finish, and the parts of the crest.
+/// A Space's appearance, in the order a person shapes it: its crest or icon
+/// on the Space's own sidebar field, then the templates, each a full set of
+/// icon and colors, then the colors that refine it, presets or any color by
+/// hex code, then the icon on its own, a crest in the Space's colors or a
+/// plain symbol or emoji, which never changes the colors. More Customization
+/// is a page of its own that holds the rest, under the stage again with a
+/// color for each part of the crest: the sidebar's pattern and finish, and
+/// the parts of the crest.
 struct BrowserCrestForge: View {
     @Binding var branding: SpaceBranding
     @Binding var symbol: String
@@ -19,11 +22,14 @@ struct BrowserCrestForge: View {
     /// Whether this is the whole page rather than one part's own page.
     var showsStepBar = true
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var initialAppearance: SpaceBranding?
     @State private var history: [SpaceBranding] = []
     @State private var editingStart: SpaceBranding?
     /// The look Undo put back, which is not itself a change to remember.
     @State private var restoredBranding: SpaceBranding?
+    /// Whether the page shows More Customization in place of the Appearance
+    /// page, as a page a person goes into and back out of.
     @State private var showsMore = false
 
     private var context: BrowserCrestStudioContext {
@@ -37,12 +43,16 @@ struct BrowserCrestForge: View {
 
     var body: some View {
         BrowserSettingsPane(.spaces) {
-            if showsStepBar {
-                page
-            } else {
+            if !showsStepBar {
                 stepSections
+            } else if showsMore {
+                morePage
+            } else {
+                page
             }
         }
+        // Going into More Customization or back out starts at its top.
+        .id(showsMore)
         #if os(iOS)
             .modifier(
                 BrowserCrestForgeStepPages(isEnabled: listsSteps) { step in
@@ -83,21 +93,83 @@ struct BrowserCrestForge: View {
 
     @ViewBuilder private var page: some View {
         Section {
+            BrowserSpaceTemplatePicker(branding: $branding, offersUndo: true)
+        } header: {
+            VStack(alignment: .leading, spacing: BrowserCrestForgeMetrics.stageHeadingSpacing) {
+                stageHeader
+                CrestSettingsSectionHeading(title: "Templates")
+            }
+            .textCase(nil)
+        } footer: {
+            Text("A template sets the icon and colors together.")
+        }
+        Section {
+            BrowserSpaceColorWells(branding: $branding)
             BrowserSpacePalettePicker(branding: $branding)
         } header: {
-            stageHeader
+            CrestSettingsSectionHeading(title: "Colors")
         }
         Section {
             BrowserSpaceIconPicker(branding: $branding, symbol: $symbol)
         } header: {
             CrestSettingsSectionHeading(title: "Icon")
         }
-        BrowserMoreCustomizationHeader(isExpanded: $showsMore)
-        if showsMore {
-            sidebarSections
-            if isCrest {
-                crestSections
+        Section {
+            Button {
+                withAnimation(CrestMotion.surface.unlessReducingMotion(reduceMotion)) { showsMore = true }
+            } label: {
+                HStack(spacing: CrestSpacing.small) {
+                    Text("More Customization")
+                    Spacer(minLength: CrestSpacing.small)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .contentShape(.rect)
             }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("more-customization")
+        }
+    }
+
+    /// More Customization: the way back to the Appearance page, the stage
+    /// again with a color for each part of the crest, then the sidebar and
+    /// the crest's parts.
+    @ViewBuilder private var morePage: some View {
+        Section {
+            sidebarPatterns
+        } header: {
+            VStack(alignment: .leading, spacing: BrowserCrestForgeMetrics.stageHeadingSpacing) {
+                moreHeading
+                stageHeader
+                CrestSettingsSectionHeading(title: "Sidebar")
+            }
+            .textCase(nil)
+        }
+        sidebarSettings
+        if isCrest {
+            crestSections
+        }
+    }
+
+    /// More Customization's name, after the way back to the Appearance page.
+    private var moreHeading: some View {
+        HStack(spacing: 6) {
+            Button {
+                withAnimation(CrestMotion.surface.unlessReducingMotion(reduceMotion)) { showsMore = false }
+            } label: {
+                Label("Appearance", systemImage: "chevron.left")
+                    .font(.body.weight(.semibold))
+            }
+            .buttonStyle(CrestChromeButtonStyle())
+            .labelStyle(.iconOnly)
+            .help(Text("Appearance"))
+            .accessibilityLabel(Text("Back to Appearance"))
+            .accessibilityIdentifier("more-customization-back")
+            Text("More Customization")
+                .font(CrestTypography.display(20))
+                .foregroundStyle(.primary)
+                .accessibilityAddTraits(.isHeader)
         }
     }
 
@@ -113,33 +185,25 @@ struct BrowserCrestForge: View {
             }
         )
         .textCase(nil)
-        .padding(.bottom, 4)
+        .padding(.bottom, CrestSpacing.extraSmall)
     }
 
     // MARK: - Sidebar
 
-    @ViewBuilder private var sidebarSections: some View {
-        Section {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 8)], spacing: 8) {
-                ForEach(SpaceBannerPattern.all, id: \.self) { pattern in
-                    patternChoice(pattern)
-                }
+    private var sidebarPatterns: some View {
+        LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: 80), spacing: CrestSpacing.small)], spacing: CrestSpacing.small
+        ) {
+            ForEach(SpaceBannerPattern.all, id: \.self) { pattern in
+                patternChoice(pattern)
             }
-            .padding(.vertical, 4)
-            .accessibilityIdentifier("space-sidebar-patterns")
-        } header: {
-            CrestSettingsSectionHeading(title: "Sidebar")
         }
+        .padding(.vertical, CrestSpacing.extraSmall)
+        .accessibilityIdentifier("space-sidebar-patterns")
+    }
+
+    private var sidebarSettings: some View {
         Section {
-            if branding.showsPattern {
-                LabeledContent("Pattern color") {
-                    CrestColorWell(
-                        title: "Pattern color",
-                        fill: Binding(
-                            get: { branding.patternFill },
-                            set: { fill in context.branding.editorUpdate { $0.patternFill = fill } }))
-                }
-            }
             BrowserCrestStudioSlider(title: "Intensity", value: context.setting(\.bannerStrength))
             BrowserCrestStudioSlider(title: "Readability fade", value: context.setting(\.readabilityFade))
             BrowserCrestStudioSlider(title: "Folder colors", value: context.setting(\.folderColorIntensity))
@@ -159,7 +223,7 @@ struct BrowserCrestForge: View {
         } artwork: {
             BrowserSpaceBannerBackground(branding: context.preview { $0.wearPattern(pattern) })
                 .frame(width: 56, height: 48)
-                .clipShape(.rect(cornerRadius: 8))
+                .clipShape(.rect(cornerRadius: CrestRadius.compact))
         }
     }
 
@@ -286,10 +350,12 @@ struct BrowserCrestForge: View {
         _ items: [Item], id: KeyPath<Item, ID>, @ViewBuilder tile: @escaping (Item) -> Tile
     ) -> some View {
         Section {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 8)], spacing: 8) {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 80), spacing: CrestSpacing.small)], spacing: CrestSpacing.small
+            ) {
                 ForEach(items, id: id) { item in tile(item) }
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, CrestSpacing.extraSmall)
             .accessibilityIdentifier("space-forge-gallery")
         } header: {
             stepHeader

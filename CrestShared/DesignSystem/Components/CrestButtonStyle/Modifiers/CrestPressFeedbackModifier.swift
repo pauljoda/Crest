@@ -11,7 +11,7 @@ struct CrestPressFeedbackModifier: ViewModifier {
             .scaleEffect(
                 (isPressed ? CrestButtonMetrics.pressedScale : 1).unlessReducingMotion(reduceMotion)
             )
-            .opacity(isEnabled ? 1 : CrestButtonMetrics.disabledOpacity)
+            .opacity(isEnabled ? 1 : CrestOpacity.disabledControl)
             .animation(
                 CrestMotion.press.unlessReducingMotion(reduceMotion),
                 value: isPressed

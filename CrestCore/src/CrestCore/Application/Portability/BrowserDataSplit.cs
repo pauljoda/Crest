@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 
 using CrestCore.Contracts;
+using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
@@ -21,7 +22,7 @@ internal sealed record BrowserDataSplit(Guid Id, string? CustomTitle, DateTimeOf
     /// milliseconds. Throws `ArchiveInvalid` for a title or icon a Space would
     /// not keep, or an icon that is no emoji.
     public SplitGroupState Materialize(Guid id) {
-        if (CustomTitle is not null && !ImportText.IsKept(CustomTitle, ImportText.MaximumTitle)) throw BrowserDataValue.Invalid();
+        if (CustomTitle is not null && !ImportText.IsKept(CustomTitle, BrowserTab.MaximumTitleLength)) throw BrowserDataValue.Invalid();
         string? icon = null;
         if (CustomIconSymbol is not null) {
             if (!ImportText.IsKept(CustomIconSymbol, ImportText.MaximumSymbol)) throw BrowserDataValue.Invalid();

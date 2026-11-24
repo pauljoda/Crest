@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "feature-metrics-read-design-tokens",
+      "category": "internal",
+      "message": "Feature layouts and setup's room read their spacing, corners, fills and colors from the shared design tokens instead of their own copies, with no visible change."
+    }
+  ]
+}

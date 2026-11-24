@@ -36,16 +36,6 @@ struct BrowserMacDownloadFeedbackLayer: View {
                         )
                     }
                 }
-                if feedback.flights.contains(where: { $0.path == nil }) {
-                    Label("Download started", systemImage: "arrow.down.circle")
-                        .font(.body.weight(.medium))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .crestFlyoutStyle(in: .rect(cornerRadius: 12))
-                        .padding(.leading, 16)
-                        .padding(.bottom, context.destination == nil ? 16 : 56)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             .onChange(of: model.pages.downloadCenter.feedbackEvents, initial: true) { _, events in
@@ -60,13 +50,16 @@ struct BrowserMacDownloadFeedbackLayer: View {
         .onDisappear { feedback.cancel() }
     }
 
+    /// A start whose icon has nowhere to fly is reported in the window's
+    /// notice instead.
     private func reconcile(
         events: [BrowserDownloadFeedbackEvent],
         context: BrowserMacDownloadFeedbackContext
     ) {
-        if feedback.reconcile(events: events, context: context) {
-            AccessibilityNotification.Announcement(String(localized: "Download started")).post()
-        }
+        let started = feedback.reconcile(events: events, context: context)
+        guard !started.isEmpty else { return }
+        AccessibilityNotification.Announcement(String(localized: "Download started")).post()
+        if started.contains(where: { $0.path == nil }) { model.chrome.showNotice(.downloadStarted) }
     }
 }
 
@@ -97,6 +90,9 @@ private struct BrowserMacDownloadFlightIcon: View {
 }
 
 private struct BrowserMacDownloadFlightDrawing: AnimatableModifier {
+    /// The document glyph, sized to fill the tile it flies on.
+    private static let glyphSize: CGFloat = 28
+
     let path: BrowserMacDownloadFlightPath
     nonisolated var progress: Double
     nonisolated var appearance: Double
@@ -112,12 +108,12 @@ private struct BrowserMacDownloadFlightDrawing: AnimatableModifier {
     func body(content: Content) -> some View {
         content.overlay(alignment: .topLeading) {
             Image(systemName: "doc.fill")
-                .font(.system(size: 28, weight: .medium))
+                .font(.system(size: Self.glyphSize, weight: .medium))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.primary)
                 .frame(width: 42, height: 46)
-                .background { CrestSurfaceLayer(shape: .rect(cornerRadius: 8)) }
-                .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+                .background { CrestSurfaceLayer(shape: .rect(cornerRadius: CrestRadius.compact)) }
+                .crestElevation(.lifted)
                 .scaleEffect(path.scale(at: progress) * (0.55 + 0.45 * appearance))
                 .opacity(appearance * (1 - min(max((progress - 0.9) / 0.1, 0), 1)))
                 .position(path.point(at: progress))

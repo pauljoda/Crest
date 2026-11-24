@@ -5,7 +5,7 @@
 import { WireReader, WireWriter } from "./wire";
 
 /** SHA-256 of the canonical contract schema, which the core refuses any other than. */
-export const fingerprint = Uint8Array.of(0x2d, 0xf8, 0xf9, 0x29, 0xf3, 0x03, 0x74, 0x10, 0x3c, 0x2b, 0xdc, 0x8e, 0x35, 0xd1, 0x42, 0x38, 0x34, 0x4a, 0x8d, 0xe4, 0xb5, 0x16, 0x25, 0xee, 0xb4, 0x7b, 0xb0, 0xe2, 0xd9, 0x64, 0x77, 0xfe);
+export const fingerprint = Uint8Array.of(0xc4, 0x04, 0x4f, 0x13, 0xb7, 0xb8, 0x4e, 0x25, 0xc3, 0x04, 0x7f, 0x64, 0xf4, 0x05, 0xad, 0xed, 0xf8, 0x5c, 0x31, 0x96, 0xe1, 0x52, 0xc7, 0x23, 0xad, 0x4e, 0xcf, 0x7d, 0x51, 0xa7, 0x68, 0x43);
 /** SHA-256 of the engine contract alone, which an engine binding registers with. */
 export const engineFingerprint = Uint8Array.of(0x27, 0xe6, 0xdb, 0x79, 0xae, 0x8b, 0xf9, 0xe3, 0x48, 0x4d, 0xbb, 0xba, 0xa2, 0x6b, 0x39, 0x04, 0xeb, 0x82, 0xa0, 0xe7, 0x59, 0x9d, 0xd5, 0x68, 0x65, 0x04, 0x32, 0xfe, 0xf2, 0x24, 0x80, 0x0a);
 
@@ -188,12 +188,6 @@ export enum PageMixedContent {
     Form = 4,
 }
 
-export enum PageResourceKind {
-    Frame = 0,
-    Image = 1,
-    Object = 2,
-}
-
 export enum PageScriptWorld {
     Agent = 0,
     Page = 1,
@@ -258,31 +252,12 @@ export enum SpaceAccessPolicy {
     DeviceOwnerAuthentication = 1,
 }
 
-export enum StorageFailure {
-    DiskFull = 0,
-    ReadOnly = 1,
-    Busy = 2,
-    Damaged = 3,
-    Unavailable = 4,
-}
-
 export enum SystemPasswordWriteThroughAvailability {
     Available = 0,
     UnsupportedPlatform = 1,
     IsolatedLaunch = 2,
     SystemVersionRequired = 3,
     ManagedBrowserCapabilityRequired = 4,
-}
-
-export enum SystemTint {
-    Red = 0,
-    Orange = 1,
-    Purple = 2,
-    Blue = 3,
-    Indigo = 4,
-    Teal = 5,
-    Pink = 6,
-    Green = 7,
 }
 
 export enum TabSavedImageChange {
@@ -374,6 +349,27 @@ export const ArchiveFilterGroup = Object.freeze({
     },
 });
 
+/** A member of the core's `StatusTone`. Its wire tag is its index in `all`. */
+export interface StatusTone {
+    readonly tag: number;
+    readonly name: string;
+}
+
+const StatusTone_Success: StatusTone = Object.freeze({ tag: 0, name: "success" });
+const StatusTone_Warning: StatusTone = Object.freeze({ tag: 1, name: "warning" });
+const StatusTone_Danger: StatusTone = Object.freeze({ tag: 2, name: "danger" });
+const StatusTone_Info: StatusTone = Object.freeze({ tag: 3, name: "info" });
+export const StatusTone = Object.freeze({
+    success: StatusTone_Success,
+    warning: StatusTone_Warning,
+    danger: StatusTone_Danger,
+    info: StatusTone_Info,
+    all: [StatusTone_Success, StatusTone_Warning, StatusTone_Danger, StatusTone_Info] as readonly StatusTone[],
+    named(name: string | null | undefined): StatusTone | undefined {
+        return StatusTone.all.find(member => member.name === name);
+    },
+});
+
 /** A member of the core's `ArchiveReason`. Its wire tag is its index in `all`. */
 export interface ArchiveReason {
     readonly tag: number;
@@ -383,18 +379,18 @@ export interface ArchiveReason {
     readonly filterGroup: ArchiveFilterGroup;
     readonly title: string;
     readonly symbol: string;
-    readonly tint: SystemTint;
+    readonly tone: StatusTone | null;
     readonly isExplicitDeletion: boolean;
     readonly isCleanup: boolean;
     readonly isReceived: boolean;
 }
 
-const ArchiveReason_AutoCleanup: ArchiveReason = Object.freeze({ tag: 0, name: "autoCleanup", storedReason: "autoCleanup", deletionOrigin: null, filterGroup: ArchiveFilterGroup_Automatic, title: "Automatically cleaned", symbol: "archivebox.fill", tint: SystemTint.Orange, isExplicitDeletion: false, isCleanup: true, isReceived: false });
-const ArchiveReason_Closed: ArchiveReason = Object.freeze({ tag: 1, name: "closed", storedReason: "closed", deletionOrigin: null, filterGroup: ArchiveFilterGroup_Closed, title: "Closed", symbol: "xmark.circle.fill", tint: SystemTint.Red, isExplicitDeletion: false, isCleanup: false, isReceived: false });
-const ArchiveReason_Deleted: ArchiveReason = Object.freeze({ tag: 2, name: "deleted", storedReason: "closed", deletionOrigin: "local", filterGroup: ArchiveFilterGroup_Closed, title: "Deleted", symbol: "trash.fill", tint: SystemTint.Red, isExplicitDeletion: true, isCleanup: false, isReceived: false });
-const ArchiveReason_DeletedOnAnotherDevice: ArchiveReason = Object.freeze({ tag: 3, name: "deletedOnAnotherDevice", storedReason: "synced", deletionOrigin: "remote", filterGroup: ArchiveFilterGroup_Synced, title: "Deleted on another device", symbol: "trash.fill", tint: SystemTint.Red, isExplicitDeletion: true, isCleanup: false, isReceived: true });
-const ArchiveReason_QuickWindow: ArchiveReason = Object.freeze({ tag: 4, name: "quickWindow", storedReason: "quickWindow", deletionOrigin: null, filterGroup: ArchiveFilterGroup_QuickWindow, title: "Quick Window", symbol: "timer", tint: SystemTint.Purple, isExplicitDeletion: false, isCleanup: false, isReceived: false });
-const ArchiveReason_Synced: ArchiveReason = Object.freeze({ tag: 5, name: "synced", storedReason: "synced", deletionOrigin: null, filterGroup: ArchiveFilterGroup_Synced, title: "Synced from another device", symbol: "icloud.and.arrow.down.fill", tint: SystemTint.Blue, isExplicitDeletion: false, isCleanup: false, isReceived: true });
+const ArchiveReason_AutoCleanup: ArchiveReason = Object.freeze({ tag: 0, name: "autoCleanup", storedReason: "autoCleanup", deletionOrigin: null, filterGroup: ArchiveFilterGroup_Automatic, title: "Automatically cleaned", symbol: "archivebox.fill", tone: StatusTone_Info, isExplicitDeletion: false, isCleanup: true, isReceived: false });
+const ArchiveReason_Closed: ArchiveReason = Object.freeze({ tag: 1, name: "closed", storedReason: "closed", deletionOrigin: null, filterGroup: ArchiveFilterGroup_Closed, title: "Closed", symbol: "xmark.circle.fill", tone: null, isExplicitDeletion: false, isCleanup: false, isReceived: false });
+const ArchiveReason_Deleted: ArchiveReason = Object.freeze({ tag: 2, name: "deleted", storedReason: "closed", deletionOrigin: "local", filterGroup: ArchiveFilterGroup_Closed, title: "Deleted", symbol: "trash.fill", tone: StatusTone_Danger, isExplicitDeletion: true, isCleanup: false, isReceived: false });
+const ArchiveReason_DeletedOnAnotherDevice: ArchiveReason = Object.freeze({ tag: 3, name: "deletedOnAnotherDevice", storedReason: "synced", deletionOrigin: "remote", filterGroup: ArchiveFilterGroup_Synced, title: "Deleted on another device", symbol: "trash.fill", tone: StatusTone_Danger, isExplicitDeletion: true, isCleanup: false, isReceived: true });
+const ArchiveReason_QuickWindow: ArchiveReason = Object.freeze({ tag: 4, name: "quickWindow", storedReason: "quickWindow", deletionOrigin: null, filterGroup: ArchiveFilterGroup_QuickWindow, title: "Quick Window", symbol: "timer", tone: null, isExplicitDeletion: false, isCleanup: false, isReceived: false });
+const ArchiveReason_Synced: ArchiveReason = Object.freeze({ tag: 5, name: "synced", storedReason: "synced", deletionOrigin: null, filterGroup: ArchiveFilterGroup_Synced, title: "Synced from another device", symbol: "icloud.and.arrow.down.fill", tone: StatusTone_Info, isExplicitDeletion: false, isCleanup: false, isReceived: true });
 export const ArchiveReason = Object.freeze({
     autoCleanup: ArchiveReason_AutoCleanup,
     closed: ArchiveReason_Closed,
@@ -451,6 +447,23 @@ export const AutomaticDownloadAction = Object.freeze({
     all: [AutomaticDownloadAction_Allow, AutomaticDownloadAction_Deny, AutomaticDownloadAction_RequestPermission] as readonly AutomaticDownloadAction[],
     named(name: string | null | undefined): AutomaticDownloadAction | undefined {
         return AutomaticDownloadAction.all.find(member => member.name === name);
+    },
+});
+
+/** A member of the core's `BackgroundPageActivity`. Its wire tag is its index in `all`. */
+export interface BackgroundPageActivity {
+    readonly tag: number;
+    readonly name: string;
+}
+
+const BackgroundPageActivity_Suspend: BackgroundPageActivity = Object.freeze({ tag: 0, name: "suspend" });
+const BackgroundPageActivity_Throttle: BackgroundPageActivity = Object.freeze({ tag: 1, name: "throttle" });
+export const BackgroundPageActivity = Object.freeze({
+    suspend: BackgroundPageActivity_Suspend,
+    throttle: BackgroundPageActivity_Throttle,
+    all: [BackgroundPageActivity_Suspend, BackgroundPageActivity_Throttle] as readonly BackgroundPageActivity[],
+    named(name: string | null | undefined): BackgroundPageActivity | undefined {
+        return BackgroundPageActivity.all.find(member => member.name === name);
     },
 });
 
@@ -849,28 +862,6 @@ export const BuiltInSearchProvider = Object.freeze({
     },
 });
 
-/** A member of the core's `CapabilityStatus`. Its wire tag is its index in `all`. */
-export interface CapabilityStatus {
-    readonly tag: number;
-    readonly name: string;
-    readonly isAvailable: boolean;
-}
-
-const CapabilityStatus_Supported: CapabilityStatus = Object.freeze({ tag: 0, name: "supported", isAvailable: true });
-const CapabilityStatus_Partial: CapabilityStatus = Object.freeze({ tag: 1, name: "partial", isAvailable: false });
-const CapabilityStatus_Unavailable: CapabilityStatus = Object.freeze({ tag: 2, name: "unavailable", isAvailable: false });
-const CapabilityStatus_Unverified: CapabilityStatus = Object.freeze({ tag: 3, name: "unverified", isAvailable: false });
-export const CapabilityStatus = Object.freeze({
-    supported: CapabilityStatus_Supported,
-    partial: CapabilityStatus_Partial,
-    unavailable: CapabilityStatus_Unavailable,
-    unverified: CapabilityStatus_Unverified,
-    all: [CapabilityStatus_Supported, CapabilityStatus_Partial, CapabilityStatus_Unavailable, CapabilityStatus_Unverified] as readonly CapabilityStatus[],
-    named(name: string | null | undefined): CapabilityStatus | undefined {
-        return CapabilityStatus.all.find(member => member.name === name);
-    },
-});
-
 /** A member of the core's `CloudAccountState`. Its wire tag is its index in `all`. */
 export interface CloudAccountState {
     readonly tag: number;
@@ -926,18 +917,18 @@ export interface CloudSyncPhase {
     readonly isRetryable: boolean;
     readonly title: string;
     readonly symbol: string;
-    readonly tint: SystemTint | null;
+    readonly tone: StatusTone | null;
     readonly keepsCloudOutOfReach: boolean;
 }
 
-const CloudSyncPhase_Disabled: CloudSyncPhase = Object.freeze({ tag: 0, name: "disabled", isRetryable: false, title: "Off", symbol: "icloud.slash", tint: null, keepsCloudOutOfReach: false });
-const CloudSyncPhase_Checking: CloudSyncPhase = Object.freeze({ tag: 1, name: "checking", isRetryable: false, title: "Checking iCloud", symbol: "arrow.triangle.2.circlepath.icloud", tint: SystemTint.Blue, keepsCloudOutOfReach: true });
-const CloudSyncPhase_Ready: CloudSyncPhase = Object.freeze({ tag: 2, name: "ready", isRetryable: false, title: "Up to date", symbol: "checkmark.icloud.fill", tint: SystemTint.Green, keepsCloudOutOfReach: false });
-const CloudSyncPhase_Syncing: CloudSyncPhase = Object.freeze({ tag: 3, name: "syncing", isRetryable: false, title: "Syncing", symbol: "arrow.triangle.2.circlepath.icloud", tint: SystemTint.Blue, keepsCloudOutOfReach: false });
-const CloudSyncPhase_NeedsReconciliation: CloudSyncPhase = Object.freeze({ tag: 4, name: "needsReconciliation", isRetryable: false, title: "Choose which copy to keep", symbol: "exclamationmark.icloud.fill", tint: SystemTint.Orange, keepsCloudOutOfReach: false });
-const CloudSyncPhase_WaitingForAccount: CloudSyncPhase = Object.freeze({ tag: 5, name: "waitingForAccount", isRetryable: true, title: "Waiting for iCloud", symbol: "person.crop.circle.badge.exclamationmark", tint: SystemTint.Orange, keepsCloudOutOfReach: true });
-const CloudSyncPhase_Failed: CloudSyncPhase = Object.freeze({ tag: 6, name: "failed", isRetryable: true, title: "Needs attention", symbol: "xmark.icloud.fill", tint: SystemTint.Red, keepsCloudOutOfReach: true });
-const CloudSyncPhase_WaitingToUpload: CloudSyncPhase = Object.freeze({ tag: 7, name: "waitingToUpload", isRetryable: false, title: "Waiting to upload", symbol: "icloud.and.arrow.up", tint: SystemTint.Blue, keepsCloudOutOfReach: false });
+const CloudSyncPhase_Disabled: CloudSyncPhase = Object.freeze({ tag: 0, name: "disabled", isRetryable: false, title: "Off", symbol: "icloud.slash", tone: null, keepsCloudOutOfReach: false });
+const CloudSyncPhase_Checking: CloudSyncPhase = Object.freeze({ tag: 1, name: "checking", isRetryable: false, title: "Checking iCloud", symbol: "arrow.triangle.2.circlepath.icloud", tone: StatusTone_Info, keepsCloudOutOfReach: true });
+const CloudSyncPhase_Ready: CloudSyncPhase = Object.freeze({ tag: 2, name: "ready", isRetryable: false, title: "Up to date", symbol: "checkmark.icloud.fill", tone: StatusTone_Success, keepsCloudOutOfReach: false });
+const CloudSyncPhase_Syncing: CloudSyncPhase = Object.freeze({ tag: 3, name: "syncing", isRetryable: false, title: "Syncing", symbol: "arrow.triangle.2.circlepath.icloud", tone: StatusTone_Info, keepsCloudOutOfReach: false });
+const CloudSyncPhase_NeedsReconciliation: CloudSyncPhase = Object.freeze({ tag: 4, name: "needsReconciliation", isRetryable: false, title: "Choose which copy to keep", symbol: "exclamationmark.icloud.fill", tone: StatusTone_Warning, keepsCloudOutOfReach: false });
+const CloudSyncPhase_WaitingForAccount: CloudSyncPhase = Object.freeze({ tag: 5, name: "waitingForAccount", isRetryable: true, title: "Waiting for iCloud", symbol: "person.crop.circle.badge.exclamationmark", tone: StatusTone_Warning, keepsCloudOutOfReach: true });
+const CloudSyncPhase_Failed: CloudSyncPhase = Object.freeze({ tag: 6, name: "failed", isRetryable: true, title: "Needs attention", symbol: "xmark.icloud.fill", tone: StatusTone_Danger, keepsCloudOutOfReach: true });
+const CloudSyncPhase_WaitingToUpload: CloudSyncPhase = Object.freeze({ tag: 7, name: "waitingToUpload", isRetryable: false, title: "Waiting to upload", symbol: "icloud.and.arrow.up", tone: StatusTone_Info, keepsCloudOutOfReach: false });
 export const CloudSyncPhase = Object.freeze({
     disabled: CloudSyncPhase_Disabled,
     checking: CloudSyncPhase_Checking,
@@ -1086,6 +1077,31 @@ export const CloudZoneLoss = Object.freeze({
     all: [CloudZoneLoss_Deleted, CloudZoneLoss_Purged, CloudZoneLoss_EncryptedDataReset] as readonly CloudZoneLoss[],
     named(name: string | null | undefined): CloudZoneLoss | undefined {
         return CloudZoneLoss.all.find(member => member.name === name);
+    },
+});
+
+/** A member of the core's `ContentBlockKind`. Its wire tag is its index in `all`. */
+export interface ContentBlockKind {
+    readonly tag: number;
+    readonly name: string;
+    readonly title: string;
+    readonly symbol: string;
+}
+
+const ContentBlockKind_Ads: ContentBlockKind = Object.freeze({ tag: 0, name: "ads", title: "Ads", symbol: "megaphone" });
+const ContentBlockKind_Trackers: ContentBlockKind = Object.freeze({ tag: 1, name: "trackers", title: "Trackers", symbol: "eye.slash" });
+const ContentBlockKind_Scams: ContentBlockKind = Object.freeze({ tag: 2, name: "scams", title: "Scams", symbol: "exclamationmark.shield" });
+const ContentBlockKind_CookieNotices: ContentBlockKind = Object.freeze({ tag: 3, name: "cookie-notices", title: "Cookie notices", symbol: "checklist" });
+const ContentBlockKind_Annoyances: ContentBlockKind = Object.freeze({ tag: 4, name: "annoyances", title: "Annoyances", symbol: "bell.slash" });
+export const ContentBlockKind = Object.freeze({
+    ads: ContentBlockKind_Ads,
+    trackers: ContentBlockKind_Trackers,
+    scams: ContentBlockKind_Scams,
+    cookieNotices: ContentBlockKind_CookieNotices,
+    annoyances: ContentBlockKind_Annoyances,
+    all: [ContentBlockKind_Ads, ContentBlockKind_Trackers, ContentBlockKind_Scams, ContentBlockKind_CookieNotices, ContentBlockKind_Annoyances] as readonly ContentBlockKind[],
+    named(name: string | null | undefined): ContentBlockKind | undefined {
+        return ContentBlockKind.all.find(member => member.name === name);
     },
 });
 
@@ -1256,6 +1272,25 @@ export const CredentialImportEffect = Object.freeze({
     },
 });
 
+/** A member of the core's `CredentialRefusal`. Its wire tag is its index in `all`. */
+export interface CredentialRefusal {
+    readonly tag: number;
+    readonly name: string;
+}
+
+const CredentialRefusal_PrivateBrowsing: CredentialRefusal = Object.freeze({ tag: 0, name: "privateBrowsing" });
+const CredentialRefusal_ManagerOff: CredentialRefusal = Object.freeze({ tag: 1, name: "managerOff" });
+const CredentialRefusal_InsecureOrigin: CredentialRefusal = Object.freeze({ tag: 2, name: "insecureOrigin" });
+export const CredentialRefusal = Object.freeze({
+    privateBrowsing: CredentialRefusal_PrivateBrowsing,
+    managerOff: CredentialRefusal_ManagerOff,
+    insecureOrigin: CredentialRefusal_InsecureOrigin,
+    all: [CredentialRefusal_PrivateBrowsing, CredentialRefusal_ManagerOff, CredentialRefusal_InsecureOrigin] as readonly CredentialRefusal[],
+    named(name: string | null | undefined): CredentialRefusal | undefined {
+        return CredentialRefusal.all.find(member => member.name === name);
+    },
+});
+
 /** A member of the core's `CredentialRowCaution`. Its wire tag is its index in `all`. */
 export interface CredentialRowCaution {
     readonly tag: number;
@@ -1289,6 +1324,27 @@ export const CredentialRowFlaw = Object.freeze({
     all: [CredentialRowFlaw_InvalidOrigin, CredentialRowFlaw_EmptyPassword, CredentialRowFlaw_MalformedRow] as readonly CredentialRowFlaw[],
     named(name: string | null | undefined): CredentialRowFlaw | undefined {
         return CredentialRowFlaw.all.find(member => member.name === name);
+    },
+});
+
+/** A member of the core's `CredentialUse`. Its wire tag is its index in `all`. */
+export interface CredentialUse {
+    readonly tag: number;
+    readonly name: string;
+    readonly needsManager: boolean;
+    readonly refusedInPrivate: boolean;
+}
+
+const CredentialUse_Read: CredentialUse = Object.freeze({ tag: 0, name: "read", needsManager: false, refusedInPrivate: false });
+const CredentialUse_Fill: CredentialUse = Object.freeze({ tag: 1, name: "fill", needsManager: true, refusedInPrivate: false });
+const CredentialUse_Save: CredentialUse = Object.freeze({ tag: 2, name: "save", needsManager: true, refusedInPrivate: true });
+export const CredentialUse = Object.freeze({
+    read: CredentialUse_Read,
+    fill: CredentialUse_Fill,
+    save: CredentialUse_Save,
+    all: [CredentialUse_Read, CredentialUse_Fill, CredentialUse_Save] as readonly CredentialUse[],
+    named(name: string | null | undefined): CredentialUse | undefined {
+        return CredentialUse.all.find(member => member.name === name);
     },
 });
 
@@ -2196,6 +2252,9 @@ export enum ShortcutCommandKinds {
     OpenNextExtension = "OpenNextExtension",
     ClearAllTabs = "ClearAllTabs",
     CollapseAllFolders = "CollapseAllFolders",
+    CopyPageTitle = "CopyPageTitle",
+    ShowPageQRCode = "ShowPageQRCode",
+    OpenPageInPrivateWindow = "OpenPageInPrivateWindow",
 }
 
 /** A member of the core's `ShortcutCommand`. Its wire tag is its index in `all`. */
@@ -2299,6 +2358,9 @@ const ShortcutCommand_ToggleSelectedTabSaved: ShortcutCommand = Object.freeze({ 
 const ShortcutCommand_OpenNextExtension: ShortcutCommand = Object.freeze({ tag: 77, kind: ShortcutCommandKinds.OpenNextExtension, name: "openNextExtension", section: ShortcutSection_Page, title: "Open Next Extension", searchTerms: "extensions popup menu cycle pinned toolbar", menuTitle: null, symbol: "puzzlepiece.extension", requiredCapability: EngineCapability_Extensions, selects: null, number: null, defaultShortcuts: Object.freeze([Object.freeze({ platform: DevicePlatform_Desktop, keys: Object.freeze({ key: "e", isSpecialKey: false, modifiers: ShortcutModifiers.Command }), yieldsToOverrides: true }), Object.freeze({ platform: DevicePlatform_Windows, keys: Object.freeze({ key: "e", isSpecialKey: false, modifiers: ShortcutModifiers.Command }), yieldsToOverrides: false })]), paletteRest: null, offersInPalette: true, isOptionAlternate: false, isReservedFromPages: false, defaultPreference: ShortcutPreference_PreferWebsite });
 const ShortcutCommand_ClearAllTabs: ShortcutCommand = Object.freeze({ tag: 78, kind: ShortcutCommandKinds.ClearAllTabs, name: "clearAllTabs", section: ShortcutSection_Tabs, title: "Clear All Tabs", searchTerms: "clean tidy archive unpinned open tabs every current", menuTitle: null, symbol: "sparkles", requiredCapability: null, selects: null, number: null, defaultShortcuts: Object.freeze([Object.freeze({ platform: DevicePlatform_Desktop, keys: Object.freeze({ key: "k", isSpecialKey: false, modifiers: ShortcutModifiers.Command | ShortcutModifiers.Option | ShortcutModifiers.Shift }), yieldsToOverrides: true }), Object.freeze({ platform: DevicePlatform_Mobile, keys: Object.freeze({ key: "k", isSpecialKey: false, modifiers: ShortcutModifiers.Command | ShortcutModifiers.Option | ShortcutModifiers.Shift }), yieldsToOverrides: true }), Object.freeze({ platform: DevicePlatform_Windows, keys: Object.freeze({ key: "k", isSpecialKey: false, modifiers: ShortcutModifiers.Command | ShortcutModifiers.Option | ShortcutModifiers.Shift }), yieldsToOverrides: true })]), paletteRest: null, offersInPalette: true, isOptionAlternate: true, isReservedFromPages: false, defaultPreference: ShortcutPreference_PreferWebsite });
 const ShortcutCommand_CollapseAllFolders: ShortcutCommand = Object.freeze({ tag: 79, kind: ShortcutCommandKinds.CollapseAllFolders, name: "collapseAllFolders", section: ShortcutSection_View, title: "Collapse All Folders", searchTerms: "close fold folders sidebar tidy", menuTitle: null, symbol: "rectangle.compress.vertical", requiredCapability: null, selects: null, number: null, defaultShortcuts: Object.freeze([]), paletteRest: null, offersInPalette: true, isOptionAlternate: false, isReservedFromPages: false, defaultPreference: ShortcutPreference_PreferWebsite });
+const ShortcutCommand_CopyPageTitle: ShortcutCommand = Object.freeze({ tag: 80, kind: ShortcutCommandKinds.CopyPageTitle, name: "copyPageTitle", section: ShortcutSection_Page, title: "Copy Page Title", searchTerms: "copy title name heading clipboard", menuTitle: null, symbol: "textformat", requiredCapability: null, selects: null, number: null, defaultShortcuts: Object.freeze([]), paletteRest: null, offersInPalette: true, isOptionAlternate: false, isReservedFromPages: false, defaultPreference: ShortcutPreference_PreferWebsite });
+const ShortcutCommand_ShowPageQRCode: ShortcutCommand = Object.freeze({ tag: 81, kind: ShortcutCommandKinds.ShowPageQRCode, name: "showPageQRCode", section: ShortcutSection_Page, title: "Show QR Code", searchTerms: "qr code scan camera phone send link address", menuTitle: null, symbol: "qrcode", requiredCapability: null, selects: null, number: null, defaultShortcuts: Object.freeze([]), paletteRest: null, offersInPalette: true, isOptionAlternate: false, isReservedFromPages: false, defaultPreference: ShortcutPreference_PreferWebsite });
+const ShortcutCommand_OpenPageInPrivateWindow: ShortcutCommand = Object.freeze({ tag: 82, kind: ShortcutCommandKinds.OpenPageInPrivateWindow, name: "openPageInPrivateWindow", section: ShortcutSection_Page, title: "Open Page in Private Window", searchTerms: "incognito private browsing open again", menuTitle: null, symbol: "eyeglasses", requiredCapability: null, selects: null, number: null, defaultShortcuts: Object.freeze([]), paletteRest: null, offersInPalette: true, isOptionAlternate: false, isReservedFromPages: false, defaultPreference: ShortcutPreference_PreferWebsite });
 export const ShortcutCommand = Object.freeze({
     newWindow: ShortcutCommand_NewWindow,
     newBlankWindow: ShortcutCommand_NewBlankWindow,
@@ -2380,7 +2442,10 @@ export const ShortcutCommand = Object.freeze({
     openNextExtension: ShortcutCommand_OpenNextExtension,
     clearAllTabs: ShortcutCommand_ClearAllTabs,
     collapseAllFolders: ShortcutCommand_CollapseAllFolders,
-    all: [ShortcutCommand_NewWindow, ShortcutCommand_NewBlankWindow, ShortcutCommand_NewTab, ShortcutCommand_NewQuickWindow, ShortcutCommand_NewPrivateWindow, ShortcutCommand_CloseTabOrWindow, ShortcutCommand_CloseWindow, ShortcutCommand_OpenLocation, ShortcutCommand_Back, ShortcutCommand_Forward, ShortcutCommand_ReloadPage, ShortcutCommand_StopLoading, ShortcutCommand_ReloadFromOrigin, ShortcutCommand_ToggleSelectedTabPinned, ShortcutCommand_DuplicateTab, ShortcutCommand_ReopenClosedTab, ShortcutCommand_ClearOtherTabs, ShortcutCommand_ArchiveTab, ShortcutCommand_PreviousTab, ShortcutCommand_NextTab, ShortcutCommand_MostRecentTab, ShortcutCommand_SelectTab1, ShortcutCommand_SelectTab2, ShortcutCommand_SelectTab3, ShortcutCommand_SelectTab4, ShortcutCommand_SelectTab5, ShortcutCommand_SelectTab6, ShortcutCommand_SelectTab7, ShortcutCommand_SelectTab8, ShortcutCommand_SelectTab9, ShortcutCommand_PreviousSpace, ShortcutCommand_NextSpace, ShortcutCommand_SelectSpace1, ShortcutCommand_SelectSpace2, ShortcutCommand_SelectSpace3, ShortcutCommand_SelectSpace4, ShortcutCommand_SelectSpace5, ShortcutCommand_SelectSpace6, ShortcutCommand_SelectSpace7, ShortcutCommand_SelectSpace8, ShortcutCommand_SelectSpace9, ShortcutCommand_ToggleReaderMode, ShortcutCommand_ToggleContentBlocking, ShortcutCommand_BlockElement, ShortcutCommand_ShowBlockedElements, ShortcutCommand_FindInPage, ShortcutCommand_ZoomIn, ShortcutCommand_ZoomOut, ShortcutCommand_ActualSize, ShortcutCommand_CopyPageLink, ShortcutCommand_CopyPageLinkAsMarkdown, ShortcutCommand_SharePage, ShortcutCommand_ExportPDF, ShortcutCommand_SaveWebArchive, ShortcutCommand_PrintPage, ShortcutCommand_ToggleSidebar, ShortcutCommand_ShowHistory, ShortcutCommand_ShowArchive, ShortcutCommand_ShowDownloads, ShortcutCommand_ShowWebInspector, ShortcutCommand_SplitWithNextTab, ShortcutCommand_FocusNextSplitCard, ShortcutCommand_FocusPreviousSplitCard, ShortcutCommand_RemoveTabFromSplit, ShortcutCommand_SeparateSplitTabs, ShortcutCommand_MoveSplitCardLeft, ShortcutCommand_MoveSplitCardRight, ShortcutCommand_ToggleDeveloperToolbar, ShortcutCommand_ToggleTranslationToolbar, ShortcutCommand_OpenFile, ShortcutCommand_FindNext, ShortcutCommand_FindPrevious, ShortcutCommand_CapturePage, ShortcutCommand_MostRecentTabBackward, ShortcutCommand_ClearSiteCookies, ShortcutCommand_ClearSiteCache, ShortcutCommand_ToggleSelectedTabSaved, ShortcutCommand_OpenNextExtension, ShortcutCommand_ClearAllTabs, ShortcutCommand_CollapseAllFolders] as readonly ShortcutCommand[],
+    copyPageTitle: ShortcutCommand_CopyPageTitle,
+    showPageQRCode: ShortcutCommand_ShowPageQRCode,
+    openPageInPrivateWindow: ShortcutCommand_OpenPageInPrivateWindow,
+    all: [ShortcutCommand_NewWindow, ShortcutCommand_NewBlankWindow, ShortcutCommand_NewTab, ShortcutCommand_NewQuickWindow, ShortcutCommand_NewPrivateWindow, ShortcutCommand_CloseTabOrWindow, ShortcutCommand_CloseWindow, ShortcutCommand_OpenLocation, ShortcutCommand_Back, ShortcutCommand_Forward, ShortcutCommand_ReloadPage, ShortcutCommand_StopLoading, ShortcutCommand_ReloadFromOrigin, ShortcutCommand_ToggleSelectedTabPinned, ShortcutCommand_DuplicateTab, ShortcutCommand_ReopenClosedTab, ShortcutCommand_ClearOtherTabs, ShortcutCommand_ArchiveTab, ShortcutCommand_PreviousTab, ShortcutCommand_NextTab, ShortcutCommand_MostRecentTab, ShortcutCommand_SelectTab1, ShortcutCommand_SelectTab2, ShortcutCommand_SelectTab3, ShortcutCommand_SelectTab4, ShortcutCommand_SelectTab5, ShortcutCommand_SelectTab6, ShortcutCommand_SelectTab7, ShortcutCommand_SelectTab8, ShortcutCommand_SelectTab9, ShortcutCommand_PreviousSpace, ShortcutCommand_NextSpace, ShortcutCommand_SelectSpace1, ShortcutCommand_SelectSpace2, ShortcutCommand_SelectSpace3, ShortcutCommand_SelectSpace4, ShortcutCommand_SelectSpace5, ShortcutCommand_SelectSpace6, ShortcutCommand_SelectSpace7, ShortcutCommand_SelectSpace8, ShortcutCommand_SelectSpace9, ShortcutCommand_ToggleReaderMode, ShortcutCommand_ToggleContentBlocking, ShortcutCommand_BlockElement, ShortcutCommand_ShowBlockedElements, ShortcutCommand_FindInPage, ShortcutCommand_ZoomIn, ShortcutCommand_ZoomOut, ShortcutCommand_ActualSize, ShortcutCommand_CopyPageLink, ShortcutCommand_CopyPageLinkAsMarkdown, ShortcutCommand_SharePage, ShortcutCommand_ExportPDF, ShortcutCommand_SaveWebArchive, ShortcutCommand_PrintPage, ShortcutCommand_ToggleSidebar, ShortcutCommand_ShowHistory, ShortcutCommand_ShowArchive, ShortcutCommand_ShowDownloads, ShortcutCommand_ShowWebInspector, ShortcutCommand_SplitWithNextTab, ShortcutCommand_FocusNextSplitCard, ShortcutCommand_FocusPreviousSplitCard, ShortcutCommand_RemoveTabFromSplit, ShortcutCommand_SeparateSplitTabs, ShortcutCommand_MoveSplitCardLeft, ShortcutCommand_MoveSplitCardRight, ShortcutCommand_ToggleDeveloperToolbar, ShortcutCommand_ToggleTranslationToolbar, ShortcutCommand_OpenFile, ShortcutCommand_FindNext, ShortcutCommand_FindPrevious, ShortcutCommand_CapturePage, ShortcutCommand_MostRecentTabBackward, ShortcutCommand_ClearSiteCookies, ShortcutCommand_ClearSiteCache, ShortcutCommand_ToggleSelectedTabSaved, ShortcutCommand_OpenNextExtension, ShortcutCommand_ClearAllTabs, ShortcutCommand_CollapseAllFolders, ShortcutCommand_CopyPageTitle, ShortcutCommand_ShowPageQRCode, ShortcutCommand_OpenPageInPrivateWindow] as readonly ShortcutCommand[],
     named(name: string | null | undefined): ShortcutCommand | undefined {
         return ShortcutCommand.all.find(member => member.name === name);
     },
@@ -2756,28 +2821,29 @@ export interface FilterList {
     readonly isDefault: boolean;
     readonly isStrict: boolean;
     readonly languages: readonly string[];
+    readonly blocks: readonly ContentBlockKind[];
 }
 
-const FilterList_EasyList: FilterList = Object.freeze({ tag: 0, name: "easylist", title: "EasyList", group: FilterListGroup_Ads, source: "https://easylist.to/easylist/easylist.txt", isDefault: true, isStrict: false, languages: Object.freeze([]) });
-const FilterList_EasyPrivacy: FilterList = Object.freeze({ tag: 1, name: "easyprivacy", title: "EasyPrivacy", group: FilterListGroup_Ads, source: "https://easylist.to/easylist/easyprivacy.txt", isDefault: true, isStrict: false, languages: Object.freeze([]) });
-const FilterList_UBlockFilters: FilterList = Object.freeze({ tag: 2, name: "ublock-filters", title: "uBlock filters", group: FilterListGroup_Ads, source: "https://ublockorigin.github.io/uAssets/filters/filters.min.txt", isDefault: true, isStrict: false, languages: Object.freeze([]) });
-const FilterList_UBlockPrivacy: FilterList = Object.freeze({ tag: 3, name: "ublock-privacy", title: "uBlock filters – Privacy", group: FilterListGroup_Ads, source: "https://ublockorigin.github.io/uAssets/filters/privacy.min.txt", isDefault: true, isStrict: false, languages: Object.freeze([]) });
-const FilterList_UBlockBadware: FilterList = Object.freeze({ tag: 4, name: "ublock-badware", title: "uBlock filters – Badware risks", group: FilterListGroup_Ads, source: "https://ublockorigin.github.io/uAssets/filters/badware.min.txt", isDefault: true, isStrict: false, languages: Object.freeze([]) });
-const FilterList_UBlockQuickFixes: FilterList = Object.freeze({ tag: 5, name: "ublock-quick-fixes", title: "uBlock filters – Quick fixes", group: FilterListGroup_Ads, source: "https://ublockorigin.github.io/uAssets/filters/quick-fixes.min.txt", isDefault: true, isStrict: false, languages: Object.freeze([]) });
-const FilterList_UBlockUnbreak: FilterList = Object.freeze({ tag: 6, name: "ublock-unbreak", title: "uBlock filters – Unbreak", group: FilterListGroup_Ads, source: "https://ublockorigin.github.io/uAssets/filters/unbreak.min.txt", isDefault: true, isStrict: false, languages: Object.freeze([]) });
-const FilterList_AdGuardBase: FilterList = Object.freeze({ tag: 7, name: "adguard-base", title: "AdGuard Base", group: FilterListGroup_Ads, source: "https://filters.adtidy.org/extension/ublock/filters/2_without_easylist.txt", isDefault: false, isStrict: true, languages: Object.freeze([]) });
-const FilterList_EasyListGermany: FilterList = Object.freeze({ tag: 8, name: "easylist-germany", title: "EasyList Germany", group: FilterListGroup_Regional, source: "https://easylist.to/easylistgermany/easylistgermany.txt", isDefault: false, isStrict: false, languages: Object.freeze(["de"]) });
-const FilterList_ListeFr: FilterList = Object.freeze({ tag: 9, name: "liste-fr", title: "Liste FR", group: FilterListGroup_Regional, source: "https://easylist-downloads.adblockplus.org/liste_fr.txt", isDefault: false, isStrict: false, languages: Object.freeze(["fr"]) });
-const FilterList_EasyListItaly: FilterList = Object.freeze({ tag: 10, name: "easylist-italy", title: "EasyList Italy", group: FilterListGroup_Regional, source: "https://easylist-downloads.adblockplus.org/easylistitaly.txt", isDefault: false, isStrict: false, languages: Object.freeze(["it"]) });
-const FilterList_EasyListDutch: FilterList = Object.freeze({ tag: 11, name: "easylist-dutch", title: "EasyList Dutch", group: FilterListGroup_Regional, source: "https://easylist-downloads.adblockplus.org/easylistdutch.txt", isDefault: false, isStrict: false, languages: Object.freeze(["nl"]) });
-const FilterList_EasyListSpanish: FilterList = Object.freeze({ tag: 12, name: "easylist-spanish", title: "EasyList Spanish", group: FilterListGroup_Regional, source: "https://easylist-downloads.adblockplus.org/easylistspanish.txt", isDefault: false, isStrict: false, languages: Object.freeze(["es"]) });
-const FilterList_EasyListPolish: FilterList = Object.freeze({ tag: 13, name: "easylist-polish", title: "EasyList Polish", group: FilterListGroup_Regional, source: "https://easylist-downloads.adblockplus.org/easylistpolish.txt", isDefault: false, isStrict: false, languages: Object.freeze(["pl"]) });
-const FilterList_EasyListChina: FilterList = Object.freeze({ tag: 14, name: "easylist-china", title: "EasyList China", group: FilterListGroup_Regional, source: "https://easylist-downloads.adblockplus.org/easylistchina.txt", isDefault: false, isStrict: false, languages: Object.freeze(["zh"]) });
-const FilterList_AdGuardJapanese: FilterList = Object.freeze({ tag: 15, name: "adguard-japanese", title: "AdGuard Japanese", group: FilterListGroup_Regional, source: "https://filters.adtidy.org/extension/ublock/filters/7.txt", isDefault: false, isStrict: false, languages: Object.freeze(["ja"]) });
-const FilterList_AdGuardRussian: FilterList = Object.freeze({ tag: 16, name: "adguard-russian", title: "AdGuard Russian", group: FilterListGroup_Regional, source: "https://filters.adtidy.org/extension/ublock/filters/1.txt", isDefault: false, isStrict: false, languages: Object.freeze(["ru", "uk", "be"]) });
-const FilterList_AdGuardTurkish: FilterList = Object.freeze({ tag: 17, name: "adguard-turkish", title: "AdGuard Turkish", group: FilterListGroup_Regional, source: "https://filters.adtidy.org/extension/ublock/filters/13.txt", isDefault: false, isStrict: false, languages: Object.freeze(["tr"]) });
-const FilterList_EasyListCookie: FilterList = Object.freeze({ tag: 18, name: "easylist-cookie", title: "EasyList Cookie List", group: FilterListGroup_Annoyances, source: "https://secure.fanboy.co.nz/fanboy-cookiemonster_ubo.txt", isDefault: false, isStrict: true, languages: Object.freeze([]) });
-const FilterList_AdGuardAnnoyances: FilterList = Object.freeze({ tag: 19, name: "adguard-annoyances", title: "AdGuard Annoyances", group: FilterListGroup_Annoyances, source: "https://filters.adtidy.org/extension/ublock/filters/14.txt", isDefault: false, isStrict: true, languages: Object.freeze([]) });
+const FilterList_EasyList: FilterList = Object.freeze({ tag: 0, name: "easylist", title: "EasyList", group: FilterListGroup_Ads, source: "https://easylist.to/easylist/easylist.txt", isDefault: true, isStrict: false, languages: Object.freeze([]), blocks: Object.freeze([ContentBlockKind_Ads]) });
+const FilterList_EasyPrivacy: FilterList = Object.freeze({ tag: 1, name: "easyprivacy", title: "EasyPrivacy", group: FilterListGroup_Ads, source: "https://easylist.to/easylist/easyprivacy.txt", isDefault: true, isStrict: false, languages: Object.freeze([]), blocks: Object.freeze([ContentBlockKind_Trackers]) });
+const FilterList_UBlockFilters: FilterList = Object.freeze({ tag: 2, name: "ublock-filters", title: "uBlock filters", group: FilterListGroup_Ads, source: "https://ublockorigin.github.io/uAssets/filters/filters.min.txt", isDefault: true, isStrict: false, languages: Object.freeze([]), blocks: Object.freeze([ContentBlockKind_Ads]) });
+const FilterList_UBlockPrivacy: FilterList = Object.freeze({ tag: 3, name: "ublock-privacy", title: "uBlock filters – Privacy", group: FilterListGroup_Ads, source: "https://ublockorigin.github.io/uAssets/filters/privacy.min.txt", isDefault: true, isStrict: false, languages: Object.freeze([]), blocks: Object.freeze([ContentBlockKind_Trackers]) });
+const FilterList_UBlockBadware: FilterList = Object.freeze({ tag: 4, name: "ublock-badware", title: "uBlock filters – Badware risks", group: FilterListGroup_Ads, source: "https://ublockorigin.github.io/uAssets/filters/badware.min.txt", isDefault: true, isStrict: false, languages: Object.freeze([]), blocks: Object.freeze([ContentBlockKind_Scams]) });
+const FilterList_UBlockQuickFixes: FilterList = Object.freeze({ tag: 5, name: "ublock-quick-fixes", title: "uBlock filters – Quick fixes", group: FilterListGroup_Ads, source: "https://ublockorigin.github.io/uAssets/filters/quick-fixes.min.txt", isDefault: true, isStrict: false, languages: Object.freeze([]), blocks: Object.freeze([]) });
+const FilterList_UBlockUnbreak: FilterList = Object.freeze({ tag: 6, name: "ublock-unbreak", title: "uBlock filters – Unbreak", group: FilterListGroup_Ads, source: "https://ublockorigin.github.io/uAssets/filters/unbreak.min.txt", isDefault: true, isStrict: false, languages: Object.freeze([]), blocks: Object.freeze([]) });
+const FilterList_AdGuardBase: FilterList = Object.freeze({ tag: 7, name: "adguard-base", title: "AdGuard Base", group: FilterListGroup_Ads, source: "https://filters.adtidy.org/extension/ublock/filters/2_without_easylist.txt", isDefault: false, isStrict: true, languages: Object.freeze([]), blocks: Object.freeze([ContentBlockKind_Ads]) });
+const FilterList_EasyListGermany: FilterList = Object.freeze({ tag: 8, name: "easylist-germany", title: "EasyList Germany", group: FilterListGroup_Regional, source: "https://easylist.to/easylistgermany/easylistgermany.txt", isDefault: false, isStrict: false, languages: Object.freeze(["de"]), blocks: Object.freeze([ContentBlockKind_Ads]) });
+const FilterList_ListeFr: FilterList = Object.freeze({ tag: 9, name: "liste-fr", title: "Liste FR", group: FilterListGroup_Regional, source: "https://easylist-downloads.adblockplus.org/liste_fr.txt", isDefault: false, isStrict: false, languages: Object.freeze(["fr"]), blocks: Object.freeze([ContentBlockKind_Ads]) });
+const FilterList_EasyListItaly: FilterList = Object.freeze({ tag: 10, name: "easylist-italy", title: "EasyList Italy", group: FilterListGroup_Regional, source: "https://easylist-downloads.adblockplus.org/easylistitaly.txt", isDefault: false, isStrict: false, languages: Object.freeze(["it"]), blocks: Object.freeze([ContentBlockKind_Ads]) });
+const FilterList_EasyListDutch: FilterList = Object.freeze({ tag: 11, name: "easylist-dutch", title: "EasyList Dutch", group: FilterListGroup_Regional, source: "https://easylist-downloads.adblockplus.org/easylistdutch.txt", isDefault: false, isStrict: false, languages: Object.freeze(["nl"]), blocks: Object.freeze([ContentBlockKind_Ads]) });
+const FilterList_EasyListSpanish: FilterList = Object.freeze({ tag: 12, name: "easylist-spanish", title: "EasyList Spanish", group: FilterListGroup_Regional, source: "https://easylist-downloads.adblockplus.org/easylistspanish.txt", isDefault: false, isStrict: false, languages: Object.freeze(["es"]), blocks: Object.freeze([ContentBlockKind_Ads]) });
+const FilterList_EasyListPolish: FilterList = Object.freeze({ tag: 13, name: "easylist-polish", title: "EasyList Polish", group: FilterListGroup_Regional, source: "https://easylist-downloads.adblockplus.org/easylistpolish.txt", isDefault: false, isStrict: false, languages: Object.freeze(["pl"]), blocks: Object.freeze([ContentBlockKind_Ads]) });
+const FilterList_EasyListChina: FilterList = Object.freeze({ tag: 14, name: "easylist-china", title: "EasyList China", group: FilterListGroup_Regional, source: "https://easylist-downloads.adblockplus.org/easylistchina.txt", isDefault: false, isStrict: false, languages: Object.freeze(["zh"]), blocks: Object.freeze([ContentBlockKind_Ads]) });
+const FilterList_AdGuardJapanese: FilterList = Object.freeze({ tag: 15, name: "adguard-japanese", title: "AdGuard Japanese", group: FilterListGroup_Regional, source: "https://filters.adtidy.org/extension/ublock/filters/7.txt", isDefault: false, isStrict: false, languages: Object.freeze(["ja"]), blocks: Object.freeze([ContentBlockKind_Ads]) });
+const FilterList_AdGuardRussian: FilterList = Object.freeze({ tag: 16, name: "adguard-russian", title: "AdGuard Russian", group: FilterListGroup_Regional, source: "https://filters.adtidy.org/extension/ublock/filters/1.txt", isDefault: false, isStrict: false, languages: Object.freeze(["ru", "uk", "be"]), blocks: Object.freeze([ContentBlockKind_Ads]) });
+const FilterList_AdGuardTurkish: FilterList = Object.freeze({ tag: 17, name: "adguard-turkish", title: "AdGuard Turkish", group: FilterListGroup_Regional, source: "https://filters.adtidy.org/extension/ublock/filters/13.txt", isDefault: false, isStrict: false, languages: Object.freeze(["tr"]), blocks: Object.freeze([ContentBlockKind_Ads]) });
+const FilterList_EasyListCookie: FilterList = Object.freeze({ tag: 18, name: "easylist-cookie", title: "EasyList Cookie List", group: FilterListGroup_Annoyances, source: "https://secure.fanboy.co.nz/fanboy-cookiemonster_ubo.txt", isDefault: false, isStrict: true, languages: Object.freeze([]), blocks: Object.freeze([ContentBlockKind_CookieNotices]) });
+const FilterList_AdGuardAnnoyances: FilterList = Object.freeze({ tag: 19, name: "adguard-annoyances", title: "AdGuard Annoyances", group: FilterListGroup_Annoyances, source: "https://filters.adtidy.org/extension/ublock/filters/14.txt", isDefault: false, isStrict: true, languages: Object.freeze([]), blocks: Object.freeze([ContentBlockKind_Annoyances]) });
 export const FilterList = Object.freeze({
     easyList: FilterList_EasyList,
     easyPrivacy: FilterList_EasyPrivacy,
@@ -2964,16 +3030,15 @@ export const SpaceTextColorMode = Object.freeze({
 export interface SpaceAccent {
     readonly tag: number;
     readonly name: string;
-    readonly tint: SystemTint;
     readonly legacyColors: readonly BrandColor[];
     readonly house: SpaceBranding;
     readonly swatch: BrandColor;
 }
 
-const SpaceAccent_Indigo: SpaceAccent = Object.freeze({ tag: 0, name: "indigo", tint: SystemTint.Indigo, legacyColors: Object.freeze([Object.freeze({ red: 0.08, green: 0.15, blue: 0.23, alpha: 1 }), Object.freeze({ red: 0.22, green: 0.42, blue: 0.64, alpha: 1 }), Object.freeze({ red: 0.88, green: 0.67, blue: 0.25, alpha: 1 })]), house: Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.09, green: 0.133, blue: 0.22, alpha: 1 }), Object.freeze({ red: 0.949, green: 0.757, blue: 0.306, alpha: 1 }), Object.freeze({ red: 0.914, green: 0.376, blue: 0.294, alpha: 1 })]) }), bannerPattern: SpaceBannerPattern_Solid, bannerStrength: 1, readabilityFade: 0.45, keepsControlsReadable: true, themeMode: SpaceThemeMode_Banner, gradientAngle: 0, textureStrength: 0, iconStyle: SpaceIconStyle_LayeredCrest, symbolColor: null, crest: Object.freeze({ backplate: CrestBackplate_SoftShield, fieldDivision: CrestFieldDivision_Plain, ordinary: CrestOrdinary_None, trim: CrestTrim_None, symbol: CrestSymbol_BrightStar, chargeLayout: CrestChargeLayout_Single, backplateColorIndex: 2, secondaryFieldColorIndex: 0, ordinaryColorIndex: 1, trimColorIndex: 1, symbolColorIndex: 1, startingPresetId: null, edgeColorIndex: 0, palette: null, charge: null, plateScale: 1, edgeWidth: 0, divisionCount: 4, finish: CrestFinish_Flat, ordinaryWidth: 1, trimWeight: 0.75, trimDetail: 12, chargeScale: 1.21, chargeOffset: 0, chargeWeight: CrestChargeWeight_Bold, sheenAngle: 45, sealTeeth: 12, showsOutline: false, depth: CrestDepth_Figure, paletteGradients: null }), renderingVersion: 6, folderColorIntensity: 0, textColorMode: SpaceTextColorMode_Automatic, hasCustomAppearance: false, gradientKind: null, symbolGradient: null, colorGradients: Object.freeze({ slots: Object.freeze([Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.18, green: 0.294, blue: 0.408, alpha: 1 }), Object.freeze({ red: 0.353, green: 0.608, blue: 0.784, alpha: 1 })]) }), kind: null, angle: 75 })]) }) }), swatch: Object.freeze({ red: 0.29, green: 0.25, blue: 0.58, alpha: 1 }) });
-const SpaceAccent_Orange: SpaceAccent = Object.freeze({ tag: 1, name: "orange", tint: SystemTint.Orange, legacyColors: Object.freeze([Object.freeze({ red: 0.85, green: 0.27, blue: 0.2, alpha: 1 }), Object.freeze({ red: 0.88, green: 0.67, blue: 0.25, alpha: 1 }), Object.freeze({ red: 0.22, green: 0.42, blue: 0.64, alpha: 1 })]), house: Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.655, green: 0.227, blue: 0.106, alpha: 1 }), Object.freeze({ red: 0.975, green: 0.83, blue: 0.42, alpha: 1 }), Object.freeze({ red: 0.789, green: 0.349, blue: 0.231, alpha: 1 })]) }), bannerPattern: SpaceBannerPattern_Solid, bannerStrength: 1, readabilityFade: 0.45, keepsControlsReadable: true, themeMode: SpaceThemeMode_Banner, gradientAngle: 0, textureStrength: 0.45, iconStyle: SpaceIconStyle_LayeredCrest, symbolColor: null, crest: Object.freeze({ backplate: CrestBackplate_Circle, fieldDivision: CrestFieldDivision_Plain, ordinary: CrestOrdinary_None, trim: CrestTrim_Sunburst, symbol: CrestSymbol_Sun, chargeLayout: CrestChargeLayout_Single, backplateColorIndex: 2, secondaryFieldColorIndex: 0, ordinaryColorIndex: 1, trimColorIndex: 1, symbolColorIndex: 1, startingPresetId: null, edgeColorIndex: 0, palette: null, charge: null, plateScale: 1, edgeWidth: 0.25, divisionCount: 4, finish: CrestFinish_Flat, ordinaryWidth: 1, trimWeight: 0.75, trimDetail: 12, chargeScale: 1.2, chargeOffset: 0, chargeWeight: CrestChargeWeight_Bold, sheenAngle: 45, sealTeeth: 12, showsOutline: false, depth: CrestDepth_Soft, paletteGradients: null }), renderingVersion: 5, folderColorIntensity: 0, textColorMode: SpaceTextColorMode_Automatic, hasCustomAppearance: false, gradientKind: null, symbolGradient: null, colorGradients: Object.freeze({ slots: Object.freeze([Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.751, green: 0.392, blue: 0.124, alpha: 1 }), Object.freeze({ red: 0.792, green: 0.533, blue: 0.245, alpha: 1 })]) }), kind: null, angle: 160 })]) }) }), swatch: Object.freeze({ red: 0.85, green: 0.27, blue: 0.2, alpha: 1 }) });
-const SpaceAccent_Teal: SpaceAccent = Object.freeze({ tag: 2, name: "teal", tint: SystemTint.Teal, legacyColors: Object.freeze([Object.freeze({ red: 0.12, green: 0.49, blue: 0.52, alpha: 1 }), Object.freeze({ red: 0.22, green: 0.42, blue: 0.64, alpha: 1 }), Object.freeze({ red: 0.82, green: 0.72, blue: 0.56, alpha: 1 })]), house: Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.118, green: 0.356, blue: 0.202, alpha: 1 }), Object.freeze({ red: 0.965, green: 0.78, blue: 0.603, alpha: 1 }), Object.freeze({ red: 0.238, green: 0.469, blue: 0.308, alpha: 1 })]) }), bannerPattern: SpaceBannerPattern_Solid, bannerStrength: 1, readabilityFade: 0.45, keepsControlsReadable: true, themeMode: SpaceThemeMode_Banner, gradientAngle: 0, textureStrength: 0.2, iconStyle: SpaceIconStyle_LayeredCrest, symbolColor: null, crest: Object.freeze({ backplate: CrestBackplate_Circle, fieldDivision: CrestFieldDivision_Plain, ordinary: CrestOrdinary_None, trim: CrestTrim_Laurel, symbol: CrestSymbol_Rose, chargeLayout: CrestChargeLayout_Single, backplateColorIndex: 2, secondaryFieldColorIndex: 0, ordinaryColorIndex: 1, trimColorIndex: 1, symbolColorIndex: 1, startingPresetId: null, edgeColorIndex: 0, palette: null, charge: null, plateScale: 1, edgeWidth: 0.25, divisionCount: 4, finish: CrestFinish_Flat, ordinaryWidth: 1, trimWeight: 0.75, trimDetail: 12, chargeScale: 1.2, chargeOffset: 0, chargeWeight: CrestChargeWeight_Bold, sheenAngle: 45, sealTeeth: 12, showsOutline: false, depth: CrestDepth_Soft, paletteGradients: null }), renderingVersion: 5, folderColorIntensity: 0, textColorMode: SpaceTextColorMode_Automatic, hasCustomAppearance: false, gradientKind: null, symbolGradient: null, colorGradients: Object.freeze({ slots: Object.freeze([Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.271, green: 0.468, blue: 0.251, alpha: 1 })]) }), kind: null, angle: 90 })]) }) }), swatch: Object.freeze({ red: 0.12, green: 0.49, blue: 0.52, alpha: 1 }) });
-const SpaceAccent_Rose: SpaceAccent = Object.freeze({ tag: 3, name: "rose", tint: SystemTint.Pink, legacyColors: Object.freeze([Object.freeze({ red: 0.72, green: 0.25, blue: 0.42, alpha: 1 }), Object.freeze({ red: 0.29, green: 0.25, blue: 0.58, alpha: 1 }), Object.freeze({ red: 0.82, green: 0.72, blue: 0.56, alpha: 1 })]), house: Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.433, green: 0.092, blue: 0.141, alpha: 1 }), Object.freeze({ red: 0.922, green: 0.776, blue: 0.411, alpha: 1 }), Object.freeze({ red: 0.56, green: 0.213, blue: 0.243, alpha: 1 })]) }), bannerPattern: SpaceBannerPattern_Solid, bannerStrength: 1, readabilityFade: 0.45, keepsControlsReadable: true, themeMode: SpaceThemeMode_Banner, gradientAngle: 0, textureStrength: 0, iconStyle: SpaceIconStyle_LayeredCrest, symbolColor: null, crest: Object.freeze({ backplate: CrestBackplate_Shield, fieldDivision: CrestFieldDivision_Plain, ordinary: CrestOrdinary_None, trim: CrestTrim_DoubleLine, symbol: CrestSymbol_Lion, chargeLayout: CrestChargeLayout_Single, backplateColorIndex: 2, secondaryFieldColorIndex: 0, ordinaryColorIndex: 1, trimColorIndex: 1, symbolColorIndex: 1, startingPresetId: null, edgeColorIndex: 0, palette: null, charge: null, plateScale: 1, edgeWidth: 0.25, divisionCount: 4, finish: CrestFinish_Sheen, ordinaryWidth: 1, trimWeight: 0.85, trimDetail: 12, chargeScale: 1.25, chargeOffset: 0, chargeWeight: CrestChargeWeight_Bold, sheenAngle: 45, sealTeeth: 12, showsOutline: false, depth: CrestDepth_Lifted, paletteGradients: null }), renderingVersion: 5, folderColorIntensity: 0, textColorMode: SpaceTextColorMode_Automatic, hasCustomAppearance: false, gradientKind: null, symbolGradient: null, colorGradients: Object.freeze({ slots: Object.freeze([Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.306, green: 0.053, blue: 0.179, alpha: 1 })]) }), kind: null, angle: 90 }), Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.88, green: 0.603, blue: 0.273, alpha: 1 })]) }), kind: null, angle: 45 })]) }) }), swatch: Object.freeze({ red: 0.72, green: 0.25, blue: 0.42, alpha: 1 }) });
+const SpaceAccent_Indigo: SpaceAccent = Object.freeze({ tag: 0, name: "indigo", legacyColors: Object.freeze([Object.freeze({ red: 0.08, green: 0.15, blue: 0.23, alpha: 1 }), Object.freeze({ red: 0.22, green: 0.42, blue: 0.64, alpha: 1 }), Object.freeze({ red: 0.88, green: 0.67, blue: 0.25, alpha: 1 })]), house: Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.09, green: 0.133, blue: 0.22, alpha: 1 }), Object.freeze({ red: 0.949, green: 0.757, blue: 0.306, alpha: 1 }), Object.freeze({ red: 0.914, green: 0.376, blue: 0.294, alpha: 1 })]) }), bannerPattern: SpaceBannerPattern_Solid, bannerStrength: 1, readabilityFade: 0.45, keepsControlsReadable: true, themeMode: SpaceThemeMode_Banner, gradientAngle: 0, textureStrength: 0, iconStyle: SpaceIconStyle_LayeredCrest, symbolColor: null, crest: Object.freeze({ backplate: CrestBackplate_SoftShield, fieldDivision: CrestFieldDivision_Plain, ordinary: CrestOrdinary_None, trim: CrestTrim_None, symbol: CrestSymbol_BrightStar, chargeLayout: CrestChargeLayout_Single, backplateColorIndex: 2, secondaryFieldColorIndex: 0, ordinaryColorIndex: 1, trimColorIndex: 1, symbolColorIndex: 1, startingPresetId: null, edgeColorIndex: 0, palette: null, charge: null, plateScale: 1, edgeWidth: 0, divisionCount: 4, finish: CrestFinish_Flat, ordinaryWidth: 1, trimWeight: 0.75, trimDetail: 12, chargeScale: 1.21, chargeOffset: 0, chargeWeight: CrestChargeWeight_Bold, sheenAngle: 45, sealTeeth: 12, showsOutline: false, depth: CrestDepth_Figure, paletteGradients: null }), renderingVersion: 6, folderColorIntensity: 0, textColorMode: SpaceTextColorMode_Automatic, hasCustomAppearance: false, gradientKind: null, symbolGradient: null, colorGradients: Object.freeze({ slots: Object.freeze([Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.18, green: 0.294, blue: 0.408, alpha: 1 }), Object.freeze({ red: 0.353, green: 0.608, blue: 0.784, alpha: 1 })]) }), kind: null, angle: 75 })]) }) }), swatch: Object.freeze({ red: 0.29, green: 0.25, blue: 0.58, alpha: 1 }) });
+const SpaceAccent_Orange: SpaceAccent = Object.freeze({ tag: 1, name: "orange", legacyColors: Object.freeze([Object.freeze({ red: 0.85, green: 0.27, blue: 0.2, alpha: 1 }), Object.freeze({ red: 0.88, green: 0.67, blue: 0.25, alpha: 1 }), Object.freeze({ red: 0.22, green: 0.42, blue: 0.64, alpha: 1 })]), house: Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.655, green: 0.227, blue: 0.106, alpha: 1 }), Object.freeze({ red: 0.975, green: 0.83, blue: 0.42, alpha: 1 }), Object.freeze({ red: 0.789, green: 0.349, blue: 0.231, alpha: 1 })]) }), bannerPattern: SpaceBannerPattern_Solid, bannerStrength: 1, readabilityFade: 0.45, keepsControlsReadable: true, themeMode: SpaceThemeMode_Banner, gradientAngle: 0, textureStrength: 0.45, iconStyle: SpaceIconStyle_LayeredCrest, symbolColor: null, crest: Object.freeze({ backplate: CrestBackplate_Circle, fieldDivision: CrestFieldDivision_Plain, ordinary: CrestOrdinary_None, trim: CrestTrim_Sunburst, symbol: CrestSymbol_Sun, chargeLayout: CrestChargeLayout_Single, backplateColorIndex: 2, secondaryFieldColorIndex: 0, ordinaryColorIndex: 1, trimColorIndex: 1, symbolColorIndex: 1, startingPresetId: null, edgeColorIndex: 0, palette: null, charge: null, plateScale: 1, edgeWidth: 0.25, divisionCount: 4, finish: CrestFinish_Flat, ordinaryWidth: 1, trimWeight: 0.75, trimDetail: 12, chargeScale: 1.2, chargeOffset: 0, chargeWeight: CrestChargeWeight_Bold, sheenAngle: 45, sealTeeth: 12, showsOutline: false, depth: CrestDepth_Soft, paletteGradients: null }), renderingVersion: 5, folderColorIntensity: 0, textColorMode: SpaceTextColorMode_Automatic, hasCustomAppearance: false, gradientKind: null, symbolGradient: null, colorGradients: Object.freeze({ slots: Object.freeze([Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.751, green: 0.392, blue: 0.124, alpha: 1 }), Object.freeze({ red: 0.792, green: 0.533, blue: 0.245, alpha: 1 })]) }), kind: null, angle: 160 })]) }) }), swatch: Object.freeze({ red: 0.85, green: 0.27, blue: 0.2, alpha: 1 }) });
+const SpaceAccent_Teal: SpaceAccent = Object.freeze({ tag: 2, name: "teal", legacyColors: Object.freeze([Object.freeze({ red: 0.12, green: 0.49, blue: 0.52, alpha: 1 }), Object.freeze({ red: 0.22, green: 0.42, blue: 0.64, alpha: 1 }), Object.freeze({ red: 0.82, green: 0.72, blue: 0.56, alpha: 1 })]), house: Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.118, green: 0.356, blue: 0.202, alpha: 1 }), Object.freeze({ red: 0.965, green: 0.78, blue: 0.603, alpha: 1 }), Object.freeze({ red: 0.238, green: 0.469, blue: 0.308, alpha: 1 })]) }), bannerPattern: SpaceBannerPattern_Solid, bannerStrength: 1, readabilityFade: 0.45, keepsControlsReadable: true, themeMode: SpaceThemeMode_Banner, gradientAngle: 0, textureStrength: 0.2, iconStyle: SpaceIconStyle_LayeredCrest, symbolColor: null, crest: Object.freeze({ backplate: CrestBackplate_Circle, fieldDivision: CrestFieldDivision_Plain, ordinary: CrestOrdinary_None, trim: CrestTrim_Laurel, symbol: CrestSymbol_Rose, chargeLayout: CrestChargeLayout_Single, backplateColorIndex: 2, secondaryFieldColorIndex: 0, ordinaryColorIndex: 1, trimColorIndex: 1, symbolColorIndex: 1, startingPresetId: null, edgeColorIndex: 0, palette: null, charge: null, plateScale: 1, edgeWidth: 0.25, divisionCount: 4, finish: CrestFinish_Flat, ordinaryWidth: 1, trimWeight: 0.75, trimDetail: 12, chargeScale: 1.2, chargeOffset: 0, chargeWeight: CrestChargeWeight_Bold, sheenAngle: 45, sealTeeth: 12, showsOutline: false, depth: CrestDepth_Soft, paletteGradients: null }), renderingVersion: 5, folderColorIntensity: 0, textColorMode: SpaceTextColorMode_Automatic, hasCustomAppearance: false, gradientKind: null, symbolGradient: null, colorGradients: Object.freeze({ slots: Object.freeze([Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.271, green: 0.468, blue: 0.251, alpha: 1 })]) }), kind: null, angle: 90 })]) }) }), swatch: Object.freeze({ red: 0.12, green: 0.49, blue: 0.52, alpha: 1 }) });
+const SpaceAccent_Rose: SpaceAccent = Object.freeze({ tag: 3, name: "rose", legacyColors: Object.freeze([Object.freeze({ red: 0.72, green: 0.25, blue: 0.42, alpha: 1 }), Object.freeze({ red: 0.29, green: 0.25, blue: 0.58, alpha: 1 }), Object.freeze({ red: 0.82, green: 0.72, blue: 0.56, alpha: 1 })]), house: Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.433, green: 0.092, blue: 0.141, alpha: 1 }), Object.freeze({ red: 0.922, green: 0.776, blue: 0.411, alpha: 1 }), Object.freeze({ red: 0.56, green: 0.213, blue: 0.243, alpha: 1 })]) }), bannerPattern: SpaceBannerPattern_Solid, bannerStrength: 1, readabilityFade: 0.45, keepsControlsReadable: true, themeMode: SpaceThemeMode_Banner, gradientAngle: 0, textureStrength: 0, iconStyle: SpaceIconStyle_LayeredCrest, symbolColor: null, crest: Object.freeze({ backplate: CrestBackplate_Shield, fieldDivision: CrestFieldDivision_Plain, ordinary: CrestOrdinary_None, trim: CrestTrim_DoubleLine, symbol: CrestSymbol_Lion, chargeLayout: CrestChargeLayout_Single, backplateColorIndex: 2, secondaryFieldColorIndex: 0, ordinaryColorIndex: 1, trimColorIndex: 1, symbolColorIndex: 1, startingPresetId: null, edgeColorIndex: 0, palette: null, charge: null, plateScale: 1, edgeWidth: 0.25, divisionCount: 4, finish: CrestFinish_Sheen, ordinaryWidth: 1, trimWeight: 0.85, trimDetail: 12, chargeScale: 1.25, chargeOffset: 0, chargeWeight: CrestChargeWeight_Bold, sheenAngle: 45, sealTeeth: 12, showsOutline: false, depth: CrestDepth_Lifted, paletteGradients: null }), renderingVersion: 5, folderColorIntensity: 0, textColorMode: SpaceTextColorMode_Automatic, hasCustomAppearance: false, gradientKind: null, symbolGradient: null, colorGradients: Object.freeze({ slots: Object.freeze([Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.306, green: 0.053, blue: 0.179, alpha: 1 })]) }), kind: null, angle: 90 }), Object.freeze({ colors: Object.freeze({ colors: Object.freeze([Object.freeze({ red: 0.88, green: 0.603, blue: 0.273, alpha: 1 })]) }), kind: null, angle: 45 })]) }) }), swatch: Object.freeze({ red: 0.72, green: 0.25, blue: 0.42, alpha: 1 }) });
 export const SpaceAccent = Object.freeze({
     indigo: SpaceAccent_Indigo,
     orange: SpaceAccent_Orange,
@@ -3183,16 +3248,132 @@ export const MemoryPressureLevel = Object.freeze({
     },
 });
 
+/** A member of the core's `PaletteActivation`. Its wire tag is its index in `all`. */
+export interface PaletteActivation {
+    readonly tag: number;
+    readonly name: string;
+    readonly closesPalette: boolean;
+    readonly opensWhereKeysChoose: boolean;
+}
+
+const PaletteActivation_SwitchesToTab: PaletteActivation = Object.freeze({ tag: 0, name: "switchesToTab", closesPalette: true, opensWhereKeysChoose: false });
+const PaletteActivation_OpensAddress: PaletteActivation = Object.freeze({ tag: 1, name: "opensAddress", closesPalette: true, opensWhereKeysChoose: true });
+const PaletteActivation_Searches: PaletteActivation = Object.freeze({ tag: 2, name: "searches", closesPalette: true, opensWhereKeysChoose: true });
+const PaletteActivation_RunsCommand: PaletteActivation = Object.freeze({ tag: 3, name: "runsCommand", closesPalette: true, opensWhereKeysChoose: false });
+const PaletteActivation_OpensSettingsPage: PaletteActivation = Object.freeze({ tag: 4, name: "opensSettingsPage", closesPalette: true, opensWhereKeysChoose: false });
+const PaletteActivation_ShowsSpace: PaletteActivation = Object.freeze({ tag: 5, name: "showsSpace", closesPalette: true, opensWhereKeysChoose: false });
+const PaletteActivation_ReopensArchivedTab: PaletteActivation = Object.freeze({ tag: 6, name: "reopensArchivedTab", closesPalette: true, opensWhereKeysChoose: false });
+const PaletteActivation_CopiesAnswer: PaletteActivation = Object.freeze({ tag: 7, name: "copiesAnswer", closesPalette: true, opensWhereKeysChoose: false });
+const PaletteActivation_EntersScope: PaletteActivation = Object.freeze({ tag: 8, name: "entersScope", closesPalette: false, opensWhereKeysChoose: false });
+export const PaletteActivation = Object.freeze({
+    switchesToTab: PaletteActivation_SwitchesToTab,
+    opensAddress: PaletteActivation_OpensAddress,
+    searches: PaletteActivation_Searches,
+    runsCommand: PaletteActivation_RunsCommand,
+    opensSettingsPage: PaletteActivation_OpensSettingsPage,
+    showsSpace: PaletteActivation_ShowsSpace,
+    reopensArchivedTab: PaletteActivation_ReopensArchivedTab,
+    copiesAnswer: PaletteActivation_CopiesAnswer,
+    entersScope: PaletteActivation_EntersScope,
+    all: [PaletteActivation_SwitchesToTab, PaletteActivation_OpensAddress, PaletteActivation_Searches, PaletteActivation_RunsCommand, PaletteActivation_OpensSettingsPage, PaletteActivation_ShowsSpace, PaletteActivation_ReopensArchivedTab, PaletteActivation_CopiesAnswer, PaletteActivation_EntersScope] as readonly PaletteActivation[],
+    named(name: string | null | undefined): PaletteActivation | undefined {
+        return PaletteActivation.all.find(member => member.name === name);
+    },
+});
+
+/** A member of the core's `PaletteRowKind`. Its wire tag is its index in `all`. */
+export interface PaletteRowKind {
+    readonly tag: number;
+    readonly name: string;
+    readonly symbol: string;
+    readonly action: string | null;
+    readonly label: string;
+    readonly isPrimary: boolean;
+    readonly activation: PaletteActivation;
+    readonly forgetsFromHistory: boolean;
+}
+
+const PaletteRowKind_OpenAddress: PaletteRowKind = Object.freeze({ tag: 0, name: "openAddress", symbol: "globe", action: null, label: "Website", isPrimary: true, activation: PaletteActivation_OpensAddress, forgetsFromHistory: false });
+const PaletteRowKind_Search: PaletteRowKind = Object.freeze({ tag: 1, name: "search", symbol: "magnifyingglass", action: null, label: "Search", isPrimary: true, activation: PaletteActivation_Searches, forgetsFromHistory: false });
+const PaletteRowKind_SearchSuggestion: PaletteRowKind = Object.freeze({ tag: 2, name: "searchSuggestion", symbol: "magnifyingglass", action: "Search", label: "Suggestion", isPrimary: false, activation: PaletteActivation_Searches, forgetsFromHistory: false });
+const PaletteRowKind_Tab: PaletteRowKind = Object.freeze({ tag: 3, name: "tab", symbol: "rectangle.stack.fill", action: "Switch to Tab", label: "Open Tab", isPrimary: false, activation: PaletteActivation_SwitchesToTab, forgetsFromHistory: false });
+const PaletteRowKind_PinnedTab: PaletteRowKind = Object.freeze({ tag: 4, name: "pinnedTab", symbol: "pin.fill", action: "Switch to Tab", label: "Pinned", isPrimary: false, activation: PaletteActivation_SwitchesToTab, forgetsFromHistory: false });
+const PaletteRowKind_SavedTab: PaletteRowKind = Object.freeze({ tag: 5, name: "savedTab", symbol: "bookmark.fill", action: "Switch to Tab", label: "Saved", isPrimary: false, activation: PaletteActivation_SwitchesToTab, forgetsFromHistory: false });
+const PaletteRowKind_Folder: PaletteRowKind = Object.freeze({ tag: 6, name: "folder", symbol: "folder", action: "Open First Tab", label: "Folder", isPrimary: false, activation: PaletteActivation_SwitchesToTab, forgetsFromHistory: false });
+const PaletteRowKind_Command: PaletteRowKind = Object.freeze({ tag: 7, name: "command", symbol: "command", action: null, label: "Action", isPrimary: false, activation: PaletteActivation_RunsCommand, forgetsFromHistory: false });
+const PaletteRowKind_History: PaletteRowKind = Object.freeze({ tag: 8, name: "history", symbol: "clock", action: "Open", label: "History", isPrimary: false, activation: PaletteActivation_OpensAddress, forgetsFromHistory: true });
+const PaletteRowKind_Space: PaletteRowKind = Object.freeze({ tag: 9, name: "space", symbol: "square.stack", action: "Switch to Space", label: "Space", isPrimary: false, activation: PaletteActivation_ShowsSpace, forgetsFromHistory: false });
+const PaletteRowKind_ArchivedTab: PaletteRowKind = Object.freeze({ tag: 10, name: "archivedTab", symbol: "archivebox", action: "Reopen", label: "Archived", isPrimary: false, activation: PaletteActivation_ReopensArchivedTab, forgetsFromHistory: false });
+const PaletteRowKind_SettingsPage: PaletteRowKind = Object.freeze({ tag: 11, name: "settingsPage", symbol: "gearshape", action: "Open Settings", label: "Settings", isPrimary: false, activation: PaletteActivation_OpensSettingsPage, forgetsFromHistory: false });
+const PaletteRowKind_Calculation: PaletteRowKind = Object.freeze({ tag: 12, name: "calculation", symbol: "equal", action: "Copy", label: "Calculator", isPrimary: true, activation: PaletteActivation_CopiesAnswer, forgetsFromHistory: false });
+const PaletteRowKind_PasteAndGo: PaletteRowKind = Object.freeze({ tag: 13, name: "pasteAndGo", symbol: "doc.on.clipboard", action: null, label: "Clipboard", isPrimary: true, activation: PaletteActivation_OpensAddress, forgetsFromHistory: false });
+const PaletteRowKind_Scope: PaletteRowKind = Object.freeze({ tag: 14, name: "scope", symbol: "line.3.horizontal.decrease", action: "Search", label: "Scope", isPrimary: false, activation: PaletteActivation_EntersScope, forgetsFromHistory: false });
+export const PaletteRowKind = Object.freeze({
+    openAddress: PaletteRowKind_OpenAddress,
+    search: PaletteRowKind_Search,
+    searchSuggestion: PaletteRowKind_SearchSuggestion,
+    tab: PaletteRowKind_Tab,
+    pinnedTab: PaletteRowKind_PinnedTab,
+    savedTab: PaletteRowKind_SavedTab,
+    folder: PaletteRowKind_Folder,
+    command: PaletteRowKind_Command,
+    history: PaletteRowKind_History,
+    space: PaletteRowKind_Space,
+    archivedTab: PaletteRowKind_ArchivedTab,
+    settingsPage: PaletteRowKind_SettingsPage,
+    calculation: PaletteRowKind_Calculation,
+    pasteAndGo: PaletteRowKind_PasteAndGo,
+    scope: PaletteRowKind_Scope,
+    all: [PaletteRowKind_OpenAddress, PaletteRowKind_Search, PaletteRowKind_SearchSuggestion, PaletteRowKind_Tab, PaletteRowKind_PinnedTab, PaletteRowKind_SavedTab, PaletteRowKind_Folder, PaletteRowKind_Command, PaletteRowKind_History, PaletteRowKind_Space, PaletteRowKind_ArchivedTab, PaletteRowKind_SettingsPage, PaletteRowKind_Calculation, PaletteRowKind_PasteAndGo, PaletteRowKind_Scope] as readonly PaletteRowKind[],
+    named(name: string | null | undefined): PaletteRowKind | undefined {
+        return PaletteRowKind.all.find(member => member.name === name);
+    },
+});
+
+/** A member of the core's `TabPlacement`. Its wire tag is its index in `all`. */
+export interface TabPlacement {
+    readonly tag: number;
+    readonly name: string;
+    readonly title: string;
+    readonly symbol: string;
+    readonly rank: number;
+    readonly fallbackRank: number;
+    readonly isDurable: boolean;
+    readonly holdsFolders: boolean;
+    readonly holdsSplits: boolean;
+    readonly isCollapsible: boolean;
+    readonly capacity: number | null;
+    readonly importedSymbol: string | null;
+    readonly isGrid: boolean;
+    readonly paletteRow: PaletteRowKind;
+}
+
+const TabPlacement_Pinned: TabPlacement = Object.freeze({ tag: 0, name: "pinned", title: "Pinned", symbol: "pin.fill", rank: 0, fallbackRank: 1, isDurable: true, holdsFolders: false, holdsSplits: false, isCollapsible: false, capacity: 12, importedSymbol: "pin.fill", isGrid: true, paletteRow: PaletteRowKind_PinnedTab });
+const TabPlacement_Saved: TabPlacement = Object.freeze({ tag: 1, name: "saved", title: "Saved", symbol: "bookmark.fill", rank: 1, fallbackRank: 2, isDurable: true, holdsFolders: true, holdsSplits: true, isCollapsible: true, capacity: null, importedSymbol: null, isGrid: false, paletteRow: PaletteRowKind_SavedTab });
+const TabPlacement_Current: TabPlacement = Object.freeze({ tag: 2, name: "current", title: "Open", symbol: "rectangle.stack.fill", rank: 2, fallbackRank: 0, isDurable: false, holdsFolders: true, holdsSplits: true, isCollapsible: false, capacity: null, importedSymbol: null, isGrid: false, paletteRow: PaletteRowKind_Tab });
+export const TabPlacement = Object.freeze({
+    pinnedCapacity: 12,
+    pinned: TabPlacement_Pinned,
+    saved: TabPlacement_Saved,
+    current: TabPlacement_Current,
+    all: [TabPlacement_Pinned, TabPlacement_Saved, TabPlacement_Current] as readonly TabPlacement[],
+    named(name: string | null | undefined): TabPlacement | undefined {
+        return TabPlacement.all.find(member => member.name === name);
+    },
+});
+
 /** A member of the core's `NativeView`. Its wire tag is its index in `all`. */
 export interface NativeView {
     readonly tag: number;
     readonly name: string;
     readonly title: string;
     readonly symbol: string;
+    readonly placement: TabPlacement;
+    readonly opensOnce: boolean;
 }
 
-const NativeView_Settings: NativeView = Object.freeze({ tag: 0, name: "settings", title: "Settings", symbol: "gearshape.fill" });
-const NativeView_GettingStarted: NativeView = Object.freeze({ tag: 1, name: "getting-started", title: "Getting Started", symbol: "book.closed.fill" });
+const NativeView_Settings: NativeView = Object.freeze({ tag: 0, name: "settings", title: "Settings", symbol: "gearshape.fill", placement: TabPlacement_Current, opensOnce: true });
+const NativeView_GettingStarted: NativeView = Object.freeze({ tag: 1, name: "getting-started", title: "Getting Started", symbol: "book.closed.fill", placement: TabPlacement_Saved, opensOnce: true });
 export const NativeView = Object.freeze({
     settings: NativeView_Settings,
     gettingStarted: NativeView_GettingStarted,
@@ -3347,6 +3528,25 @@ export const PagePresentation = Object.freeze({
     },
 });
 
+/** A member of the core's `PageResourceKind`. Its wire tag is its index in `all`. */
+export interface PageResourceKind {
+    readonly tag: number;
+    readonly name: string;
+}
+
+const PageResourceKind_Frame: PageResourceKind = Object.freeze({ tag: 0, name: "frame" });
+const PageResourceKind_Image: PageResourceKind = Object.freeze({ tag: 1, name: "image" });
+const PageResourceKind_Object: PageResourceKind = Object.freeze({ tag: 2, name: "object" });
+export const PageResourceKind = Object.freeze({
+    frame: PageResourceKind_Frame,
+    image: PageResourceKind_Image,
+    object: PageResourceKind_Object,
+    all: [PageResourceKind_Frame, PageResourceKind_Image, PageResourceKind_Object] as readonly PageResourceKind[],
+    named(name: string | null | undefined): PageResourceKind | undefined {
+        return PageResourceKind.all.find(member => member.name === name);
+    },
+});
+
 /** A member of the core's `PageSecurity`. Its wire tag is its index in `all`. */
 export interface PageSecurity {
     readonly tag: number;
@@ -3374,39 +3574,6 @@ export const PageSecurity = Object.freeze({
     all: [PageSecurity_None, PageSecurity_Insecure, PageSecurity_Secure, PageSecurity_MixedContent, PageSecurity_CertificateError, PageSecurity_Dangerous] as readonly PageSecurity[],
     named(name: string | null | undefined): PageSecurity | undefined {
         return PageSecurity.all.find(member => member.name === name);
-    },
-});
-
-/** A member of the core's `PaletteActivation`. Its wire tag is its index in `all`. */
-export interface PaletteActivation {
-    readonly tag: number;
-    readonly name: string;
-    readonly closesPalette: boolean;
-    readonly opensWhereKeysChoose: boolean;
-}
-
-const PaletteActivation_SwitchesToTab: PaletteActivation = Object.freeze({ tag: 0, name: "switchesToTab", closesPalette: true, opensWhereKeysChoose: false });
-const PaletteActivation_OpensAddress: PaletteActivation = Object.freeze({ tag: 1, name: "opensAddress", closesPalette: true, opensWhereKeysChoose: true });
-const PaletteActivation_Searches: PaletteActivation = Object.freeze({ tag: 2, name: "searches", closesPalette: true, opensWhereKeysChoose: true });
-const PaletteActivation_RunsCommand: PaletteActivation = Object.freeze({ tag: 3, name: "runsCommand", closesPalette: true, opensWhereKeysChoose: false });
-const PaletteActivation_OpensSettingsPage: PaletteActivation = Object.freeze({ tag: 4, name: "opensSettingsPage", closesPalette: true, opensWhereKeysChoose: false });
-const PaletteActivation_ShowsSpace: PaletteActivation = Object.freeze({ tag: 5, name: "showsSpace", closesPalette: true, opensWhereKeysChoose: false });
-const PaletteActivation_ReopensArchivedTab: PaletteActivation = Object.freeze({ tag: 6, name: "reopensArchivedTab", closesPalette: true, opensWhereKeysChoose: false });
-const PaletteActivation_CopiesAnswer: PaletteActivation = Object.freeze({ tag: 7, name: "copiesAnswer", closesPalette: true, opensWhereKeysChoose: false });
-const PaletteActivation_EntersScope: PaletteActivation = Object.freeze({ tag: 8, name: "entersScope", closesPalette: false, opensWhereKeysChoose: false });
-export const PaletteActivation = Object.freeze({
-    switchesToTab: PaletteActivation_SwitchesToTab,
-    opensAddress: PaletteActivation_OpensAddress,
-    searches: PaletteActivation_Searches,
-    runsCommand: PaletteActivation_RunsCommand,
-    opensSettingsPage: PaletteActivation_OpensSettingsPage,
-    showsSpace: PaletteActivation_ShowsSpace,
-    reopensArchivedTab: PaletteActivation_ReopensArchivedTab,
-    copiesAnswer: PaletteActivation_CopiesAnswer,
-    entersScope: PaletteActivation_EntersScope,
-    all: [PaletteActivation_SwitchesToTab, PaletteActivation_OpensAddress, PaletteActivation_Searches, PaletteActivation_RunsCommand, PaletteActivation_OpensSettingsPage, PaletteActivation_ShowsSpace, PaletteActivation_ReopensArchivedTab, PaletteActivation_CopiesAnswer, PaletteActivation_EntersScope] as readonly PaletteActivation[],
-    named(name: string | null | undefined): PaletteActivation | undefined {
-        return PaletteActivation.all.find(member => member.name === name);
     },
 });
 
@@ -3456,55 +3623,6 @@ export const PaletteReason = Object.freeze({
     all: [PaletteReason_Completion, PaletteReason_Learned, PaletteReason_OftenVisited, PaletteReason_RecentlyUsed, PaletteReason_OpenTab, PaletteReason_Kept, PaletteReason_TitleMatch, PaletteReason_AddressMatch] as readonly PaletteReason[],
     named(name: string | null | undefined): PaletteReason | undefined {
         return PaletteReason.all.find(member => member.name === name);
-    },
-});
-
-/** A member of the core's `PaletteRowKind`. Its wire tag is its index in `all`. */
-export interface PaletteRowKind {
-    readonly tag: number;
-    readonly name: string;
-    readonly symbol: string;
-    readonly action: string | null;
-    readonly label: string;
-    readonly isPrimary: boolean;
-    readonly activation: PaletteActivation;
-    readonly forgetsFromHistory: boolean;
-}
-
-const PaletteRowKind_OpenAddress: PaletteRowKind = Object.freeze({ tag: 0, name: "openAddress", symbol: "globe", action: null, label: "Website", isPrimary: true, activation: PaletteActivation_OpensAddress, forgetsFromHistory: false });
-const PaletteRowKind_Search: PaletteRowKind = Object.freeze({ tag: 1, name: "search", symbol: "magnifyingglass", action: null, label: "Search", isPrimary: true, activation: PaletteActivation_Searches, forgetsFromHistory: false });
-const PaletteRowKind_SearchSuggestion: PaletteRowKind = Object.freeze({ tag: 2, name: "searchSuggestion", symbol: "magnifyingglass", action: "Search", label: "Suggestion", isPrimary: false, activation: PaletteActivation_Searches, forgetsFromHistory: false });
-const PaletteRowKind_Tab: PaletteRowKind = Object.freeze({ tag: 3, name: "tab", symbol: "globe", action: "Switch to Tab", label: "Open Tab", isPrimary: false, activation: PaletteActivation_SwitchesToTab, forgetsFromHistory: false });
-const PaletteRowKind_PinnedTab: PaletteRowKind = Object.freeze({ tag: 4, name: "pinnedTab", symbol: "pin.fill", action: "Switch to Tab", label: "Pinned", isPrimary: false, activation: PaletteActivation_SwitchesToTab, forgetsFromHistory: false });
-const PaletteRowKind_SavedTab: PaletteRowKind = Object.freeze({ tag: 5, name: "savedTab", symbol: "bookmark", action: "Switch to Tab", label: "Saved", isPrimary: false, activation: PaletteActivation_SwitchesToTab, forgetsFromHistory: false });
-const PaletteRowKind_Folder: PaletteRowKind = Object.freeze({ tag: 6, name: "folder", symbol: "folder", action: "Open First Tab", label: "Folder", isPrimary: false, activation: PaletteActivation_SwitchesToTab, forgetsFromHistory: false });
-const PaletteRowKind_Command: PaletteRowKind = Object.freeze({ tag: 7, name: "command", symbol: "command", action: null, label: "Action", isPrimary: false, activation: PaletteActivation_RunsCommand, forgetsFromHistory: false });
-const PaletteRowKind_History: PaletteRowKind = Object.freeze({ tag: 8, name: "history", symbol: "clock", action: "Open", label: "History", isPrimary: false, activation: PaletteActivation_OpensAddress, forgetsFromHistory: true });
-const PaletteRowKind_Space: PaletteRowKind = Object.freeze({ tag: 9, name: "space", symbol: "square.stack", action: "Switch to Space", label: "Space", isPrimary: false, activation: PaletteActivation_ShowsSpace, forgetsFromHistory: false });
-const PaletteRowKind_ArchivedTab: PaletteRowKind = Object.freeze({ tag: 10, name: "archivedTab", symbol: "archivebox", action: "Reopen", label: "Archived", isPrimary: false, activation: PaletteActivation_ReopensArchivedTab, forgetsFromHistory: false });
-const PaletteRowKind_SettingsPage: PaletteRowKind = Object.freeze({ tag: 11, name: "settingsPage", symbol: "gearshape", action: "Open Settings", label: "Settings", isPrimary: false, activation: PaletteActivation_OpensSettingsPage, forgetsFromHistory: false });
-const PaletteRowKind_Calculation: PaletteRowKind = Object.freeze({ tag: 12, name: "calculation", symbol: "equal", action: "Copy", label: "Calculator", isPrimary: true, activation: PaletteActivation_CopiesAnswer, forgetsFromHistory: false });
-const PaletteRowKind_PasteAndGo: PaletteRowKind = Object.freeze({ tag: 13, name: "pasteAndGo", symbol: "doc.on.clipboard", action: null, label: "Clipboard", isPrimary: true, activation: PaletteActivation_OpensAddress, forgetsFromHistory: false });
-const PaletteRowKind_Scope: PaletteRowKind = Object.freeze({ tag: 14, name: "scope", symbol: "line.3.horizontal.decrease", action: "Search", label: "Scope", isPrimary: false, activation: PaletteActivation_EntersScope, forgetsFromHistory: false });
-export const PaletteRowKind = Object.freeze({
-    openAddress: PaletteRowKind_OpenAddress,
-    search: PaletteRowKind_Search,
-    searchSuggestion: PaletteRowKind_SearchSuggestion,
-    tab: PaletteRowKind_Tab,
-    pinnedTab: PaletteRowKind_PinnedTab,
-    savedTab: PaletteRowKind_SavedTab,
-    folder: PaletteRowKind_Folder,
-    command: PaletteRowKind_Command,
-    history: PaletteRowKind_History,
-    space: PaletteRowKind_Space,
-    archivedTab: PaletteRowKind_ArchivedTab,
-    settingsPage: PaletteRowKind_SettingsPage,
-    calculation: PaletteRowKind_Calculation,
-    pasteAndGo: PaletteRowKind_PasteAndGo,
-    scope: PaletteRowKind_Scope,
-    all: [PaletteRowKind_OpenAddress, PaletteRowKind_Search, PaletteRowKind_SearchSuggestion, PaletteRowKind_Tab, PaletteRowKind_PinnedTab, PaletteRowKind_SavedTab, PaletteRowKind_Folder, PaletteRowKind_Command, PaletteRowKind_History, PaletteRowKind_Space, PaletteRowKind_ArchivedTab, PaletteRowKind_SettingsPage, PaletteRowKind_Calculation, PaletteRowKind_PasteAndGo, PaletteRowKind_Scope] as readonly PaletteRowKind[],
-    named(name: string | null | undefined): PaletteRowKind | undefined {
-        return PaletteRowKind.all.find(member => member.name === name);
     },
 });
 
@@ -3558,20 +3676,21 @@ export interface PaletteSource {
     readonly isEnabledByDefault: boolean;
     readonly restingSection: PaletteSection | null;
     readonly defaultLimit: number;
+    readonly isArranged: boolean;
 }
 
-const PaletteSource_RecentTabs: PaletteSource = Object.freeze({ tag: 0, name: "recentTabs", title: "Recent Tabs", detail: null, section: PaletteSection_RecentTabs, isSection: true, isEnabledByDefault: true, restingSection: PaletteSection_RecentTabs, defaultLimit: 5 });
-const PaletteSource_OpenTabs: PaletteSource = Object.freeze({ tag: 1, name: "openTabs", title: "Open Tabs", detail: null, section: PaletteSection_Tabs, isSection: true, isEnabledByDefault: true, restingSection: null, defaultLimit: 8 });
-const PaletteSource_Saved: PaletteSource = Object.freeze({ tag: 2, name: "saved", title: "Pinned & Saved", detail: null, section: PaletteSection_Saved, isSection: true, isEnabledByDefault: true, restingSection: null, defaultLimit: 5 });
-const PaletteSource_History: PaletteSource = Object.freeze({ tag: 3, name: "history", title: "History", detail: null, section: PaletteSection_History, isSection: true, isEnabledByDefault: true, restingSection: null, defaultLimit: 6 });
-const PaletteSource_Actions: PaletteSource = Object.freeze({ tag: 4, name: "actions", title: "Actions", detail: null, section: PaletteSection_Actions, isSection: true, isEnabledByDefault: true, restingSection: PaletteSection_Actions, defaultLimit: 3 });
-const PaletteSource_Spaces: PaletteSource = Object.freeze({ tag: 5, name: "spaces", title: "Spaces", detail: null, section: PaletteSection_Spaces, isSection: true, isEnabledByDefault: true, restingSection: null, defaultLimit: 2 });
-const PaletteSource_ArchivedTabs: PaletteSource = Object.freeze({ tag: 6, name: "archivedTabs", title: "Archived Tabs", detail: null, section: PaletteSection_Archived, isSection: true, isEnabledByDefault: false, restingSection: null, defaultLimit: 3 });
-const PaletteSource_Suggestions: PaletteSource = Object.freeze({ tag: 7, name: "suggestions", title: "Search Suggestions", detail: null, section: PaletteSection_SearchSuggestions, isSection: true, isEnabledByDefault: true, restingSection: null, defaultLimit: 3 });
-const PaletteSource_SettingsPages: PaletteSource = Object.freeze({ tag: 8, name: "settingsPages", title: "Settings Pages", detail: "Finds Settings pages by name.", section: PaletteSection_Actions, isSection: false, isEnabledByDefault: true, restingSection: null, defaultLimit: 3 });
-const PaletteSource_Scopes: PaletteSource = Object.freeze({ tag: 9, name: "scopes", title: "@ Filters", detail: "Type @tabs, @saved, @history, @actions or @spaces, then a space or Tab, to show only that kind.", section: PaletteSection_Intent, isSection: false, isEnabledByDefault: true, restingSection: null, defaultLimit: 2 });
-const PaletteSource_Calculator: PaletteSource = Object.freeze({ tag: 10, name: "calculator", title: "Calculator", detail: "Answers arithmetic such as 24 * 7. Return copies the answer.", section: PaletteSection_TopHit, isSection: false, isEnabledByDefault: true, restingSection: null, defaultLimit: 1 });
-const PaletteSource_PasteAndGo: PaletteSource = Object.freeze({ tag: 11, name: "pasteAndGo", title: "Paste and Go", detail: "Offers the address you copied when the palette opens.", section: PaletteSection_Intent, isSection: false, isEnabledByDefault: false, restingSection: null, defaultLimit: 2 });
+const PaletteSource_RecentTabs: PaletteSource = Object.freeze({ tag: 0, name: "recentTabs", title: "Recent Tabs", detail: null, section: PaletteSection_RecentTabs, isSection: true, isEnabledByDefault: true, restingSection: PaletteSection_RecentTabs, defaultLimit: 5, isArranged: true });
+const PaletteSource_OpenTabs: PaletteSource = Object.freeze({ tag: 1, name: "openTabs", title: "Open Tabs", detail: null, section: PaletteSection_Tabs, isSection: true, isEnabledByDefault: true, restingSection: null, defaultLimit: 8, isArranged: true });
+const PaletteSource_Saved: PaletteSource = Object.freeze({ tag: 2, name: "saved", title: "Pinned & Saved", detail: null, section: PaletteSection_Saved, isSection: true, isEnabledByDefault: true, restingSection: null, defaultLimit: 5, isArranged: true });
+const PaletteSource_History: PaletteSource = Object.freeze({ tag: 3, name: "history", title: "History", detail: null, section: PaletteSection_History, isSection: true, isEnabledByDefault: true, restingSection: null, defaultLimit: 6, isArranged: true });
+const PaletteSource_Actions: PaletteSource = Object.freeze({ tag: 4, name: "actions", title: "Actions", detail: null, section: PaletteSection_Actions, isSection: true, isEnabledByDefault: true, restingSection: PaletteSection_Actions, defaultLimit: 3, isArranged: true });
+const PaletteSource_Spaces: PaletteSource = Object.freeze({ tag: 5, name: "spaces", title: "Spaces", detail: null, section: PaletteSection_Spaces, isSection: true, isEnabledByDefault: true, restingSection: null, defaultLimit: 2, isArranged: true });
+const PaletteSource_ArchivedTabs: PaletteSource = Object.freeze({ tag: 6, name: "archivedTabs", title: "Archived Tabs", detail: null, section: PaletteSection_Archived, isSection: true, isEnabledByDefault: false, restingSection: null, defaultLimit: 3, isArranged: true });
+const PaletteSource_Suggestions: PaletteSource = Object.freeze({ tag: 7, name: "suggestions", title: "Search Suggestions", detail: null, section: PaletteSection_SearchSuggestions, isSection: true, isEnabledByDefault: true, restingSection: null, defaultLimit: 3, isArranged: false });
+const PaletteSource_SettingsPages: PaletteSource = Object.freeze({ tag: 8, name: "settingsPages", title: "Settings Pages", detail: "Finds Settings pages by name.", section: PaletteSection_Actions, isSection: false, isEnabledByDefault: true, restingSection: null, defaultLimit: 3, isArranged: false });
+const PaletteSource_Scopes: PaletteSource = Object.freeze({ tag: 9, name: "scopes", title: "@ Filters", detail: "Type @tabs, @saved, @history, @actions or @spaces, then a space or Tab, to show only that kind.", section: PaletteSection_Intent, isSection: false, isEnabledByDefault: true, restingSection: null, defaultLimit: 2, isArranged: false });
+const PaletteSource_Calculator: PaletteSource = Object.freeze({ tag: 10, name: "calculator", title: "Calculator", detail: "Answers arithmetic such as 24 * 7. Return copies the answer.", section: PaletteSection_TopHit, isSection: false, isEnabledByDefault: true, restingSection: null, defaultLimit: 1, isArranged: false });
+const PaletteSource_PasteAndGo: PaletteSource = Object.freeze({ tag: 11, name: "pasteAndGo", title: "Paste and Go", detail: "Offers the address you copied when the palette opens.", section: PaletteSection_Intent, isSection: false, isEnabledByDefault: false, restingSection: null, defaultLimit: 2, isArranged: false });
 export const PaletteSource = Object.freeze({
     recentTabs: PaletteSource_RecentTabs,
     openTabs: PaletteSource_OpenTabs,
@@ -3602,7 +3721,7 @@ export interface PaletteScope {
 }
 
 const PaletteScope_Tabs: PaletteScope = Object.freeze({ tag: 0, name: "tabs", keyword: "@tabs", title: "Tabs", symbol: "square.on.square", source: PaletteSource_OpenTabs });
-const PaletteScope_Saved: PaletteScope = Object.freeze({ tag: 1, name: "saved", keyword: "@saved", title: "Pinned & Saved", symbol: "pin", source: PaletteSource_Saved });
+const PaletteScope_Saved: PaletteScope = Object.freeze({ tag: 1, name: "saved", keyword: "@saved", title: "Pinned & Saved", symbol: "pin.fill", source: PaletteSource_Saved });
 const PaletteScope_History: PaletteScope = Object.freeze({ tag: 2, name: "history", keyword: "@history", title: "History", symbol: "clock", source: PaletteSource_History });
 const PaletteScope_Actions: PaletteScope = Object.freeze({ tag: 3, name: "actions", keyword: "@actions", title: "Actions", symbol: "command", source: PaletteSource_Actions });
 const PaletteScope_Spaces: PaletteScope = Object.freeze({ tag: 4, name: "spaces", keyword: "@spaces", title: "Spaces", symbol: "square.stack", source: PaletteSource_Spaces });
@@ -3688,38 +3807,6 @@ export const PasskeyDeviceConfiguration = Object.freeze({
     all: [PasskeyDeviceConfiguration_Configured, PasskeyDeviceConfiguration_NotConfigured, PasskeyDeviceConfiguration_Unknown] as readonly PasskeyDeviceConfiguration[],
     named(name: string | null | undefined): PasskeyDeviceConfiguration | undefined {
         return PasskeyDeviceConfiguration.all.find(member => member.name === name);
-    },
-});
-
-/** A member of the core's `TabPlacement`. Its wire tag is its index in `all`. */
-export interface TabPlacement {
-    readonly tag: number;
-    readonly name: string;
-    readonly title: string;
-    readonly symbol: string;
-    readonly rank: number;
-    readonly fallbackRank: number;
-    readonly isDurable: boolean;
-    readonly holdsFolders: boolean;
-    readonly holdsSplits: boolean;
-    readonly isCollapsible: boolean;
-    readonly capacity: number | null;
-    readonly importedSymbol: string | null;
-    readonly isGrid: boolean;
-    readonly paletteRow: PaletteRowKind;
-}
-
-const TabPlacement_Pinned: TabPlacement = Object.freeze({ tag: 0, name: "pinned", title: "Pinned", symbol: "pin.fill", rank: 0, fallbackRank: 1, isDurable: true, holdsFolders: false, holdsSplits: false, isCollapsible: false, capacity: 12, importedSymbol: "pin.fill", isGrid: true, paletteRow: PaletteRowKind_PinnedTab });
-const TabPlacement_Saved: TabPlacement = Object.freeze({ tag: 1, name: "saved", title: "Saved", symbol: "bookmark.fill", rank: 1, fallbackRank: 2, isDurable: true, holdsFolders: true, holdsSplits: true, isCollapsible: true, capacity: null, importedSymbol: null, isGrid: false, paletteRow: PaletteRowKind_SavedTab });
-const TabPlacement_Current: TabPlacement = Object.freeze({ tag: 2, name: "current", title: "Open", symbol: "rectangle.stack.fill", rank: 2, fallbackRank: 0, isDurable: false, holdsFolders: true, holdsSplits: true, isCollapsible: false, capacity: null, importedSymbol: null, isGrid: false, paletteRow: PaletteRowKind_Tab });
-export const TabPlacement = Object.freeze({
-    pinnedCapacity: 12,
-    pinned: TabPlacement_Pinned,
-    saved: TabPlacement_Saved,
-    current: TabPlacement_Current,
-    all: [TabPlacement_Pinned, TabPlacement_Saved, TabPlacement_Current] as readonly TabPlacement[],
-    named(name: string | null | undefined): TabPlacement | undefined {
-        return TabPlacement.all.find(member => member.name === name);
     },
 });
 
@@ -3967,32 +4054,19 @@ export const SetupFailureReason = Object.freeze({
     },
 });
 
-export enum SetupLookKinds {
-    Heraldic = "Heraldic",
-    Modern = "Modern",
-    Simple = "Simple",
-}
-
 /** A member of the core's `SetupLook`. Its wire tag is its index in `all`. */
 export interface SetupLook {
     readonly tag: number;
-    readonly kind: SetupLookKinds;
     readonly name: string;
     readonly title: string;
     readonly themeMode: SpaceThemeMode;
     readonly iconStyle: SpaceIconStyle;
-    readonly gradientAngle: number | null;
-    readonly tint: number | null;
 }
 
-const SetupLook_Heraldic: SetupLook = Object.freeze({ tag: 0, kind: SetupLookKinds.Heraldic, name: "heraldic", title: "Heraldic (Full)", themeMode: SpaceThemeMode_Banner, iconStyle: SpaceIconStyle_LayeredCrest, gradientAngle: null, tint: null });
-const SetupLook_Modern: SetupLook = Object.freeze({ tag: 1, kind: SetupLookKinds.Modern, name: "modern", title: "Modern", themeMode: SpaceThemeMode_Gradient, iconStyle: SpaceIconStyle_SimpleSymbol, gradientAngle: 90, tint: null });
-const SetupLook_Simple: SetupLook = Object.freeze({ tag: 2, kind: SetupLookKinds.Simple, name: "simple", title: "Simple", themeMode: SpaceThemeMode_Gradient, iconStyle: SpaceIconStyle_SimpleSymbol, gradientAngle: 0, tint: 1 });
+const SetupLook_Heraldic: SetupLook = Object.freeze({ tag: 0, name: "heraldic", title: "Heraldic (Full)", themeMode: SpaceThemeMode_Banner, iconStyle: SpaceIconStyle_LayeredCrest });
 export const SetupLook = Object.freeze({
     heraldic: SetupLook_Heraldic,
-    modern: SetupLook_Modern,
-    simple: SetupLook_Simple,
-    all: [SetupLook_Heraldic, SetupLook_Modern, SetupLook_Simple] as readonly SetupLook[],
+    all: [SetupLook_Heraldic] as readonly SetupLook[],
     named(name: string | null | undefined): SetupLook | undefined {
         return SetupLook.all.find(member => member.name === name);
     },
@@ -4028,12 +4102,12 @@ export interface ShortcutMenu {
     readonly groups: readonly (readonly ShortcutCommand[])[];
 }
 
-const ShortcutMenu_File: ShortcutMenu = Object.freeze({ tag: 0, name: "file", title: "File", groups: Object.freeze([Object.freeze([ShortcutCommand_NewWindow, ShortcutCommand_NewBlankWindow, ShortcutCommand_NewTab, ShortcutCommand_NewQuickWindow, ShortcutCommand_NewPrivateWindow]), Object.freeze([ShortcutCommand_OpenFile]), Object.freeze([ShortcutCommand_CloseTabOrWindow, ShortcutCommand_CloseWindow]), Object.freeze([ShortcutCommand_PrintPage])]) });
+const ShortcutMenu_File: ShortcutMenu = Object.freeze({ tag: 0, name: "file", title: "File", groups: Object.freeze([Object.freeze([ShortcutCommand_NewWindow, ShortcutCommand_NewBlankWindow, ShortcutCommand_NewTab, ShortcutCommand_NewQuickWindow, ShortcutCommand_NewPrivateWindow, ShortcutCommand_OpenPageInPrivateWindow]), Object.freeze([ShortcutCommand_OpenFile]), Object.freeze([ShortcutCommand_CloseTabOrWindow, ShortcutCommand_CloseWindow]), Object.freeze([ShortcutCommand_PrintPage])]) });
 const ShortcutMenu_View: ShortcutMenu = Object.freeze({ tag: 1, name: "view", title: "View", groups: Object.freeze([Object.freeze([ShortcutCommand_ToggleSidebar, ShortcutCommand_CollapseAllFolders, ShortcutCommand_ToggleTranslationToolbar]), Object.freeze([ShortcutCommand_ShowHistory, ShortcutCommand_ShowArchive, ShortcutCommand_ShowDownloads])]) });
 const ShortcutMenu_Navigate: ShortcutMenu = Object.freeze({ tag: 2, name: "navigate", title: "Navigate", groups: Object.freeze([Object.freeze([ShortcutCommand_OpenLocation]), Object.freeze([ShortcutCommand_Back, ShortcutCommand_Forward, ShortcutCommand_ReloadPage, ShortcutCommand_StopLoading, ShortcutCommand_ReloadFromOrigin])]) });
 const ShortcutMenu_Tabs: ShortcutMenu = Object.freeze({ tag: 3, name: "tabs", title: "Tabs", groups: Object.freeze([Object.freeze([ShortcutCommand_ToggleSelectedTabPinned, ShortcutCommand_ToggleSelectedTabSaved, ShortcutCommand_DuplicateTab, ShortcutCommand_ReopenClosedTab, ShortcutCommand_ClearOtherTabs, ShortcutCommand_ClearAllTabs, ShortcutCommand_ArchiveTab]), Object.freeze([ShortcutCommand_PreviousTab, ShortcutCommand_NextTab, ShortcutCommand_MostRecentTab, ShortcutCommand_MostRecentTabBackward]), Object.freeze([ShortcutCommand_SplitWithNextTab, ShortcutCommand_FocusNextSplitCard, ShortcutCommand_FocusPreviousSplitCard, ShortcutCommand_MoveSplitCardLeft, ShortcutCommand_MoveSplitCardRight, ShortcutCommand_RemoveTabFromSplit, ShortcutCommand_SeparateSplitTabs]), Object.freeze([ShortcutCommand_SelectTab1, ShortcutCommand_SelectTab2, ShortcutCommand_SelectTab3, ShortcutCommand_SelectTab4, ShortcutCommand_SelectTab5, ShortcutCommand_SelectTab6, ShortcutCommand_SelectTab7, ShortcutCommand_SelectTab8, ShortcutCommand_SelectTab9])]) });
 const ShortcutMenu_Spaces: ShortcutMenu = Object.freeze({ tag: 4, name: "spaces", title: "Spaces", groups: Object.freeze([Object.freeze([ShortcutCommand_PreviousSpace, ShortcutCommand_NextSpace]), Object.freeze([ShortcutCommand_SelectSpace1, ShortcutCommand_SelectSpace2, ShortcutCommand_SelectSpace3, ShortcutCommand_SelectSpace4, ShortcutCommand_SelectSpace5, ShortcutCommand_SelectSpace6, ShortcutCommand_SelectSpace7, ShortcutCommand_SelectSpace8, ShortcutCommand_SelectSpace9])]) });
-const ShortcutMenu_Page: ShortcutMenu = Object.freeze({ tag: 5, name: "page", title: "Page", groups: Object.freeze([Object.freeze([ShortcutCommand_ToggleReaderMode, ShortcutCommand_ToggleContentBlocking, ShortcutCommand_BlockElement, ShortcutCommand_ShowBlockedElements]), Object.freeze([ShortcutCommand_OpenNextExtension]), Object.freeze([ShortcutCommand_FindInPage, ShortcutCommand_FindNext, ShortcutCommand_FindPrevious]), Object.freeze([ShortcutCommand_ZoomIn, ShortcutCommand_ZoomOut, ShortcutCommand_ActualSize]), Object.freeze([ShortcutCommand_CopyPageLink, ShortcutCommand_CopyPageLinkAsMarkdown, ShortcutCommand_SharePage, ShortcutCommand_ExportPDF, ShortcutCommand_SaveWebArchive, ShortcutCommand_CapturePage]), Object.freeze([ShortcutCommand_ClearSiteCookies, ShortcutCommand_ClearSiteCache])]) });
+const ShortcutMenu_Page: ShortcutMenu = Object.freeze({ tag: 5, name: "page", title: "Page", groups: Object.freeze([Object.freeze([ShortcutCommand_ToggleReaderMode, ShortcutCommand_ToggleContentBlocking, ShortcutCommand_BlockElement, ShortcutCommand_ShowBlockedElements]), Object.freeze([ShortcutCommand_OpenNextExtension]), Object.freeze([ShortcutCommand_FindInPage, ShortcutCommand_FindNext, ShortcutCommand_FindPrevious]), Object.freeze([ShortcutCommand_ZoomIn, ShortcutCommand_ZoomOut, ShortcutCommand_ActualSize]), Object.freeze([ShortcutCommand_CopyPageLink, ShortcutCommand_CopyPageLinkAsMarkdown, ShortcutCommand_CopyPageTitle, ShortcutCommand_ShowPageQRCode, ShortcutCommand_SharePage, ShortcutCommand_ExportPDF, ShortcutCommand_SaveWebArchive, ShortcutCommand_CapturePage]), Object.freeze([ShortcutCommand_ClearSiteCookies, ShortcutCommand_ClearSiteCache])]) });
 const ShortcutMenu_Develop: ShortcutMenu = Object.freeze({ tag: 6, name: "develop", title: "Develop", groups: Object.freeze([Object.freeze([ShortcutCommand_ToggleDeveloperToolbar]), Object.freeze([ShortcutCommand_ShowWebInspector])]) });
 export const ShortcutMenu = Object.freeze({
     file: ShortcutMenu_File,
@@ -4156,6 +4230,126 @@ export const SidebarRowKind = Object.freeze({
     },
 });
 
+/** A member of the core's `SiteControlActionGroup`. Its wire tag is its index in `all`. */
+export interface SiteControlActionGroup {
+    readonly tag: number;
+    readonly name: string;
+    readonly title: string;
+}
+
+const SiteControlActionGroup_Copy: SiteControlActionGroup = Object.freeze({ tag: 0, name: "copy", title: "Copy" });
+const SiteControlActionGroup_ShareAndExport: SiteControlActionGroup = Object.freeze({ tag: 1, name: "shareAndExport", title: "Share and Export" });
+const SiteControlActionGroup_Tab: SiteControlActionGroup = Object.freeze({ tag: 2, name: "tab", title: "Tab" });
+const SiteControlActionGroup_Page: SiteControlActionGroup = Object.freeze({ tag: 3, name: "page", title: "Page" });
+const SiteControlActionGroup_Browser: SiteControlActionGroup = Object.freeze({ tag: 4, name: "browser", title: "Browser" });
+const SiteControlActionGroup_Privacy: SiteControlActionGroup = Object.freeze({ tag: 5, name: "privacy", title: "Privacy" });
+const SiteControlActionGroup_Developer: SiteControlActionGroup = Object.freeze({ tag: 6, name: "developer", title: "Developer" });
+export const SiteControlActionGroup = Object.freeze({
+    copy: SiteControlActionGroup_Copy,
+    shareAndExport: SiteControlActionGroup_ShareAndExport,
+    tab: SiteControlActionGroup_Tab,
+    page: SiteControlActionGroup_Page,
+    browser: SiteControlActionGroup_Browser,
+    privacy: SiteControlActionGroup_Privacy,
+    developer: SiteControlActionGroup_Developer,
+    all: [SiteControlActionGroup_Copy, SiteControlActionGroup_ShareAndExport, SiteControlActionGroup_Tab, SiteControlActionGroup_Page, SiteControlActionGroup_Browser, SiteControlActionGroup_Privacy, SiteControlActionGroup_Developer] as readonly SiteControlActionGroup[],
+    named(name: string | null | undefined): SiteControlActionGroup | undefined {
+        return SiteControlActionGroup.all.find(member => member.name === name);
+    },
+});
+
+/** A member of the core's `SiteControlAction`. Its wire tag is its index in `all`. */
+export interface SiteControlAction {
+    readonly tag: number;
+    readonly name: string;
+    readonly group: SiteControlActionGroup;
+    readonly title: string;
+    readonly shortTitle: string;
+    readonly onTitle: string | null;
+    readonly onShortTitle: string | null;
+    readonly symbol: string;
+    readonly onSymbol: string | null;
+    readonly onWhileTabIs: TabPlacement | null;
+    readonly command: ShortcutCommand | null;
+    readonly requiredCapability: EngineCapability | null;
+    readonly platforms: readonly DevicePlatform[];
+    readonly keepsSiteControlsOpen: boolean;
+    readonly showsOnlyWhenAvailable: boolean;
+}
+
+const SiteControlAction_CopyLink: SiteControlAction = Object.freeze({ tag: 0, name: "copyLink", group: SiteControlActionGroup_Copy, title: "Copy Link", shortTitle: "Copy Link", onTitle: null, onShortTitle: null, symbol: "link", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_CopyPageLink, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: true, showsOnlyWhenAvailable: false });
+const SiteControlAction_CopyLinkAsMarkdown: SiteControlAction = Object.freeze({ tag: 1, name: "copyLinkAsMarkdown", group: SiteControlActionGroup_Copy, title: "Copy Link as Markdown", shortTitle: "Markdown", onTitle: null, onShortTitle: null, symbol: "doc.on.clipboard", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_CopyPageLinkAsMarkdown, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: true, showsOnlyWhenAvailable: false });
+const SiteControlAction_CopyTitle: SiteControlAction = Object.freeze({ tag: 2, name: "copyTitle", group: SiteControlActionGroup_Copy, title: "Copy Title", shortTitle: "Copy Title", onTitle: null, onShortTitle: null, symbol: "textformat", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_CopyPageTitle, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: true, showsOnlyWhenAvailable: false });
+const SiteControlAction_ShowQRCode: SiteControlAction = Object.freeze({ tag: 3, name: "showQRCode", group: SiteControlActionGroup_Copy, title: "Show QR Code", shortTitle: "QR Code", onTitle: null, onShortTitle: null, symbol: "qrcode", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_ShowPageQRCode, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: true, showsOnlyWhenAvailable: false });
+const SiteControlAction_Share: SiteControlAction = Object.freeze({ tag: 4, name: "share", group: SiteControlActionGroup_ShareAndExport, title: "Share…", shortTitle: "Share", onTitle: null, onShortTitle: null, symbol: "square.and.arrow.up", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_SharePage, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_CapturePage: SiteControlAction = Object.freeze({ tag: 5, name: "capturePage", group: SiteControlActionGroup_ShareAndExport, title: "Capture Page", shortTitle: "Capture", onTitle: null, onShortTitle: null, symbol: "camera", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_CapturePage, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_Print: SiteControlAction = Object.freeze({ tag: 6, name: "print", group: SiteControlActionGroup_ShareAndExport, title: "Print…", shortTitle: "Print", onTitle: null, onShortTitle: null, symbol: "printer", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_PrintPage, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_ExportPDF: SiteControlAction = Object.freeze({ tag: 7, name: "exportPDF", group: SiteControlActionGroup_ShareAndExport, title: "Export as PDF…", shortTitle: "PDF", onTitle: null, onShortTitle: null, symbol: "doc.richtext", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_ExportPDF, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_SaveWebArchive: SiteControlAction = Object.freeze({ tag: 8, name: "saveWebArchive", group: SiteControlActionGroup_ShareAndExport, title: "Save Web Archive…", shortTitle: "Web Archive", onTitle: null, onShortTitle: null, symbol: "square.and.arrow.down", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_SaveWebArchive, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_PinTab: SiteControlAction = Object.freeze({ tag: 9, name: "pinTab", group: SiteControlActionGroup_Tab, title: "Pin Tab", shortTitle: "Pin", onTitle: "Unpin Tab", onShortTitle: "Pinned", symbol: "pin", onSymbol: "pin.fill", onWhileTabIs: TabPlacement_Pinned, command: ShortcutCommand_ToggleSelectedTabPinned, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: true, showsOnlyWhenAvailable: false });
+const SiteControlAction_SaveTab: SiteControlAction = Object.freeze({ tag: 10, name: "saveTab", group: SiteControlActionGroup_Tab, title: "Save Tab", shortTitle: "Save", onTitle: "Unsave Tab", onShortTitle: "Saved", symbol: "bookmark", onSymbol: "bookmark.fill", onWhileTabIs: TabPlacement_Saved, command: ShortcutCommand_ToggleSelectedTabSaved, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: true, showsOnlyWhenAvailable: false });
+const SiteControlAction_DuplicateTab: SiteControlAction = Object.freeze({ tag: 11, name: "duplicateTab", group: SiteControlActionGroup_Tab, title: "Duplicate Tab", shortTitle: "Duplicate", onTitle: null, onShortTitle: null, symbol: "plus.square.on.square", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_DuplicateTab, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_SplitWithNextTab: SiteControlAction = Object.freeze({ tag: 12, name: "splitWithNextTab", group: SiteControlActionGroup_Tab, title: "Split With Next Tab", shortTitle: "Split", onTitle: null, onShortTitle: null, symbol: "rectangle.split.2x1", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_SplitWithNextTab, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_OpenInPrivateWindow: SiteControlAction = Object.freeze({ tag: 13, name: "openInPrivateWindow", group: SiteControlActionGroup_Tab, title: "Open in Private Window", shortTitle: "Private", onTitle: null, onShortTitle: null, symbol: "eyeglasses", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_OpenPageInPrivateWindow, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_ArchiveTab: SiteControlAction = Object.freeze({ tag: 14, name: "archiveTab", group: SiteControlActionGroup_Tab, title: "Archive Tab", shortTitle: "Archive", onTitle: null, onShortTitle: null, symbol: "archivebox", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_ArchiveTab, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_FindInPage: SiteControlAction = Object.freeze({ tag: 15, name: "findInPage", group: SiteControlActionGroup_Page, title: "Find in Page", shortTitle: "Find", onTitle: null, onShortTitle: null, symbol: "text.magnifyingglass", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_FindInPage, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_ReloadPage: SiteControlAction = Object.freeze({ tag: 16, name: "reloadPage", group: SiteControlActionGroup_Page, title: "Reload Page", shortTitle: "Reload", onTitle: null, onShortTitle: null, symbol: "arrow.clockwise", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_ReloadPage, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: true, showsOnlyWhenAvailable: false });
+const SiteControlAction_ReloadIgnoringCache: SiteControlAction = Object.freeze({ tag: 17, name: "reloadIgnoringCache", group: SiteControlActionGroup_Page, title: "Reload (Ignore Cache)", shortTitle: "Hard Reload", onTitle: null, onShortTitle: null, symbol: "arrow.trianglehead.2.clockwise.rotate.90", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_ReloadFromOrigin, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop]), keepsSiteControlsOpen: true, showsOnlyWhenAvailable: false });
+const SiteControlAction_OpenInOtherEngine: SiteControlAction = Object.freeze({ tag: 18, name: "openInOtherEngine", group: SiteControlActionGroup_Page, title: "Open Page in Other Engine", shortTitle: "Other Engine", onTitle: null, onShortTitle: null, symbol: "arrow.triangle.swap", onSymbol: null, onWhileTabIs: null, command: null, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_ShowTranslationControls: SiteControlAction = Object.freeze({ tag: 19, name: "showTranslationControls", group: SiteControlActionGroup_Page, title: "Show Translation Controls", shortTitle: "Translate Bar", onTitle: "Hide Translation Controls", onShortTitle: null, symbol: "translate", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_ToggleTranslationToolbar, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: true, showsOnlyWhenAvailable: false });
+const SiteControlAction_Downloads: SiteControlAction = Object.freeze({ tag: 20, name: "downloads", group: SiteControlActionGroup_Browser, title: "Downloads", shortTitle: "Downloads", onTitle: null, onShortTitle: null, symbol: "arrow.down.circle", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_ShowDownloads, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_ShowHistory: SiteControlAction = Object.freeze({ tag: 21, name: "showHistory", group: SiteControlActionGroup_Browser, title: "Show History", shortTitle: "History", onTitle: null, onShortTitle: null, symbol: "clock", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_ShowHistory, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_BlockElement: SiteControlAction = Object.freeze({ tag: 22, name: "blockElement", group: SiteControlActionGroup_Privacy, title: "Block Element", shortTitle: "Block", onTitle: null, onShortTitle: null, symbol: "eye.slash", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_BlockElement, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_ShowBlockedElements: SiteControlAction = Object.freeze({ tag: 23, name: "showBlockedElements", group: SiteControlActionGroup_Privacy, title: "Show Blocked Elements", shortTitle: "Blocked", onTitle: null, onShortTitle: null, symbol: "eye", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_ShowBlockedElements, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: true, showsOnlyWhenAvailable: false });
+const SiteControlAction_ClearCookies: SiteControlAction = Object.freeze({ tag: 24, name: "clearCookies", group: SiteControlActionGroup_Privacy, title: "Clear Cookies", shortTitle: "Cookies", onTitle: null, onShortTitle: null, symbol: "person.crop.circle.badge.xmark", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_ClearSiteCookies, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: true, showsOnlyWhenAvailable: false });
+const SiteControlAction_ClearCache: SiteControlAction = Object.freeze({ tag: 25, name: "clearCache", group: SiteControlActionGroup_Privacy, title: "Clear Cache", shortTitle: "Cache", onTitle: null, onShortTitle: null, symbol: "trash", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_ClearSiteCache, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]), keepsSiteControlsOpen: true, showsOnlyWhenAvailable: false });
+const SiteControlAction_ShowDeveloperToolbar: SiteControlAction = Object.freeze({ tag: 26, name: "showDeveloperToolbar", group: SiteControlActionGroup_Developer, title: "Show Developer Toolbar", shortTitle: "Dev Toolbar", onTitle: "Hide Developer Toolbar", onShortTitle: null, symbol: "macbook.and.iphone", onSymbol: null, onWhileTabIs: null, command: ShortcutCommand_ToggleDeveloperToolbar, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop]), keepsSiteControlsOpen: true, showsOnlyWhenAvailable: false });
+const SiteControlAction_InspectElement: SiteControlAction = Object.freeze({ tag: 27, name: "inspectElement", group: SiteControlActionGroup_Developer, title: "Inspect Element", shortTitle: "Inspect", onTitle: null, onShortTitle: null, symbol: "scope", onSymbol: null, onWhileTabIs: null, command: null, requiredCapability: EngineCapability_Inspector, platforms: Object.freeze([DevicePlatform_Desktop]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_ToggleConsole: SiteControlAction = Object.freeze({ tag: 28, name: "toggleConsole", group: SiteControlActionGroup_Developer, title: "Toggle Console", shortTitle: "Console", onTitle: null, onShortTitle: null, symbol: "terminal", onSymbol: null, onWhileTabIs: null, command: null, requiredCapability: EngineCapability_Inspector, platforms: Object.freeze([DevicePlatform_Desktop]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_ToggleNetworkPanel: SiteControlAction = Object.freeze({ tag: 29, name: "toggleNetworkPanel", group: SiteControlActionGroup_Developer, title: "Toggle Network Panel", shortTitle: "Network", onTitle: null, onShortTitle: null, symbol: "network", onSymbol: null, onWhileTabIs: null, command: null, requiredCapability: EngineCapability_Inspector, platforms: Object.freeze([DevicePlatform_Desktop]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_ClearCookiesAndReload: SiteControlAction = Object.freeze({ tag: 30, name: "clearCookiesAndReload", group: SiteControlActionGroup_Developer, title: "Clear Cookies and Reload", shortTitle: "Clear + Reload", onTitle: null, onShortTitle: null, symbol: "arrow.clockwise.circle", onSymbol: null, onWhileTabIs: null, command: null, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Desktop]), keepsSiteControlsOpen: true, showsOnlyWhenAvailable: true });
+const SiteControlAction_AddToHomeScreen: SiteControlAction = Object.freeze({ tag: 31, name: "addToHomeScreen", group: SiteControlActionGroup_ShareAndExport, title: "Add to Home Screen", shortTitle: "Home Screen", onTitle: null, onShortTitle: null, symbol: "plus.app", onSymbol: null, onWhileTabIs: null, command: null, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Mobile]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+const SiteControlAction_HideToolbar: SiteControlAction = Object.freeze({ tag: 32, name: "hideToolbar", group: SiteControlActionGroup_Page, title: "Hide Toolbar", shortTitle: "Hide Toolbar", onTitle: null, onShortTitle: null, symbol: "chevron.down", onSymbol: null, onWhileTabIs: null, command: null, requiredCapability: null, platforms: Object.freeze([DevicePlatform_Mobile]), keepsSiteControlsOpen: false, showsOnlyWhenAvailable: false });
+export const SiteControlAction = Object.freeze({
+    copyLink: SiteControlAction_CopyLink,
+    copyLinkAsMarkdown: SiteControlAction_CopyLinkAsMarkdown,
+    copyTitle: SiteControlAction_CopyTitle,
+    showQRCode: SiteControlAction_ShowQRCode,
+    share: SiteControlAction_Share,
+    capturePage: SiteControlAction_CapturePage,
+    print: SiteControlAction_Print,
+    exportPDF: SiteControlAction_ExportPDF,
+    saveWebArchive: SiteControlAction_SaveWebArchive,
+    pinTab: SiteControlAction_PinTab,
+    saveTab: SiteControlAction_SaveTab,
+    duplicateTab: SiteControlAction_DuplicateTab,
+    splitWithNextTab: SiteControlAction_SplitWithNextTab,
+    openInPrivateWindow: SiteControlAction_OpenInPrivateWindow,
+    archiveTab: SiteControlAction_ArchiveTab,
+    findInPage: SiteControlAction_FindInPage,
+    reloadPage: SiteControlAction_ReloadPage,
+    reloadIgnoringCache: SiteControlAction_ReloadIgnoringCache,
+    openInOtherEngine: SiteControlAction_OpenInOtherEngine,
+    showTranslationControls: SiteControlAction_ShowTranslationControls,
+    downloads: SiteControlAction_Downloads,
+    showHistory: SiteControlAction_ShowHistory,
+    blockElement: SiteControlAction_BlockElement,
+    showBlockedElements: SiteControlAction_ShowBlockedElements,
+    clearCookies: SiteControlAction_ClearCookies,
+    clearCache: SiteControlAction_ClearCache,
+    showDeveloperToolbar: SiteControlAction_ShowDeveloperToolbar,
+    inspectElement: SiteControlAction_InspectElement,
+    toggleConsole: SiteControlAction_ToggleConsole,
+    toggleNetworkPanel: SiteControlAction_ToggleNetworkPanel,
+    clearCookiesAndReload: SiteControlAction_ClearCookiesAndReload,
+    addToHomeScreen: SiteControlAction_AddToHomeScreen,
+    hideToolbar: SiteControlAction_HideToolbar,
+    all: [SiteControlAction_CopyLink, SiteControlAction_CopyLinkAsMarkdown, SiteControlAction_CopyTitle, SiteControlAction_ShowQRCode, SiteControlAction_Share, SiteControlAction_CapturePage, SiteControlAction_Print, SiteControlAction_ExportPDF, SiteControlAction_SaveWebArchive, SiteControlAction_PinTab, SiteControlAction_SaveTab, SiteControlAction_DuplicateTab, SiteControlAction_SplitWithNextTab, SiteControlAction_OpenInPrivateWindow, SiteControlAction_ArchiveTab, SiteControlAction_FindInPage, SiteControlAction_ReloadPage, SiteControlAction_ReloadIgnoringCache, SiteControlAction_OpenInOtherEngine, SiteControlAction_ShowTranslationControls, SiteControlAction_Downloads, SiteControlAction_ShowHistory, SiteControlAction_BlockElement, SiteControlAction_ShowBlockedElements, SiteControlAction_ClearCookies, SiteControlAction_ClearCache, SiteControlAction_ShowDeveloperToolbar, SiteControlAction_InspectElement, SiteControlAction_ToggleConsole, SiteControlAction_ToggleNetworkPanel, SiteControlAction_ClearCookiesAndReload, SiteControlAction_AddToHomeScreen, SiteControlAction_HideToolbar] as readonly SiteControlAction[],
+    named(name: string | null | undefined): SiteControlAction | undefined {
+        return SiteControlAction.all.find(member => member.name === name);
+    },
+});
+
 /** A member of the core's `SitePermission`. Its wire tag is its index in `all`. */
 export interface SitePermission {
     readonly tag: number;
@@ -4163,23 +4357,25 @@ export interface SitePermission {
     readonly title: string;
     readonly symbol: string;
     readonly requestTitle: string;
+    readonly question: string;
     readonly askTitle: string;
     readonly askChoiceTitle: string;
     readonly isMedia: boolean;
     readonly isEngineEnforced: boolean;
     readonly isAskedBySystem: boolean;
     readonly components: readonly SitePermission[];
+    readonly platforms: readonly DevicePlatform[];
 }
 
-const SitePermission_Camera: SitePermission = Object.freeze({ tag: 0, name: "camera", title: "Camera", symbol: "video", requestTitle: "Wants to use your camera", askTitle: "Ask", askChoiceTitle: "Ask", isMedia: true, isEngineEnforced: true, isAskedBySystem: false, components: Object.freeze([]) });
-const SitePermission_Microphone: SitePermission = Object.freeze({ tag: 1, name: "microphone", title: "Microphone", symbol: "mic", requestTitle: "Wants to use your microphone", askTitle: "Ask", askChoiceTitle: "Ask", isMedia: true, isEngineEnforced: true, isAskedBySystem: false, components: Object.freeze([]) });
-const SitePermission_CameraAndMicrophone: SitePermission = Object.freeze({ tag: 2, name: "cameraAndMicrophone", title: "Camera & Microphone", symbol: "video.and.waveform", requestTitle: "Wants to use your camera and microphone", askTitle: "Ask", askChoiceTitle: "Ask", isMedia: true, isEngineEnforced: false, isAskedBySystem: false, components: Object.freeze([SitePermission_Camera, SitePermission_Microphone]) });
-const SitePermission_Location: SitePermission = Object.freeze({ tag: 3, name: "location", title: "Location", symbol: "location", requestTitle: "Wants to use your location", askTitle: "Ask", askChoiceTitle: "Ask", isMedia: false, isEngineEnforced: true, isAskedBySystem: false, components: Object.freeze([]) });
-const SitePermission_Notifications: SitePermission = Object.freeze({ tag: 4, name: "notifications", title: "Notifications", symbol: "bell", requestTitle: "Wants to send notifications", askTitle: "Ask", askChoiceTitle: "Ask", isMedia: false, isEngineEnforced: true, isAskedBySystem: false, components: Object.freeze([]) });
-const SitePermission_Popups: SitePermission = Object.freeze({ tag: 5, name: "popups", title: "Automatic Pop-ups", symbol: "macwindow.on.rectangle", requestTitle: "Requests permission", askTitle: "Blocked by Default", askChoiceTitle: "Default (Block)", isMedia: false, isEngineEnforced: false, isAskedBySystem: false, components: Object.freeze([]) });
-const SitePermission_AutomaticDownloads: SitePermission = Object.freeze({ tag: 6, name: "automaticDownloads", title: "Automatic Downloads", symbol: "arrow.down.circle", requestTitle: "Wants to download multiple files automatically", askTitle: "Ask after First", askChoiceTitle: "Default (Ask after First)", isMedia: false, isEngineEnforced: false, isAskedBySystem: false, components: Object.freeze([]) });
-const SitePermission_ExternalApplications: SitePermission = Object.freeze({ tag: 7, name: "externalApplications", title: "External Apps", symbol: "arrow.up.forward.app", requestTitle: "Requests permission", askTitle: "Ask", askChoiceTitle: "Ask", isMedia: false, isEngineEnforced: false, isAskedBySystem: false, components: Object.freeze([]) });
-const SitePermission_ScreenSharing: SitePermission = Object.freeze({ tag: 8, name: "screenSharing", title: "Screen Sharing", symbol: "rectangle.inset.filled.and.person.filled", requestTitle: "Wants to share your screen", askTitle: "Ask", askChoiceTitle: "Ask", isMedia: false, isEngineEnforced: false, isAskedBySystem: true, components: Object.freeze([]) });
+const SitePermission_Camera: SitePermission = Object.freeze({ tag: 0, name: "camera", title: "Camera", symbol: "video", requestTitle: "Wants to use your camera", question: "Use your camera?", askTitle: "Ask", askChoiceTitle: "Ask", isMedia: true, isEngineEnforced: true, isAskedBySystem: false, components: Object.freeze([]), platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]) });
+const SitePermission_Microphone: SitePermission = Object.freeze({ tag: 1, name: "microphone", title: "Microphone", symbol: "mic", requestTitle: "Wants to use your microphone", question: "Use your microphone?", askTitle: "Ask", askChoiceTitle: "Ask", isMedia: true, isEngineEnforced: true, isAskedBySystem: false, components: Object.freeze([]), platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]) });
+const SitePermission_CameraAndMicrophone: SitePermission = Object.freeze({ tag: 2, name: "cameraAndMicrophone", title: "Camera & Microphone", symbol: "video.and.waveform", requestTitle: "Wants to use your camera and microphone", question: "Use your camera and mic?", askTitle: "Ask", askChoiceTitle: "Ask", isMedia: true, isEngineEnforced: false, isAskedBySystem: false, components: Object.freeze([SitePermission_Camera, SitePermission_Microphone]), platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]) });
+const SitePermission_Location: SitePermission = Object.freeze({ tag: 3, name: "location", title: "Location", symbol: "location", requestTitle: "Wants to use your location", question: "Use your location?", askTitle: "Ask", askChoiceTitle: "Ask", isMedia: false, isEngineEnforced: true, isAskedBySystem: false, components: Object.freeze([]), platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]) });
+const SitePermission_Notifications: SitePermission = Object.freeze({ tag: 4, name: "notifications", title: "Notifications", symbol: "bell", requestTitle: "Wants to send notifications", question: "Send notifications?", askTitle: "Ask", askChoiceTitle: "Ask", isMedia: false, isEngineEnforced: true, isAskedBySystem: false, components: Object.freeze([]), platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]) });
+const SitePermission_Popups: SitePermission = Object.freeze({ tag: 5, name: "popups", title: "Automatic Pop-ups", symbol: "macwindow.on.rectangle", requestTitle: "Requests permission", question: "Open pop-ups?", askTitle: "Blocked by Default", askChoiceTitle: "Default (Block)", isMedia: false, isEngineEnforced: false, isAskedBySystem: false, components: Object.freeze([]), platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]) });
+const SitePermission_AutomaticDownloads: SitePermission = Object.freeze({ tag: 6, name: "automaticDownloads", title: "Automatic Downloads", symbol: "arrow.down.circle", requestTitle: "Wants to download multiple files automatically", question: "Download several files?", askTitle: "Ask after First", askChoiceTitle: "Default (Ask after First)", isMedia: false, isEngineEnforced: false, isAskedBySystem: false, components: Object.freeze([]), platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]) });
+const SitePermission_ExternalApplications: SitePermission = Object.freeze({ tag: 7, name: "externalApplications", title: "External Apps", symbol: "arrow.up.forward.app", requestTitle: "Requests permission", question: "Open another app?", askTitle: "Ask", askChoiceTitle: "Ask", isMedia: false, isEngineEnforced: false, isAskedBySystem: false, components: Object.freeze([]), platforms: Object.freeze([DevicePlatform_Desktop, DevicePlatform_Mobile, DevicePlatform_Windows]) });
+const SitePermission_ScreenSharing: SitePermission = Object.freeze({ tag: 8, name: "screenSharing", title: "Screen Sharing", symbol: "rectangle.inset.filled.and.person.filled", requestTitle: "Wants to share your screen", question: "Share your screen?", askTitle: "Ask", askChoiceTitle: "Ask", isMedia: false, isEngineEnforced: false, isAskedBySystem: true, components: Object.freeze([]), platforms: Object.freeze([DevicePlatform_Desktop]) });
 export const SitePermission = Object.freeze({
     camera: SitePermission_Camera,
     microphone: SitePermission_Microphone,
@@ -4354,6 +4550,30 @@ export const StartupBehavior = Object.freeze({
     all: [StartupBehavior_ShowStartPage, StartupBehavior_LastActiveTab, StartupBehavior_NewTab] as readonly StartupBehavior[],
     named(name: string | null | undefined): StartupBehavior | undefined {
         return StartupBehavior.all.find(member => member.name === name);
+    },
+});
+
+/** A member of the core's `StorageFailure`. Its wire tag is its index in `all`. */
+export interface StorageFailure {
+    readonly tag: number;
+    readonly name: string;
+    readonly message: string;
+}
+
+const StorageFailure_DiskFull: StorageFailure = Object.freeze({ tag: 0, name: "disk_full", message: "Crest couldn’t save your session because the disk is full." });
+const StorageFailure_ReadOnly: StorageFailure = Object.freeze({ tag: 1, name: "read_only", message: "Crest couldn’t save your session because its folder can’t be written to." });
+const StorageFailure_Busy: StorageFailure = Object.freeze({ tag: 2, name: "busy", message: "Crest couldn’t save your session because another app is using its file." });
+const StorageFailure_Damaged: StorageFailure = Object.freeze({ tag: 3, name: "damaged", message: "Crest couldn’t save your session because its file is damaged." });
+const StorageFailure_Unavailable: StorageFailure = Object.freeze({ tag: 4, name: "unavailable", message: "Crest couldn’t save your session." });
+export const StorageFailure = Object.freeze({
+    diskFull: StorageFailure_DiskFull,
+    readOnly: StorageFailure_ReadOnly,
+    busy: StorageFailure_Busy,
+    damaged: StorageFailure_Damaged,
+    unavailable: StorageFailure_Unavailable,
+    all: [StorageFailure_DiskFull, StorageFailure_ReadOnly, StorageFailure_Busy, StorageFailure_Damaged, StorageFailure_Unavailable] as readonly StorageFailure[],
+    named(name: string | null | undefined): StorageFailure | undefined {
+        return StorageFailure.all.find(member => member.name === name);
     },
 });
 
@@ -4729,16 +4949,53 @@ export const TransientPresentation = Object.freeze({
     },
 });
 
+/** A member of the core's `UrlScheme`. Its wire tag is its index in `all`. */
+export interface UrlScheme {
+    readonly tag: number;
+    readonly name: string;
+    readonly disposition: ExternalSchemeDisposition;
+    readonly appInitiatedDisposition: ExternalSchemeDisposition;
+}
+
+const UrlScheme_Http: UrlScheme = Object.freeze({ tag: 0, name: "http", disposition: ExternalSchemeDisposition_Engine, appInitiatedDisposition: ExternalSchemeDisposition_Engine });
+const UrlScheme_Https: UrlScheme = Object.freeze({ tag: 1, name: "https", disposition: ExternalSchemeDisposition_Engine, appInitiatedDisposition: ExternalSchemeDisposition_Engine });
+const UrlScheme_About: UrlScheme = Object.freeze({ tag: 2, name: "about", disposition: ExternalSchemeDisposition_Engine, appInitiatedDisposition: ExternalSchemeDisposition_Engine });
+const UrlScheme_Blob: UrlScheme = Object.freeze({ tag: 3, name: "blob", disposition: ExternalSchemeDisposition_Engine, appInitiatedDisposition: ExternalSchemeDisposition_Engine });
+const UrlScheme_ChromeExtension: UrlScheme = Object.freeze({ tag: 4, name: "chrome-extension", disposition: ExternalSchemeDisposition_Engine, appInitiatedDisposition: ExternalSchemeDisposition_Engine });
+const UrlScheme_CrestExtension: UrlScheme = Object.freeze({ tag: 5, name: "crest-extension", disposition: ExternalSchemeDisposition_Engine, appInitiatedDisposition: ExternalSchemeDisposition_Engine });
+const UrlScheme_Data: UrlScheme = Object.freeze({ tag: 6, name: "data", disposition: ExternalSchemeDisposition_Engine, appInitiatedDisposition: ExternalSchemeDisposition_Engine });
+const UrlScheme_WebKitExtension: UrlScheme = Object.freeze({ tag: 7, name: "webkit-extension", disposition: ExternalSchemeDisposition_Engine, appInitiatedDisposition: ExternalSchemeDisposition_Engine });
+const UrlScheme_JavaScript: UrlScheme = Object.freeze({ tag: 8, name: "javascript", disposition: ExternalSchemeDisposition_Blocked, appInitiatedDisposition: ExternalSchemeDisposition_Blocked });
+const UrlScheme_File: UrlScheme = Object.freeze({ tag: 9, name: "file", disposition: ExternalSchemeDisposition_Blocked, appInitiatedDisposition: ExternalSchemeDisposition_Engine });
+export const UrlScheme = Object.freeze({
+    maximumSchemeLength: 256,
+    http: UrlScheme_Http,
+    https: UrlScheme_Https,
+    about: UrlScheme_About,
+    blob: UrlScheme_Blob,
+    chromeExtension: UrlScheme_ChromeExtension,
+    crestExtension: UrlScheme_CrestExtension,
+    data: UrlScheme_Data,
+    webKitExtension: UrlScheme_WebKitExtension,
+    javaScript: UrlScheme_JavaScript,
+    file: UrlScheme_File,
+    all: [UrlScheme_Http, UrlScheme_Https, UrlScheme_About, UrlScheme_Blob, UrlScheme_ChromeExtension, UrlScheme_CrestExtension, UrlScheme_Data, UrlScheme_WebKitExtension, UrlScheme_JavaScript, UrlScheme_File] as readonly UrlScheme[],
+    named(name: string | null | undefined): UrlScheme | undefined {
+        return UrlScheme.all.find(member => member.name === name);
+    },
+});
+
 /** A member of the core's `WebScheme`. Its wire tag is its index in `all`. */
 export interface WebScheme {
     readonly tag: number;
     readonly name: string;
     readonly defaultPort: number;
     readonly isSecure: boolean;
+    readonly prefix: string;
 }
 
-const WebScheme_Http: WebScheme = Object.freeze({ tag: 0, name: "http", defaultPort: 80, isSecure: false });
-const WebScheme_Https: WebScheme = Object.freeze({ tag: 1, name: "https", defaultPort: 443, isSecure: true });
+const WebScheme_Http: WebScheme = Object.freeze({ tag: 0, name: "http", defaultPort: 80, isSecure: false, prefix: "http://" });
+const WebScheme_Https: WebScheme = Object.freeze({ tag: 1, name: "https", defaultPort: 443, isSecure: true, prefix: "https://" });
 export const WebScheme = Object.freeze({
     http: WebScheme_Http,
     https: WebScheme_Https,
@@ -4877,6 +5134,18 @@ export interface AddressCompletion {
     readonly typed: string;
     readonly suffix: string;
     readonly accepted: string;
+}
+
+export interface AdoptDevicePreferences {
+    readonly $kind: "AdoptDevicePreferences";
+    readonly defaultPageZoom: number | null;
+    readonly backgroundPageActivity: string | null;
+    readonly allowsHighFrameRate: boolean | null;
+    readonly syncsWithICloud: boolean | null;
+    readonly downloads: readonly SpaceDownloadPreferences[];
+}
+export function AdoptDevicePreferences(fields: Omit<AdoptDevicePreferences, "$kind">): AdoptDevicePreferences {
+    return { $kind: "AdoptDevicePreferences", ...fields };
 }
 
 export interface AdoptLegacySession {
@@ -5308,6 +5577,15 @@ export function AppPreferencesChanged(fields: Omit<AppPreferencesChanged, "$kind
     return { $kind: "AppPreferencesChanged", ...fields };
 }
 
+export interface ApplyHouse {
+    readonly $kind: "ApplyHouse";
+    readonly branding: SpaceBranding;
+    readonly house: SpaceHouse;
+}
+export function ApplyHouse(fields: Omit<ApplyHouse, "$kind">): ApplyHouse {
+    return { $kind: "ApplyHouse", ...fields };
+}
+
 export interface ApplyManualSetup {
     readonly $kind: "ApplyManualSetup";
     readonly workspaceId: string;
@@ -5503,14 +5781,6 @@ export interface AutomaticDownloadVerdict {
     readonly hasAllowedAutomaticDownload: boolean;
 }
 
-export interface AwaitDownloadApproval {
-    readonly $kind: "AwaitDownloadApproval";
-    readonly downloadId: string;
-}
-export function AwaitDownloadApproval(fields: Omit<AwaitDownloadApproval, "$kind">): AwaitDownloadApproval {
-    return { $kind: "AwaitDownloadApproval", ...fields };
-}
-
 export interface BeforeUnloadAnswered {
     readonly $kind: "BeforeUnloadAnswered";
     readonly pageId: string;
@@ -5583,14 +5853,6 @@ export interface BeginUnlockingSpace {
 }
 export function BeginUnlockingSpace(fields: Omit<BeginUnlockingSpace, "$kind">): BeginUnlockingSpace {
     return { $kind: "BeginUnlockingSpace", ...fields };
-}
-
-export interface BlockAutomaticDownload {
-    readonly $kind: "BlockAutomaticDownload";
-    readonly downloadId: string;
-}
-export function BlockAutomaticDownload(fields: Omit<BlockAutomaticDownload, "$kind">): BlockAutomaticDownload {
-    return { $kind: "BlockAutomaticDownload", ...fields };
 }
 
 export interface BlockElement {
@@ -5745,7 +6007,7 @@ export function CanReturnToSavedAddress(fields: Omit<CanReturnToSavedAddress, "$
 
 export interface CanSend {
     readonly $kind: "CanSend";
-    readonly intent: Intent;
+    readonly intent: SessionIntent;
 }
 export function CanSend(fields: Omit<CanSend, "$kind">): CanSend {
     return { $kind: "CanSend", ...fields };
@@ -5850,6 +6112,7 @@ export interface CapacityLimits {
     readonly tabsPerSpace: number;
     readonly syncRecords: number;
     readonly credentialFileBytes: number;
+    readonly filterListBytes: number;
 }
 
 export interface CaptureDecision {
@@ -5973,14 +6236,6 @@ export function ChooseQuickWindowArchivePolicy(fields: Omit<ChooseQuickWindowArc
     return { $kind: "ChooseQuickWindowArchivePolicy", ...fields };
 }
 
-export interface ChooseSetupLook {
-    readonly $kind: "ChooseSetupLook";
-    readonly look: SetupLook;
-}
-export function ChooseSetupLook(fields: Omit<ChooseSetupLook, "$kind">): ChooseSetupLook {
-    return { $kind: "ChooseSetupLook", ...fields };
-}
-
 export interface ChooseShareSource {
     readonly $kind: "ChooseShareSource";
     readonly pageId: string;
@@ -6069,6 +6324,17 @@ export interface ClearPaletteChoices {
 }
 export function ClearPaletteChoices(): ClearPaletteChoices {
     return { $kind: "ClearPaletteChoices" };
+}
+
+export interface ClearedTabs {
+    readonly $kind: "ClearedTabs";
+    readonly workspaceId: string;
+    readonly windowId: string;
+    readonly spaceId: string;
+    readonly keepsShownTab: boolean;
+}
+export function ClearedTabs(fields: Omit<ClearedTabs, "$kind">): ClearedTabs {
+    return { $kind: "ClearedTabs", ...fields };
 }
 
 export interface ClickPage {
@@ -6265,13 +6531,6 @@ export function CloudStepFailed(fields: Omit<CloudStepFailed, "$kind">): CloudSt
     return { $kind: "CloudStepFailed", ...fields };
 }
 
-export interface CloudSync {
-    readonly $kind: "CloudSync";
-}
-export function CloudSync(): CloudSync {
-    return { $kind: "CloudSync" };
-}
-
 export interface CloudSyncAdvanced {
     readonly $kind: "CloudSyncAdvanced";
     readonly status: CloudSyncStatus;
@@ -6403,7 +6662,6 @@ export interface ColorPalette {
 
 export interface ConfigureCloudSync {
     readonly $kind: "ConfigureCloudSync";
-    readonly isEnabled: boolean;
     readonly canReachCloud: boolean;
 }
 export function ConfigureCloudSync(fields: Omit<ConfigureCloudSync, "$kind">): ConfigureCloudSync {
@@ -6554,6 +6812,22 @@ export function CreateSpace(fields: Omit<CreateSpace, "$kind">): CreateSpace {
     return { $kind: "CreateSpace", ...fields };
 }
 
+export interface CredentialAccess {
+    readonly $kind: "CredentialAccess";
+    readonly workspaceId: string;
+    readonly spaceId: string;
+    readonly use: CredentialUse;
+    readonly origin: CredentialOrigin | null;
+}
+export function CredentialAccess(fields: Omit<CredentialAccess, "$kind">): CredentialAccess {
+    return { $kind: "CredentialAccess", ...fields };
+}
+
+export interface CredentialAccessAnswer {
+    readonly refusal: CredentialRefusal | null;
+    readonly vaults: readonly string[];
+}
+
 export interface CredentialCapture {
     readonly $kind: "CredentialCapture";
     readonly facts: CredentialFormFacts;
@@ -6665,7 +6939,7 @@ export interface CredentialOrigin {
     readonly port: number;
 }
 export const CredentialOriginStatics = Object.freeze({
-    maximumHostLength: 1024,
+    maximumFillCandidates: 1024,
 });
 
 export interface CredentialPendingCandidate {
@@ -6685,6 +6959,11 @@ export interface CredentialRecord {
     readonly updatedAt: number;
     readonly lastUsedAt: number | null;
 }
+export const CredentialRecordStatics = Object.freeze({
+    maximumRecords: 64,
+    revealLifetime: 30,
+    clipboardLifetime: 60,
+});
 
 export interface CredentialRecordLimitReached {
     readonly $kind: "CredentialRecordLimitReached";
@@ -6972,6 +7251,10 @@ export function DetachedSession(fields: Omit<DetachedSession, "$kind">): Detache
     return { $kind: "DetachedSession", ...fields };
 }
 
+export interface DevelopmentAddressVerdict {
+    readonly isLocal: boolean;
+}
+
 export interface DiscardStagedLink {
     readonly $kind: "DiscardStagedLink";
     readonly sourcePageId: string;
@@ -7076,6 +7359,11 @@ export function DownloadExtension(fields: Omit<DownloadExtension, "$kind">): Dow
     return { $kind: "DownloadExtension", ...fields };
 }
 
+export interface DownloadFolder {
+    readonly name: string;
+    readonly token: Uint8Array;
+}
+
 export interface DownloadLimitReached {
     readonly $kind: "DownloadLimitReached";
     readonly limit: number;
@@ -7084,23 +7372,12 @@ export function DownloadLimitReached(fields: Omit<DownloadLimitReached, "$kind">
     return { $kind: "DownloadLimitReached", ...fields };
 }
 
-export interface DownloadProgress {
-    readonly $kind: "DownloadProgress";
-    readonly estimator: DownloadTransferEstimator | null;
-    readonly completedUnitCount: bigint;
-    readonly totalUnitCount: bigint;
-    readonly fractionCompleted: number;
-    readonly isPaused: boolean;
-    readonly uptime: number;
+export interface DownloadPreferencesChanged {
+    readonly $kind: "DownloadPreferencesChanged";
+    readonly spaces: readonly SpaceDownloadPreferences[];
 }
-export function DownloadProgress(fields: Omit<DownloadProgress, "$kind">): DownloadProgress {
-    return { $kind: "DownloadProgress", ...fields };
-}
-
-export interface DownloadProgressReading {
-    readonly estimator: DownloadTransferEstimator;
-    readonly telemetry: DownloadTelemetry;
-    readonly progress: number;
+export function DownloadPreferencesChanged(fields: Omit<DownloadPreferencesChanged, "$kind">): DownloadPreferencesChanged {
+    return { $kind: "DownloadPreferencesChanged", ...fields };
 }
 
 export interface DownloadRisk {
@@ -7169,22 +7446,6 @@ export interface DownloadTelemetry {
 }
 export const DownloadTelemetryStatics = Object.freeze({
     empty: Object.freeze({ bytesReceived: 0n, totalBytes: null, bytesPerSecond: null, estimatedTimeRemaining: null, isPaused: false }),
-});
-
-export interface DownloadTransferEstimator {
-    readonly publishedBytes: bigint;
-    readonly knownTotalBytes: bigint | null;
-    readonly totalIsUnreliable: boolean;
-    readonly measurementBytes: bigint | null;
-    readonly measurementUptime: number | null;
-    readonly smoothedBytesPerSecond: number | null;
-}
-export const DownloadTransferEstimatorStatics = Object.freeze({
-    minimumRateInterval: 0.15,
-    smoothingWeight: 0.25,
-    minimumUsefulEstimate: 0.5,
-    maximumUsefulEstimate: 604800,
-    initial: Object.freeze({ publishedBytes: 0n, knownTotalBytes: null, totalIsUnreliable: false, measurementBytes: null, measurementUptime: null, smoothedBytesPerSecond: null }),
 });
 
 export interface DownloadUpdated {
@@ -8128,6 +8389,16 @@ export function FolderCycle(fields: Omit<FolderCycle, "$kind">): FolderCycle {
     return { $kind: "FolderCycle", ...fields };
 }
 
+export interface FolderDeletionTabs {
+    readonly $kind: "FolderDeletionTabs";
+    readonly workspaceId: string;
+    readonly spaceId: string;
+    readonly folderId: string;
+}
+export function FolderDeletionTabs(fields: Omit<FolderDeletionTabs, "$kind">): FolderDeletionTabs {
+    return { $kind: "FolderDeletionTabs", ...fields };
+}
+
 export interface FolderDepthLimitReached {
     readonly $kind: "FolderDepthLimitReached";
     readonly limit: number;
@@ -8174,6 +8445,8 @@ export interface FolderStateSeed {
 export const FolderStateStatics = Object.freeze({
     maximumDepth: 16,
     defaultSymbol: "folder",
+    untitledTitle: "Untitled Folder",
+    maximumTitleLength: 500,
     defaultColor: Object.freeze({ red: 0.43, green: 0.48, blue: 0.54, alpha: 1 }),
 });
 
@@ -8465,6 +8738,7 @@ export interface ImportPasswordRoutes {
 export interface ImportPasswordSource {
     readonly profileName: string;
     readonly host: string;
+    readonly isSecure: boolean;
 }
 
 export interface ImportPasswordStore {
@@ -9205,16 +9479,6 @@ export function LinkHovered(fields: Omit<LinkHovered, "$kind">): LinkHovered {
     return { $kind: "LinkHovered", ...fields };
 }
 
-export interface LinkNavigation {
-    readonly $kind: "LinkNavigation";
-    readonly pageId: string;
-    readonly url: string | null;
-    readonly gesture: LinkGesture;
-}
-export function LinkNavigation(fields: Omit<LinkNavigation, "$kind">): LinkNavigation {
-    return { $kind: "LinkNavigation", ...fields };
-}
-
 export interface LinkNavigationAnswer {
     readonly decision: LinkNavigationDecision;
 }
@@ -9322,6 +9586,15 @@ export interface LoadPage {
 }
 export function LoadPage(fields: Omit<LoadPage, "$kind">): LoadPage {
     return { $kind: "LoadPage", ...fields };
+}
+
+export interface LocalDevelopmentAddress {
+    readonly $kind: "LocalDevelopmentAddress";
+    readonly scheme: string | null;
+    readonly host: string | null;
+}
+export function LocalDevelopmentAddress(fields: Omit<LocalDevelopmentAddress, "$kind">): LocalDevelopmentAddress {
+    return { $kind: "LocalDevelopmentAddress", ...fields };
 }
 
 export interface LocalDocumentFacts {
@@ -9550,6 +9823,15 @@ export interface MoveSetupSpace {
 }
 export function MoveSetupSpace(fields: Omit<MoveSetupSpace, "$kind">): MoveSetupSpace {
     return { $kind: "MoveSetupSpace", ...fields };
+}
+
+export interface MoveSiteControlTopAction {
+    readonly $kind: "MoveSiteControlTopAction";
+    readonly action: SiteControlAction;
+    readonly index: number;
+}
+export function MoveSiteControlTopAction(fields: Omit<MoveSiteControlTopAction, "$kind">): MoveSiteControlTopAction {
+    return { $kind: "MoveSiteControlTopAction", ...fields };
 }
 
 export interface MoveSplitMember {
@@ -9834,6 +10116,14 @@ export function NoteAgentActivity(fields: Omit<NoteAgentActivity, "$kind">): Not
     return { $kind: "NoteAgentActivity", ...fields };
 }
 
+export interface NoteLaunchRelease {
+    readonly $kind: "NoteLaunchRelease";
+    readonly version: string;
+}
+export function NoteLaunchRelease(fields: Omit<NoteLaunchRelease, "$kind">): NoteLaunchRelease {
+    return { $kind: "NoteLaunchRelease", ...fields };
+}
+
 export interface NotificationDisplayCheck {
     readonly $kind: "NotificationDisplayCheck";
     readonly spaceId: string;
@@ -9992,11 +10282,13 @@ export interface OpenLinkInSplit {
     readonly tabId: string;
     readonly targetTabId: string;
     readonly address: string;
-    readonly title: string;
 }
 export function OpenLinkInSplit(fields: Omit<OpenLinkInSplit, "$kind">): OpenLinkInSplit {
     return { $kind: "OpenLinkInSplit", ...fields };
 }
+export const OpenLinkInSplitStatics = Object.freeze({
+    probeAddress: "about:blank",
+});
 
 export interface OpenPage {
     readonly $kind: "OpenPage";
@@ -10444,6 +10736,26 @@ export interface PagePoint {
     readonly y: number;
 }
 
+export interface PagePreferences {
+    readonly defaultZoom: number;
+    readonly backgroundActivity: BackgroundPageActivity;
+    readonly allowsHighFrameRate: boolean;
+}
+export const PagePreferencesStatics = Object.freeze({
+    standardZoom: 1,
+    minimumZoom: 0.25,
+    maximumZoom: 5,
+    default: Object.freeze({ defaultZoom: 1, backgroundActivity: BackgroundPageActivity_Suspend, allowsHighFrameRate: false }),
+});
+
+export interface PagePreferencesChanged {
+    readonly $kind: "PagePreferencesChanged";
+    readonly preferences: PagePreferences;
+}
+export function PagePreferencesChanged(fields: Omit<PagePreferencesChanged, "$kind">): PagePreferencesChanged {
+    return { $kind: "PagePreferencesChanged", ...fields };
+}
+
 export interface PagePresented {
     readonly presentation: PagePresentation;
 }
@@ -10634,6 +10946,26 @@ export interface PaletteGroup {
     readonly rows: readonly PaletteRow[];
 }
 
+export interface PaletteLimiting {
+    readonly $kind: "PaletteLimiting";
+    readonly preferences: PalettePreferences;
+    readonly source: PaletteSource;
+    readonly limit: number;
+}
+export function PaletteLimiting(fields: Omit<PaletteLimiting, "$kind">): PaletteLimiting {
+    return { $kind: "PaletteLimiting", ...fields };
+}
+
+export interface PaletteOffering {
+    readonly $kind: "PaletteOffering";
+    readonly preferences: PalettePreferences;
+    readonly source: PaletteSource;
+    readonly isEnabled: boolean;
+}
+export function PaletteOffering(fields: Omit<PaletteOffering, "$kind">): PaletteOffering {
+    return { $kind: "PaletteOffering", ...fields };
+}
+
 export interface PalettePreferences {
     readonly layout: PaletteLayout;
     readonly sources: readonly PaletteSourceChoice[];
@@ -10647,6 +10979,7 @@ export interface PalettePreferences {
 }
 export const PalettePreferencesStatics = Object.freeze({
     maximumLimit: 50,
+    offeredLimits: Object.freeze([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]),
     default: Object.freeze({ layout: PaletteLayout_Sections, sources: Object.freeze([Object.freeze({ source: PaletteSource_RecentTabs, isEnabled: true, limit: null }), Object.freeze({ source: PaletteSource_OpenTabs, isEnabled: true, limit: null }), Object.freeze({ source: PaletteSource_Saved, isEnabled: true, limit: null }), Object.freeze({ source: PaletteSource_History, isEnabled: true, limit: null }), Object.freeze({ source: PaletteSource_Actions, isEnabled: true, limit: null }), Object.freeze({ source: PaletteSource_Spaces, isEnabled: true, limit: null }), Object.freeze({ source: PaletteSource_ArchivedTabs, isEnabled: false, limit: null }), Object.freeze({ source: PaletteSource_Suggestions, isEnabled: true, limit: null }), Object.freeze({ source: PaletteSource_SettingsPages, isEnabled: true, limit: null }), Object.freeze({ source: PaletteSource_Scopes, isEnabled: true, limit: null }), Object.freeze({ source: PaletteSource_Calculator, isEnabled: true, limit: null }), Object.freeze({ source: PaletteSource_PasteAndGo, isEnabled: false, limit: null })]), showsTopHit: true, prefersOpenTabs: true, completesInline: true, learnsChoices: true, searchesSitesWithTab: true, showsReasons: false, providerSpaceTrigger: SearchProviderSpaceTrigger_PrefixedShortcut }),
 });
 
@@ -10682,6 +11015,24 @@ export interface PaletteRowSeed {
     readonly reason: PaletteReason | null;
     readonly iconTabIds: readonly string[];
     readonly httpFallback: string | null;
+}
+
+export interface PaletteSectionMove {
+    readonly $kind: "PaletteSectionMove";
+    readonly preferences: PalettePreferences;
+    readonly source: PaletteSource;
+    readonly index: number;
+}
+export function PaletteSectionMove(fields: Omit<PaletteSectionMove, "$kind">): PaletteSectionMove {
+    return { $kind: "PaletteSectionMove", ...fields };
+}
+
+export interface PaletteSectionOrder {
+    readonly $kind: "PaletteSectionOrder";
+    readonly preferences: PalettePreferences;
+}
+export function PaletteSectionOrder(fields: Omit<PaletteSectionOrder, "$kind">): PaletteSectionOrder {
+    return { $kind: "PaletteSectionOrder", ...fields };
 }
 
 export interface PaletteSettingsPage {
@@ -10903,6 +11254,15 @@ export interface PlaceImportTab {
 }
 export function PlaceImportTab(fields: Omit<PlaceImportTab, "$kind">): PlaceImportTab {
     return { $kind: "PlaceImportTab", ...fields };
+}
+
+export interface PlaceSiteControlTopAction {
+    readonly $kind: "PlaceSiteControlTopAction";
+    readonly action: SiteControlAction;
+    readonly slot: number;
+}
+export function PlaceSiteControlTopAction(fields: Omit<PlaceSiteControlTopAction, "$kind">): PlaceSiteControlTopAction {
+    return { $kind: "PlaceSiteControlTopAction", ...fields };
 }
 
 export interface PopupBlocked {
@@ -11316,6 +11676,14 @@ export function RejectOfferedPage(fields: Omit<RejectOfferedPage, "$kind">): Rej
     return { $kind: "RejectOfferedPage", ...fields };
 }
 
+export interface ReleaseNotesDue {
+    readonly $kind: "ReleaseNotesDue";
+    readonly version: string;
+}
+export function ReleaseNotesDue(fields: Omit<ReleaseNotesDue, "$kind">): ReleaseNotesDue {
+    return { $kind: "ReleaseNotesDue", ...fields };
+}
+
 export interface ReleasePage {
     readonly $kind: "ReleasePage";
     readonly pageId: string;
@@ -11421,6 +11789,18 @@ export interface RemoveSetupSpace {
 }
 export function RemoveSetupSpace(fields: Omit<RemoveSetupSpace, "$kind">): RemoveSetupSpace {
     return { $kind: "RemoveSetupSpace", ...fields };
+}
+
+export interface RemoveSiteControlTopAction {
+    readonly $kind: "RemoveSiteControlTopAction";
+    readonly action: SiteControlAction;
+}
+export function RemoveSiteControlTopAction(fields: Omit<RemoveSiteControlTopAction, "$kind">): RemoveSiteControlTopAction {
+    return { $kind: "RemoveSiteControlTopAction", ...fields };
+}
+
+export interface RemovedTabs {
+    readonly tabIds: readonly string[];
 }
 
 export interface RenameFolder {
@@ -11556,6 +11936,13 @@ export function ResetShortcuts(): ResetShortcuts {
     return { $kind: "ResetShortcuts" };
 }
 
+export interface ResetSiteControlTopActions {
+    readonly $kind: "ResetSiteControlTopActions";
+}
+export function ResetSiteControlTopActions(): ResetSiteControlTopActions {
+    return { $kind: "ResetSiteControlTopActions" };
+}
+
 export interface ResetSitePermission {
     readonly $kind: "ResetSitePermission";
     readonly recordId: string;
@@ -11633,14 +12020,6 @@ export function RestoreInteractionState(fields: Omit<RestoreInteractionState, "$
     return { $kind: "RestoreInteractionState", ...fields };
 }
 
-export interface RestoreLook {
-    readonly $kind: "RestoreLook";
-    readonly text: string;
-}
-export function RestoreLook(fields: Omit<RestoreLook, "$kind">): RestoreLook {
-    return { $kind: "RestoreLook", ...fields };
-}
-
 export interface RestoreSearchCatalog {
     readonly $kind: "RestoreSearchCatalog";
     readonly language: string | null;
@@ -11659,10 +12038,6 @@ export interface RestoreTabHistory {
 }
 export function RestoreTabHistory(fields: Omit<RestoreTabHistory, "$kind">): RestoreTabHistory {
     return { $kind: "RestoreTabHistory", ...fields };
-}
-
-export interface RestoredLook {
-    readonly look: SpaceBranding | null;
 }
 
 export interface ResumeDownload {
@@ -11867,6 +12242,8 @@ export interface SearchCatalogChanged {
     readonly providers: readonly SearchProvider[];
     readonly default: SearchProvider;
     readonly privateDefault: SearchProvider;
+    readonly enabled: readonly SearchProvider[];
+    readonly defaultChoices: readonly SearchProvider[];
 }
 export function SearchCatalogChanged(fields: Omit<SearchCatalogChanged, "$kind">): SearchCatalogChanged {
     return { $kind: "SearchCatalogChanged", ...fields };
@@ -12168,6 +12545,14 @@ export function SetAppPreferences(fields: Omit<SetAppPreferences, "$kind">): Set
     return { $kind: "SetAppPreferences", ...fields };
 }
 
+export interface SetBackgroundPageActivity {
+    readonly $kind: "SetBackgroundPageActivity";
+    readonly activity: BackgroundPageActivity;
+}
+export function SetBackgroundPageActivity(fields: Omit<SetBackgroundPageActivity, "$kind">): SetBackgroundPageActivity {
+    return { $kind: "SetBackgroundPageActivity", ...fields };
+}
+
 export interface SetBrowsingPreferences {
     readonly $kind: "SetBrowsingPreferences";
     readonly workspaceId: string;
@@ -12221,6 +12606,14 @@ export interface SetCustomFilters {
 }
 export function SetCustomFilters(fields: Omit<SetCustomFilters, "$kind">): SetCustomFilters {
     return { $kind: "SetCustomFilters", ...fields };
+}
+
+export interface SetDefaultPageZoom {
+    readonly $kind: "SetDefaultPageZoom";
+    readonly zoom: number;
+}
+export function SetDefaultPageZoom(fields: Omit<SetDefaultPageZoom, "$kind">): SetDefaultPageZoom {
+    return { $kind: "SetDefaultPageZoom", ...fields };
 }
 
 export interface SetDefaultSearch {
@@ -12290,6 +12683,14 @@ export interface SetFolderSymbol {
 }
 export function SetFolderSymbol(fields: Omit<SetFolderSymbol, "$kind">): SetFolderSymbol {
     return { $kind: "SetFolderSymbol", ...fields };
+}
+
+export interface SetHighFrameRate {
+    readonly $kind: "SetHighFrameRate";
+    readonly allowed: boolean;
+}
+export function SetHighFrameRate(fields: Omit<SetHighFrameRate, "$kind">): SetHighFrameRate {
+    return { $kind: "SetHighFrameRate", ...fields };
 }
 
 export interface SetLinkBehavior {
@@ -12393,6 +12794,14 @@ export interface SetSpaceBranding {
 }
 export function SetSpaceBranding(fields: Omit<SetSpaceBranding, "$kind">): SetSpaceBranding {
     return { $kind: "SetSpaceBranding", ...fields };
+}
+
+export interface SetSpaceDownloads {
+    readonly $kind: "SetSpaceDownloads";
+    readonly preferences: SpaceDownloadPreferences;
+}
+export function SetSpaceDownloads(fields: Omit<SetSpaceDownloads, "$kind">): SetSpaceDownloads {
+    return { $kind: "SetSpaceDownloads", ...fields };
 }
 
 export interface SetSpaceIdentity {
@@ -12615,6 +13024,7 @@ export interface SetupReviewSpace {
     readonly placements: readonly TabPlacementChoice[];
     readonly includesPasswords: boolean;
     readonly passwordCount: number;
+    readonly insecurePasswordCount: number;
     readonly extensions: readonly ImportExtension[];
     readonly includedExtensionIds: readonly string[];
     readonly joinsGroupOf: string | null;
@@ -12866,6 +13276,22 @@ export function SiteContentBlockingChanged(fields: Omit<SiteContentBlockingChang
     return { $kind: "SiteContentBlockingChanged", ...fields };
 }
 
+export interface SiteControlTopActions {
+    readonly actions: readonly SiteControlAction[];
+}
+export const SiteControlTopActionsStatics = Object.freeze({
+    maximumCount: 4,
+    default: Object.freeze({ actions: Object.freeze([SiteControlAction_CopyLink, SiteControlAction_Share, SiteControlAction_PinTab, SiteControlAction_FindInPage]) }),
+});
+
+export interface SiteControlTopActionsChanged {
+    readonly $kind: "SiteControlTopActionsChanged";
+    readonly topActions: SiteControlTopActions;
+}
+export function SiteControlTopActionsChanged(fields: Omit<SiteControlTopActionsChanged, "$kind">): SiteControlTopActionsChanged {
+    return { $kind: "SiteControlTopActionsChanged", ...fields };
+}
+
 export interface SiteDataRead {
     readonly $kind: "SiteDataRead";
     readonly readingId: string;
@@ -13040,6 +13466,7 @@ export interface SpaceCustomization {
 }
 export const SpaceCustomizationStatics = Object.freeze({
     untitledName: "Untitled Space",
+    maximumNameLength: 200,
 });
 
 export interface SpaceDataNotErased {
@@ -13078,6 +13505,12 @@ export function SpaceDeletionUnderway(fields: Omit<SpaceDeletionUnderway, "$kind
 export const SpaceDeletionUnderwayTexts = Object.freeze({
     message: Object.freeze({ text: "Crest will quit once the Space is deleted." }),
 });
+
+export interface SpaceDownloadPreferences {
+    readonly spaceId: string;
+    readonly asksWhereToSave: boolean;
+    readonly folder: DownloadFolder | null;
+}
 
 export interface SpaceIsPrivate {
     readonly $kind: "SpaceIsPrivate";
@@ -13285,7 +13718,8 @@ export interface SplitGroupStateSeed {
     readonly collapseModifiedAt: Date | null;
 }
 export const SplitGroupStateStatics = Object.freeze({
-    minimumShownMembers: 2,
+    minimumMembers: 2,
+    maximumMembers: 4,
 });
 /** The English texts of a `SplitGroupState`; `%lld` stands for the field each names. */
 export const SplitGroupStateTexts = Object.freeze({
@@ -13335,7 +13769,7 @@ export function SplitNeedsTwoTabs(fields: Omit<SplitNeedsTwoTabs, "$kind">): Spl
 }
 /** The English texts of a `SplitNeedsTwoTabs`; `%lld` stands for the field each names. */
 export const SplitNeedsTwoTabsTexts = Object.freeze({
-    message: Object.freeze({ text: "Split View needs 2 to %lld tabs. Select fewer tabs or use a smaller split.", argument: "limit" }),
+    message: Object.freeze({ text: "Split View needs 2 to %lld tabs. Select at least 2 tabs to make a split.", argument: "limit" }),
 });
 
 export interface SplitTabs {
@@ -13527,14 +13961,6 @@ export function StoreInstallRequested(fields: Omit<StoreInstallRequested, "$kind
     return { $kind: "StoreInstallRequested", ...fields };
 }
 
-export interface StoreLook {
-    readonly $kind: "StoreLook";
-    readonly look: SpaceBranding;
-}
-export function StoreLook(fields: Omit<StoreLook, "$kind">): StoreLook {
-    return { $kind: "StoreLook", ...fields };
-}
-
 export interface StoreRemovalRequested {
     readonly $kind: "StoreRemovalRequested";
     readonly pageId: string;
@@ -13542,10 +13968,6 @@ export interface StoreRemovalRequested {
 }
 export function StoreRemovalRequested(fields: Omit<StoreRemovalRequested, "$kind">): StoreRemovalRequested {
     return { $kind: "StoreRemovalRequested", ...fields };
-}
-
-export interface StoredLook {
-    readonly text: string;
 }
 
 export interface StoredSessionClosed {
@@ -13859,6 +14281,13 @@ export function TabsImported(fields: Omit<TabsImported, "$kind">): TabsImported 
     return { $kind: "TabsImported", ...fields };
 }
 
+export interface TakeReleaseNotes {
+    readonly $kind: "TakeReleaseNotes";
+}
+export function TakeReleaseNotes(): TakeReleaseNotes {
+    return { $kind: "TakeReleaseNotes" };
+}
+
 export interface TearOffPermission {
     readonly allowed: boolean;
     readonly reason: TearOffRefusal | null;
@@ -13925,14 +14354,19 @@ export interface TranslationChoice {
     readonly $kind: "TranslationChoice";
     readonly rules: readonly TranslationRule[];
     readonly sourceLanguage: string;
+    readonly preferredLanguage: string | null;
 }
 export function TranslationChoice(fields: Omit<TranslationChoice, "$kind">): TranslationChoice {
     return { $kind: "TranslationChoice", ...fields };
 }
+export const TranslationChoiceStatics = Object.freeze({
+    fallbackPreferredLanguage: "en",
+});
 
 export interface TranslationDecision {
     readonly rule: TranslationRule | null;
     readonly target: string | null;
+    readonly offers: boolean;
 }
 
 export interface TranslationRule {
@@ -14184,6 +14618,15 @@ export function WatchPage(fields: Omit<WatchPage, "$kind">): WatchPage {
     return { $kind: "WatchPage", ...fields };
 }
 
+export interface WearHouseCrest {
+    readonly $kind: "WearHouseCrest";
+    readonly branding: SpaceBranding;
+    readonly house: SpaceHouse;
+}
+export function WearHouseCrest(fields: Omit<WearHouseCrest, "$kind">): WearHouseCrest {
+    return { $kind: "WearHouseCrest", ...fields };
+}
+
 export interface WebNotificationClosed {
     readonly $kind: "WebNotificationClosed";
     readonly pageId: string;
@@ -14355,6 +14798,7 @@ export type Intent =
     | AddLinkRoute
     | AddSetupSpace
     | AddSubSpace
+    | AdoptDevicePreferences
     | AdoptLegacySession
     | AdoptLinkPreferences
     | AdoptOpenWindows
@@ -14378,7 +14822,6 @@ export type Intent =
     | ArchiveTransientPage
     | AssessDownloadRisk
     | AssignShortcut
-    | AwaitDownloadApproval
     | BeginAgentSession
     | BeginCloudMerge
     | BeginDeletingSpace
@@ -14386,7 +14829,6 @@ export type Intent =
     | BeginImportCommit
     | BeginReopeningPages
     | BeginUnlockingSpace
-    | BlockAutomaticDownload
     | BlockElement
     | BorrowSpace
     | CancelDownload
@@ -14398,7 +14840,6 @@ export type Intent =
     | ChooseImportDestination
     | ChoosePeekModifier
     | ChooseQuickWindowArchivePolicy
-    | ChooseSetupLook
     | ChooseShortcutPreference
     | ChooseSiteEngine
     | ChooseTabIcon
@@ -14499,6 +14940,7 @@ export type Intent =
     | MovePage
     | MovePinnedExtension
     | MoveSetupSpace
+    | MoveSiteControlTopAction
     | MoveSplitMember
     | MoveTab
     | MoveTabToSpace
@@ -14508,6 +14950,7 @@ export type Intent =
     | Navigate
     | NavigateTab
     | NoteAgentActivity
+    | NoteLaunchRelease
     | NotifyCloudLocalChanges
     | ObserveCloudAccountAvailability
     | ObserveCloudAccountChange
@@ -14522,6 +14965,7 @@ export type Intent =
     | OverwriteCloud
     | PauseDownload
     | PlaceImportTab
+    | PlaceSiteControlTopAction
     | PrepareToClosePages
     | PrepareToCloseWindows
     | PrepareToQuit
@@ -14544,6 +14988,7 @@ export type Intent =
     | RemoveProfileDownloads
     | RemoveSearchProvider
     | RemoveSetupSpace
+    | RemoveSiteControlTopAction
     | RenameFolder
     | RenameTab
     | ReopenClosedTab
@@ -14559,6 +15004,7 @@ export type Intent =
     | ResetSearchProviders
     | ResetShortcut
     | ResetShortcuts
+    | ResetSiteControlTopActions
     | ResetSitePermission
     | ResetSpacePermissions
     | ResizeSplitColumns
@@ -14580,12 +15026,14 @@ export type Intent =
     | SetAgentScripts
     | SetAgents
     | SetAppPreferences
+    | SetBackgroundPageActivity
     | SetBrowsingPreferences
     | SetCloudSyncEnabled
     | SetContentBlockingLevel
     | SetCredentialPreferences
     | SetCustomFilterList
     | SetCustomFilters
+    | SetDefaultPageZoom
     | SetDefaultSearch
     | SetDefaultSpace
     | SetDownloadDestination
@@ -14593,6 +15041,7 @@ export type Intent =
     | SetFolderColor
     | SetFolderGroup
     | SetFolderSymbol
+    | SetHighFrameRate
     | SetLinkBehavior
     | SetPrivateSearch
     | SetSearchOption
@@ -14603,6 +15052,7 @@ export type Intent =
     | SetSiteContentBlocking
     | SetSpaceAccess
     | SetSpaceBranding
+    | SetSpaceDownloads
     | SetSpaceIdentity
     | SetSpaceSearch
     | SetSplitIcon
@@ -14627,6 +15077,7 @@ export type Intent =
     | StopAgentTab
     | StopAllAgents
     | SweepExpiredRecords
+    | TakeReleaseNotes
     | TintSplit
     | ToggleImportSource
     | TogglePin
@@ -14647,6 +15098,7 @@ export type Change =
     | DataDeleted
     | DownloadApprovalAsked
     | DownloadDestinationAsked
+    | DownloadPreferencesChanged
     | DownloadStarted
     | DownloadUpdated
     | DownloadsRemoved
@@ -14664,12 +15116,14 @@ export type Change =
     | OfferedWindowAdopted
     | PageChanged
     | PageOpened
+    | PagePreferencesChanged
     | PageRehosted
     | PageRemoved
     | PageUnloaded
     | PermissionAsked
     | PromptSettled
     | QuitWithDownloadsAsked
+    | ReleaseNotesDue
     | Saved
     | ScriptDialogAsked
     | SearchCatalogChanged
@@ -14681,6 +15135,7 @@ export type Change =
     | ShortcutsChanged
     | SidebarChanged
     | SiteContentBlockingChanged
+    | SiteControlTopActionsChanged
     | SitePermissionsChanged
     | SpaceLockChanged
     | SpaceSettingsChanged
@@ -14953,7 +15408,7 @@ export function messageOfRejection(value: Rejection): string | null {
         case "SpaceLocked": return "The Space is locked or no longer active. Unlock it and select the tabs again.";
         case "SpaceProfileChanged": return "That Space is no longer available.";
         case "SplitLimitReached": return "Split View needs 2 to %lld tabs. Select fewer tabs or use a smaller split.".replace("%lld", value.limit.toLocaleString());
-        case "SplitNeedsTwoTabs": return "Split View needs 2 to %lld tabs. Select fewer tabs or use a smaller split.".replace("%lld", value.limit.toLocaleString());
+        case "SplitNeedsTwoTabs": return "Split View needs 2 to %lld tabs. Select at least 2 tabs to make a split.".replace("%lld", value.limit.toLocaleString());
         case "UnknownAgentSession": return "This agent is no longer connected to Crest.";
         case "UnknownCloudMerge": return "Crest lost track of an iCloud download it was applying.";
         case "UnknownExtension": return "That extension is no longer installed.";
@@ -14967,6 +15422,7 @@ export function messageOfRejection(value: Rejection): string | null {
 
 export type Query =
     | AgentReach
+    | ApplyHouse
     | ArchivedPageHistory
     | AuthenticationSource
     | AutomaticDownloadCheck
@@ -14978,13 +15434,14 @@ export type Query =
     | CaptureDecision
     | CatchUp
     | ChallengeHandling
+    | ClearedTabs
     | CloudComparison
     | CloudFieldsOf
-    | CloudSync
     | CloudTransport
     | ContentBlockingApplies
     | ContentRuleListSource
     | ContentRuleLists
+    | CredentialAccess
     | CredentialCapture
     | CredentialExport
     | CredentialFill
@@ -14996,7 +15453,6 @@ export type Query =
     | DetachedSession
     | DockMenu
     | DocumentCosmetics
-    | DownloadProgress
     | DownloadRisk
     | DropTargets
     | DueFilterDownloads
@@ -15011,6 +15467,7 @@ export type Query =
     | FindChromiumBrowsers
     | FindImportData
     | FirstInstallSession
+    | FolderDeletionTabs
     | GetAgentPreferences
     | GetEnginePreferences
     | GetFilterLists
@@ -15023,8 +15480,8 @@ export type Query =
     | LaunchPlan
     | LaunchSetup
     | LaunchWindows
-    | LinkNavigation
     | LinkToCopy
+    | LocalDevelopmentAddress
     | MediaSessionOrder
     | MediaSessionReport
     | MostRecentCredential
@@ -15036,6 +15493,10 @@ export type Query =
     | PageBlocksElements
     | PageHistoryEntries
     | PageScriptlets
+    | PaletteLimiting
+    | PaletteOffering
+    | PaletteSectionMove
+    | PaletteSectionOrder
     | PaletteSuggestions
     | PasskeyAccess
     | PasswordImportPreview
@@ -15048,7 +15509,6 @@ export type Query =
     | RecentTabs
     | RecordsToUpload
     | ResolveAddress
-    | RestoreLook
     | RouteExternalLink
     | RouteLocalDocument
     | SamePage
@@ -15060,16 +15520,17 @@ export type Query =
     | SiteDecision
     | SpaceSearch
     | SplitJoinCandidate
-    | StoreLook
     | StrongPassword
     | SwipeNeighbors
     | SystemPasswordOffer
     | SystemPasswordWriteThrough
     | TranslationChoice
+    | WearHouseCrest
     | WindowToReopen;
 /** What each `Query` answers with. */
 export interface QueryAnswers {
     AgentReach: AgentReachList;
+    ApplyHouse: NormalizedBranding;
     ArchivedPageHistory: PageHistoryArchive;
     AuthenticationSource: AuthenticationSourceLabel;
     AutomaticDownloadCheck: AutomaticDownloadVerdict;
@@ -15081,13 +15542,14 @@ export interface QueryAnswers {
     CaptureDecision: SitePermissionAnswer;
     CatchUp: CaughtUp;
     ChallengeHandling: ChallengeHandled;
+    ClearedTabs: RemovedTabs;
     CloudComparison: CloudContentComparison;
     CloudFieldsOf: CloudRecordFieldList;
-    CloudSync: CloudSyncStatus;
     CloudTransport: CloudTransportState;
     ContentBlockingApplies: boolean;
     ContentRuleListSource: ContentRuleList;
     ContentRuleLists: ContentRuleListSet;
+    CredentialAccess: CredentialAccessAnswer;
     CredentialCapture: CredentialCaptureDecision;
     CredentialExport: CredentialExportFile;
     CredentialFill: CredentialFillDecision;
@@ -15099,7 +15561,6 @@ export interface QueryAnswers {
     DetachedSession: SessionState;
     DockMenu: DockMenuContent;
     DocumentCosmetics: CosmeticFilters;
-    DownloadProgress: DownloadProgressReading;
     DownloadRisk: DownloadRiskVerdict;
     DropTargets: DropTargetList;
     DueFilterDownloads: readonly FilterDownload[];
@@ -15114,6 +15575,7 @@ export interface QueryAnswers {
     FindChromiumBrowsers: readonly ImportFoundBrowser[];
     FindImportData: ImportData;
     FirstInstallSession: SessionState;
+    FolderDeletionTabs: RemovedTabs;
     GetAgentPreferences: AgentPreferences;
     GetEnginePreferences: EnginePreferences;
     GetFilterLists: FilterLists;
@@ -15126,8 +15588,8 @@ export interface QueryAnswers {
     LaunchPlan: LaunchDecision;
     LaunchSetup: LaunchSetupGate;
     LaunchWindows: LaunchWindowPlan;
-    LinkNavigation: LinkNavigationAnswer;
     LinkToCopy: string;
+    LocalDevelopmentAddress: DevelopmentAddressVerdict;
     MediaSessionOrder: MediaSessionArbitration;
     MediaSessionReport: MediaSessionEventDecision;
     MostRecentCredential: CredentialChoice;
@@ -15139,6 +15601,10 @@ export interface QueryAnswers {
     PageBlocksElements: boolean;
     PageHistoryEntries: PageHistoryList;
     PageScriptlets: string;
+    PaletteLimiting: PalettePreferences;
+    PaletteOffering: PalettePreferences;
+    PaletteSectionMove: PalettePreferences;
+    PaletteSectionOrder: PalettePreferences;
     PaletteSuggestions: PaletteAnswer;
     PasskeyAccess: PasskeyAccessVerdict;
     PasswordImportPreview: CredentialImportPlan;
@@ -15151,7 +15617,6 @@ export interface QueryAnswers {
     RecentTabs: RecentTabList;
     RecordsToUpload: UploadBatch;
     ResolveAddress: ResolvedAddress;
-    RestoreLook: RestoredLook;
     RouteExternalLink: ExternalLinkPlacement;
     RouteLocalDocument: LocalDocumentPlacement;
     SamePage: PageMatch;
@@ -15163,12 +15628,12 @@ export interface QueryAnswers {
     SiteDecision: SitePermissionAnswer;
     SpaceSearch: SpaceSearchAnswer;
     SplitJoinCandidate: SplitJoinCandidateTab;
-    StoreLook: StoredLook;
     StrongPassword: StrongPasswordRecipe;
     SwipeNeighbors: SwipeNeighborTabs;
     SystemPasswordOffer: SystemPasswordOfferDecision;
     SystemPasswordWriteThrough: SystemPasswordWriteThroughSupport;
     TranslationChoice: TranslationDecision;
+    WearHouseCrest: NormalizedBranding;
     WindowToReopen: ReopenedWindow;
 }
 export type AnswerOfQuery<Q extends Query> = QueryAnswers[Q["$kind"]];
@@ -15474,13 +15939,23 @@ export type DataDeletionIntent =
     | DeleteProfileData
     | DeleteSiteData;
 
+/** The members of `Intent` that derive from the core's `DevicePreferenceIntent`. */
+export type DevicePreferenceIntent =
+    | AdoptDevicePreferences
+    | MoveSiteControlTopAction
+    | PlaceSiteControlTopAction
+    | RemoveSiteControlTopAction
+    | ResetSiteControlTopActions
+    | SetBackgroundPageActivity
+    | SetDefaultPageZoom
+    | SetHighFrameRate
+    | SetSpaceDownloads;
+
 /** The members of `Intent` that derive from the core's `DownloadIntent`. */
 export type DownloadIntent =
     | AcknowledgeDownloads
     | AssessDownloadRisk
-    | AwaitDownloadApproval
     | BeginDownload
-    | BlockAutomaticDownload
     | CancelDownload
     | FailDownload
     | FinishDownload
@@ -15703,7 +16178,6 @@ export type SetupFlowIntent =
     | BeginImportCommit
     | CancelImportRead
     | ChooseImportDestination
-    | ChooseSetupLook
     | ContinueImport
     | CustomizeImportSpace
     | FailImport
@@ -15762,6 +16236,7 @@ export type WindowIntent =
     | CloseWindow
     | DismissShownTab
     | FinishReopeningPages
+    | NoteLaunchRelease
     | OpenWindow
     | RememberWindowsForLaunch
     | ResizeSplitColumns
@@ -15770,7 +16245,8 @@ export type WindowIntent =
     | ShowLeastRecentTab
     | ShowMostRecentTab
     | ShowSpace
-    | ShowTab;
+    | ShowTab
+    | TakeReleaseNotes;
 
 /** The members of `Intent` that derive from the core's `WorkspaceIntent`. */
 export type WorkspaceIntent =
@@ -15789,30 +16265,30 @@ export function readIntent(reader: WireReader): Intent {
         case 3: return readAddLinkRoute(reader);
         case 4: return readAddSetupSpace(reader);
         case 5: return readAddSubSpace(reader);
-        case 6: return readAdoptLegacySession(reader);
-        case 7: return readAdoptLinkPreferences(reader);
-        case 8: return readAdoptOpenWindows(reader);
-        case 9: return readAdoptSetupCompletion(reader);
-        case 10: return readAdoptSetupDraft(reader);
-        case 11: return readAdoptShiftedDigitShortcuts(reader);
-        case 12: return readAdoptShortcuts(reader);
-        case 13: return readAdoptSitePermissions(reader);
-        case 14: return readAdoptWindowRecords(reader);
-        case 15: return readAllowAgentSpace(reader);
-        case 16: return readAllowAgentWindows(reader);
-        case 17: return readAnswerAuthentication(reader);
-        case 18: return readAnswerDownloadApproval(reader);
-        case 19: return readAnswerDownloadDestination(reader);
-        case 20: return readAnswerExtensionInstall(reader);
-        case 21: return readAnswerPermission(reader);
-        case 22: return readAnswerQuitWithDownloads(reader);
-        case 23: return readAnswerScriptDialog(reader);
-        case 24: return readApplyManualSetup(reader);
-        case 25: return readApproveAgent(reader);
-        case 26: return readArchiveTransientPage(reader);
-        case 27: return readAssessDownloadRisk(reader);
-        case 28: return readAssignShortcut(reader);
-        case 29: return readAwaitDownloadApproval(reader);
+        case 6: return readAdoptDevicePreferences(reader);
+        case 7: return readAdoptLegacySession(reader);
+        case 8: return readAdoptLinkPreferences(reader);
+        case 9: return readAdoptOpenWindows(reader);
+        case 10: return readAdoptSetupCompletion(reader);
+        case 11: return readAdoptSetupDraft(reader);
+        case 12: return readAdoptShiftedDigitShortcuts(reader);
+        case 13: return readAdoptShortcuts(reader);
+        case 14: return readAdoptSitePermissions(reader);
+        case 15: return readAdoptWindowRecords(reader);
+        case 16: return readAllowAgentSpace(reader);
+        case 17: return readAllowAgentWindows(reader);
+        case 18: return readAnswerAuthentication(reader);
+        case 19: return readAnswerDownloadApproval(reader);
+        case 20: return readAnswerDownloadDestination(reader);
+        case 21: return readAnswerExtensionInstall(reader);
+        case 22: return readAnswerPermission(reader);
+        case 23: return readAnswerQuitWithDownloads(reader);
+        case 24: return readAnswerScriptDialog(reader);
+        case 25: return readApplyManualSetup(reader);
+        case 26: return readApproveAgent(reader);
+        case 27: return readArchiveTransientPage(reader);
+        case 28: return readAssessDownloadRisk(reader);
+        case 29: return readAssignShortcut(reader);
         case 30: return readBeginAgentSession(reader);
         case 31: return readBeginCloudMerge(reader);
         case 32: return readBeginDeletingSpace(reader);
@@ -15820,128 +16296,128 @@ export function readIntent(reader: WireReader): Intent {
         case 34: return readBeginImportCommit(reader);
         case 35: return readBeginReopeningPages(reader);
         case 36: return readBeginUnlockingSpace(reader);
-        case 37: return readBlockAutomaticDownload(reader);
-        case 38: return readBlockElement(reader);
-        case 39: return readBorrowSpace(reader);
-        case 40: return readCancelDownload(reader);
-        case 41: return readCancelExtensionInstall(reader);
-        case 42: return readCancelImportRead(reader);
-        case 43: return readChangeExtension(reader);
-        case 44: return readChooseCloudCopy(reader);
-        case 45: return readChooseExternalLinkDestination(reader);
-        case 46: return readChooseImportDestination(reader);
-        case 47: return readChoosePeekModifier(reader);
-        case 48: return readChooseQuickWindowArchivePolicy(reader);
-        case 49: return readChooseSetupLook(reader);
-        case 50: return readChooseShortcutPreference(reader);
-        case 51: return readChooseSiteEngine(reader);
-        case 52: return readChooseTabIcon(reader);
-        case 53: return readClaimAgentTab(reader);
-        case 54: return readCleanUpCurrentTabs(reader);
-        case 55: return readClearCurrentTabs(reader);
-        case 56: return readClearHistory(reader);
-        case 57: return readClearPaletteChoices(reader);
-        case 58: return readCloseTab(reader);
-        case 59: return readCloseTabs(reader);
-        case 60: return readCloseWindow(reader);
-        case 61: return readCloseWorkspace(reader);
-        case 62: return readCloudAccountChecked(reader);
-        case 63: return readCloudContentCompared(reader);
-        case 64: return readCloudContentTaken(reader);
-        case 65: return readCloudCopyApplied(reader);
-        case 66: return readCloudEntitlementChecked(reader);
-        case 67: return readCloudSeedReplaced(reader);
-        case 68: return readCloudStepFailed(reader);
-        case 69: return readCloudTransportPulled(reader);
-        case 70: return readCloudTransportReported(reader);
-        case 71: return readCloudTransportStarted(reader);
-        case 72: return readCloudTransportSynced(reader);
-        case 73: return readCollapseAllFolders(reader);
-        case 74: return readCollapseFolder(reader);
-        case 75: return readCollapseSplit(reader);
-        case 76: return readConfigureCloudSync(reader);
-        case 77: return readContinueImport(reader);
-        case 78: return readCreateFolder(reader);
-        case 79: return readCreateSpace(reader);
-        case 80: return readCustomizeImportSpace(reader);
-        case 81: return readCustomizeSetupSpace(reader);
-        case 82: return readDecideSitePermission(reader);
-        case 83: return readDeleteBrowsingData(reader);
-        case 84: return readDeleteFolder(reader);
-        case 85: return readDeleteFolderAndContents(reader);
-        case 86: return readDeleteProfileData(reader);
-        case 87: return readDeleteSiteData(reader);
-        case 88: return readDeleteTab(reader);
-        case 89: return readDeleteTabs(reader);
-        case 90: return readDiscardStagedLink(reader);
-        case 91: return readDismissShownTab(reader);
-        case 92: return readDissolveSplit(reader);
-        case 93: return readDropAroundTab(reader);
-        case 94: return readDropIntoList(reader);
-        case 95: return readDropIntoSplit(reader);
-        case 96: return readDropOnSpace(reader);
-        case 97: return readDuplicateTab(reader);
-        case 98: return readDuplicateTabs(reader);
-        case 99: return readEditEngineRule(reader);
-        case 100: return readEditLinkRoute(reader);
-        case 101: return readEndAgentSession(reader);
-        case 102: return readExpandSavedTabs(reader);
-        case 103: return readFailDownload(reader);
-        case 104: return readFailImport(reader);
-        case 105: return readFileTabs(reader);
-        case 106: return readFilterDownloadFailed(reader);
-        case 107: return readFilterDownloadFetched(reader);
-        case 108: return readFilterDownloadNotModified(reader);
-        case 109: return readFilterDownloadTooLarge(reader);
-        case 110: return readFinishCloudMerge(reader);
-        case 111: return readFinishDeletingSpace(reader);
-        case 112: return readFinishDownload(reader);
-        case 113: return readFinishImportCommit(reader);
-        case 114: return readFinishReopeningPages(reader);
-        case 115: return readFinishSetup(reader);
-        case 116: return readFinishUnlockingSpace(reader);
-        case 117: return readFolderTabs(reader);
-        case 118: return readFolderTabsAround(reader);
-        case 119: return readForgetAgent(reader);
-        case 120: return readForgetCloudZone(reader);
-        case 121: return readForgetEngineRule(reader);
-        case 122: return readForgetPaletteChoices(reader);
-        case 123: return readIdentifyAgent(reader);
-        case 124: return readImportAppPreferences(reader);
-        case 125: return readImportReviewedSpaces(reader);
-        case 126: return readImportSpaces(reader);
-        case 127: return readIncludeImportExtension(reader);
-        case 128: return readIncludeImportPasswords(reader);
-        case 129: return readIncludeImportSpace(reader);
-        case 130: return readIncludeImportTabs(reader);
-        case 131: return readInstallExtension(reader);
-        case 132: return readJoinSpace(reader);
-        case 133: return readJoinSplit(reader);
-        case 134: return readKeepPageLoaded(reader);
-        case 135: return readKeepTabsLoaded(reader);
-        case 136: return readLeavePageFailure(reader);
-        case 137: return readLeaveSplit(reader);
-        case 138: return readListExtensions(reader);
-        case 139: return readLoadAddress(reader);
-        case 140: return readLockAllSpaces(reader);
-        case 141: return readLockSpace(reader);
-        case 142: return readMergeCloudSnapshot(reader);
-        case 143: return readMergeSyncRecords(reader);
-        case 144: return readMoveFolder(reader);
-        case 145: return readMoveFolderToSpace(reader);
-        case 146: return readMoveLinkRoute(reader);
-        case 147: return readMovePage(reader);
-        case 148: return readMovePinnedExtension(reader);
-        case 149: return readMoveSetupSpace(reader);
-        case 150: return readMoveSplitMember(reader);
-        case 151: return readMoveTab(reader);
-        case 152: return readMoveTabToSpace(reader);
-        case 153: return readMoveTabToWindow(reader);
-        case 154: return readMoveTabsToSpace(reader);
-        case 155: return readNameSplit(reader);
-        case 156: return readNavigate(reader);
-        case 157: return readNavigateTab(reader);
-        case 158: return readNoteAgentActivity(reader);
+        case 37: return readBlockElement(reader);
+        case 38: return readBorrowSpace(reader);
+        case 39: return readCancelDownload(reader);
+        case 40: return readCancelExtensionInstall(reader);
+        case 41: return readCancelImportRead(reader);
+        case 42: return readChangeExtension(reader);
+        case 43: return readChooseCloudCopy(reader);
+        case 44: return readChooseExternalLinkDestination(reader);
+        case 45: return readChooseImportDestination(reader);
+        case 46: return readChoosePeekModifier(reader);
+        case 47: return readChooseQuickWindowArchivePolicy(reader);
+        case 48: return readChooseShortcutPreference(reader);
+        case 49: return readChooseSiteEngine(reader);
+        case 50: return readChooseTabIcon(reader);
+        case 51: return readClaimAgentTab(reader);
+        case 52: return readCleanUpCurrentTabs(reader);
+        case 53: return readClearCurrentTabs(reader);
+        case 54: return readClearHistory(reader);
+        case 55: return readClearPaletteChoices(reader);
+        case 56: return readCloseTab(reader);
+        case 57: return readCloseTabs(reader);
+        case 58: return readCloseWindow(reader);
+        case 59: return readCloseWorkspace(reader);
+        case 60: return readCloudAccountChecked(reader);
+        case 61: return readCloudContentCompared(reader);
+        case 62: return readCloudContentTaken(reader);
+        case 63: return readCloudCopyApplied(reader);
+        case 64: return readCloudEntitlementChecked(reader);
+        case 65: return readCloudSeedReplaced(reader);
+        case 66: return readCloudStepFailed(reader);
+        case 67: return readCloudTransportPulled(reader);
+        case 68: return readCloudTransportReported(reader);
+        case 69: return readCloudTransportStarted(reader);
+        case 70: return readCloudTransportSynced(reader);
+        case 71: return readCollapseAllFolders(reader);
+        case 72: return readCollapseFolder(reader);
+        case 73: return readCollapseSplit(reader);
+        case 74: return readConfigureCloudSync(reader);
+        case 75: return readContinueImport(reader);
+        case 76: return readCreateFolder(reader);
+        case 77: return readCreateSpace(reader);
+        case 78: return readCustomizeImportSpace(reader);
+        case 79: return readCustomizeSetupSpace(reader);
+        case 80: return readDecideSitePermission(reader);
+        case 81: return readDeleteBrowsingData(reader);
+        case 82: return readDeleteFolder(reader);
+        case 83: return readDeleteFolderAndContents(reader);
+        case 84: return readDeleteProfileData(reader);
+        case 85: return readDeleteSiteData(reader);
+        case 86: return readDeleteTab(reader);
+        case 87: return readDeleteTabs(reader);
+        case 88: return readDiscardStagedLink(reader);
+        case 89: return readDismissShownTab(reader);
+        case 90: return readDissolveSplit(reader);
+        case 91: return readDropAroundTab(reader);
+        case 92: return readDropIntoList(reader);
+        case 93: return readDropIntoSplit(reader);
+        case 94: return readDropOnSpace(reader);
+        case 95: return readDuplicateTab(reader);
+        case 96: return readDuplicateTabs(reader);
+        case 97: return readEditEngineRule(reader);
+        case 98: return readEditLinkRoute(reader);
+        case 99: return readEndAgentSession(reader);
+        case 100: return readExpandSavedTabs(reader);
+        case 101: return readFailDownload(reader);
+        case 102: return readFailImport(reader);
+        case 103: return readFileTabs(reader);
+        case 104: return readFilterDownloadFailed(reader);
+        case 105: return readFilterDownloadFetched(reader);
+        case 106: return readFilterDownloadNotModified(reader);
+        case 107: return readFilterDownloadTooLarge(reader);
+        case 108: return readFinishCloudMerge(reader);
+        case 109: return readFinishDeletingSpace(reader);
+        case 110: return readFinishDownload(reader);
+        case 111: return readFinishImportCommit(reader);
+        case 112: return readFinishReopeningPages(reader);
+        case 113: return readFinishSetup(reader);
+        case 114: return readFinishUnlockingSpace(reader);
+        case 115: return readFolderTabs(reader);
+        case 116: return readFolderTabsAround(reader);
+        case 117: return readForgetAgent(reader);
+        case 118: return readForgetCloudZone(reader);
+        case 119: return readForgetEngineRule(reader);
+        case 120: return readForgetPaletteChoices(reader);
+        case 121: return readIdentifyAgent(reader);
+        case 122: return readImportAppPreferences(reader);
+        case 123: return readImportReviewedSpaces(reader);
+        case 124: return readImportSpaces(reader);
+        case 125: return readIncludeImportExtension(reader);
+        case 126: return readIncludeImportPasswords(reader);
+        case 127: return readIncludeImportSpace(reader);
+        case 128: return readIncludeImportTabs(reader);
+        case 129: return readInstallExtension(reader);
+        case 130: return readJoinSpace(reader);
+        case 131: return readJoinSplit(reader);
+        case 132: return readKeepPageLoaded(reader);
+        case 133: return readKeepTabsLoaded(reader);
+        case 134: return readLeavePageFailure(reader);
+        case 135: return readLeaveSplit(reader);
+        case 136: return readListExtensions(reader);
+        case 137: return readLoadAddress(reader);
+        case 138: return readLockAllSpaces(reader);
+        case 139: return readLockSpace(reader);
+        case 140: return readMergeCloudSnapshot(reader);
+        case 141: return readMergeSyncRecords(reader);
+        case 142: return readMoveFolder(reader);
+        case 143: return readMoveFolderToSpace(reader);
+        case 144: return readMoveLinkRoute(reader);
+        case 145: return readMovePage(reader);
+        case 146: return readMovePinnedExtension(reader);
+        case 147: return readMoveSetupSpace(reader);
+        case 148: return readMoveSiteControlTopAction(reader);
+        case 149: return readMoveSplitMember(reader);
+        case 150: return readMoveTab(reader);
+        case 151: return readMoveTabToSpace(reader);
+        case 152: return readMoveTabToWindow(reader);
+        case 153: return readMoveTabsToSpace(reader);
+        case 154: return readNameSplit(reader);
+        case 155: return readNavigate(reader);
+        case 156: return readNavigateTab(reader);
+        case 157: return readNoteAgentActivity(reader);
+        case 158: return readNoteLaunchRelease(reader);
         case 159: return readNotifyCloudLocalChanges(reader);
         case 160: return readObserveCloudAccountAvailability(reader);
         case 161: return readObserveCloudAccountChange(reader);
@@ -15956,116 +16432,124 @@ export function readIntent(reader: WireReader): Intent {
         case 170: return readOverwriteCloud(reader);
         case 171: return readPauseDownload(reader);
         case 172: return readPlaceImportTab(reader);
-        case 173: return readPrepareToClosePages(reader);
-        case 174: return readPrepareToCloseWindows(reader);
-        case 175: return readPrepareToQuit(reader);
-        case 176: return readPromoteTransientPage(reader);
-        case 177: return readPutAwayTabs(reader);
-        case 178: return readReadWebsiteData(reader);
-        case 179: return readReassignShortcut(reader);
-        case 180: return readRecordCloudFields(reader);
-        case 181: return readRecordDownloadTransfer(reader);
-        case 182: return readRecordPaletteChoice(reader);
-        case 183: return readRefreshFilterLists(reader);
-        case 184: return readRehostPage(reader);
-        case 185: return readReleasePage(reader);
-        case 186: return readRememberQuickWindowSpace(reader);
-        case 187: return readRememberWindowsForLaunch(reader);
-        case 188: return readRemoveCustomFilterList(reader);
-        case 189: return readRemoveDownload(reader);
-        case 190: return readRemoveHistoryAddress(reader);
-        case 191: return readRemoveLinkRoute(reader);
-        case 192: return readRemoveProfileDownloads(reader);
-        case 193: return readRemoveSearchProvider(reader);
-        case 194: return readRemoveSetupSpace(reader);
-        case 195: return readRenameFolder(reader);
-        case 196: return readRenameTab(reader);
-        case 197: return readReopenClosedTab(reader);
-        case 198: return readReorderSpaces(reader);
-        case 199: return readReplaceSavedAddress(reader);
-        case 200: return readReplaceSeedWithCloudRecords(reader);
-        case 201: return readReplaceWithCloudRecords(reader);
-        case 202: return readReportMemoryPressure(reader);
-        case 203: return readRequestCloudPull(reader);
-        case 204: return readRequestCloudSync(reader);
-        case 205: return readResetCloudTransport(reader);
-        case 206: return readResetPrivateBrowsing(reader);
-        case 207: return readResetSearchProviders(reader);
-        case 208: return readResetShortcut(reader);
-        case 209: return readResetShortcuts(reader);
-        case 210: return readResetSitePermission(reader);
-        case 211: return readResetSpacePermissions(reader);
-        case 212: return readResizeSplitColumns(reader);
-        case 213: return readRestartCloudSyncAfterAccountChange(reader);
-        case 214: return readRestartDownload(reader);
-        case 215: return readRestoreArchivedTab(reader);
-        case 216: return readRestoreSearchCatalog(reader);
-        case 217: return readRestoreTabHistory(reader);
-        case 218: return readResumeDownload(reader);
-        case 219: return readRetryCloudSync(reader);
-        case 220: return readReturnToSavedAddress(reader);
-        case 221: return readReviewImport(reader);
-        case 222: return readSaveCloudEngineState(reader);
-        case 223: return readSaveSearchProvider(reader);
-        case 224: return readSelectDefaultEngine(reader);
-        case 225: return readSeparateImportSpace(reader);
-        case 226: return readSeparateSpace(reader);
-        case 227: return readSeparateSplits(reader);
-        case 228: return readSetAgentScripts(reader);
-        case 229: return readSetAgents(reader);
-        case 230: return readSetAppPreferences(reader);
-        case 231: return readSetBrowsingPreferences(reader);
-        case 232: return readSetCloudSyncEnabled(reader);
-        case 233: return readSetContentBlockingLevel(reader);
-        case 234: return readSetCredentialPreferences(reader);
-        case 235: return readSetCustomFilterList(reader);
-        case 236: return readSetCustomFilters(reader);
-        case 237: return readSetDefaultSearch(reader);
-        case 238: return readSetDefaultSpace(reader);
-        case 239: return readSetDownloadDestination(reader);
-        case 240: return readSetFilterList(reader);
-        case 241: return readSetFolderColor(reader);
-        case 242: return readSetFolderGroup(reader);
-        case 243: return readSetFolderSymbol(reader);
-        case 244: return readSetLinkBehavior(reader);
-        case 245: return readSetPrivateSearch(reader);
-        case 246: return readSetSearchOption(reader);
-        case 247: return readSetSearchProviderEnabled(reader);
-        case 248: return readSetSearchShortcuts(reader);
-        case 249: return readSetSearchSuggestions(reader);
-        case 250: return readSetSeparatePinnedTabs(reader);
-        case 251: return readSetSiteContentBlocking(reader);
-        case 252: return readSetSpaceAccess(reader);
-        case 253: return readSetSpaceBranding(reader);
-        case 254: return readSetSpaceIdentity(reader);
-        case 255: return readSetSpaceSearch(reader);
-        case 256: return readSetSplitIcon(reader);
-        case 257: return readSetTranslationRule(reader);
-        case 258: return readSettleCloudOverwrite(reader);
-        case 259: return readShowAdjacentSpace(reader);
-        case 260: return readShowAdjacentTab(reader);
-        case 261: return readShowHistoryEntry(reader);
-        case 262: return readShowImportSpace(reader);
-        case 263: return readShowLeastRecentTab(reader);
-        case 264: return readShowMostRecentTab(reader);
-        case 265: return readShowSetupStep(reader);
-        case 266: return readShowSpace(reader);
-        case 267: return readShowStartPage(reader);
-        case 268: return readShowTab(reader);
-        case 269: return readSplitTabs(reader);
-        case 270: return readStageLink(reader);
-        case 271: return readStartCloudSync(reader);
-        case 272: return readStartSetup(reader);
-        case 273: return readStepHistory(reader);
-        case 274: return readStepSplitMember(reader);
-        case 275: return readStopAgentTab(reader);
-        case 276: return readStopAllAgents(reader);
-        case 277: return readSweepExpiredRecords(reader);
-        case 278: return readTintSplit(reader);
-        case 279: return readToggleImportSource(reader);
-        case 280: return readTogglePin(reader);
-        case 281: return readUnassignShortcut(reader);
-        case 282: return readUnblockElements(reader);
+        case 173: return readPlaceSiteControlTopAction(reader);
+        case 174: return readPrepareToClosePages(reader);
+        case 175: return readPrepareToCloseWindows(reader);
+        case 176: return readPrepareToQuit(reader);
+        case 177: return readPromoteTransientPage(reader);
+        case 178: return readPutAwayTabs(reader);
+        case 179: return readReadWebsiteData(reader);
+        case 180: return readReassignShortcut(reader);
+        case 181: return readRecordCloudFields(reader);
+        case 182: return readRecordDownloadTransfer(reader);
+        case 183: return readRecordPaletteChoice(reader);
+        case 184: return readRefreshFilterLists(reader);
+        case 185: return readRehostPage(reader);
+        case 186: return readReleasePage(reader);
+        case 187: return readRememberQuickWindowSpace(reader);
+        case 188: return readRememberWindowsForLaunch(reader);
+        case 189: return readRemoveCustomFilterList(reader);
+        case 190: return readRemoveDownload(reader);
+        case 191: return readRemoveHistoryAddress(reader);
+        case 192: return readRemoveLinkRoute(reader);
+        case 193: return readRemoveProfileDownloads(reader);
+        case 194: return readRemoveSearchProvider(reader);
+        case 195: return readRemoveSetupSpace(reader);
+        case 196: return readRemoveSiteControlTopAction(reader);
+        case 197: return readRenameFolder(reader);
+        case 198: return readRenameTab(reader);
+        case 199: return readReopenClosedTab(reader);
+        case 200: return readReorderSpaces(reader);
+        case 201: return readReplaceSavedAddress(reader);
+        case 202: return readReplaceSeedWithCloudRecords(reader);
+        case 203: return readReplaceWithCloudRecords(reader);
+        case 204: return readReportMemoryPressure(reader);
+        case 205: return readRequestCloudPull(reader);
+        case 206: return readRequestCloudSync(reader);
+        case 207: return readResetCloudTransport(reader);
+        case 208: return readResetPrivateBrowsing(reader);
+        case 209: return readResetSearchProviders(reader);
+        case 210: return readResetShortcut(reader);
+        case 211: return readResetShortcuts(reader);
+        case 212: return readResetSiteControlTopActions(reader);
+        case 213: return readResetSitePermission(reader);
+        case 214: return readResetSpacePermissions(reader);
+        case 215: return readResizeSplitColumns(reader);
+        case 216: return readRestartCloudSyncAfterAccountChange(reader);
+        case 217: return readRestartDownload(reader);
+        case 218: return readRestoreArchivedTab(reader);
+        case 219: return readRestoreSearchCatalog(reader);
+        case 220: return readRestoreTabHistory(reader);
+        case 221: return readResumeDownload(reader);
+        case 222: return readRetryCloudSync(reader);
+        case 223: return readReturnToSavedAddress(reader);
+        case 224: return readReviewImport(reader);
+        case 225: return readSaveCloudEngineState(reader);
+        case 226: return readSaveSearchProvider(reader);
+        case 227: return readSelectDefaultEngine(reader);
+        case 228: return readSeparateImportSpace(reader);
+        case 229: return readSeparateSpace(reader);
+        case 230: return readSeparateSplits(reader);
+        case 231: return readSetAgentScripts(reader);
+        case 232: return readSetAgents(reader);
+        case 233: return readSetAppPreferences(reader);
+        case 234: return readSetBackgroundPageActivity(reader);
+        case 235: return readSetBrowsingPreferences(reader);
+        case 236: return readSetCloudSyncEnabled(reader);
+        case 237: return readSetContentBlockingLevel(reader);
+        case 238: return readSetCredentialPreferences(reader);
+        case 239: return readSetCustomFilterList(reader);
+        case 240: return readSetCustomFilters(reader);
+        case 241: return readSetDefaultPageZoom(reader);
+        case 242: return readSetDefaultSearch(reader);
+        case 243: return readSetDefaultSpace(reader);
+        case 244: return readSetDownloadDestination(reader);
+        case 245: return readSetFilterList(reader);
+        case 246: return readSetFolderColor(reader);
+        case 247: return readSetFolderGroup(reader);
+        case 248: return readSetFolderSymbol(reader);
+        case 249: return readSetHighFrameRate(reader);
+        case 250: return readSetLinkBehavior(reader);
+        case 251: return readSetPrivateSearch(reader);
+        case 252: return readSetSearchOption(reader);
+        case 253: return readSetSearchProviderEnabled(reader);
+        case 254: return readSetSearchShortcuts(reader);
+        case 255: return readSetSearchSuggestions(reader);
+        case 256: return readSetSeparatePinnedTabs(reader);
+        case 257: return readSetSiteContentBlocking(reader);
+        case 258: return readSetSpaceAccess(reader);
+        case 259: return readSetSpaceBranding(reader);
+        case 260: return readSetSpaceDownloads(reader);
+        case 261: return readSetSpaceIdentity(reader);
+        case 262: return readSetSpaceSearch(reader);
+        case 263: return readSetSplitIcon(reader);
+        case 264: return readSetTranslationRule(reader);
+        case 265: return readSettleCloudOverwrite(reader);
+        case 266: return readShowAdjacentSpace(reader);
+        case 267: return readShowAdjacentTab(reader);
+        case 268: return readShowHistoryEntry(reader);
+        case 269: return readShowImportSpace(reader);
+        case 270: return readShowLeastRecentTab(reader);
+        case 271: return readShowMostRecentTab(reader);
+        case 272: return readShowSetupStep(reader);
+        case 273: return readShowSpace(reader);
+        case 274: return readShowStartPage(reader);
+        case 275: return readShowTab(reader);
+        case 276: return readSplitTabs(reader);
+        case 277: return readStageLink(reader);
+        case 278: return readStartCloudSync(reader);
+        case 279: return readStartSetup(reader);
+        case 280: return readStepHistory(reader);
+        case 281: return readStepSplitMember(reader);
+        case 282: return readStopAgentTab(reader);
+        case 283: return readStopAllAgents(reader);
+        case 284: return readSweepExpiredRecords(reader);
+        case 285: return readTakeReleaseNotes(reader);
+        case 286: return readTintSplit(reader);
+        case 287: return readToggleImportSource(reader);
+        case 288: return readTogglePin(reader);
+        case 289: return readUnassignShortcut(reader);
+        case 290: return readUnblockElements(reader);
         default: throw new Error(`Unknown Intent tag ${tag}.`);
     }
 }
@@ -16078,30 +16562,30 @@ export function writeIntent(writer: WireWriter, value: Intent): void {
         case "AddLinkRoute": writer.writeTag(3); writeAddLinkRoute(writer, value); break;
         case "AddSetupSpace": writer.writeTag(4); writeAddSetupSpace(writer, value); break;
         case "AddSubSpace": writer.writeTag(5); writeAddSubSpace(writer, value); break;
-        case "AdoptLegacySession": writer.writeTag(6); writeAdoptLegacySession(writer, value); break;
-        case "AdoptLinkPreferences": writer.writeTag(7); writeAdoptLinkPreferences(writer, value); break;
-        case "AdoptOpenWindows": writer.writeTag(8); writeAdoptOpenWindows(writer, value); break;
-        case "AdoptSetupCompletion": writer.writeTag(9); writeAdoptSetupCompletion(writer, value); break;
-        case "AdoptSetupDraft": writer.writeTag(10); writeAdoptSetupDraft(writer, value); break;
-        case "AdoptShiftedDigitShortcuts": writer.writeTag(11); writeAdoptShiftedDigitShortcuts(writer, value); break;
-        case "AdoptShortcuts": writer.writeTag(12); writeAdoptShortcuts(writer, value); break;
-        case "AdoptSitePermissions": writer.writeTag(13); writeAdoptSitePermissions(writer, value); break;
-        case "AdoptWindowRecords": writer.writeTag(14); writeAdoptWindowRecords(writer, value); break;
-        case "AllowAgentSpace": writer.writeTag(15); writeAllowAgentSpace(writer, value); break;
-        case "AllowAgentWindows": writer.writeTag(16); writeAllowAgentWindows(writer, value); break;
-        case "AnswerAuthentication": writer.writeTag(17); writeAnswerAuthentication(writer, value); break;
-        case "AnswerDownloadApproval": writer.writeTag(18); writeAnswerDownloadApproval(writer, value); break;
-        case "AnswerDownloadDestination": writer.writeTag(19); writeAnswerDownloadDestination(writer, value); break;
-        case "AnswerExtensionInstall": writer.writeTag(20); writeAnswerExtensionInstall(writer, value); break;
-        case "AnswerPermission": writer.writeTag(21); writeAnswerPermission(writer, value); break;
-        case "AnswerQuitWithDownloads": writer.writeTag(22); writeAnswerQuitWithDownloads(writer, value); break;
-        case "AnswerScriptDialog": writer.writeTag(23); writeAnswerScriptDialog(writer, value); break;
-        case "ApplyManualSetup": writer.writeTag(24); writeApplyManualSetup(writer, value); break;
-        case "ApproveAgent": writer.writeTag(25); writeApproveAgent(writer, value); break;
-        case "ArchiveTransientPage": writer.writeTag(26); writeArchiveTransientPage(writer, value); break;
-        case "AssessDownloadRisk": writer.writeTag(27); writeAssessDownloadRisk(writer, value); break;
-        case "AssignShortcut": writer.writeTag(28); writeAssignShortcut(writer, value); break;
-        case "AwaitDownloadApproval": writer.writeTag(29); writeAwaitDownloadApproval(writer, value); break;
+        case "AdoptDevicePreferences": writer.writeTag(6); writeAdoptDevicePreferences(writer, value); break;
+        case "AdoptLegacySession": writer.writeTag(7); writeAdoptLegacySession(writer, value); break;
+        case "AdoptLinkPreferences": writer.writeTag(8); writeAdoptLinkPreferences(writer, value); break;
+        case "AdoptOpenWindows": writer.writeTag(9); writeAdoptOpenWindows(writer, value); break;
+        case "AdoptSetupCompletion": writer.writeTag(10); writeAdoptSetupCompletion(writer, value); break;
+        case "AdoptSetupDraft": writer.writeTag(11); writeAdoptSetupDraft(writer, value); break;
+        case "AdoptShiftedDigitShortcuts": writer.writeTag(12); writeAdoptShiftedDigitShortcuts(writer, value); break;
+        case "AdoptShortcuts": writer.writeTag(13); writeAdoptShortcuts(writer, value); break;
+        case "AdoptSitePermissions": writer.writeTag(14); writeAdoptSitePermissions(writer, value); break;
+        case "AdoptWindowRecords": writer.writeTag(15); writeAdoptWindowRecords(writer, value); break;
+        case "AllowAgentSpace": writer.writeTag(16); writeAllowAgentSpace(writer, value); break;
+        case "AllowAgentWindows": writer.writeTag(17); writeAllowAgentWindows(writer, value); break;
+        case "AnswerAuthentication": writer.writeTag(18); writeAnswerAuthentication(writer, value); break;
+        case "AnswerDownloadApproval": writer.writeTag(19); writeAnswerDownloadApproval(writer, value); break;
+        case "AnswerDownloadDestination": writer.writeTag(20); writeAnswerDownloadDestination(writer, value); break;
+        case "AnswerExtensionInstall": writer.writeTag(21); writeAnswerExtensionInstall(writer, value); break;
+        case "AnswerPermission": writer.writeTag(22); writeAnswerPermission(writer, value); break;
+        case "AnswerQuitWithDownloads": writer.writeTag(23); writeAnswerQuitWithDownloads(writer, value); break;
+        case "AnswerScriptDialog": writer.writeTag(24); writeAnswerScriptDialog(writer, value); break;
+        case "ApplyManualSetup": writer.writeTag(25); writeApplyManualSetup(writer, value); break;
+        case "ApproveAgent": writer.writeTag(26); writeApproveAgent(writer, value); break;
+        case "ArchiveTransientPage": writer.writeTag(27); writeArchiveTransientPage(writer, value); break;
+        case "AssessDownloadRisk": writer.writeTag(28); writeAssessDownloadRisk(writer, value); break;
+        case "AssignShortcut": writer.writeTag(29); writeAssignShortcut(writer, value); break;
         case "BeginAgentSession": writer.writeTag(30); writeBeginAgentSession(writer, value); break;
         case "BeginCloudMerge": writer.writeTag(31); writeBeginCloudMerge(writer, value); break;
         case "BeginDeletingSpace": writer.writeTag(32); writeBeginDeletingSpace(writer, value); break;
@@ -16109,128 +16593,128 @@ export function writeIntent(writer: WireWriter, value: Intent): void {
         case "BeginImportCommit": writer.writeTag(34); writeBeginImportCommit(writer, value); break;
         case "BeginReopeningPages": writer.writeTag(35); writeBeginReopeningPages(writer, value); break;
         case "BeginUnlockingSpace": writer.writeTag(36); writeBeginUnlockingSpace(writer, value); break;
-        case "BlockAutomaticDownload": writer.writeTag(37); writeBlockAutomaticDownload(writer, value); break;
-        case "BlockElement": writer.writeTag(38); writeBlockElement(writer, value); break;
-        case "BorrowSpace": writer.writeTag(39); writeBorrowSpace(writer, value); break;
-        case "CancelDownload": writer.writeTag(40); writeCancelDownload(writer, value); break;
-        case "CancelExtensionInstall": writer.writeTag(41); writeCancelExtensionInstall(writer, value); break;
-        case "CancelImportRead": writer.writeTag(42); writeCancelImportRead(writer, value); break;
-        case "ChangeExtension": writer.writeTag(43); writeChangeExtension(writer, value); break;
-        case "ChooseCloudCopy": writer.writeTag(44); writeChooseCloudCopy(writer, value); break;
-        case "ChooseExternalLinkDestination": writer.writeTag(45); writeChooseExternalLinkDestination(writer, value); break;
-        case "ChooseImportDestination": writer.writeTag(46); writeChooseImportDestination(writer, value); break;
-        case "ChoosePeekModifier": writer.writeTag(47); writeChoosePeekModifier(writer, value); break;
-        case "ChooseQuickWindowArchivePolicy": writer.writeTag(48); writeChooseQuickWindowArchivePolicy(writer, value); break;
-        case "ChooseSetupLook": writer.writeTag(49); writeChooseSetupLook(writer, value); break;
-        case "ChooseShortcutPreference": writer.writeTag(50); writeChooseShortcutPreference(writer, value); break;
-        case "ChooseSiteEngine": writer.writeTag(51); writeChooseSiteEngine(writer, value); break;
-        case "ChooseTabIcon": writer.writeTag(52); writeChooseTabIcon(writer, value); break;
-        case "ClaimAgentTab": writer.writeTag(53); writeClaimAgentTab(writer, value); break;
-        case "CleanUpCurrentTabs": writer.writeTag(54); writeCleanUpCurrentTabs(writer, value); break;
-        case "ClearCurrentTabs": writer.writeTag(55); writeClearCurrentTabs(writer, value); break;
-        case "ClearHistory": writer.writeTag(56); writeClearHistory(writer, value); break;
-        case "ClearPaletteChoices": writer.writeTag(57); writeClearPaletteChoices(writer, value); break;
-        case "CloseTab": writer.writeTag(58); writeCloseTab(writer, value); break;
-        case "CloseTabs": writer.writeTag(59); writeCloseTabs(writer, value); break;
-        case "CloseWindow": writer.writeTag(60); writeCloseWindow(writer, value); break;
-        case "CloseWorkspace": writer.writeTag(61); writeCloseWorkspace(writer, value); break;
-        case "CloudAccountChecked": writer.writeTag(62); writeCloudAccountChecked(writer, value); break;
-        case "CloudContentCompared": writer.writeTag(63); writeCloudContentCompared(writer, value); break;
-        case "CloudContentTaken": writer.writeTag(64); writeCloudContentTaken(writer, value); break;
-        case "CloudCopyApplied": writer.writeTag(65); writeCloudCopyApplied(writer, value); break;
-        case "CloudEntitlementChecked": writer.writeTag(66); writeCloudEntitlementChecked(writer, value); break;
-        case "CloudSeedReplaced": writer.writeTag(67); writeCloudSeedReplaced(writer, value); break;
-        case "CloudStepFailed": writer.writeTag(68); writeCloudStepFailed(writer, value); break;
-        case "CloudTransportPulled": writer.writeTag(69); writeCloudTransportPulled(writer, value); break;
-        case "CloudTransportReported": writer.writeTag(70); writeCloudTransportReported(writer, value); break;
-        case "CloudTransportStarted": writer.writeTag(71); writeCloudTransportStarted(writer, value); break;
-        case "CloudTransportSynced": writer.writeTag(72); writeCloudTransportSynced(writer, value); break;
-        case "CollapseAllFolders": writer.writeTag(73); writeCollapseAllFolders(writer, value); break;
-        case "CollapseFolder": writer.writeTag(74); writeCollapseFolder(writer, value); break;
-        case "CollapseSplit": writer.writeTag(75); writeCollapseSplit(writer, value); break;
-        case "ConfigureCloudSync": writer.writeTag(76); writeConfigureCloudSync(writer, value); break;
-        case "ContinueImport": writer.writeTag(77); writeContinueImport(writer, value); break;
-        case "CreateFolder": writer.writeTag(78); writeCreateFolder(writer, value); break;
-        case "CreateSpace": writer.writeTag(79); writeCreateSpace(writer, value); break;
-        case "CustomizeImportSpace": writer.writeTag(80); writeCustomizeImportSpace(writer, value); break;
-        case "CustomizeSetupSpace": writer.writeTag(81); writeCustomizeSetupSpace(writer, value); break;
-        case "DecideSitePermission": writer.writeTag(82); writeDecideSitePermission(writer, value); break;
-        case "DeleteBrowsingData": writer.writeTag(83); writeDeleteBrowsingData(writer, value); break;
-        case "DeleteFolder": writer.writeTag(84); writeDeleteFolder(writer, value); break;
-        case "DeleteFolderAndContents": writer.writeTag(85); writeDeleteFolderAndContents(writer, value); break;
-        case "DeleteProfileData": writer.writeTag(86); writeDeleteProfileData(writer, value); break;
-        case "DeleteSiteData": writer.writeTag(87); writeDeleteSiteData(writer, value); break;
-        case "DeleteTab": writer.writeTag(88); writeDeleteTab(writer, value); break;
-        case "DeleteTabs": writer.writeTag(89); writeDeleteTabs(writer, value); break;
-        case "DiscardStagedLink": writer.writeTag(90); writeDiscardStagedLink(writer, value); break;
-        case "DismissShownTab": writer.writeTag(91); writeDismissShownTab(writer, value); break;
-        case "DissolveSplit": writer.writeTag(92); writeDissolveSplit(writer, value); break;
-        case "DropAroundTab": writer.writeTag(93); writeDropAroundTab(writer, value); break;
-        case "DropIntoList": writer.writeTag(94); writeDropIntoList(writer, value); break;
-        case "DropIntoSplit": writer.writeTag(95); writeDropIntoSplit(writer, value); break;
-        case "DropOnSpace": writer.writeTag(96); writeDropOnSpace(writer, value); break;
-        case "DuplicateTab": writer.writeTag(97); writeDuplicateTab(writer, value); break;
-        case "DuplicateTabs": writer.writeTag(98); writeDuplicateTabs(writer, value); break;
-        case "EditEngineRule": writer.writeTag(99); writeEditEngineRule(writer, value); break;
-        case "EditLinkRoute": writer.writeTag(100); writeEditLinkRoute(writer, value); break;
-        case "EndAgentSession": writer.writeTag(101); writeEndAgentSession(writer, value); break;
-        case "ExpandSavedTabs": writer.writeTag(102); writeExpandSavedTabs(writer, value); break;
-        case "FailDownload": writer.writeTag(103); writeFailDownload(writer, value); break;
-        case "FailImport": writer.writeTag(104); writeFailImport(writer, value); break;
-        case "FileTabs": writer.writeTag(105); writeFileTabs(writer, value); break;
-        case "FilterDownloadFailed": writer.writeTag(106); writeFilterDownloadFailed(writer, value); break;
-        case "FilterDownloadFetched": writer.writeTag(107); writeFilterDownloadFetched(writer, value); break;
-        case "FilterDownloadNotModified": writer.writeTag(108); writeFilterDownloadNotModified(writer, value); break;
-        case "FilterDownloadTooLarge": writer.writeTag(109); writeFilterDownloadTooLarge(writer, value); break;
-        case "FinishCloudMerge": writer.writeTag(110); writeFinishCloudMerge(writer, value); break;
-        case "FinishDeletingSpace": writer.writeTag(111); writeFinishDeletingSpace(writer, value); break;
-        case "FinishDownload": writer.writeTag(112); writeFinishDownload(writer, value); break;
-        case "FinishImportCommit": writer.writeTag(113); writeFinishImportCommit(writer, value); break;
-        case "FinishReopeningPages": writer.writeTag(114); writeFinishReopeningPages(writer, value); break;
-        case "FinishSetup": writer.writeTag(115); writeFinishSetup(writer, value); break;
-        case "FinishUnlockingSpace": writer.writeTag(116); writeFinishUnlockingSpace(writer, value); break;
-        case "FolderTabs": writer.writeTag(117); writeFolderTabs(writer, value); break;
-        case "FolderTabsAround": writer.writeTag(118); writeFolderTabsAround(writer, value); break;
-        case "ForgetAgent": writer.writeTag(119); writeForgetAgent(writer, value); break;
-        case "ForgetCloudZone": writer.writeTag(120); writeForgetCloudZone(writer, value); break;
-        case "ForgetEngineRule": writer.writeTag(121); writeForgetEngineRule(writer, value); break;
-        case "ForgetPaletteChoices": writer.writeTag(122); writeForgetPaletteChoices(writer, value); break;
-        case "IdentifyAgent": writer.writeTag(123); writeIdentifyAgent(writer, value); break;
-        case "ImportAppPreferences": writer.writeTag(124); writeImportAppPreferences(writer, value); break;
-        case "ImportReviewedSpaces": writer.writeTag(125); writeImportReviewedSpaces(writer, value); break;
-        case "ImportSpaces": writer.writeTag(126); writeImportSpaces(writer, value); break;
-        case "IncludeImportExtension": writer.writeTag(127); writeIncludeImportExtension(writer, value); break;
-        case "IncludeImportPasswords": writer.writeTag(128); writeIncludeImportPasswords(writer, value); break;
-        case "IncludeImportSpace": writer.writeTag(129); writeIncludeImportSpace(writer, value); break;
-        case "IncludeImportTabs": writer.writeTag(130); writeIncludeImportTabs(writer, value); break;
-        case "InstallExtension": writer.writeTag(131); writeInstallExtension(writer, value); break;
-        case "JoinSpace": writer.writeTag(132); writeJoinSpace(writer, value); break;
-        case "JoinSplit": writer.writeTag(133); writeJoinSplit(writer, value); break;
-        case "KeepPageLoaded": writer.writeTag(134); writeKeepPageLoaded(writer, value); break;
-        case "KeepTabsLoaded": writer.writeTag(135); writeKeepTabsLoaded(writer, value); break;
-        case "LeavePageFailure": writer.writeTag(136); writeLeavePageFailure(writer, value); break;
-        case "LeaveSplit": writer.writeTag(137); writeLeaveSplit(writer, value); break;
-        case "ListExtensions": writer.writeTag(138); writeListExtensions(writer, value); break;
-        case "LoadAddress": writer.writeTag(139); writeLoadAddress(writer, value); break;
-        case "LockAllSpaces": writer.writeTag(140); writeLockAllSpaces(writer, value); break;
-        case "LockSpace": writer.writeTag(141); writeLockSpace(writer, value); break;
-        case "MergeCloudSnapshot": writer.writeTag(142); writeMergeCloudSnapshot(writer, value); break;
-        case "MergeSyncRecords": writer.writeTag(143); writeMergeSyncRecords(writer, value); break;
-        case "MoveFolder": writer.writeTag(144); writeMoveFolder(writer, value); break;
-        case "MoveFolderToSpace": writer.writeTag(145); writeMoveFolderToSpace(writer, value); break;
-        case "MoveLinkRoute": writer.writeTag(146); writeMoveLinkRoute(writer, value); break;
-        case "MovePage": writer.writeTag(147); writeMovePage(writer, value); break;
-        case "MovePinnedExtension": writer.writeTag(148); writeMovePinnedExtension(writer, value); break;
-        case "MoveSetupSpace": writer.writeTag(149); writeMoveSetupSpace(writer, value); break;
-        case "MoveSplitMember": writer.writeTag(150); writeMoveSplitMember(writer, value); break;
-        case "MoveTab": writer.writeTag(151); writeMoveTab(writer, value); break;
-        case "MoveTabToSpace": writer.writeTag(152); writeMoveTabToSpace(writer, value); break;
-        case "MoveTabToWindow": writer.writeTag(153); writeMoveTabToWindow(writer, value); break;
-        case "MoveTabsToSpace": writer.writeTag(154); writeMoveTabsToSpace(writer, value); break;
-        case "NameSplit": writer.writeTag(155); writeNameSplit(writer, value); break;
-        case "Navigate": writer.writeTag(156); writeNavigate(writer, value); break;
-        case "NavigateTab": writer.writeTag(157); writeNavigateTab(writer, value); break;
-        case "NoteAgentActivity": writer.writeTag(158); writeNoteAgentActivity(writer, value); break;
+        case "BlockElement": writer.writeTag(37); writeBlockElement(writer, value); break;
+        case "BorrowSpace": writer.writeTag(38); writeBorrowSpace(writer, value); break;
+        case "CancelDownload": writer.writeTag(39); writeCancelDownload(writer, value); break;
+        case "CancelExtensionInstall": writer.writeTag(40); writeCancelExtensionInstall(writer, value); break;
+        case "CancelImportRead": writer.writeTag(41); writeCancelImportRead(writer, value); break;
+        case "ChangeExtension": writer.writeTag(42); writeChangeExtension(writer, value); break;
+        case "ChooseCloudCopy": writer.writeTag(43); writeChooseCloudCopy(writer, value); break;
+        case "ChooseExternalLinkDestination": writer.writeTag(44); writeChooseExternalLinkDestination(writer, value); break;
+        case "ChooseImportDestination": writer.writeTag(45); writeChooseImportDestination(writer, value); break;
+        case "ChoosePeekModifier": writer.writeTag(46); writeChoosePeekModifier(writer, value); break;
+        case "ChooseQuickWindowArchivePolicy": writer.writeTag(47); writeChooseQuickWindowArchivePolicy(writer, value); break;
+        case "ChooseShortcutPreference": writer.writeTag(48); writeChooseShortcutPreference(writer, value); break;
+        case "ChooseSiteEngine": writer.writeTag(49); writeChooseSiteEngine(writer, value); break;
+        case "ChooseTabIcon": writer.writeTag(50); writeChooseTabIcon(writer, value); break;
+        case "ClaimAgentTab": writer.writeTag(51); writeClaimAgentTab(writer, value); break;
+        case "CleanUpCurrentTabs": writer.writeTag(52); writeCleanUpCurrentTabs(writer, value); break;
+        case "ClearCurrentTabs": writer.writeTag(53); writeClearCurrentTabs(writer, value); break;
+        case "ClearHistory": writer.writeTag(54); writeClearHistory(writer, value); break;
+        case "ClearPaletteChoices": writer.writeTag(55); writeClearPaletteChoices(writer, value); break;
+        case "CloseTab": writer.writeTag(56); writeCloseTab(writer, value); break;
+        case "CloseTabs": writer.writeTag(57); writeCloseTabs(writer, value); break;
+        case "CloseWindow": writer.writeTag(58); writeCloseWindow(writer, value); break;
+        case "CloseWorkspace": writer.writeTag(59); writeCloseWorkspace(writer, value); break;
+        case "CloudAccountChecked": writer.writeTag(60); writeCloudAccountChecked(writer, value); break;
+        case "CloudContentCompared": writer.writeTag(61); writeCloudContentCompared(writer, value); break;
+        case "CloudContentTaken": writer.writeTag(62); writeCloudContentTaken(writer, value); break;
+        case "CloudCopyApplied": writer.writeTag(63); writeCloudCopyApplied(writer, value); break;
+        case "CloudEntitlementChecked": writer.writeTag(64); writeCloudEntitlementChecked(writer, value); break;
+        case "CloudSeedReplaced": writer.writeTag(65); writeCloudSeedReplaced(writer, value); break;
+        case "CloudStepFailed": writer.writeTag(66); writeCloudStepFailed(writer, value); break;
+        case "CloudTransportPulled": writer.writeTag(67); writeCloudTransportPulled(writer, value); break;
+        case "CloudTransportReported": writer.writeTag(68); writeCloudTransportReported(writer, value); break;
+        case "CloudTransportStarted": writer.writeTag(69); writeCloudTransportStarted(writer, value); break;
+        case "CloudTransportSynced": writer.writeTag(70); writeCloudTransportSynced(writer, value); break;
+        case "CollapseAllFolders": writer.writeTag(71); writeCollapseAllFolders(writer, value); break;
+        case "CollapseFolder": writer.writeTag(72); writeCollapseFolder(writer, value); break;
+        case "CollapseSplit": writer.writeTag(73); writeCollapseSplit(writer, value); break;
+        case "ConfigureCloudSync": writer.writeTag(74); writeConfigureCloudSync(writer, value); break;
+        case "ContinueImport": writer.writeTag(75); writeContinueImport(writer, value); break;
+        case "CreateFolder": writer.writeTag(76); writeCreateFolder(writer, value); break;
+        case "CreateSpace": writer.writeTag(77); writeCreateSpace(writer, value); break;
+        case "CustomizeImportSpace": writer.writeTag(78); writeCustomizeImportSpace(writer, value); break;
+        case "CustomizeSetupSpace": writer.writeTag(79); writeCustomizeSetupSpace(writer, value); break;
+        case "DecideSitePermission": writer.writeTag(80); writeDecideSitePermission(writer, value); break;
+        case "DeleteBrowsingData": writer.writeTag(81); writeDeleteBrowsingData(writer, value); break;
+        case "DeleteFolder": writer.writeTag(82); writeDeleteFolder(writer, value); break;
+        case "DeleteFolderAndContents": writer.writeTag(83); writeDeleteFolderAndContents(writer, value); break;
+        case "DeleteProfileData": writer.writeTag(84); writeDeleteProfileData(writer, value); break;
+        case "DeleteSiteData": writer.writeTag(85); writeDeleteSiteData(writer, value); break;
+        case "DeleteTab": writer.writeTag(86); writeDeleteTab(writer, value); break;
+        case "DeleteTabs": writer.writeTag(87); writeDeleteTabs(writer, value); break;
+        case "DiscardStagedLink": writer.writeTag(88); writeDiscardStagedLink(writer, value); break;
+        case "DismissShownTab": writer.writeTag(89); writeDismissShownTab(writer, value); break;
+        case "DissolveSplit": writer.writeTag(90); writeDissolveSplit(writer, value); break;
+        case "DropAroundTab": writer.writeTag(91); writeDropAroundTab(writer, value); break;
+        case "DropIntoList": writer.writeTag(92); writeDropIntoList(writer, value); break;
+        case "DropIntoSplit": writer.writeTag(93); writeDropIntoSplit(writer, value); break;
+        case "DropOnSpace": writer.writeTag(94); writeDropOnSpace(writer, value); break;
+        case "DuplicateTab": writer.writeTag(95); writeDuplicateTab(writer, value); break;
+        case "DuplicateTabs": writer.writeTag(96); writeDuplicateTabs(writer, value); break;
+        case "EditEngineRule": writer.writeTag(97); writeEditEngineRule(writer, value); break;
+        case "EditLinkRoute": writer.writeTag(98); writeEditLinkRoute(writer, value); break;
+        case "EndAgentSession": writer.writeTag(99); writeEndAgentSession(writer, value); break;
+        case "ExpandSavedTabs": writer.writeTag(100); writeExpandSavedTabs(writer, value); break;
+        case "FailDownload": writer.writeTag(101); writeFailDownload(writer, value); break;
+        case "FailImport": writer.writeTag(102); writeFailImport(writer, value); break;
+        case "FileTabs": writer.writeTag(103); writeFileTabs(writer, value); break;
+        case "FilterDownloadFailed": writer.writeTag(104); writeFilterDownloadFailed(writer, value); break;
+        case "FilterDownloadFetched": writer.writeTag(105); writeFilterDownloadFetched(writer, value); break;
+        case "FilterDownloadNotModified": writer.writeTag(106); writeFilterDownloadNotModified(writer, value); break;
+        case "FilterDownloadTooLarge": writer.writeTag(107); writeFilterDownloadTooLarge(writer, value); break;
+        case "FinishCloudMerge": writer.writeTag(108); writeFinishCloudMerge(writer, value); break;
+        case "FinishDeletingSpace": writer.writeTag(109); writeFinishDeletingSpace(writer, value); break;
+        case "FinishDownload": writer.writeTag(110); writeFinishDownload(writer, value); break;
+        case "FinishImportCommit": writer.writeTag(111); writeFinishImportCommit(writer, value); break;
+        case "FinishReopeningPages": writer.writeTag(112); writeFinishReopeningPages(writer, value); break;
+        case "FinishSetup": writer.writeTag(113); writeFinishSetup(writer, value); break;
+        case "FinishUnlockingSpace": writer.writeTag(114); writeFinishUnlockingSpace(writer, value); break;
+        case "FolderTabs": writer.writeTag(115); writeFolderTabs(writer, value); break;
+        case "FolderTabsAround": writer.writeTag(116); writeFolderTabsAround(writer, value); break;
+        case "ForgetAgent": writer.writeTag(117); writeForgetAgent(writer, value); break;
+        case "ForgetCloudZone": writer.writeTag(118); writeForgetCloudZone(writer, value); break;
+        case "ForgetEngineRule": writer.writeTag(119); writeForgetEngineRule(writer, value); break;
+        case "ForgetPaletteChoices": writer.writeTag(120); writeForgetPaletteChoices(writer, value); break;
+        case "IdentifyAgent": writer.writeTag(121); writeIdentifyAgent(writer, value); break;
+        case "ImportAppPreferences": writer.writeTag(122); writeImportAppPreferences(writer, value); break;
+        case "ImportReviewedSpaces": writer.writeTag(123); writeImportReviewedSpaces(writer, value); break;
+        case "ImportSpaces": writer.writeTag(124); writeImportSpaces(writer, value); break;
+        case "IncludeImportExtension": writer.writeTag(125); writeIncludeImportExtension(writer, value); break;
+        case "IncludeImportPasswords": writer.writeTag(126); writeIncludeImportPasswords(writer, value); break;
+        case "IncludeImportSpace": writer.writeTag(127); writeIncludeImportSpace(writer, value); break;
+        case "IncludeImportTabs": writer.writeTag(128); writeIncludeImportTabs(writer, value); break;
+        case "InstallExtension": writer.writeTag(129); writeInstallExtension(writer, value); break;
+        case "JoinSpace": writer.writeTag(130); writeJoinSpace(writer, value); break;
+        case "JoinSplit": writer.writeTag(131); writeJoinSplit(writer, value); break;
+        case "KeepPageLoaded": writer.writeTag(132); writeKeepPageLoaded(writer, value); break;
+        case "KeepTabsLoaded": writer.writeTag(133); writeKeepTabsLoaded(writer, value); break;
+        case "LeavePageFailure": writer.writeTag(134); writeLeavePageFailure(writer, value); break;
+        case "LeaveSplit": writer.writeTag(135); writeLeaveSplit(writer, value); break;
+        case "ListExtensions": writer.writeTag(136); writeListExtensions(writer, value); break;
+        case "LoadAddress": writer.writeTag(137); writeLoadAddress(writer, value); break;
+        case "LockAllSpaces": writer.writeTag(138); writeLockAllSpaces(writer, value); break;
+        case "LockSpace": writer.writeTag(139); writeLockSpace(writer, value); break;
+        case "MergeCloudSnapshot": writer.writeTag(140); writeMergeCloudSnapshot(writer, value); break;
+        case "MergeSyncRecords": writer.writeTag(141); writeMergeSyncRecords(writer, value); break;
+        case "MoveFolder": writer.writeTag(142); writeMoveFolder(writer, value); break;
+        case "MoveFolderToSpace": writer.writeTag(143); writeMoveFolderToSpace(writer, value); break;
+        case "MoveLinkRoute": writer.writeTag(144); writeMoveLinkRoute(writer, value); break;
+        case "MovePage": writer.writeTag(145); writeMovePage(writer, value); break;
+        case "MovePinnedExtension": writer.writeTag(146); writeMovePinnedExtension(writer, value); break;
+        case "MoveSetupSpace": writer.writeTag(147); writeMoveSetupSpace(writer, value); break;
+        case "MoveSiteControlTopAction": writer.writeTag(148); writeMoveSiteControlTopAction(writer, value); break;
+        case "MoveSplitMember": writer.writeTag(149); writeMoveSplitMember(writer, value); break;
+        case "MoveTab": writer.writeTag(150); writeMoveTab(writer, value); break;
+        case "MoveTabToSpace": writer.writeTag(151); writeMoveTabToSpace(writer, value); break;
+        case "MoveTabToWindow": writer.writeTag(152); writeMoveTabToWindow(writer, value); break;
+        case "MoveTabsToSpace": writer.writeTag(153); writeMoveTabsToSpace(writer, value); break;
+        case "NameSplit": writer.writeTag(154); writeNameSplit(writer, value); break;
+        case "Navigate": writer.writeTag(155); writeNavigate(writer, value); break;
+        case "NavigateTab": writer.writeTag(156); writeNavigateTab(writer, value); break;
+        case "NoteAgentActivity": writer.writeTag(157); writeNoteAgentActivity(writer, value); break;
+        case "NoteLaunchRelease": writer.writeTag(158); writeNoteLaunchRelease(writer, value); break;
         case "NotifyCloudLocalChanges": writer.writeTag(159); writeNotifyCloudLocalChanges(writer, value); break;
         case "ObserveCloudAccountAvailability": writer.writeTag(160); writeObserveCloudAccountAvailability(writer, value); break;
         case "ObserveCloudAccountChange": writer.writeTag(161); writeObserveCloudAccountChange(writer, value); break;
@@ -16245,116 +16729,124 @@ export function writeIntent(writer: WireWriter, value: Intent): void {
         case "OverwriteCloud": writer.writeTag(170); writeOverwriteCloud(writer, value); break;
         case "PauseDownload": writer.writeTag(171); writePauseDownload(writer, value); break;
         case "PlaceImportTab": writer.writeTag(172); writePlaceImportTab(writer, value); break;
-        case "PrepareToClosePages": writer.writeTag(173); writePrepareToClosePages(writer, value); break;
-        case "PrepareToCloseWindows": writer.writeTag(174); writePrepareToCloseWindows(writer, value); break;
-        case "PrepareToQuit": writer.writeTag(175); writePrepareToQuit(writer, value); break;
-        case "PromoteTransientPage": writer.writeTag(176); writePromoteTransientPage(writer, value); break;
-        case "PutAwayTabs": writer.writeTag(177); writePutAwayTabs(writer, value); break;
-        case "ReadWebsiteData": writer.writeTag(178); writeReadWebsiteData(writer, value); break;
-        case "ReassignShortcut": writer.writeTag(179); writeReassignShortcut(writer, value); break;
-        case "RecordCloudFields": writer.writeTag(180); writeRecordCloudFields(writer, value); break;
-        case "RecordDownloadTransfer": writer.writeTag(181); writeRecordDownloadTransfer(writer, value); break;
-        case "RecordPaletteChoice": writer.writeTag(182); writeRecordPaletteChoice(writer, value); break;
-        case "RefreshFilterLists": writer.writeTag(183); writeRefreshFilterLists(writer, value); break;
-        case "RehostPage": writer.writeTag(184); writeRehostPage(writer, value); break;
-        case "ReleasePage": writer.writeTag(185); writeReleasePage(writer, value); break;
-        case "RememberQuickWindowSpace": writer.writeTag(186); writeRememberQuickWindowSpace(writer, value); break;
-        case "RememberWindowsForLaunch": writer.writeTag(187); writeRememberWindowsForLaunch(writer, value); break;
-        case "RemoveCustomFilterList": writer.writeTag(188); writeRemoveCustomFilterList(writer, value); break;
-        case "RemoveDownload": writer.writeTag(189); writeRemoveDownload(writer, value); break;
-        case "RemoveHistoryAddress": writer.writeTag(190); writeRemoveHistoryAddress(writer, value); break;
-        case "RemoveLinkRoute": writer.writeTag(191); writeRemoveLinkRoute(writer, value); break;
-        case "RemoveProfileDownloads": writer.writeTag(192); writeRemoveProfileDownloads(writer, value); break;
-        case "RemoveSearchProvider": writer.writeTag(193); writeRemoveSearchProvider(writer, value); break;
-        case "RemoveSetupSpace": writer.writeTag(194); writeRemoveSetupSpace(writer, value); break;
-        case "RenameFolder": writer.writeTag(195); writeRenameFolder(writer, value); break;
-        case "RenameTab": writer.writeTag(196); writeRenameTab(writer, value); break;
-        case "ReopenClosedTab": writer.writeTag(197); writeReopenClosedTab(writer, value); break;
-        case "ReorderSpaces": writer.writeTag(198); writeReorderSpaces(writer, value); break;
-        case "ReplaceSavedAddress": writer.writeTag(199); writeReplaceSavedAddress(writer, value); break;
-        case "ReplaceSeedWithCloudRecords": writer.writeTag(200); writeReplaceSeedWithCloudRecords(writer, value); break;
-        case "ReplaceWithCloudRecords": writer.writeTag(201); writeReplaceWithCloudRecords(writer, value); break;
-        case "ReportMemoryPressure": writer.writeTag(202); writeReportMemoryPressure(writer, value); break;
-        case "RequestCloudPull": writer.writeTag(203); writeRequestCloudPull(writer, value); break;
-        case "RequestCloudSync": writer.writeTag(204); writeRequestCloudSync(writer, value); break;
-        case "ResetCloudTransport": writer.writeTag(205); writeResetCloudTransport(writer, value); break;
-        case "ResetPrivateBrowsing": writer.writeTag(206); writeResetPrivateBrowsing(writer, value); break;
-        case "ResetSearchProviders": writer.writeTag(207); writeResetSearchProviders(writer, value); break;
-        case "ResetShortcut": writer.writeTag(208); writeResetShortcut(writer, value); break;
-        case "ResetShortcuts": writer.writeTag(209); writeResetShortcuts(writer, value); break;
-        case "ResetSitePermission": writer.writeTag(210); writeResetSitePermission(writer, value); break;
-        case "ResetSpacePermissions": writer.writeTag(211); writeResetSpacePermissions(writer, value); break;
-        case "ResizeSplitColumns": writer.writeTag(212); writeResizeSplitColumns(writer, value); break;
-        case "RestartCloudSyncAfterAccountChange": writer.writeTag(213); writeRestartCloudSyncAfterAccountChange(writer, value); break;
-        case "RestartDownload": writer.writeTag(214); writeRestartDownload(writer, value); break;
-        case "RestoreArchivedTab": writer.writeTag(215); writeRestoreArchivedTab(writer, value); break;
-        case "RestoreSearchCatalog": writer.writeTag(216); writeRestoreSearchCatalog(writer, value); break;
-        case "RestoreTabHistory": writer.writeTag(217); writeRestoreTabHistory(writer, value); break;
-        case "ResumeDownload": writer.writeTag(218); writeResumeDownload(writer, value); break;
-        case "RetryCloudSync": writer.writeTag(219); writeRetryCloudSync(writer, value); break;
-        case "ReturnToSavedAddress": writer.writeTag(220); writeReturnToSavedAddress(writer, value); break;
-        case "ReviewImport": writer.writeTag(221); writeReviewImport(writer, value); break;
-        case "SaveCloudEngineState": writer.writeTag(222); writeSaveCloudEngineState(writer, value); break;
-        case "SaveSearchProvider": writer.writeTag(223); writeSaveSearchProvider(writer, value); break;
-        case "SelectDefaultEngine": writer.writeTag(224); writeSelectDefaultEngine(writer, value); break;
-        case "SeparateImportSpace": writer.writeTag(225); writeSeparateImportSpace(writer, value); break;
-        case "SeparateSpace": writer.writeTag(226); writeSeparateSpace(writer, value); break;
-        case "SeparateSplits": writer.writeTag(227); writeSeparateSplits(writer, value); break;
-        case "SetAgentScripts": writer.writeTag(228); writeSetAgentScripts(writer, value); break;
-        case "SetAgents": writer.writeTag(229); writeSetAgents(writer, value); break;
-        case "SetAppPreferences": writer.writeTag(230); writeSetAppPreferences(writer, value); break;
-        case "SetBrowsingPreferences": writer.writeTag(231); writeSetBrowsingPreferences(writer, value); break;
-        case "SetCloudSyncEnabled": writer.writeTag(232); writeSetCloudSyncEnabled(writer, value); break;
-        case "SetContentBlockingLevel": writer.writeTag(233); writeSetContentBlockingLevel(writer, value); break;
-        case "SetCredentialPreferences": writer.writeTag(234); writeSetCredentialPreferences(writer, value); break;
-        case "SetCustomFilterList": writer.writeTag(235); writeSetCustomFilterList(writer, value); break;
-        case "SetCustomFilters": writer.writeTag(236); writeSetCustomFilters(writer, value); break;
-        case "SetDefaultSearch": writer.writeTag(237); writeSetDefaultSearch(writer, value); break;
-        case "SetDefaultSpace": writer.writeTag(238); writeSetDefaultSpace(writer, value); break;
-        case "SetDownloadDestination": writer.writeTag(239); writeSetDownloadDestination(writer, value); break;
-        case "SetFilterList": writer.writeTag(240); writeSetFilterList(writer, value); break;
-        case "SetFolderColor": writer.writeTag(241); writeSetFolderColor(writer, value); break;
-        case "SetFolderGroup": writer.writeTag(242); writeSetFolderGroup(writer, value); break;
-        case "SetFolderSymbol": writer.writeTag(243); writeSetFolderSymbol(writer, value); break;
-        case "SetLinkBehavior": writer.writeTag(244); writeSetLinkBehavior(writer, value); break;
-        case "SetPrivateSearch": writer.writeTag(245); writeSetPrivateSearch(writer, value); break;
-        case "SetSearchOption": writer.writeTag(246); writeSetSearchOption(writer, value); break;
-        case "SetSearchProviderEnabled": writer.writeTag(247); writeSetSearchProviderEnabled(writer, value); break;
-        case "SetSearchShortcuts": writer.writeTag(248); writeSetSearchShortcuts(writer, value); break;
-        case "SetSearchSuggestions": writer.writeTag(249); writeSetSearchSuggestions(writer, value); break;
-        case "SetSeparatePinnedTabs": writer.writeTag(250); writeSetSeparatePinnedTabs(writer, value); break;
-        case "SetSiteContentBlocking": writer.writeTag(251); writeSetSiteContentBlocking(writer, value); break;
-        case "SetSpaceAccess": writer.writeTag(252); writeSetSpaceAccess(writer, value); break;
-        case "SetSpaceBranding": writer.writeTag(253); writeSetSpaceBranding(writer, value); break;
-        case "SetSpaceIdentity": writer.writeTag(254); writeSetSpaceIdentity(writer, value); break;
-        case "SetSpaceSearch": writer.writeTag(255); writeSetSpaceSearch(writer, value); break;
-        case "SetSplitIcon": writer.writeTag(256); writeSetSplitIcon(writer, value); break;
-        case "SetTranslationRule": writer.writeTag(257); writeSetTranslationRule(writer, value); break;
-        case "SettleCloudOverwrite": writer.writeTag(258); writeSettleCloudOverwrite(writer, value); break;
-        case "ShowAdjacentSpace": writer.writeTag(259); writeShowAdjacentSpace(writer, value); break;
-        case "ShowAdjacentTab": writer.writeTag(260); writeShowAdjacentTab(writer, value); break;
-        case "ShowHistoryEntry": writer.writeTag(261); writeShowHistoryEntry(writer, value); break;
-        case "ShowImportSpace": writer.writeTag(262); writeShowImportSpace(writer, value); break;
-        case "ShowLeastRecentTab": writer.writeTag(263); writeShowLeastRecentTab(writer, value); break;
-        case "ShowMostRecentTab": writer.writeTag(264); writeShowMostRecentTab(writer, value); break;
-        case "ShowSetupStep": writer.writeTag(265); writeShowSetupStep(writer, value); break;
-        case "ShowSpace": writer.writeTag(266); writeShowSpace(writer, value); break;
-        case "ShowStartPage": writer.writeTag(267); writeShowStartPage(writer, value); break;
-        case "ShowTab": writer.writeTag(268); writeShowTab(writer, value); break;
-        case "SplitTabs": writer.writeTag(269); writeSplitTabs(writer, value); break;
-        case "StageLink": writer.writeTag(270); writeStageLink(writer, value); break;
-        case "StartCloudSync": writer.writeTag(271); writeStartCloudSync(writer, value); break;
-        case "StartSetup": writer.writeTag(272); writeStartSetup(writer, value); break;
-        case "StepHistory": writer.writeTag(273); writeStepHistory(writer, value); break;
-        case "StepSplitMember": writer.writeTag(274); writeStepSplitMember(writer, value); break;
-        case "StopAgentTab": writer.writeTag(275); writeStopAgentTab(writer, value); break;
-        case "StopAllAgents": writer.writeTag(276); writeStopAllAgents(writer, value); break;
-        case "SweepExpiredRecords": writer.writeTag(277); writeSweepExpiredRecords(writer, value); break;
-        case "TintSplit": writer.writeTag(278); writeTintSplit(writer, value); break;
-        case "ToggleImportSource": writer.writeTag(279); writeToggleImportSource(writer, value); break;
-        case "TogglePin": writer.writeTag(280); writeTogglePin(writer, value); break;
-        case "UnassignShortcut": writer.writeTag(281); writeUnassignShortcut(writer, value); break;
-        case "UnblockElements": writer.writeTag(282); writeUnblockElements(writer, value); break;
+        case "PlaceSiteControlTopAction": writer.writeTag(173); writePlaceSiteControlTopAction(writer, value); break;
+        case "PrepareToClosePages": writer.writeTag(174); writePrepareToClosePages(writer, value); break;
+        case "PrepareToCloseWindows": writer.writeTag(175); writePrepareToCloseWindows(writer, value); break;
+        case "PrepareToQuit": writer.writeTag(176); writePrepareToQuit(writer, value); break;
+        case "PromoteTransientPage": writer.writeTag(177); writePromoteTransientPage(writer, value); break;
+        case "PutAwayTabs": writer.writeTag(178); writePutAwayTabs(writer, value); break;
+        case "ReadWebsiteData": writer.writeTag(179); writeReadWebsiteData(writer, value); break;
+        case "ReassignShortcut": writer.writeTag(180); writeReassignShortcut(writer, value); break;
+        case "RecordCloudFields": writer.writeTag(181); writeRecordCloudFields(writer, value); break;
+        case "RecordDownloadTransfer": writer.writeTag(182); writeRecordDownloadTransfer(writer, value); break;
+        case "RecordPaletteChoice": writer.writeTag(183); writeRecordPaletteChoice(writer, value); break;
+        case "RefreshFilterLists": writer.writeTag(184); writeRefreshFilterLists(writer, value); break;
+        case "RehostPage": writer.writeTag(185); writeRehostPage(writer, value); break;
+        case "ReleasePage": writer.writeTag(186); writeReleasePage(writer, value); break;
+        case "RememberQuickWindowSpace": writer.writeTag(187); writeRememberQuickWindowSpace(writer, value); break;
+        case "RememberWindowsForLaunch": writer.writeTag(188); writeRememberWindowsForLaunch(writer, value); break;
+        case "RemoveCustomFilterList": writer.writeTag(189); writeRemoveCustomFilterList(writer, value); break;
+        case "RemoveDownload": writer.writeTag(190); writeRemoveDownload(writer, value); break;
+        case "RemoveHistoryAddress": writer.writeTag(191); writeRemoveHistoryAddress(writer, value); break;
+        case "RemoveLinkRoute": writer.writeTag(192); writeRemoveLinkRoute(writer, value); break;
+        case "RemoveProfileDownloads": writer.writeTag(193); writeRemoveProfileDownloads(writer, value); break;
+        case "RemoveSearchProvider": writer.writeTag(194); writeRemoveSearchProvider(writer, value); break;
+        case "RemoveSetupSpace": writer.writeTag(195); writeRemoveSetupSpace(writer, value); break;
+        case "RemoveSiteControlTopAction": writer.writeTag(196); writeRemoveSiteControlTopAction(writer, value); break;
+        case "RenameFolder": writer.writeTag(197); writeRenameFolder(writer, value); break;
+        case "RenameTab": writer.writeTag(198); writeRenameTab(writer, value); break;
+        case "ReopenClosedTab": writer.writeTag(199); writeReopenClosedTab(writer, value); break;
+        case "ReorderSpaces": writer.writeTag(200); writeReorderSpaces(writer, value); break;
+        case "ReplaceSavedAddress": writer.writeTag(201); writeReplaceSavedAddress(writer, value); break;
+        case "ReplaceSeedWithCloudRecords": writer.writeTag(202); writeReplaceSeedWithCloudRecords(writer, value); break;
+        case "ReplaceWithCloudRecords": writer.writeTag(203); writeReplaceWithCloudRecords(writer, value); break;
+        case "ReportMemoryPressure": writer.writeTag(204); writeReportMemoryPressure(writer, value); break;
+        case "RequestCloudPull": writer.writeTag(205); writeRequestCloudPull(writer, value); break;
+        case "RequestCloudSync": writer.writeTag(206); writeRequestCloudSync(writer, value); break;
+        case "ResetCloudTransport": writer.writeTag(207); writeResetCloudTransport(writer, value); break;
+        case "ResetPrivateBrowsing": writer.writeTag(208); writeResetPrivateBrowsing(writer, value); break;
+        case "ResetSearchProviders": writer.writeTag(209); writeResetSearchProviders(writer, value); break;
+        case "ResetShortcut": writer.writeTag(210); writeResetShortcut(writer, value); break;
+        case "ResetShortcuts": writer.writeTag(211); writeResetShortcuts(writer, value); break;
+        case "ResetSiteControlTopActions": writer.writeTag(212); writeResetSiteControlTopActions(writer, value); break;
+        case "ResetSitePermission": writer.writeTag(213); writeResetSitePermission(writer, value); break;
+        case "ResetSpacePermissions": writer.writeTag(214); writeResetSpacePermissions(writer, value); break;
+        case "ResizeSplitColumns": writer.writeTag(215); writeResizeSplitColumns(writer, value); break;
+        case "RestartCloudSyncAfterAccountChange": writer.writeTag(216); writeRestartCloudSyncAfterAccountChange(writer, value); break;
+        case "RestartDownload": writer.writeTag(217); writeRestartDownload(writer, value); break;
+        case "RestoreArchivedTab": writer.writeTag(218); writeRestoreArchivedTab(writer, value); break;
+        case "RestoreSearchCatalog": writer.writeTag(219); writeRestoreSearchCatalog(writer, value); break;
+        case "RestoreTabHistory": writer.writeTag(220); writeRestoreTabHistory(writer, value); break;
+        case "ResumeDownload": writer.writeTag(221); writeResumeDownload(writer, value); break;
+        case "RetryCloudSync": writer.writeTag(222); writeRetryCloudSync(writer, value); break;
+        case "ReturnToSavedAddress": writer.writeTag(223); writeReturnToSavedAddress(writer, value); break;
+        case "ReviewImport": writer.writeTag(224); writeReviewImport(writer, value); break;
+        case "SaveCloudEngineState": writer.writeTag(225); writeSaveCloudEngineState(writer, value); break;
+        case "SaveSearchProvider": writer.writeTag(226); writeSaveSearchProvider(writer, value); break;
+        case "SelectDefaultEngine": writer.writeTag(227); writeSelectDefaultEngine(writer, value); break;
+        case "SeparateImportSpace": writer.writeTag(228); writeSeparateImportSpace(writer, value); break;
+        case "SeparateSpace": writer.writeTag(229); writeSeparateSpace(writer, value); break;
+        case "SeparateSplits": writer.writeTag(230); writeSeparateSplits(writer, value); break;
+        case "SetAgentScripts": writer.writeTag(231); writeSetAgentScripts(writer, value); break;
+        case "SetAgents": writer.writeTag(232); writeSetAgents(writer, value); break;
+        case "SetAppPreferences": writer.writeTag(233); writeSetAppPreferences(writer, value); break;
+        case "SetBackgroundPageActivity": writer.writeTag(234); writeSetBackgroundPageActivity(writer, value); break;
+        case "SetBrowsingPreferences": writer.writeTag(235); writeSetBrowsingPreferences(writer, value); break;
+        case "SetCloudSyncEnabled": writer.writeTag(236); writeSetCloudSyncEnabled(writer, value); break;
+        case "SetContentBlockingLevel": writer.writeTag(237); writeSetContentBlockingLevel(writer, value); break;
+        case "SetCredentialPreferences": writer.writeTag(238); writeSetCredentialPreferences(writer, value); break;
+        case "SetCustomFilterList": writer.writeTag(239); writeSetCustomFilterList(writer, value); break;
+        case "SetCustomFilters": writer.writeTag(240); writeSetCustomFilters(writer, value); break;
+        case "SetDefaultPageZoom": writer.writeTag(241); writeSetDefaultPageZoom(writer, value); break;
+        case "SetDefaultSearch": writer.writeTag(242); writeSetDefaultSearch(writer, value); break;
+        case "SetDefaultSpace": writer.writeTag(243); writeSetDefaultSpace(writer, value); break;
+        case "SetDownloadDestination": writer.writeTag(244); writeSetDownloadDestination(writer, value); break;
+        case "SetFilterList": writer.writeTag(245); writeSetFilterList(writer, value); break;
+        case "SetFolderColor": writer.writeTag(246); writeSetFolderColor(writer, value); break;
+        case "SetFolderGroup": writer.writeTag(247); writeSetFolderGroup(writer, value); break;
+        case "SetFolderSymbol": writer.writeTag(248); writeSetFolderSymbol(writer, value); break;
+        case "SetHighFrameRate": writer.writeTag(249); writeSetHighFrameRate(writer, value); break;
+        case "SetLinkBehavior": writer.writeTag(250); writeSetLinkBehavior(writer, value); break;
+        case "SetPrivateSearch": writer.writeTag(251); writeSetPrivateSearch(writer, value); break;
+        case "SetSearchOption": writer.writeTag(252); writeSetSearchOption(writer, value); break;
+        case "SetSearchProviderEnabled": writer.writeTag(253); writeSetSearchProviderEnabled(writer, value); break;
+        case "SetSearchShortcuts": writer.writeTag(254); writeSetSearchShortcuts(writer, value); break;
+        case "SetSearchSuggestions": writer.writeTag(255); writeSetSearchSuggestions(writer, value); break;
+        case "SetSeparatePinnedTabs": writer.writeTag(256); writeSetSeparatePinnedTabs(writer, value); break;
+        case "SetSiteContentBlocking": writer.writeTag(257); writeSetSiteContentBlocking(writer, value); break;
+        case "SetSpaceAccess": writer.writeTag(258); writeSetSpaceAccess(writer, value); break;
+        case "SetSpaceBranding": writer.writeTag(259); writeSetSpaceBranding(writer, value); break;
+        case "SetSpaceDownloads": writer.writeTag(260); writeSetSpaceDownloads(writer, value); break;
+        case "SetSpaceIdentity": writer.writeTag(261); writeSetSpaceIdentity(writer, value); break;
+        case "SetSpaceSearch": writer.writeTag(262); writeSetSpaceSearch(writer, value); break;
+        case "SetSplitIcon": writer.writeTag(263); writeSetSplitIcon(writer, value); break;
+        case "SetTranslationRule": writer.writeTag(264); writeSetTranslationRule(writer, value); break;
+        case "SettleCloudOverwrite": writer.writeTag(265); writeSettleCloudOverwrite(writer, value); break;
+        case "ShowAdjacentSpace": writer.writeTag(266); writeShowAdjacentSpace(writer, value); break;
+        case "ShowAdjacentTab": writer.writeTag(267); writeShowAdjacentTab(writer, value); break;
+        case "ShowHistoryEntry": writer.writeTag(268); writeShowHistoryEntry(writer, value); break;
+        case "ShowImportSpace": writer.writeTag(269); writeShowImportSpace(writer, value); break;
+        case "ShowLeastRecentTab": writer.writeTag(270); writeShowLeastRecentTab(writer, value); break;
+        case "ShowMostRecentTab": writer.writeTag(271); writeShowMostRecentTab(writer, value); break;
+        case "ShowSetupStep": writer.writeTag(272); writeShowSetupStep(writer, value); break;
+        case "ShowSpace": writer.writeTag(273); writeShowSpace(writer, value); break;
+        case "ShowStartPage": writer.writeTag(274); writeShowStartPage(writer, value); break;
+        case "ShowTab": writer.writeTag(275); writeShowTab(writer, value); break;
+        case "SplitTabs": writer.writeTag(276); writeSplitTabs(writer, value); break;
+        case "StageLink": writer.writeTag(277); writeStageLink(writer, value); break;
+        case "StartCloudSync": writer.writeTag(278); writeStartCloudSync(writer, value); break;
+        case "StartSetup": writer.writeTag(279); writeStartSetup(writer, value); break;
+        case "StepHistory": writer.writeTag(280); writeStepHistory(writer, value); break;
+        case "StepSplitMember": writer.writeTag(281); writeStepSplitMember(writer, value); break;
+        case "StopAgentTab": writer.writeTag(282); writeStopAgentTab(writer, value); break;
+        case "StopAllAgents": writer.writeTag(283); writeStopAllAgents(writer, value); break;
+        case "SweepExpiredRecords": writer.writeTag(284); writeSweepExpiredRecords(writer, value); break;
+        case "TakeReleaseNotes": writer.writeTag(285); writeTakeReleaseNotes(writer, value); break;
+        case "TintSplit": writer.writeTag(286); writeTintSplit(writer, value); break;
+        case "ToggleImportSource": writer.writeTag(287); writeToggleImportSource(writer, value); break;
+        case "TogglePin": writer.writeTag(288); writeTogglePin(writer, value); break;
+        case "UnassignShortcut": writer.writeTag(289); writeUnassignShortcut(writer, value); break;
+        case "UnblockElements": writer.writeTag(290); writeUnblockElements(writer, value); break;
         default: throw new Error(`Not a contract Intent: ${(value as { $kind: string }).$kind}.`);
     }
 }
@@ -16375,65 +16867,69 @@ export function readChange(reader: WireReader): Change {
         case 10: return readDataDeleted(reader);
         case 11: return readDownloadApprovalAsked(reader);
         case 12: return readDownloadDestinationAsked(reader);
-        case 13: return readDownloadStarted(reader);
-        case 14: return readDownloadUpdated(reader);
-        case 15: return readDownloadsRemoved(reader);
-        case 16: return readEnginePreferencesChanged(reader);
-        case 17: return readEnginesChanged(reader);
-        case 18: return readExtensionInstallAsked(reader);
-        case 19: return readExtensionInstallChanged(reader);
-        case 20: return readFilterListsChanged(reader);
-        case 21: return readFoldersChanged(reader);
-        case 22: return readHistoryChanged(reader);
-        case 23: return readInstalledExtensionsChanged(reader);
-        case 24: return readLinkPreferencesChanged(reader);
-        case 25: return readNavigationRecorded(reader);
-        case 26: return readOfferedPageAdopted(reader);
-        case 27: return readOfferedWindowAdopted(reader);
-        case 28: return readPageChanged(reader);
-        case 29: return readPageOpened(reader);
-        case 30: return readPageRehosted(reader);
-        case 31: return readPageRemoved(reader);
-        case 32: return readPageUnloaded(reader);
-        case 33: return readPermissionAsked(reader);
-        case 34: return readPromptSettled(reader);
-        case 35: return readQuitWithDownloadsAsked(reader);
-        case 36: return readSaved(reader);
-        case 37: return readScriptDialogAsked(reader);
-        case 38: return readSearchCatalogChanged(reader);
-        case 39: return readSessionAdopted(reader);
-        case 40: return readSetupCompletedChanged(reader);
-        case 41: return readSetupDraftChanged(reader);
-        case 42: return readSetupFinished(reader);
-        case 43: return readSetupFlowChanged(reader);
-        case 44: return readShortcutsChanged(reader);
-        case 45: return readSidebarChanged(reader);
-        case 46: return readSiteContentBlockingChanged(reader);
-        case 47: return readSitePermissionsChanged(reader);
-        case 48: return readSpaceLockChanged(reader);
-        case 49: return readSpaceSettingsChanged(reader);
-        case 50: return readSpacesChanged(reader);
-        case 51: return readSplitGroupsChanged(reader);
-        case 52: return readStorageFailed(reader);
-        case 53: return readSyncJournalChanged(reader);
-        case 54: return readSyncRecordsSkipped(reader);
-        case 55: return readSyncStagingFailed(reader);
-        case 56: return readTabCopied(reader);
-        case 57: return readTabFaviconAssigned(reader);
-        case 58: return readTabPagePutAway(reader);
-        case 59: return readTabSavedImageChanged(reader);
-        case 60: return readTabsChanged(reader);
-        case 61: return readTabsImported(reader);
-        case 62: return readTransientPageClosed(reader);
-        case 63: return readTransientPagePromoted(reader);
-        case 64: return readWebsiteDataRead(reader);
-        case 65: return readWindowBroughtForward(reader);
-        case 66: return readWindowChanged(reader);
-        case 67: return readWindowClosed(reader);
-        case 68: return readWindowRecordsAdopted(reader);
-        case 69: return readWorkspaceChanged(reader);
-        case 70: return readWorkspaceClosed(reader);
-        case 71: return readWorkspaceOpened(reader);
+        case 13: return readDownloadPreferencesChanged(reader);
+        case 14: return readDownloadStarted(reader);
+        case 15: return readDownloadUpdated(reader);
+        case 16: return readDownloadsRemoved(reader);
+        case 17: return readEnginePreferencesChanged(reader);
+        case 18: return readEnginesChanged(reader);
+        case 19: return readExtensionInstallAsked(reader);
+        case 20: return readExtensionInstallChanged(reader);
+        case 21: return readFilterListsChanged(reader);
+        case 22: return readFoldersChanged(reader);
+        case 23: return readHistoryChanged(reader);
+        case 24: return readInstalledExtensionsChanged(reader);
+        case 25: return readLinkPreferencesChanged(reader);
+        case 26: return readNavigationRecorded(reader);
+        case 27: return readOfferedPageAdopted(reader);
+        case 28: return readOfferedWindowAdopted(reader);
+        case 29: return readPageChanged(reader);
+        case 30: return readPageOpened(reader);
+        case 31: return readPagePreferencesChanged(reader);
+        case 32: return readPageRehosted(reader);
+        case 33: return readPageRemoved(reader);
+        case 34: return readPageUnloaded(reader);
+        case 35: return readPermissionAsked(reader);
+        case 36: return readPromptSettled(reader);
+        case 37: return readQuitWithDownloadsAsked(reader);
+        case 38: return readReleaseNotesDue(reader);
+        case 39: return readSaved(reader);
+        case 40: return readScriptDialogAsked(reader);
+        case 41: return readSearchCatalogChanged(reader);
+        case 42: return readSessionAdopted(reader);
+        case 43: return readSetupCompletedChanged(reader);
+        case 44: return readSetupDraftChanged(reader);
+        case 45: return readSetupFinished(reader);
+        case 46: return readSetupFlowChanged(reader);
+        case 47: return readShortcutsChanged(reader);
+        case 48: return readSidebarChanged(reader);
+        case 49: return readSiteContentBlockingChanged(reader);
+        case 50: return readSiteControlTopActionsChanged(reader);
+        case 51: return readSitePermissionsChanged(reader);
+        case 52: return readSpaceLockChanged(reader);
+        case 53: return readSpaceSettingsChanged(reader);
+        case 54: return readSpacesChanged(reader);
+        case 55: return readSplitGroupsChanged(reader);
+        case 56: return readStorageFailed(reader);
+        case 57: return readSyncJournalChanged(reader);
+        case 58: return readSyncRecordsSkipped(reader);
+        case 59: return readSyncStagingFailed(reader);
+        case 60: return readTabCopied(reader);
+        case 61: return readTabFaviconAssigned(reader);
+        case 62: return readTabPagePutAway(reader);
+        case 63: return readTabSavedImageChanged(reader);
+        case 64: return readTabsChanged(reader);
+        case 65: return readTabsImported(reader);
+        case 66: return readTransientPageClosed(reader);
+        case 67: return readTransientPagePromoted(reader);
+        case 68: return readWebsiteDataRead(reader);
+        case 69: return readWindowBroughtForward(reader);
+        case 70: return readWindowChanged(reader);
+        case 71: return readWindowClosed(reader);
+        case 72: return readWindowRecordsAdopted(reader);
+        case 73: return readWorkspaceChanged(reader);
+        case 74: return readWorkspaceClosed(reader);
+        case 75: return readWorkspaceOpened(reader);
         default: throw new Error(`Unknown Change tag ${tag}.`);
     }
 }
@@ -16453,65 +16949,69 @@ export function writeChange(writer: WireWriter, value: Change): void {
         case "DataDeleted": writer.writeTag(10); writeDataDeleted(writer, value); break;
         case "DownloadApprovalAsked": writer.writeTag(11); writeDownloadApprovalAsked(writer, value); break;
         case "DownloadDestinationAsked": writer.writeTag(12); writeDownloadDestinationAsked(writer, value); break;
-        case "DownloadStarted": writer.writeTag(13); writeDownloadStarted(writer, value); break;
-        case "DownloadUpdated": writer.writeTag(14); writeDownloadUpdated(writer, value); break;
-        case "DownloadsRemoved": writer.writeTag(15); writeDownloadsRemoved(writer, value); break;
-        case "EnginePreferencesChanged": writer.writeTag(16); writeEnginePreferencesChanged(writer, value); break;
-        case "EnginesChanged": writer.writeTag(17); writeEnginesChanged(writer, value); break;
-        case "ExtensionInstallAsked": writer.writeTag(18); writeExtensionInstallAsked(writer, value); break;
-        case "ExtensionInstallChanged": writer.writeTag(19); writeExtensionInstallChanged(writer, value); break;
-        case "FilterListsChanged": writer.writeTag(20); writeFilterListsChanged(writer, value); break;
-        case "FoldersChanged": writer.writeTag(21); writeFoldersChanged(writer, value); break;
-        case "HistoryChanged": writer.writeTag(22); writeHistoryChanged(writer, value); break;
-        case "InstalledExtensionsChanged": writer.writeTag(23); writeInstalledExtensionsChanged(writer, value); break;
-        case "LinkPreferencesChanged": writer.writeTag(24); writeLinkPreferencesChanged(writer, value); break;
-        case "NavigationRecorded": writer.writeTag(25); writeNavigationRecorded(writer, value); break;
-        case "OfferedPageAdopted": writer.writeTag(26); writeOfferedPageAdopted(writer, value); break;
-        case "OfferedWindowAdopted": writer.writeTag(27); writeOfferedWindowAdopted(writer, value); break;
-        case "PageChanged": writer.writeTag(28); writePageChanged(writer, value); break;
-        case "PageOpened": writer.writeTag(29); writePageOpened(writer, value); break;
-        case "PageRehosted": writer.writeTag(30); writePageRehosted(writer, value); break;
-        case "PageRemoved": writer.writeTag(31); writePageRemoved(writer, value); break;
-        case "PageUnloaded": writer.writeTag(32); writePageUnloaded(writer, value); break;
-        case "PermissionAsked": writer.writeTag(33); writePermissionAsked(writer, value); break;
-        case "PromptSettled": writer.writeTag(34); writePromptSettled(writer, value); break;
-        case "QuitWithDownloadsAsked": writer.writeTag(35); writeQuitWithDownloadsAsked(writer, value); break;
-        case "Saved": writer.writeTag(36); writeSaved(writer, value); break;
-        case "ScriptDialogAsked": writer.writeTag(37); writeScriptDialogAsked(writer, value); break;
-        case "SearchCatalogChanged": writer.writeTag(38); writeSearchCatalogChanged(writer, value); break;
-        case "SessionAdopted": writer.writeTag(39); writeSessionAdopted(writer, value); break;
-        case "SetupCompletedChanged": writer.writeTag(40); writeSetupCompletedChanged(writer, value); break;
-        case "SetupDraftChanged": writer.writeTag(41); writeSetupDraftChanged(writer, value); break;
-        case "SetupFinished": writer.writeTag(42); writeSetupFinished(writer, value); break;
-        case "SetupFlowChanged": writer.writeTag(43); writeSetupFlowChanged(writer, value); break;
-        case "ShortcutsChanged": writer.writeTag(44); writeShortcutsChanged(writer, value); break;
-        case "SidebarChanged": writer.writeTag(45); writeSidebarChanged(writer, value); break;
-        case "SiteContentBlockingChanged": writer.writeTag(46); writeSiteContentBlockingChanged(writer, value); break;
-        case "SitePermissionsChanged": writer.writeTag(47); writeSitePermissionsChanged(writer, value); break;
-        case "SpaceLockChanged": writer.writeTag(48); writeSpaceLockChanged(writer, value); break;
-        case "SpaceSettingsChanged": writer.writeTag(49); writeSpaceSettingsChanged(writer, value); break;
-        case "SpacesChanged": writer.writeTag(50); writeSpacesChanged(writer, value); break;
-        case "SplitGroupsChanged": writer.writeTag(51); writeSplitGroupsChanged(writer, value); break;
-        case "StorageFailed": writer.writeTag(52); writeStorageFailed(writer, value); break;
-        case "SyncJournalChanged": writer.writeTag(53); writeSyncJournalChanged(writer, value); break;
-        case "SyncRecordsSkipped": writer.writeTag(54); writeSyncRecordsSkipped(writer, value); break;
-        case "SyncStagingFailed": writer.writeTag(55); writeSyncStagingFailed(writer, value); break;
-        case "TabCopied": writer.writeTag(56); writeTabCopied(writer, value); break;
-        case "TabFaviconAssigned": writer.writeTag(57); writeTabFaviconAssigned(writer, value); break;
-        case "TabPagePutAway": writer.writeTag(58); writeTabPagePutAway(writer, value); break;
-        case "TabSavedImageChanged": writer.writeTag(59); writeTabSavedImageChanged(writer, value); break;
-        case "TabsChanged": writer.writeTag(60); writeTabsChanged(writer, value); break;
-        case "TabsImported": writer.writeTag(61); writeTabsImported(writer, value); break;
-        case "TransientPageClosed": writer.writeTag(62); writeTransientPageClosed(writer, value); break;
-        case "TransientPagePromoted": writer.writeTag(63); writeTransientPagePromoted(writer, value); break;
-        case "WebsiteDataRead": writer.writeTag(64); writeWebsiteDataRead(writer, value); break;
-        case "WindowBroughtForward": writer.writeTag(65); writeWindowBroughtForward(writer, value); break;
-        case "WindowChanged": writer.writeTag(66); writeWindowChanged(writer, value); break;
-        case "WindowClosed": writer.writeTag(67); writeWindowClosed(writer, value); break;
-        case "WindowRecordsAdopted": writer.writeTag(68); writeWindowRecordsAdopted(writer, value); break;
-        case "WorkspaceChanged": writer.writeTag(69); writeWorkspaceChanged(writer, value); break;
-        case "WorkspaceClosed": writer.writeTag(70); writeWorkspaceClosed(writer, value); break;
-        case "WorkspaceOpened": writer.writeTag(71); writeWorkspaceOpened(writer, value); break;
+        case "DownloadPreferencesChanged": writer.writeTag(13); writeDownloadPreferencesChanged(writer, value); break;
+        case "DownloadStarted": writer.writeTag(14); writeDownloadStarted(writer, value); break;
+        case "DownloadUpdated": writer.writeTag(15); writeDownloadUpdated(writer, value); break;
+        case "DownloadsRemoved": writer.writeTag(16); writeDownloadsRemoved(writer, value); break;
+        case "EnginePreferencesChanged": writer.writeTag(17); writeEnginePreferencesChanged(writer, value); break;
+        case "EnginesChanged": writer.writeTag(18); writeEnginesChanged(writer, value); break;
+        case "ExtensionInstallAsked": writer.writeTag(19); writeExtensionInstallAsked(writer, value); break;
+        case "ExtensionInstallChanged": writer.writeTag(20); writeExtensionInstallChanged(writer, value); break;
+        case "FilterListsChanged": writer.writeTag(21); writeFilterListsChanged(writer, value); break;
+        case "FoldersChanged": writer.writeTag(22); writeFoldersChanged(writer, value); break;
+        case "HistoryChanged": writer.writeTag(23); writeHistoryChanged(writer, value); break;
+        case "InstalledExtensionsChanged": writer.writeTag(24); writeInstalledExtensionsChanged(writer, value); break;
+        case "LinkPreferencesChanged": writer.writeTag(25); writeLinkPreferencesChanged(writer, value); break;
+        case "NavigationRecorded": writer.writeTag(26); writeNavigationRecorded(writer, value); break;
+        case "OfferedPageAdopted": writer.writeTag(27); writeOfferedPageAdopted(writer, value); break;
+        case "OfferedWindowAdopted": writer.writeTag(28); writeOfferedWindowAdopted(writer, value); break;
+        case "PageChanged": writer.writeTag(29); writePageChanged(writer, value); break;
+        case "PageOpened": writer.writeTag(30); writePageOpened(writer, value); break;
+        case "PagePreferencesChanged": writer.writeTag(31); writePagePreferencesChanged(writer, value); break;
+        case "PageRehosted": writer.writeTag(32); writePageRehosted(writer, value); break;
+        case "PageRemoved": writer.writeTag(33); writePageRemoved(writer, value); break;
+        case "PageUnloaded": writer.writeTag(34); writePageUnloaded(writer, value); break;
+        case "PermissionAsked": writer.writeTag(35); writePermissionAsked(writer, value); break;
+        case "PromptSettled": writer.writeTag(36); writePromptSettled(writer, value); break;
+        case "QuitWithDownloadsAsked": writer.writeTag(37); writeQuitWithDownloadsAsked(writer, value); break;
+        case "ReleaseNotesDue": writer.writeTag(38); writeReleaseNotesDue(writer, value); break;
+        case "Saved": writer.writeTag(39); writeSaved(writer, value); break;
+        case "ScriptDialogAsked": writer.writeTag(40); writeScriptDialogAsked(writer, value); break;
+        case "SearchCatalogChanged": writer.writeTag(41); writeSearchCatalogChanged(writer, value); break;
+        case "SessionAdopted": writer.writeTag(42); writeSessionAdopted(writer, value); break;
+        case "SetupCompletedChanged": writer.writeTag(43); writeSetupCompletedChanged(writer, value); break;
+        case "SetupDraftChanged": writer.writeTag(44); writeSetupDraftChanged(writer, value); break;
+        case "SetupFinished": writer.writeTag(45); writeSetupFinished(writer, value); break;
+        case "SetupFlowChanged": writer.writeTag(46); writeSetupFlowChanged(writer, value); break;
+        case "ShortcutsChanged": writer.writeTag(47); writeShortcutsChanged(writer, value); break;
+        case "SidebarChanged": writer.writeTag(48); writeSidebarChanged(writer, value); break;
+        case "SiteContentBlockingChanged": writer.writeTag(49); writeSiteContentBlockingChanged(writer, value); break;
+        case "SiteControlTopActionsChanged": writer.writeTag(50); writeSiteControlTopActionsChanged(writer, value); break;
+        case "SitePermissionsChanged": writer.writeTag(51); writeSitePermissionsChanged(writer, value); break;
+        case "SpaceLockChanged": writer.writeTag(52); writeSpaceLockChanged(writer, value); break;
+        case "SpaceSettingsChanged": writer.writeTag(53); writeSpaceSettingsChanged(writer, value); break;
+        case "SpacesChanged": writer.writeTag(54); writeSpacesChanged(writer, value); break;
+        case "SplitGroupsChanged": writer.writeTag(55); writeSplitGroupsChanged(writer, value); break;
+        case "StorageFailed": writer.writeTag(56); writeStorageFailed(writer, value); break;
+        case "SyncJournalChanged": writer.writeTag(57); writeSyncJournalChanged(writer, value); break;
+        case "SyncRecordsSkipped": writer.writeTag(58); writeSyncRecordsSkipped(writer, value); break;
+        case "SyncStagingFailed": writer.writeTag(59); writeSyncStagingFailed(writer, value); break;
+        case "TabCopied": writer.writeTag(60); writeTabCopied(writer, value); break;
+        case "TabFaviconAssigned": writer.writeTag(61); writeTabFaviconAssigned(writer, value); break;
+        case "TabPagePutAway": writer.writeTag(62); writeTabPagePutAway(writer, value); break;
+        case "TabSavedImageChanged": writer.writeTag(63); writeTabSavedImageChanged(writer, value); break;
+        case "TabsChanged": writer.writeTag(64); writeTabsChanged(writer, value); break;
+        case "TabsImported": writer.writeTag(65); writeTabsImported(writer, value); break;
+        case "TransientPageClosed": writer.writeTag(66); writeTransientPageClosed(writer, value); break;
+        case "TransientPagePromoted": writer.writeTag(67); writeTransientPagePromoted(writer, value); break;
+        case "WebsiteDataRead": writer.writeTag(68); writeWebsiteDataRead(writer, value); break;
+        case "WindowBroughtForward": writer.writeTag(69); writeWindowBroughtForward(writer, value); break;
+        case "WindowChanged": writer.writeTag(70); writeWindowChanged(writer, value); break;
+        case "WindowClosed": writer.writeTag(71); writeWindowClosed(writer, value); break;
+        case "WindowRecordsAdopted": writer.writeTag(72); writeWindowRecordsAdopted(writer, value); break;
+        case "WorkspaceChanged": writer.writeTag(73); writeWorkspaceChanged(writer, value); break;
+        case "WorkspaceClosed": writer.writeTag(74); writeWorkspaceClosed(writer, value); break;
+        case "WorkspaceOpened": writer.writeTag(75); writeWorkspaceOpened(writer, value); break;
         default: throw new Error(`Not a contract Change: ${(value as { $kind: string }).$kind}.`);
     }
 }
@@ -16893,106 +17393,111 @@ export function readQuery(reader: WireReader): Query {
     const tag = reader.readTag();
     switch (tag) {
         case 0: return readAgentReach(reader);
-        case 1: return readArchivedPageHistory(reader);
-        case 2: return readAuthenticationSource(reader);
-        case 3: return readAutomaticDownloadCheck(reader);
-        case 4: return readBlockedPopupTransition(reader);
-        case 5: return readCanChangeExtensions(reader);
-        case 6: return readCanReturnToSavedAddress(reader);
-        case 7: return readCanSend(reader);
-        case 8: return readCanTearOff(reader);
-        case 9: return readCaptureDecision(reader);
-        case 10: return readCatchUp(reader);
-        case 11: return readChallengeHandling(reader);
-        case 12: return readCloudComparison(reader);
-        case 13: return readCloudFieldsOf(reader);
-        case 14: return readCloudSync(reader);
-        case 15: return readCloudTransport(reader);
-        case 16: return readContentBlockingApplies(reader);
-        case 17: return readContentRuleListSource(reader);
-        case 18: return readContentRuleLists(reader);
-        case 19: return readCredentialCapture(reader);
-        case 20: return readCredentialExport(reader);
-        case 21: return readCredentialFill(reader);
-        case 22: return readCredentialImportPreview(reader);
-        case 23: return readCredentialSave(reader);
-        case 24: return readCredentialSaveCheck(reader);
-        case 25: return readCredentialSaveMatch(reader);
-        case 26: return readCredentialsFillingPage(reader);
-        case 27: return readDetachedSession(reader);
-        case 28: return readDockMenu(reader);
-        case 29: return readDocumentCosmetics(reader);
-        case 30: return readDownloadProgress(reader);
-        case 31: return readDownloadRisk(reader);
-        case 32: return readDropTargets(reader);
-        case 33: return readDueFilterDownloads(reader);
-        case 34: return readEnforcedLimits(reader);
-        case 35: return readEngineWindowPlacement(reader);
-        case 36: return readEscapedAddress(reader);
-        case 37: return readExportWorkspace(reader);
-        case 38: return readExtensionCopyDestinations(reader);
-        case 39: return readExternalLocalDocument(reader);
-        case 40: return readExternalWebLink(reader);
-        case 41: return readFallbackTab(reader);
-        case 42: return readFindChromiumBrowsers(reader);
-        case 43: return readFindImportData(reader);
-        case 44: return readFirstInstallSession(reader);
-        case 45: return readGetAgentPreferences(reader);
-        case 46: return readGetEnginePreferences(reader);
-        case 47: return readGetFilterLists(reader);
-        case 48: return readGetSiteContentBlocking(reader);
-        case 49: return readHistoryAddresses(reader);
-        case 50: return readImportPasswordDestinations(reader);
-        case 51: return readImportPreview(reader);
-        case 52: return readLanguagesMatching(reader);
-        case 53: return readLaunchIsolation(reader);
-        case 54: return readLaunchPlan(reader);
-        case 55: return readLaunchSetup(reader);
-        case 56: return readLaunchWindows(reader);
-        case 57: return readLinkNavigation(reader);
-        case 58: return readLinkToCopy(reader);
-        case 59: return readMediaSessionOrder(reader);
-        case 60: return readMediaSessionReport(reader);
-        case 61: return readMostRecentCredential(reader);
-        case 62: return readNormalizeBranding(reader);
-        case 63: return readNotificationDisplayCheck(reader);
-        case 64: return readNotificationPermissionRequest(reader);
-        case 65: return readNumberedSelections(reader);
-        case 66: return readOpenedWindowSelection(reader);
-        case 67: return readPageBlocksElements(reader);
-        case 68: return readPageHistoryEntries(reader);
-        case 69: return readPageScriptlets(reader);
-        case 70: return readPaletteSuggestions(reader);
-        case 71: return readPasskeyAccess(reader);
-        case 72: return readPasswordImportPreview(reader);
-        case 73: return readPendingSave(reader);
-        case 74: return readPendingUploads(reader);
-        case 75: return readPresentPage(reader);
-        case 76: return readProfileNotificationDisplayCheck(reader);
-        case 77: return readReadArchive(reader);
-        case 78: return readReadImport(reader);
-        case 79: return readRecentTabs(reader);
-        case 80: return readRecordsToUpload(reader);
-        case 81: return readResolveAddress(reader);
-        case 82: return readRestoreLook(reader);
-        case 83: return readRouteExternalLink(reader);
-        case 84: return readRouteLocalDocument(reader);
-        case 85: return readSamePage(reader);
-        case 86: return readSchemeHandling(reader);
-        case 87: return readSearchProviderPreview(reader);
-        case 88: return readSecureOriginCheck(reader);
-        case 89: return readSelectionPreview(reader);
-        case 90: return readSelectionSearch(reader);
-        case 91: return readSiteDecision(reader);
-        case 92: return readSpaceSearch(reader);
-        case 93: return readSplitJoinCandidate(reader);
-        case 94: return readStoreLook(reader);
-        case 95: return readStrongPassword(reader);
-        case 96: return readSwipeNeighbors(reader);
-        case 97: return readSystemPasswordOffer(reader);
-        case 98: return readSystemPasswordWriteThrough(reader);
-        case 99: return readTranslationChoice(reader);
-        case 100: return readWindowToReopen(reader);
+        case 1: return readApplyHouse(reader);
+        case 2: return readArchivedPageHistory(reader);
+        case 3: return readAuthenticationSource(reader);
+        case 4: return readAutomaticDownloadCheck(reader);
+        case 5: return readBlockedPopupTransition(reader);
+        case 6: return readCanChangeExtensions(reader);
+        case 7: return readCanReturnToSavedAddress(reader);
+        case 8: return readCanSend(reader);
+        case 9: return readCanTearOff(reader);
+        case 10: return readCaptureDecision(reader);
+        case 11: return readCatchUp(reader);
+        case 12: return readChallengeHandling(reader);
+        case 13: return readClearedTabs(reader);
+        case 14: return readCloudComparison(reader);
+        case 15: return readCloudFieldsOf(reader);
+        case 16: return readCloudTransport(reader);
+        case 17: return readContentBlockingApplies(reader);
+        case 18: return readContentRuleListSource(reader);
+        case 19: return readContentRuleLists(reader);
+        case 20: return readCredentialAccess(reader);
+        case 21: return readCredentialCapture(reader);
+        case 22: return readCredentialExport(reader);
+        case 23: return readCredentialFill(reader);
+        case 24: return readCredentialImportPreview(reader);
+        case 25: return readCredentialSave(reader);
+        case 26: return readCredentialSaveCheck(reader);
+        case 27: return readCredentialSaveMatch(reader);
+        case 28: return readCredentialsFillingPage(reader);
+        case 29: return readDetachedSession(reader);
+        case 30: return readDockMenu(reader);
+        case 31: return readDocumentCosmetics(reader);
+        case 32: return readDownloadRisk(reader);
+        case 33: return readDropTargets(reader);
+        case 34: return readDueFilterDownloads(reader);
+        case 35: return readEnforcedLimits(reader);
+        case 36: return readEngineWindowPlacement(reader);
+        case 37: return readEscapedAddress(reader);
+        case 38: return readExportWorkspace(reader);
+        case 39: return readExtensionCopyDestinations(reader);
+        case 40: return readExternalLocalDocument(reader);
+        case 41: return readExternalWebLink(reader);
+        case 42: return readFallbackTab(reader);
+        case 43: return readFindChromiumBrowsers(reader);
+        case 44: return readFindImportData(reader);
+        case 45: return readFirstInstallSession(reader);
+        case 46: return readFolderDeletionTabs(reader);
+        case 47: return readGetAgentPreferences(reader);
+        case 48: return readGetEnginePreferences(reader);
+        case 49: return readGetFilterLists(reader);
+        case 50: return readGetSiteContentBlocking(reader);
+        case 51: return readHistoryAddresses(reader);
+        case 52: return readImportPasswordDestinations(reader);
+        case 53: return readImportPreview(reader);
+        case 54: return readLanguagesMatching(reader);
+        case 55: return readLaunchIsolation(reader);
+        case 56: return readLaunchPlan(reader);
+        case 57: return readLaunchSetup(reader);
+        case 58: return readLaunchWindows(reader);
+        case 59: return readLinkToCopy(reader);
+        case 60: return readLocalDevelopmentAddress(reader);
+        case 61: return readMediaSessionOrder(reader);
+        case 62: return readMediaSessionReport(reader);
+        case 63: return readMostRecentCredential(reader);
+        case 64: return readNormalizeBranding(reader);
+        case 65: return readNotificationDisplayCheck(reader);
+        case 66: return readNotificationPermissionRequest(reader);
+        case 67: return readNumberedSelections(reader);
+        case 68: return readOpenedWindowSelection(reader);
+        case 69: return readPageBlocksElements(reader);
+        case 70: return readPageHistoryEntries(reader);
+        case 71: return readPageScriptlets(reader);
+        case 72: return readPaletteLimiting(reader);
+        case 73: return readPaletteOffering(reader);
+        case 74: return readPaletteSectionMove(reader);
+        case 75: return readPaletteSectionOrder(reader);
+        case 76: return readPaletteSuggestions(reader);
+        case 77: return readPasskeyAccess(reader);
+        case 78: return readPasswordImportPreview(reader);
+        case 79: return readPendingSave(reader);
+        case 80: return readPendingUploads(reader);
+        case 81: return readPresentPage(reader);
+        case 82: return readProfileNotificationDisplayCheck(reader);
+        case 83: return readReadArchive(reader);
+        case 84: return readReadImport(reader);
+        case 85: return readRecentTabs(reader);
+        case 86: return readRecordsToUpload(reader);
+        case 87: return readResolveAddress(reader);
+        case 88: return readRouteExternalLink(reader);
+        case 89: return readRouteLocalDocument(reader);
+        case 90: return readSamePage(reader);
+        case 91: return readSchemeHandling(reader);
+        case 92: return readSearchProviderPreview(reader);
+        case 93: return readSecureOriginCheck(reader);
+        case 94: return readSelectionPreview(reader);
+        case 95: return readSelectionSearch(reader);
+        case 96: return readSiteDecision(reader);
+        case 97: return readSpaceSearch(reader);
+        case 98: return readSplitJoinCandidate(reader);
+        case 99: return readStrongPassword(reader);
+        case 100: return readSwipeNeighbors(reader);
+        case 101: return readSystemPasswordOffer(reader);
+        case 102: return readSystemPasswordWriteThrough(reader);
+        case 103: return readTranslationChoice(reader);
+        case 104: return readWearHouseCrest(reader);
+        case 105: return readWindowToReopen(reader);
         default: throw new Error(`Unknown Query tag ${tag}.`);
     }
 }
@@ -17000,106 +17505,111 @@ export function readQuery(reader: WireReader): Query {
 export function writeQuery(writer: WireWriter, value: Query): void {
     switch (value.$kind) {
         case "AgentReach": writer.writeTag(0); writeAgentReach(writer, value); break;
-        case "ArchivedPageHistory": writer.writeTag(1); writeArchivedPageHistory(writer, value); break;
-        case "AuthenticationSource": writer.writeTag(2); writeAuthenticationSource(writer, value); break;
-        case "AutomaticDownloadCheck": writer.writeTag(3); writeAutomaticDownloadCheck(writer, value); break;
-        case "BlockedPopupTransition": writer.writeTag(4); writeBlockedPopupTransition(writer, value); break;
-        case "CanChangeExtensions": writer.writeTag(5); writeCanChangeExtensions(writer, value); break;
-        case "CanReturnToSavedAddress": writer.writeTag(6); writeCanReturnToSavedAddress(writer, value); break;
-        case "CanSend": writer.writeTag(7); writeCanSend(writer, value); break;
-        case "CanTearOff": writer.writeTag(8); writeCanTearOff(writer, value); break;
-        case "CaptureDecision": writer.writeTag(9); writeCaptureDecision(writer, value); break;
-        case "CatchUp": writer.writeTag(10); writeCatchUp(writer, value); break;
-        case "ChallengeHandling": writer.writeTag(11); writeChallengeHandling(writer, value); break;
-        case "CloudComparison": writer.writeTag(12); writeCloudComparison(writer, value); break;
-        case "CloudFieldsOf": writer.writeTag(13); writeCloudFieldsOf(writer, value); break;
-        case "CloudSync": writer.writeTag(14); writeCloudSync(writer, value); break;
-        case "CloudTransport": writer.writeTag(15); writeCloudTransport(writer, value); break;
-        case "ContentBlockingApplies": writer.writeTag(16); writeContentBlockingApplies(writer, value); break;
-        case "ContentRuleListSource": writer.writeTag(17); writeContentRuleListSource(writer, value); break;
-        case "ContentRuleLists": writer.writeTag(18); writeContentRuleLists(writer, value); break;
-        case "CredentialCapture": writer.writeTag(19); writeCredentialCapture(writer, value); break;
-        case "CredentialExport": writer.writeTag(20); writeCredentialExport(writer, value); break;
-        case "CredentialFill": writer.writeTag(21); writeCredentialFill(writer, value); break;
-        case "CredentialImportPreview": writer.writeTag(22); writeCredentialImportPreview(writer, value); break;
-        case "CredentialSave": writer.writeTag(23); writeCredentialSave(writer, value); break;
-        case "CredentialSaveCheck": writer.writeTag(24); writeCredentialSaveCheck(writer, value); break;
-        case "CredentialSaveMatch": writer.writeTag(25); writeCredentialSaveMatch(writer, value); break;
-        case "CredentialsFillingPage": writer.writeTag(26); writeCredentialsFillingPage(writer, value); break;
-        case "DetachedSession": writer.writeTag(27); writeDetachedSession(writer, value); break;
-        case "DockMenu": writer.writeTag(28); writeDockMenu(writer, value); break;
-        case "DocumentCosmetics": writer.writeTag(29); writeDocumentCosmetics(writer, value); break;
-        case "DownloadProgress": writer.writeTag(30); writeDownloadProgress(writer, value); break;
-        case "DownloadRisk": writer.writeTag(31); writeDownloadRisk(writer, value); break;
-        case "DropTargets": writer.writeTag(32); writeDropTargets(writer, value); break;
-        case "DueFilterDownloads": writer.writeTag(33); writeDueFilterDownloads(writer, value); break;
-        case "EnforcedLimits": writer.writeTag(34); writeEnforcedLimits(writer, value); break;
-        case "EngineWindowPlacement": writer.writeTag(35); writeEngineWindowPlacement(writer, value); break;
-        case "EscapedAddress": writer.writeTag(36); writeEscapedAddress(writer, value); break;
-        case "ExportWorkspace": writer.writeTag(37); writeExportWorkspace(writer, value); break;
-        case "ExtensionCopyDestinations": writer.writeTag(38); writeExtensionCopyDestinations(writer, value); break;
-        case "ExternalLocalDocument": writer.writeTag(39); writeExternalLocalDocument(writer, value); break;
-        case "ExternalWebLink": writer.writeTag(40); writeExternalWebLink(writer, value); break;
-        case "FallbackTab": writer.writeTag(41); writeFallbackTab(writer, value); break;
-        case "FindChromiumBrowsers": writer.writeTag(42); writeFindChromiumBrowsers(writer, value); break;
-        case "FindImportData": writer.writeTag(43); writeFindImportData(writer, value); break;
-        case "FirstInstallSession": writer.writeTag(44); writeFirstInstallSession(writer, value); break;
-        case "GetAgentPreferences": writer.writeTag(45); writeGetAgentPreferences(writer, value); break;
-        case "GetEnginePreferences": writer.writeTag(46); writeGetEnginePreferences(writer, value); break;
-        case "GetFilterLists": writer.writeTag(47); writeGetFilterLists(writer, value); break;
-        case "GetSiteContentBlocking": writer.writeTag(48); writeGetSiteContentBlocking(writer, value); break;
-        case "HistoryAddresses": writer.writeTag(49); writeHistoryAddresses(writer, value); break;
-        case "ImportPasswordDestinations": writer.writeTag(50); writeImportPasswordDestinations(writer, value); break;
-        case "ImportPreview": writer.writeTag(51); writeImportPreview(writer, value); break;
-        case "LanguagesMatching": writer.writeTag(52); writeLanguagesMatching(writer, value); break;
-        case "LaunchIsolation": writer.writeTag(53); writeLaunchIsolation(writer, value); break;
-        case "LaunchPlan": writer.writeTag(54); writeLaunchPlan(writer, value); break;
-        case "LaunchSetup": writer.writeTag(55); writeLaunchSetup(writer, value); break;
-        case "LaunchWindows": writer.writeTag(56); writeLaunchWindows(writer, value); break;
-        case "LinkNavigation": writer.writeTag(57); writeLinkNavigation(writer, value); break;
-        case "LinkToCopy": writer.writeTag(58); writeLinkToCopy(writer, value); break;
-        case "MediaSessionOrder": writer.writeTag(59); writeMediaSessionOrder(writer, value); break;
-        case "MediaSessionReport": writer.writeTag(60); writeMediaSessionReport(writer, value); break;
-        case "MostRecentCredential": writer.writeTag(61); writeMostRecentCredential(writer, value); break;
-        case "NormalizeBranding": writer.writeTag(62); writeNormalizeBranding(writer, value); break;
-        case "NotificationDisplayCheck": writer.writeTag(63); writeNotificationDisplayCheck(writer, value); break;
-        case "NotificationPermissionRequest": writer.writeTag(64); writeNotificationPermissionRequest(writer, value); break;
-        case "NumberedSelections": writer.writeTag(65); writeNumberedSelections(writer, value); break;
-        case "OpenedWindowSelection": writer.writeTag(66); writeOpenedWindowSelection(writer, value); break;
-        case "PageBlocksElements": writer.writeTag(67); writePageBlocksElements(writer, value); break;
-        case "PageHistoryEntries": writer.writeTag(68); writePageHistoryEntries(writer, value); break;
-        case "PageScriptlets": writer.writeTag(69); writePageScriptlets(writer, value); break;
-        case "PaletteSuggestions": writer.writeTag(70); writePaletteSuggestions(writer, value); break;
-        case "PasskeyAccess": writer.writeTag(71); writePasskeyAccess(writer, value); break;
-        case "PasswordImportPreview": writer.writeTag(72); writePasswordImportPreview(writer, value); break;
-        case "PendingSave": writer.writeTag(73); writePendingSave(writer, value); break;
-        case "PendingUploads": writer.writeTag(74); writePendingUploads(writer, value); break;
-        case "PresentPage": writer.writeTag(75); writePresentPage(writer, value); break;
-        case "ProfileNotificationDisplayCheck": writer.writeTag(76); writeProfileNotificationDisplayCheck(writer, value); break;
-        case "ReadArchive": writer.writeTag(77); writeReadArchive(writer, value); break;
-        case "ReadImport": writer.writeTag(78); writeReadImport(writer, value); break;
-        case "RecentTabs": writer.writeTag(79); writeRecentTabs(writer, value); break;
-        case "RecordsToUpload": writer.writeTag(80); writeRecordsToUpload(writer, value); break;
-        case "ResolveAddress": writer.writeTag(81); writeResolveAddress(writer, value); break;
-        case "RestoreLook": writer.writeTag(82); writeRestoreLook(writer, value); break;
-        case "RouteExternalLink": writer.writeTag(83); writeRouteExternalLink(writer, value); break;
-        case "RouteLocalDocument": writer.writeTag(84); writeRouteLocalDocument(writer, value); break;
-        case "SamePage": writer.writeTag(85); writeSamePage(writer, value); break;
-        case "SchemeHandling": writer.writeTag(86); writeSchemeHandling(writer, value); break;
-        case "SearchProviderPreview": writer.writeTag(87); writeSearchProviderPreview(writer, value); break;
-        case "SecureOriginCheck": writer.writeTag(88); writeSecureOriginCheck(writer, value); break;
-        case "SelectionPreview": writer.writeTag(89); writeSelectionPreview(writer, value); break;
-        case "SelectionSearch": writer.writeTag(90); writeSelectionSearch(writer, value); break;
-        case "SiteDecision": writer.writeTag(91); writeSiteDecision(writer, value); break;
-        case "SpaceSearch": writer.writeTag(92); writeSpaceSearch(writer, value); break;
-        case "SplitJoinCandidate": writer.writeTag(93); writeSplitJoinCandidate(writer, value); break;
-        case "StoreLook": writer.writeTag(94); writeStoreLook(writer, value); break;
-        case "StrongPassword": writer.writeTag(95); writeStrongPassword(writer, value); break;
-        case "SwipeNeighbors": writer.writeTag(96); writeSwipeNeighbors(writer, value); break;
-        case "SystemPasswordOffer": writer.writeTag(97); writeSystemPasswordOffer(writer, value); break;
-        case "SystemPasswordWriteThrough": writer.writeTag(98); writeSystemPasswordWriteThrough(writer, value); break;
-        case "TranslationChoice": writer.writeTag(99); writeTranslationChoice(writer, value); break;
-        case "WindowToReopen": writer.writeTag(100); writeWindowToReopen(writer, value); break;
+        case "ApplyHouse": writer.writeTag(1); writeApplyHouse(writer, value); break;
+        case "ArchivedPageHistory": writer.writeTag(2); writeArchivedPageHistory(writer, value); break;
+        case "AuthenticationSource": writer.writeTag(3); writeAuthenticationSource(writer, value); break;
+        case "AutomaticDownloadCheck": writer.writeTag(4); writeAutomaticDownloadCheck(writer, value); break;
+        case "BlockedPopupTransition": writer.writeTag(5); writeBlockedPopupTransition(writer, value); break;
+        case "CanChangeExtensions": writer.writeTag(6); writeCanChangeExtensions(writer, value); break;
+        case "CanReturnToSavedAddress": writer.writeTag(7); writeCanReturnToSavedAddress(writer, value); break;
+        case "CanSend": writer.writeTag(8); writeCanSend(writer, value); break;
+        case "CanTearOff": writer.writeTag(9); writeCanTearOff(writer, value); break;
+        case "CaptureDecision": writer.writeTag(10); writeCaptureDecision(writer, value); break;
+        case "CatchUp": writer.writeTag(11); writeCatchUp(writer, value); break;
+        case "ChallengeHandling": writer.writeTag(12); writeChallengeHandling(writer, value); break;
+        case "ClearedTabs": writer.writeTag(13); writeClearedTabs(writer, value); break;
+        case "CloudComparison": writer.writeTag(14); writeCloudComparison(writer, value); break;
+        case "CloudFieldsOf": writer.writeTag(15); writeCloudFieldsOf(writer, value); break;
+        case "CloudTransport": writer.writeTag(16); writeCloudTransport(writer, value); break;
+        case "ContentBlockingApplies": writer.writeTag(17); writeContentBlockingApplies(writer, value); break;
+        case "ContentRuleListSource": writer.writeTag(18); writeContentRuleListSource(writer, value); break;
+        case "ContentRuleLists": writer.writeTag(19); writeContentRuleLists(writer, value); break;
+        case "CredentialAccess": writer.writeTag(20); writeCredentialAccess(writer, value); break;
+        case "CredentialCapture": writer.writeTag(21); writeCredentialCapture(writer, value); break;
+        case "CredentialExport": writer.writeTag(22); writeCredentialExport(writer, value); break;
+        case "CredentialFill": writer.writeTag(23); writeCredentialFill(writer, value); break;
+        case "CredentialImportPreview": writer.writeTag(24); writeCredentialImportPreview(writer, value); break;
+        case "CredentialSave": writer.writeTag(25); writeCredentialSave(writer, value); break;
+        case "CredentialSaveCheck": writer.writeTag(26); writeCredentialSaveCheck(writer, value); break;
+        case "CredentialSaveMatch": writer.writeTag(27); writeCredentialSaveMatch(writer, value); break;
+        case "CredentialsFillingPage": writer.writeTag(28); writeCredentialsFillingPage(writer, value); break;
+        case "DetachedSession": writer.writeTag(29); writeDetachedSession(writer, value); break;
+        case "DockMenu": writer.writeTag(30); writeDockMenu(writer, value); break;
+        case "DocumentCosmetics": writer.writeTag(31); writeDocumentCosmetics(writer, value); break;
+        case "DownloadRisk": writer.writeTag(32); writeDownloadRisk(writer, value); break;
+        case "DropTargets": writer.writeTag(33); writeDropTargets(writer, value); break;
+        case "DueFilterDownloads": writer.writeTag(34); writeDueFilterDownloads(writer, value); break;
+        case "EnforcedLimits": writer.writeTag(35); writeEnforcedLimits(writer, value); break;
+        case "EngineWindowPlacement": writer.writeTag(36); writeEngineWindowPlacement(writer, value); break;
+        case "EscapedAddress": writer.writeTag(37); writeEscapedAddress(writer, value); break;
+        case "ExportWorkspace": writer.writeTag(38); writeExportWorkspace(writer, value); break;
+        case "ExtensionCopyDestinations": writer.writeTag(39); writeExtensionCopyDestinations(writer, value); break;
+        case "ExternalLocalDocument": writer.writeTag(40); writeExternalLocalDocument(writer, value); break;
+        case "ExternalWebLink": writer.writeTag(41); writeExternalWebLink(writer, value); break;
+        case "FallbackTab": writer.writeTag(42); writeFallbackTab(writer, value); break;
+        case "FindChromiumBrowsers": writer.writeTag(43); writeFindChromiumBrowsers(writer, value); break;
+        case "FindImportData": writer.writeTag(44); writeFindImportData(writer, value); break;
+        case "FirstInstallSession": writer.writeTag(45); writeFirstInstallSession(writer, value); break;
+        case "FolderDeletionTabs": writer.writeTag(46); writeFolderDeletionTabs(writer, value); break;
+        case "GetAgentPreferences": writer.writeTag(47); writeGetAgentPreferences(writer, value); break;
+        case "GetEnginePreferences": writer.writeTag(48); writeGetEnginePreferences(writer, value); break;
+        case "GetFilterLists": writer.writeTag(49); writeGetFilterLists(writer, value); break;
+        case "GetSiteContentBlocking": writer.writeTag(50); writeGetSiteContentBlocking(writer, value); break;
+        case "HistoryAddresses": writer.writeTag(51); writeHistoryAddresses(writer, value); break;
+        case "ImportPasswordDestinations": writer.writeTag(52); writeImportPasswordDestinations(writer, value); break;
+        case "ImportPreview": writer.writeTag(53); writeImportPreview(writer, value); break;
+        case "LanguagesMatching": writer.writeTag(54); writeLanguagesMatching(writer, value); break;
+        case "LaunchIsolation": writer.writeTag(55); writeLaunchIsolation(writer, value); break;
+        case "LaunchPlan": writer.writeTag(56); writeLaunchPlan(writer, value); break;
+        case "LaunchSetup": writer.writeTag(57); writeLaunchSetup(writer, value); break;
+        case "LaunchWindows": writer.writeTag(58); writeLaunchWindows(writer, value); break;
+        case "LinkToCopy": writer.writeTag(59); writeLinkToCopy(writer, value); break;
+        case "LocalDevelopmentAddress": writer.writeTag(60); writeLocalDevelopmentAddress(writer, value); break;
+        case "MediaSessionOrder": writer.writeTag(61); writeMediaSessionOrder(writer, value); break;
+        case "MediaSessionReport": writer.writeTag(62); writeMediaSessionReport(writer, value); break;
+        case "MostRecentCredential": writer.writeTag(63); writeMostRecentCredential(writer, value); break;
+        case "NormalizeBranding": writer.writeTag(64); writeNormalizeBranding(writer, value); break;
+        case "NotificationDisplayCheck": writer.writeTag(65); writeNotificationDisplayCheck(writer, value); break;
+        case "NotificationPermissionRequest": writer.writeTag(66); writeNotificationPermissionRequest(writer, value); break;
+        case "NumberedSelections": writer.writeTag(67); writeNumberedSelections(writer, value); break;
+        case "OpenedWindowSelection": writer.writeTag(68); writeOpenedWindowSelection(writer, value); break;
+        case "PageBlocksElements": writer.writeTag(69); writePageBlocksElements(writer, value); break;
+        case "PageHistoryEntries": writer.writeTag(70); writePageHistoryEntries(writer, value); break;
+        case "PageScriptlets": writer.writeTag(71); writePageScriptlets(writer, value); break;
+        case "PaletteLimiting": writer.writeTag(72); writePaletteLimiting(writer, value); break;
+        case "PaletteOffering": writer.writeTag(73); writePaletteOffering(writer, value); break;
+        case "PaletteSectionMove": writer.writeTag(74); writePaletteSectionMove(writer, value); break;
+        case "PaletteSectionOrder": writer.writeTag(75); writePaletteSectionOrder(writer, value); break;
+        case "PaletteSuggestions": writer.writeTag(76); writePaletteSuggestions(writer, value); break;
+        case "PasskeyAccess": writer.writeTag(77); writePasskeyAccess(writer, value); break;
+        case "PasswordImportPreview": writer.writeTag(78); writePasswordImportPreview(writer, value); break;
+        case "PendingSave": writer.writeTag(79); writePendingSave(writer, value); break;
+        case "PendingUploads": writer.writeTag(80); writePendingUploads(writer, value); break;
+        case "PresentPage": writer.writeTag(81); writePresentPage(writer, value); break;
+        case "ProfileNotificationDisplayCheck": writer.writeTag(82); writeProfileNotificationDisplayCheck(writer, value); break;
+        case "ReadArchive": writer.writeTag(83); writeReadArchive(writer, value); break;
+        case "ReadImport": writer.writeTag(84); writeReadImport(writer, value); break;
+        case "RecentTabs": writer.writeTag(85); writeRecentTabs(writer, value); break;
+        case "RecordsToUpload": writer.writeTag(86); writeRecordsToUpload(writer, value); break;
+        case "ResolveAddress": writer.writeTag(87); writeResolveAddress(writer, value); break;
+        case "RouteExternalLink": writer.writeTag(88); writeRouteExternalLink(writer, value); break;
+        case "RouteLocalDocument": writer.writeTag(89); writeRouteLocalDocument(writer, value); break;
+        case "SamePage": writer.writeTag(90); writeSamePage(writer, value); break;
+        case "SchemeHandling": writer.writeTag(91); writeSchemeHandling(writer, value); break;
+        case "SearchProviderPreview": writer.writeTag(92); writeSearchProviderPreview(writer, value); break;
+        case "SecureOriginCheck": writer.writeTag(93); writeSecureOriginCheck(writer, value); break;
+        case "SelectionPreview": writer.writeTag(94); writeSelectionPreview(writer, value); break;
+        case "SelectionSearch": writer.writeTag(95); writeSelectionSearch(writer, value); break;
+        case "SiteDecision": writer.writeTag(96); writeSiteDecision(writer, value); break;
+        case "SpaceSearch": writer.writeTag(97); writeSpaceSearch(writer, value); break;
+        case "SplitJoinCandidate": writer.writeTag(98); writeSplitJoinCandidate(writer, value); break;
+        case "StrongPassword": writer.writeTag(99); writeStrongPassword(writer, value); break;
+        case "SwipeNeighbors": writer.writeTag(100); writeSwipeNeighbors(writer, value); break;
+        case "SystemPasswordOffer": writer.writeTag(101); writeSystemPasswordOffer(writer, value); break;
+        case "SystemPasswordWriteThrough": writer.writeTag(102); writeSystemPasswordWriteThrough(writer, value); break;
+        case "TranslationChoice": writer.writeTag(103); writeTranslationChoice(writer, value); break;
+        case "WearHouseCrest": writer.writeTag(104); writeWearHouseCrest(writer, value); break;
+        case "WindowToReopen": writer.writeTag(105); writeWindowToReopen(writer, value); break;
         default: throw new Error(`Not a contract Query: ${(value as { $kind: string }).$kind}.`);
     }
 }
@@ -17108,6 +17618,7 @@ export function writeQuery(writer: WireWriter, value: Query): void {
 export function readQueryAnswer<Q extends Query>(question: Q, reader: WireReader): AnswerOfQuery<Q> {
     switch (question.$kind) {
         case "AgentReach": return (readAgentReachList(reader)) as unknown as AnswerOfQuery<Q>;
+        case "ApplyHouse": return (readNormalizedBranding(reader)) as unknown as AnswerOfQuery<Q>;
         case "ArchivedPageHistory": return (readPageHistoryArchive(reader)) as unknown as AnswerOfQuery<Q>;
         case "AuthenticationSource": return (readAuthenticationSourceLabel(reader)) as unknown as AnswerOfQuery<Q>;
         case "AutomaticDownloadCheck": return (readAutomaticDownloadVerdict(reader)) as unknown as AnswerOfQuery<Q>;
@@ -17119,13 +17630,14 @@ export function readQueryAnswer<Q extends Query>(question: Q, reader: WireReader
         case "CaptureDecision": return (readSitePermissionAnswer(reader)) as unknown as AnswerOfQuery<Q>;
         case "CatchUp": return (readCaughtUp(reader)) as unknown as AnswerOfQuery<Q>;
         case "ChallengeHandling": return (readChallengeHandled(reader)) as unknown as AnswerOfQuery<Q>;
+        case "ClearedTabs": return (readRemovedTabs(reader)) as unknown as AnswerOfQuery<Q>;
         case "CloudComparison": return (readCloudContentComparison(reader)) as unknown as AnswerOfQuery<Q>;
         case "CloudFieldsOf": return (readCloudRecordFieldList(reader)) as unknown as AnswerOfQuery<Q>;
-        case "CloudSync": return (readCloudSyncStatus(reader)) as unknown as AnswerOfQuery<Q>;
         case "CloudTransport": return (readCloudTransportState(reader)) as unknown as AnswerOfQuery<Q>;
         case "ContentBlockingApplies": return (reader.readBool()) as unknown as AnswerOfQuery<Q>;
         case "ContentRuleListSource": return (readContentRuleList(reader)) as unknown as AnswerOfQuery<Q>;
         case "ContentRuleLists": return (readContentRuleListSet(reader)) as unknown as AnswerOfQuery<Q>;
+        case "CredentialAccess": return (readCredentialAccessAnswer(reader)) as unknown as AnswerOfQuery<Q>;
         case "CredentialCapture": return (readCredentialCaptureDecision(reader)) as unknown as AnswerOfQuery<Q>;
         case "CredentialExport": return (readCredentialExportFile(reader)) as unknown as AnswerOfQuery<Q>;
         case "CredentialFill": return (readCredentialFillDecision(reader)) as unknown as AnswerOfQuery<Q>;
@@ -17137,7 +17649,6 @@ export function readQueryAnswer<Q extends Query>(question: Q, reader: WireReader
         case "DetachedSession": return (readSessionState(reader)) as unknown as AnswerOfQuery<Q>;
         case "DockMenu": return (readDockMenuContent(reader)) as unknown as AnswerOfQuery<Q>;
         case "DocumentCosmetics": return (readCosmeticFilters(reader)) as unknown as AnswerOfQuery<Q>;
-        case "DownloadProgress": return (readDownloadProgressReading(reader)) as unknown as AnswerOfQuery<Q>;
         case "DownloadRisk": return (readDownloadRiskVerdict(reader)) as unknown as AnswerOfQuery<Q>;
         case "DropTargets": return (readDropTargetList(reader)) as unknown as AnswerOfQuery<Q>;
         case "DueFilterDownloads": return (reader.readList(() => readFilterDownload(reader))) as unknown as AnswerOfQuery<Q>;
@@ -17152,6 +17663,7 @@ export function readQueryAnswer<Q extends Query>(question: Q, reader: WireReader
         case "FindChromiumBrowsers": return (reader.readList(() => readImportFoundBrowser(reader))) as unknown as AnswerOfQuery<Q>;
         case "FindImportData": return (readImportData(reader)) as unknown as AnswerOfQuery<Q>;
         case "FirstInstallSession": return (readSessionState(reader)) as unknown as AnswerOfQuery<Q>;
+        case "FolderDeletionTabs": return (readRemovedTabs(reader)) as unknown as AnswerOfQuery<Q>;
         case "GetAgentPreferences": return (readAgentPreferences(reader)) as unknown as AnswerOfQuery<Q>;
         case "GetEnginePreferences": return (readEnginePreferences(reader)) as unknown as AnswerOfQuery<Q>;
         case "GetFilterLists": return (readFilterLists(reader)) as unknown as AnswerOfQuery<Q>;
@@ -17164,8 +17676,8 @@ export function readQueryAnswer<Q extends Query>(question: Q, reader: WireReader
         case "LaunchPlan": return (readLaunchDecision(reader)) as unknown as AnswerOfQuery<Q>;
         case "LaunchSetup": return (readLaunchSetupGate(reader)) as unknown as AnswerOfQuery<Q>;
         case "LaunchWindows": return (readLaunchWindowPlan(reader)) as unknown as AnswerOfQuery<Q>;
-        case "LinkNavigation": return (readLinkNavigationAnswer(reader)) as unknown as AnswerOfQuery<Q>;
         case "LinkToCopy": return (reader.readString()) as unknown as AnswerOfQuery<Q>;
+        case "LocalDevelopmentAddress": return (readDevelopmentAddressVerdict(reader)) as unknown as AnswerOfQuery<Q>;
         case "MediaSessionOrder": return (readMediaSessionArbitration(reader)) as unknown as AnswerOfQuery<Q>;
         case "MediaSessionReport": return (readMediaSessionEventDecision(reader)) as unknown as AnswerOfQuery<Q>;
         case "MostRecentCredential": return (readCredentialChoice(reader)) as unknown as AnswerOfQuery<Q>;
@@ -17177,6 +17689,10 @@ export function readQueryAnswer<Q extends Query>(question: Q, reader: WireReader
         case "PageBlocksElements": return (reader.readBool()) as unknown as AnswerOfQuery<Q>;
         case "PageHistoryEntries": return (readPageHistoryList(reader)) as unknown as AnswerOfQuery<Q>;
         case "PageScriptlets": return (reader.readString()) as unknown as AnswerOfQuery<Q>;
+        case "PaletteLimiting": return (readPalettePreferences(reader)) as unknown as AnswerOfQuery<Q>;
+        case "PaletteOffering": return (readPalettePreferences(reader)) as unknown as AnswerOfQuery<Q>;
+        case "PaletteSectionMove": return (readPalettePreferences(reader)) as unknown as AnswerOfQuery<Q>;
+        case "PaletteSectionOrder": return (readPalettePreferences(reader)) as unknown as AnswerOfQuery<Q>;
         case "PaletteSuggestions": return (readPaletteAnswer(reader)) as unknown as AnswerOfQuery<Q>;
         case "PasskeyAccess": return (readPasskeyAccessVerdict(reader)) as unknown as AnswerOfQuery<Q>;
         case "PasswordImportPreview": return (readCredentialImportPlan(reader)) as unknown as AnswerOfQuery<Q>;
@@ -17189,7 +17705,6 @@ export function readQueryAnswer<Q extends Query>(question: Q, reader: WireReader
         case "RecentTabs": return (readRecentTabList(reader)) as unknown as AnswerOfQuery<Q>;
         case "RecordsToUpload": return (readUploadBatch(reader)) as unknown as AnswerOfQuery<Q>;
         case "ResolveAddress": return (readResolvedAddress(reader)) as unknown as AnswerOfQuery<Q>;
-        case "RestoreLook": return (readRestoredLook(reader)) as unknown as AnswerOfQuery<Q>;
         case "RouteExternalLink": return (readExternalLinkPlacement(reader)) as unknown as AnswerOfQuery<Q>;
         case "RouteLocalDocument": return (readLocalDocumentPlacement(reader)) as unknown as AnswerOfQuery<Q>;
         case "SamePage": return (readPageMatch(reader)) as unknown as AnswerOfQuery<Q>;
@@ -17201,12 +17716,12 @@ export function readQueryAnswer<Q extends Query>(question: Q, reader: WireReader
         case "SiteDecision": return (readSitePermissionAnswer(reader)) as unknown as AnswerOfQuery<Q>;
         case "SpaceSearch": return (readSpaceSearchAnswer(reader)) as unknown as AnswerOfQuery<Q>;
         case "SplitJoinCandidate": return (readSplitJoinCandidateTab(reader)) as unknown as AnswerOfQuery<Q>;
-        case "StoreLook": return (readStoredLook(reader)) as unknown as AnswerOfQuery<Q>;
         case "StrongPassword": return (readStrongPasswordRecipe(reader)) as unknown as AnswerOfQuery<Q>;
         case "SwipeNeighbors": return (readSwipeNeighborTabs(reader)) as unknown as AnswerOfQuery<Q>;
         case "SystemPasswordOffer": return (readSystemPasswordOfferDecision(reader)) as unknown as AnswerOfQuery<Q>;
         case "SystemPasswordWriteThrough": return (readSystemPasswordWriteThroughSupport(reader)) as unknown as AnswerOfQuery<Q>;
         case "TranslationChoice": return (readTranslationDecision(reader)) as unknown as AnswerOfQuery<Q>;
+        case "WearHouseCrest": return (readNormalizedBranding(reader)) as unknown as AnswerOfQuery<Q>;
         case "WindowToReopen": return (readReopenedWindow(reader)) as unknown as AnswerOfQuery<Q>;
         default: throw new Error(`Not a contract Query: ${(question as { $kind: string }).$kind}.`);
     }
@@ -17218,6 +17733,11 @@ export function writeQueryAnswer<Q extends Query>(question: Q, writer: WireWrite
         case "AgentReach": {
             const answer = value as QueryAnswers["AgentReach"];
             writeAgentReachList(writer, answer);
+            break;
+        }
+        case "ApplyHouse": {
+            const answer = value as QueryAnswers["ApplyHouse"];
+            writeNormalizedBranding(writer, answer);
             break;
         }
         case "ArchivedPageHistory": {
@@ -17275,6 +17795,11 @@ export function writeQueryAnswer<Q extends Query>(question: Q, writer: WireWrite
             writeChallengeHandled(writer, answer);
             break;
         }
+        case "ClearedTabs": {
+            const answer = value as QueryAnswers["ClearedTabs"];
+            writeRemovedTabs(writer, answer);
+            break;
+        }
         case "CloudComparison": {
             const answer = value as QueryAnswers["CloudComparison"];
             writeCloudContentComparison(writer, answer);
@@ -17283,11 +17808,6 @@ export function writeQueryAnswer<Q extends Query>(question: Q, writer: WireWrite
         case "CloudFieldsOf": {
             const answer = value as QueryAnswers["CloudFieldsOf"];
             writeCloudRecordFieldList(writer, answer);
-            break;
-        }
-        case "CloudSync": {
-            const answer = value as QueryAnswers["CloudSync"];
-            writeCloudSyncStatus(writer, answer);
             break;
         }
         case "CloudTransport": {
@@ -17308,6 +17828,11 @@ export function writeQueryAnswer<Q extends Query>(question: Q, writer: WireWrite
         case "ContentRuleLists": {
             const answer = value as QueryAnswers["ContentRuleLists"];
             writeContentRuleListSet(writer, answer);
+            break;
+        }
+        case "CredentialAccess": {
+            const answer = value as QueryAnswers["CredentialAccess"];
+            writeCredentialAccessAnswer(writer, answer);
             break;
         }
         case "CredentialCapture": {
@@ -17363,11 +17888,6 @@ export function writeQueryAnswer<Q extends Query>(question: Q, writer: WireWrite
         case "DocumentCosmetics": {
             const answer = value as QueryAnswers["DocumentCosmetics"];
             writeCosmeticFilters(writer, answer);
-            break;
-        }
-        case "DownloadProgress": {
-            const answer = value as QueryAnswers["DownloadProgress"];
-            writeDownloadProgressReading(writer, answer);
             break;
         }
         case "DownloadRisk": {
@@ -17446,6 +17966,11 @@ export function writeQueryAnswer<Q extends Query>(question: Q, writer: WireWrite
             writeSessionState(writer, answer);
             break;
         }
+        case "FolderDeletionTabs": {
+            const answer = value as QueryAnswers["FolderDeletionTabs"];
+            writeRemovedTabs(writer, answer);
+            break;
+        }
         case "GetAgentPreferences": {
             const answer = value as QueryAnswers["GetAgentPreferences"];
             writeAgentPreferences(writer, answer);
@@ -17509,14 +18034,14 @@ export function writeQueryAnswer<Q extends Query>(question: Q, writer: WireWrite
             writeLaunchWindowPlan(writer, answer);
             break;
         }
-        case "LinkNavigation": {
-            const answer = value as QueryAnswers["LinkNavigation"];
-            writeLinkNavigationAnswer(writer, answer);
-            break;
-        }
         case "LinkToCopy": {
             const answer = value as QueryAnswers["LinkToCopy"];
             writer.writeString(answer);
+            break;
+        }
+        case "LocalDevelopmentAddress": {
+            const answer = value as QueryAnswers["LocalDevelopmentAddress"];
+            writeDevelopmentAddressVerdict(writer, answer);
             break;
         }
         case "MediaSessionOrder": {
@@ -17572,6 +18097,26 @@ export function writeQueryAnswer<Q extends Query>(question: Q, writer: WireWrite
         case "PageScriptlets": {
             const answer = value as QueryAnswers["PageScriptlets"];
             writer.writeString(answer);
+            break;
+        }
+        case "PaletteLimiting": {
+            const answer = value as QueryAnswers["PaletteLimiting"];
+            writePalettePreferences(writer, answer);
+            break;
+        }
+        case "PaletteOffering": {
+            const answer = value as QueryAnswers["PaletteOffering"];
+            writePalettePreferences(writer, answer);
+            break;
+        }
+        case "PaletteSectionMove": {
+            const answer = value as QueryAnswers["PaletteSectionMove"];
+            writePalettePreferences(writer, answer);
+            break;
+        }
+        case "PaletteSectionOrder": {
+            const answer = value as QueryAnswers["PaletteSectionOrder"];
+            writePalettePreferences(writer, answer);
             break;
         }
         case "PaletteSuggestions": {
@@ -17634,11 +18179,6 @@ export function writeQueryAnswer<Q extends Query>(question: Q, writer: WireWrite
             writeResolvedAddress(writer, answer);
             break;
         }
-        case "RestoreLook": {
-            const answer = value as QueryAnswers["RestoreLook"];
-            writeRestoredLook(writer, answer);
-            break;
-        }
         case "RouteExternalLink": {
             const answer = value as QueryAnswers["RouteExternalLink"];
             writeExternalLinkPlacement(writer, answer);
@@ -17694,11 +18234,6 @@ export function writeQueryAnswer<Q extends Query>(question: Q, writer: WireWrite
             writeSplitJoinCandidateTab(writer, answer);
             break;
         }
-        case "StoreLook": {
-            const answer = value as QueryAnswers["StoreLook"];
-            writeStoredLook(writer, answer);
-            break;
-        }
         case "StrongPassword": {
             const answer = value as QueryAnswers["StrongPassword"];
             writeStrongPasswordRecipe(writer, answer);
@@ -17722,6 +18257,11 @@ export function writeQueryAnswer<Q extends Query>(question: Q, writer: WireWrite
         case "TranslationChoice": {
             const answer = value as QueryAnswers["TranslationChoice"];
             writeTranslationDecision(writer, answer);
+            break;
+        }
+        case "WearHouseCrest": {
+            const answer = value as QueryAnswers["WearHouseCrest"];
+            writeNormalizedBranding(writer, answer);
             break;
         }
         case "WindowToReopen": {
@@ -18461,13 +19001,107 @@ export function writeEngineQuestionAnswer<Q extends EngineQuestion>(question: Q,
 export function readImportWorkspace(reader: WireReader): ImportWorkspace {
     const tag = reader.readTag();
     switch (tag) {
-        case 24: return readApplyManualSetup(reader);
-        case 125: return readImportReviewedSpaces(reader);
-        case 126: return readImportSpaces(reader);
+        case 25: return readApplyManualSetup(reader);
+        case 123: return readImportReviewedSpaces(reader);
+        case 124: return readImportSpaces(reader);
         default: throw new Error(`Intent tag ${tag} is not a ImportWorkspace.`);
     }
 }
 export function writeImportWorkspace(writer: WireWriter, value: ImportWorkspace): void {
+    writeIntent(writer, value);
+}
+
+export function readSessionIntent(reader: WireReader): SessionIntent {
+    const tag = reader.readTag();
+    switch (tag) {
+        case 5: return readAddSubSpace(reader);
+        case 25: return readApplyManualSetup(reader);
+        case 27: return readArchiveTransientPage(reader);
+        case 32: return readBeginDeletingSpace(reader);
+        case 50: return readChooseTabIcon(reader);
+        case 52: return readCleanUpCurrentTabs(reader);
+        case 53: return readClearCurrentTabs(reader);
+        case 54: return readClearHistory(reader);
+        case 56: return readCloseTab(reader);
+        case 57: return readCloseTabs(reader);
+        case 71: return readCollapseAllFolders(reader);
+        case 72: return readCollapseFolder(reader);
+        case 73: return readCollapseSplit(reader);
+        case 76: return readCreateFolder(reader);
+        case 77: return readCreateSpace(reader);
+        case 82: return readDeleteFolder(reader);
+        case 83: return readDeleteFolderAndContents(reader);
+        case 86: return readDeleteTab(reader);
+        case 87: return readDeleteTabs(reader);
+        case 90: return readDissolveSplit(reader);
+        case 91: return readDropAroundTab(reader);
+        case 92: return readDropIntoList(reader);
+        case 93: return readDropIntoSplit(reader);
+        case 94: return readDropOnSpace(reader);
+        case 95: return readDuplicateTab(reader);
+        case 96: return readDuplicateTabs(reader);
+        case 100: return readExpandSavedTabs(reader);
+        case 103: return readFileTabs(reader);
+        case 109: return readFinishDeletingSpace(reader);
+        case 115: return readFolderTabs(reader);
+        case 116: return readFolderTabsAround(reader);
+        case 122: return readImportAppPreferences(reader);
+        case 123: return readImportReviewedSpaces(reader);
+        case 124: return readImportSpaces(reader);
+        case 130: return readJoinSpace(reader);
+        case 131: return readJoinSplit(reader);
+        case 132: return readKeepPageLoaded(reader);
+        case 133: return readKeepTabsLoaded(reader);
+        case 135: return readLeaveSplit(reader);
+        case 142: return readMoveFolder(reader);
+        case 143: return readMoveFolderToSpace(reader);
+        case 149: return readMoveSplitMember(reader);
+        case 150: return readMoveTab(reader);
+        case 151: return readMoveTabToSpace(reader);
+        case 152: return readMoveTabToWindow(reader);
+        case 153: return readMoveTabsToSpace(reader);
+        case 154: return readNameSplit(reader);
+        case 156: return readNavigateTab(reader);
+        case 163: return readOpenAddress(reader);
+        case 165: return readOpenLinkInSplit(reader);
+        case 167: return readOpenTab(reader);
+        case 177: return readPromoteTransientPage(reader);
+        case 178: return readPutAwayTabs(reader);
+        case 191: return readRemoveHistoryAddress(reader);
+        case 197: return readRenameFolder(reader);
+        case 198: return readRenameTab(reader);
+        case 199: return readReopenClosedTab(reader);
+        case 200: return readReorderSpaces(reader);
+        case 201: return readReplaceSavedAddress(reader);
+        case 208: return readResetPrivateBrowsing(reader);
+        case 218: return readRestoreArchivedTab(reader);
+        case 223: return readReturnToSavedAddress(reader);
+        case 229: return readSeparateSpace(reader);
+        case 230: return readSeparateSplits(reader);
+        case 233: return readSetAppPreferences(reader);
+        case 235: return readSetBrowsingPreferences(reader);
+        case 238: return readSetCredentialPreferences(reader);
+        case 243: return readSetDefaultSpace(reader);
+        case 246: return readSetFolderColor(reader);
+        case 247: return readSetFolderGroup(reader);
+        case 248: return readSetFolderSymbol(reader);
+        case 256: return readSetSeparatePinnedTabs(reader);
+        case 258: return readSetSpaceAccess(reader);
+        case 259: return readSetSpaceBranding(reader);
+        case 261: return readSetSpaceIdentity(reader);
+        case 262: return readSetSpaceSearch(reader);
+        case 263: return readSetSplitIcon(reader);
+        case 264: return readSetTranslationRule(reader);
+        case 274: return readShowStartPage(reader);
+        case 276: return readSplitTabs(reader);
+        case 281: return readStepSplitMember(reader);
+        case 284: return readSweepExpiredRecords(reader);
+        case 286: return readTintSplit(reader);
+        case 288: return readTogglePin(reader);
+        default: throw new Error(`Intent tag ${tag} is not a SessionIntent.`);
+    }
+}
+export function writeSessionIntent(writer: WireWriter, value: SessionIntent): void {
     writeIntent(writer, value);
 }
 
@@ -18569,6 +19203,45 @@ export function writeAddressCompletion(writer: WireWriter, value: AddressComplet
     writer.writeString(value.typed);
     writer.writeString(value.suffix);
     writer.writeString(value.accepted);
+}
+
+export function readAdoptDevicePreferences(reader: WireReader): AdoptDevicePreferences {
+    const defaultPageZoom = (reader.readPresence() ? reader.readDouble() : null);
+    const backgroundPageActivity = (reader.readPresence() ? reader.readString() : null);
+    const allowsHighFrameRate = (reader.readPresence() ? reader.readBool() : null);
+    const syncsWithICloud = (reader.readPresence() ? reader.readBool() : null);
+    const downloads = reader.readList(() => readSpaceDownloadPreferences(reader));
+    return { $kind: "AdoptDevicePreferences", defaultPageZoom, backgroundPageActivity, allowsHighFrameRate, syncsWithICloud, downloads };
+}
+export function writeAdoptDevicePreferences(writer: WireWriter, value: AdoptDevicePreferences): void {
+    if (value.defaultPageZoom !== null && value.defaultPageZoom !== undefined) {
+        writer.writePresence(true);
+        writer.writeDouble(value.defaultPageZoom);
+    } else {
+        writer.writePresence(false);
+    }
+    if (value.backgroundPageActivity !== null && value.backgroundPageActivity !== undefined) {
+        writer.writePresence(true);
+        writer.writeString(value.backgroundPageActivity);
+    } else {
+        writer.writePresence(false);
+    }
+    if (value.allowsHighFrameRate !== null && value.allowsHighFrameRate !== undefined) {
+        writer.writePresence(true);
+        writer.writeBool(value.allowsHighFrameRate);
+    } else {
+        writer.writePresence(false);
+    }
+    if (value.syncsWithICloud !== null && value.syncsWithICloud !== undefined) {
+        writer.writePresence(true);
+        writer.writeBool(value.syncsWithICloud);
+    } else {
+        writer.writePresence(false);
+    }
+    writer.writeCount(value.downloads.length);
+    for (const downloadsItem of value.downloads) {
+        writeSpaceDownloadPreferences(writer, downloadsItem);
+    }
 }
 
 export function readAdoptLegacySession(reader: WireReader): AdoptLegacySession {
@@ -19199,6 +19872,16 @@ export function writeAppPreferencesChanged(writer: WireWriter, value: AppPrefere
     }
 }
 
+export function readApplyHouse(reader: WireReader): ApplyHouse {
+    const branding = readSpaceBranding(reader);
+    const house = readSpaceHouse(reader);
+    return { $kind: "ApplyHouse", branding, house };
+}
+export function writeApplyHouse(writer: WireWriter, value: ApplyHouse): void {
+    writeSpaceBranding(writer, value.branding);
+    writeSpaceHouse(writer, value.house);
+}
+
 export function readApplyManualSetup(reader: WireReader): ApplyManualSetup {
     const workspaceId = reader.readGuid();
     const windowId = reader.readGuid();
@@ -19463,14 +20146,6 @@ export function writeAutomaticDownloadVerdict(writer: WireWriter, value: Automat
     writer.writeBool(value.hasAllowedAutomaticDownload);
 }
 
-export function readAwaitDownloadApproval(reader: WireReader): AwaitDownloadApproval {
-    const downloadId = reader.readGuid();
-    return { $kind: "AwaitDownloadApproval", downloadId };
-}
-export function writeAwaitDownloadApproval(writer: WireWriter, value: AwaitDownloadApproval): void {
-    writer.writeGuid(value.downloadId);
-}
-
 export function readBeforeUnloadAnswered(reader: WireReader): BeforeUnloadAnswered {
     const pageId = reader.readGuid();
     const proceeds = reader.readBool();
@@ -19558,14 +20233,6 @@ export function writeBeginUnlockingSpace(writer: WireWriter, value: BeginUnlocki
     writer.writeGuid(value.workspaceId);
     writer.writeGuid(value.spaceId);
     writer.writeGuid(value.requestId);
-}
-
-export function readBlockAutomaticDownload(reader: WireReader): BlockAutomaticDownload {
-    const downloadId = reader.readGuid();
-    return { $kind: "BlockAutomaticDownload", downloadId };
-}
-export function writeBlockAutomaticDownload(writer: WireWriter, value: BlockAutomaticDownload): void {
-    writer.writeGuid(value.downloadId);
 }
 
 export function readBlockElement(reader: WireReader): BlockElement {
@@ -19789,11 +20456,11 @@ export function writeCanReturnToSavedAddress(writer: WireWriter, value: CanRetur
 }
 
 export function readCanSend(reader: WireReader): CanSend {
-    const intent = readIntent(reader);
+    const intent = readSessionIntent(reader);
     return { $kind: "CanSend", intent };
 }
 export function writeCanSend(writer: WireWriter, value: CanSend): void {
-    writeIntent(writer, value.intent);
+    writeSessionIntent(writer, value.intent);
 }
 
 export function readCanTearOff(reader: WireReader): CanTearOff {
@@ -19895,7 +20562,8 @@ export function readCapacityLimits(reader: WireReader): CapacityLimits {
     const tabsPerSpace = reader.readInt32();
     const syncRecords = reader.readInt32();
     const credentialFileBytes = reader.readInt32();
-    return { folders, folderDepth, historyEntries, splitMembers, brandColors, crestPalette, spaces, tabsPerSpace, syncRecords, credentialFileBytes };
+    const filterListBytes = reader.readInt32();
+    return { folders, folderDepth, historyEntries, splitMembers, brandColors, crestPalette, spaces, tabsPerSpace, syncRecords, credentialFileBytes, filterListBytes };
 }
 export function writeCapacityLimits(writer: WireWriter, value: CapacityLimits): void {
     writer.writeInt32(value.folders);
@@ -19908,6 +20576,7 @@ export function writeCapacityLimits(writer: WireWriter, value: CapacityLimits): 
     writer.writeInt32(value.tabsPerSpace);
     writer.writeInt32(value.syncRecords);
     writer.writeInt32(value.credentialFileBytes);
+    writer.writeInt32(value.filterListBytes);
 }
 
 export function readCaptureDecision(reader: WireReader): CaptureDecision {
@@ -20077,14 +20746,6 @@ export function writeChooseQuickWindowArchivePolicy(writer: WireWriter, value: C
     writeQuickWindowArchivePolicy(writer, value.policy);
 }
 
-export function readChooseSetupLook(reader: WireReader): ChooseSetupLook {
-    const look = readSetupLook(reader);
-    return { $kind: "ChooseSetupLook", look };
-}
-export function writeChooseSetupLook(writer: WireWriter, value: ChooseSetupLook): void {
-    writeSetupLook(writer, value.look);
-}
-
 export function readChooseShareSource(reader: WireReader): ChooseShareSource {
     const pageId = reader.readGuid();
     const shareId = reader.readGuid();
@@ -20216,6 +20877,20 @@ export function readClearPaletteChoices(reader: WireReader): ClearPaletteChoices
     return { $kind: "ClearPaletteChoices" };
 }
 export function writeClearPaletteChoices(writer: WireWriter, _value: ClearPaletteChoices): void {
+}
+
+export function readClearedTabs(reader: WireReader): ClearedTabs {
+    const workspaceId = reader.readGuid();
+    const windowId = reader.readGuid();
+    const spaceId = reader.readGuid();
+    const keepsShownTab = reader.readBool();
+    return { $kind: "ClearedTabs", workspaceId, windowId, spaceId, keepsShownTab };
+}
+export function writeClearedTabs(writer: WireWriter, value: ClearedTabs): void {
+    writer.writeGuid(value.workspaceId);
+    writer.writeGuid(value.windowId);
+    writer.writeGuid(value.spaceId);
+    writer.writeBool(value.keepsShownTab);
 }
 
 export function readClickPage(reader: WireReader): ClickPage {
@@ -20478,12 +21153,6 @@ export function writeCloudStepFailed(writer: WireWriter, value: CloudStepFailed)
     }
 }
 
-export function readCloudSync(reader: WireReader): CloudSync {
-    return { $kind: "CloudSync" };
-}
-export function writeCloudSync(writer: WireWriter, _value: CloudSync): void {
-}
-
 export function readCloudSyncAdvanced(reader: WireReader): CloudSyncAdvanced {
     const status = readCloudSyncStatus(reader);
     const steps = reader.readList(() => readCloudSyncStep(reader));
@@ -20709,12 +21378,10 @@ export function writeColorPalette(writer: WireWriter, value: ColorPalette): void
 }
 
 export function readConfigureCloudSync(reader: WireReader): ConfigureCloudSync {
-    const isEnabled = reader.readBool();
     const canReachCloud = reader.readBool();
-    return { $kind: "ConfigureCloudSync", isEnabled, canReachCloud };
+    return { $kind: "ConfigureCloudSync", canReachCloud };
 }
 export function writeConfigureCloudSync(writer: WireWriter, value: ConfigureCloudSync): void {
-    writer.writeBool(value.isEnabled);
     writer.writeBool(value.canReachCloud);
 }
 
@@ -20949,6 +21616,43 @@ export function writeCreateSpace(writer: WireWriter, value: CreateSpace): void {
     writer.writeGuid(value.workspaceId);
     writer.writeGuid(value.windowId);
     writer.writeGuid(value.spaceId);
+}
+
+export function readCredentialAccess(reader: WireReader): CredentialAccess {
+    const workspaceId = reader.readGuid();
+    const spaceId = reader.readGuid();
+    const use = readCredentialUse(reader);
+    const origin = (reader.readPresence() ? readCredentialOrigin(reader) : null);
+    return { $kind: "CredentialAccess", workspaceId, spaceId, use, origin };
+}
+export function writeCredentialAccess(writer: WireWriter, value: CredentialAccess): void {
+    writer.writeGuid(value.workspaceId);
+    writer.writeGuid(value.spaceId);
+    writeCredentialUse(writer, value.use);
+    if (value.origin !== null && value.origin !== undefined) {
+        writer.writePresence(true);
+        writeCredentialOrigin(writer, value.origin);
+    } else {
+        writer.writePresence(false);
+    }
+}
+
+export function readCredentialAccessAnswer(reader: WireReader): CredentialAccessAnswer {
+    const refusal = (reader.readPresence() ? readCredentialRefusal(reader) : null);
+    const vaults = reader.readList(() => reader.readGuid());
+    return { refusal, vaults };
+}
+export function writeCredentialAccessAnswer(writer: WireWriter, value: CredentialAccessAnswer): void {
+    if (value.refusal !== null && value.refusal !== undefined) {
+        writer.writePresence(true);
+        writeCredentialRefusal(writer, value.refusal);
+    } else {
+        writer.writePresence(false);
+    }
+    writer.writeCount(value.vaults.length);
+    for (const vaultsItem of value.vaults) {
+        writer.writeGuid(vaultsItem);
+    }
 }
 
 export function readCredentialCapture(reader: WireReader): CredentialCapture {
@@ -21694,6 +22398,14 @@ export function writeDetachedSession(writer: WireWriter, value: DetachedSession)
     writeSessionState(writer, value.seed);
 }
 
+export function readDevelopmentAddressVerdict(reader: WireReader): DevelopmentAddressVerdict {
+    const isLocal = reader.readBool();
+    return { isLocal };
+}
+export function writeDevelopmentAddressVerdict(writer: WireWriter, value: DevelopmentAddressVerdict): void {
+    writer.writeBool(value.isLocal);
+}
+
 export function readDiscardStagedLink(reader: WireReader): DiscardStagedLink {
     const sourcePageId = reader.readGuid();
     const stagedLinkId = reader.readGuid();
@@ -21879,6 +22591,16 @@ export function writeDownloadExtension(writer: WireWriter, value: DownloadExtens
     writer.writeString(value.extensionId);
 }
 
+export function readDownloadFolder(reader: WireReader): DownloadFolder {
+    const name = reader.readString();
+    const token = reader.readBytes();
+    return { name, token };
+}
+export function writeDownloadFolder(writer: WireWriter, value: DownloadFolder): void {
+    writer.writeString(value.name);
+    writer.writeBytes(value.token);
+}
+
 export function readDownloadLimitReached(reader: WireReader): DownloadLimitReached {
     const limit = reader.readInt32();
     return { $kind: "DownloadLimitReached", limit };
@@ -21887,39 +22609,15 @@ export function writeDownloadLimitReached(writer: WireWriter, value: DownloadLim
     writer.writeInt32(value.limit);
 }
 
-export function readDownloadProgress(reader: WireReader): DownloadProgress {
-    const estimator = (reader.readPresence() ? readDownloadTransferEstimator(reader) : null);
-    const completedUnitCount = reader.readInt64();
-    const totalUnitCount = reader.readInt64();
-    const fractionCompleted = reader.readDouble();
-    const isPaused = reader.readBool();
-    const uptime = reader.readDouble();
-    return { $kind: "DownloadProgress", estimator, completedUnitCount, totalUnitCount, fractionCompleted, isPaused, uptime };
+export function readDownloadPreferencesChanged(reader: WireReader): DownloadPreferencesChanged {
+    const spaces = reader.readList(() => readSpaceDownloadPreferences(reader));
+    return { $kind: "DownloadPreferencesChanged", spaces };
 }
-export function writeDownloadProgress(writer: WireWriter, value: DownloadProgress): void {
-    if (value.estimator !== null && value.estimator !== undefined) {
-        writer.writePresence(true);
-        writeDownloadTransferEstimator(writer, value.estimator);
-    } else {
-        writer.writePresence(false);
+export function writeDownloadPreferencesChanged(writer: WireWriter, value: DownloadPreferencesChanged): void {
+    writer.writeCount(value.spaces.length);
+    for (const spacesItem of value.spaces) {
+        writeSpaceDownloadPreferences(writer, spacesItem);
     }
-    writer.writeInt64(value.completedUnitCount);
-    writer.writeInt64(value.totalUnitCount);
-    writer.writeDouble(value.fractionCompleted);
-    writer.writeBool(value.isPaused);
-    writer.writeDouble(value.uptime);
-}
-
-export function readDownloadProgressReading(reader: WireReader): DownloadProgressReading {
-    const estimator = readDownloadTransferEstimator(reader);
-    const telemetry = readDownloadTelemetry(reader);
-    const progress = reader.readDouble();
-    return { estimator, telemetry, progress };
-}
-export function writeDownloadProgressReading(writer: WireWriter, value: DownloadProgressReading): void {
-    writeDownloadTransferEstimator(writer, value.estimator);
-    writeDownloadTelemetry(writer, value.telemetry);
-    writer.writeDouble(value.progress);
 }
 
 export function readDownloadRisk(reader: WireReader): DownloadRisk {
@@ -22076,44 +22774,6 @@ export function writeDownloadTelemetry(writer: WireWriter, value: DownloadTeleme
         writer.writePresence(false);
     }
     writer.writeBool(value.isPaused);
-}
-
-export function readDownloadTransferEstimator(reader: WireReader): DownloadTransferEstimator {
-    const publishedBytes = reader.readInt64();
-    const knownTotalBytes = (reader.readPresence() ? reader.readInt64() : null);
-    const totalIsUnreliable = reader.readBool();
-    const measurementBytes = (reader.readPresence() ? reader.readInt64() : null);
-    const measurementUptime = (reader.readPresence() ? reader.readDouble() : null);
-    const smoothedBytesPerSecond = (reader.readPresence() ? reader.readDouble() : null);
-    return { publishedBytes, knownTotalBytes, totalIsUnreliable, measurementBytes, measurementUptime, smoothedBytesPerSecond };
-}
-export function writeDownloadTransferEstimator(writer: WireWriter, value: DownloadTransferEstimator): void {
-    writer.writeInt64(value.publishedBytes);
-    if (value.knownTotalBytes !== null && value.knownTotalBytes !== undefined) {
-        writer.writePresence(true);
-        writer.writeInt64(value.knownTotalBytes);
-    } else {
-        writer.writePresence(false);
-    }
-    writer.writeBool(value.totalIsUnreliable);
-    if (value.measurementBytes !== null && value.measurementBytes !== undefined) {
-        writer.writePresence(true);
-        writer.writeInt64(value.measurementBytes);
-    } else {
-        writer.writePresence(false);
-    }
-    if (value.measurementUptime !== null && value.measurementUptime !== undefined) {
-        writer.writePresence(true);
-        writer.writeDouble(value.measurementUptime);
-    } else {
-        writer.writePresence(false);
-    }
-    if (value.smoothedBytesPerSecond !== null && value.smoothedBytesPerSecond !== undefined) {
-        writer.writePresence(true);
-        writer.writeDouble(value.smoothedBytesPerSecond);
-    } else {
-        writer.writePresence(false);
-    }
 }
 
 export function readDownloadUpdated(reader: WireReader): DownloadUpdated {
@@ -23606,6 +24266,18 @@ export function writeFolderCycle(writer: WireWriter, value: FolderCycle): void {
     writer.writeGuid(value.folderId);
 }
 
+export function readFolderDeletionTabs(reader: WireReader): FolderDeletionTabs {
+    const workspaceId = reader.readGuid();
+    const spaceId = reader.readGuid();
+    const folderId = reader.readGuid();
+    return { $kind: "FolderDeletionTabs", workspaceId, spaceId, folderId };
+}
+export function writeFolderDeletionTabs(writer: WireWriter, value: FolderDeletionTabs): void {
+    writer.writeGuid(value.workspaceId);
+    writer.writeGuid(value.spaceId);
+    writer.writeGuid(value.folderId);
+}
+
 export function readFolderDepthLimitReached(reader: WireReader): FolderDepthLimitReached {
     const limit = reader.readInt32();
     return { $kind: "FolderDepthLimitReached", limit };
@@ -24144,11 +24816,13 @@ export function writeImportPasswordRoutes(writer: WireWriter, value: ImportPassw
 export function readImportPasswordSource(reader: WireReader): ImportPasswordSource {
     const profileName = reader.readString();
     const host = reader.readString();
-    return { profileName, host };
+    const isSecure = reader.readBool();
+    return { profileName, host, isSecure };
 }
 export function writeImportPasswordSource(writer: WireWriter, value: ImportPasswordSource): void {
     writer.writeString(value.profileName);
     writer.writeString(value.host);
+    writer.writeBool(value.isSecure);
 }
 
 export function readImportPasswordStore(reader: WireReader): ImportPasswordStore {
@@ -25225,23 +25899,6 @@ export function writeLinkHovered(writer: WireWriter, value: LinkHovered): void {
     }
 }
 
-export function readLinkNavigation(reader: WireReader): LinkNavigation {
-    const pageId = reader.readGuid();
-    const url = (reader.readPresence() ? reader.readString() : null);
-    const gesture = readLinkGesture(reader);
-    return { $kind: "LinkNavigation", pageId, url, gesture };
-}
-export function writeLinkNavigation(writer: WireWriter, value: LinkNavigation): void {
-    writer.writeGuid(value.pageId);
-    if (value.url !== null && value.url !== undefined) {
-        writer.writePresence(true);
-        writer.writeString(value.url);
-    } else {
-        writer.writePresence(false);
-    }
-    writeLinkGesture(writer, value.gesture);
-}
-
 export function readLinkNavigationAnswer(reader: WireReader): LinkNavigationAnswer {
     const decision = readLinkNavigationDecision(reader);
     return { decision };
@@ -25404,6 +26061,26 @@ export function writeLoadPage(writer: WireWriter, value: LoadPage): void {
     if (value.entryId !== null && value.entryId !== undefined) {
         writer.writePresence(true);
         writer.writeGuid(value.entryId);
+    } else {
+        writer.writePresence(false);
+    }
+}
+
+export function readLocalDevelopmentAddress(reader: WireReader): LocalDevelopmentAddress {
+    const scheme = (reader.readPresence() ? reader.readString() : null);
+    const host = (reader.readPresence() ? reader.readString() : null);
+    return { $kind: "LocalDevelopmentAddress", scheme, host };
+}
+export function writeLocalDevelopmentAddress(writer: WireWriter, value: LocalDevelopmentAddress): void {
+    if (value.scheme !== null && value.scheme !== undefined) {
+        writer.writePresence(true);
+        writer.writeString(value.scheme);
+    } else {
+        writer.writePresence(false);
+    }
+    if (value.host !== null && value.host !== undefined) {
+        writer.writePresence(true);
+        writer.writeString(value.host);
     } else {
         writer.writePresence(false);
     }
@@ -25839,6 +26516,16 @@ export function writeMoveSetupSpace(writer: WireWriter, value: MoveSetupSpace): 
     writer.writeGuid(value.targetSpaceId);
 }
 
+export function readMoveSiteControlTopAction(reader: WireReader): MoveSiteControlTopAction {
+    const action = readSiteControlAction(reader);
+    const index = reader.readInt32();
+    return { $kind: "MoveSiteControlTopAction", action, index };
+}
+export function writeMoveSiteControlTopAction(writer: WireWriter, value: MoveSiteControlTopAction): void {
+    writeSiteControlAction(writer, value.action);
+    writer.writeInt32(value.index);
+}
+
 export function readMoveSplitMember(reader: WireReader): MoveSplitMember {
     const workspaceId = reader.readGuid();
     const spaceId = reader.readGuid();
@@ -26195,6 +26882,14 @@ export function writeNoteAgentActivity(writer: WireWriter, value: NoteAgentActiv
     writer.writeString(value.subject);
 }
 
+export function readNoteLaunchRelease(reader: WireReader): NoteLaunchRelease {
+    const version = reader.readString();
+    return { $kind: "NoteLaunchRelease", version };
+}
+export function writeNoteLaunchRelease(writer: WireWriter, value: NoteLaunchRelease): void {
+    writer.writeString(value.version);
+}
+
 export function readNotificationDisplayCheck(reader: WireReader): NotificationDisplayCheck {
     const spaceId = reader.readGuid();
     const origin = readSiteOrigin(reader);
@@ -26411,8 +27106,7 @@ export function readOpenLinkInSplit(reader: WireReader): OpenLinkInSplit {
     const tabId = reader.readGuid();
     const targetTabId = reader.readGuid();
     const address = reader.readString();
-    const title = reader.readString();
-    return { $kind: "OpenLinkInSplit", workspaceId, windowId, spaceId, tabId, targetTabId, address, title };
+    return { $kind: "OpenLinkInSplit", workspaceId, windowId, spaceId, tabId, targetTabId, address };
 }
 export function writeOpenLinkInSplit(writer: WireWriter, value: OpenLinkInSplit): void {
     writer.writeGuid(value.workspaceId);
@@ -26421,7 +27115,6 @@ export function writeOpenLinkInSplit(writer: WireWriter, value: OpenLinkInSplit)
     writer.writeGuid(value.tabId);
     writer.writeGuid(value.targetTabId);
     writer.writeString(value.address);
-    writer.writeString(value.title);
 }
 
 export function readOpenPage(reader: WireReader): OpenPage {
@@ -27184,6 +27877,26 @@ export function writePagePoint(writer: WireWriter, value: PagePoint): void {
     writer.writeDouble(value.y);
 }
 
+export function readPagePreferences(reader: WireReader): PagePreferences {
+    const defaultZoom = reader.readDouble();
+    const backgroundActivity = readBackgroundPageActivity(reader);
+    const allowsHighFrameRate = reader.readBool();
+    return { defaultZoom, backgroundActivity, allowsHighFrameRate };
+}
+export function writePagePreferences(writer: WireWriter, value: PagePreferences): void {
+    writer.writeDouble(value.defaultZoom);
+    writeBackgroundPageActivity(writer, value.backgroundActivity);
+    writer.writeBool(value.allowsHighFrameRate);
+}
+
+export function readPagePreferencesChanged(reader: WireReader): PagePreferencesChanged {
+    const preferences = readPagePreferences(reader);
+    return { $kind: "PagePreferencesChanged", preferences };
+}
+export function writePagePreferencesChanged(writer: WireWriter, value: PagePreferencesChanged): void {
+    writePagePreferences(writer, value.preferences);
+}
+
 export function readPagePresented(reader: WireReader): PagePresented {
     const presentation = readPagePresentation(reader);
     return { presentation };
@@ -27538,6 +28251,30 @@ export function writePaletteGroup(writer: WireWriter, value: PaletteGroup): void
     }
 }
 
+export function readPaletteLimiting(reader: WireReader): PaletteLimiting {
+    const preferences = readPalettePreferences(reader);
+    const source = readPaletteSource(reader);
+    const limit = reader.readInt32();
+    return { $kind: "PaletteLimiting", preferences, source, limit };
+}
+export function writePaletteLimiting(writer: WireWriter, value: PaletteLimiting): void {
+    writePalettePreferences(writer, value.preferences);
+    writePaletteSource(writer, value.source);
+    writer.writeInt32(value.limit);
+}
+
+export function readPaletteOffering(reader: WireReader): PaletteOffering {
+    const preferences = readPalettePreferences(reader);
+    const source = readPaletteSource(reader);
+    const isEnabled = reader.readBool();
+    return { $kind: "PaletteOffering", preferences, source, isEnabled };
+}
+export function writePaletteOffering(writer: WireWriter, value: PaletteOffering): void {
+    writePalettePreferences(writer, value.preferences);
+    writePaletteSource(writer, value.source);
+    writer.writeBool(value.isEnabled);
+}
+
 export function readPalettePreferences(reader: WireReader): PalettePreferences {
     const layout = readPaletteLayout(reader);
     const sources = reader.readList(() => readPaletteSourceChoice(reader));
@@ -27647,6 +28384,26 @@ export function writePaletteRow(writer: WireWriter, value: PaletteRowSeed): void
     }
 }
 export const writePaletteRowSeed = writePaletteRow;
+
+export function readPaletteSectionMove(reader: WireReader): PaletteSectionMove {
+    const preferences = readPalettePreferences(reader);
+    const source = readPaletteSource(reader);
+    const index = reader.readInt32();
+    return { $kind: "PaletteSectionMove", preferences, source, index };
+}
+export function writePaletteSectionMove(writer: WireWriter, value: PaletteSectionMove): void {
+    writePalettePreferences(writer, value.preferences);
+    writePaletteSource(writer, value.source);
+    writer.writeInt32(value.index);
+}
+
+export function readPaletteSectionOrder(reader: WireReader): PaletteSectionOrder {
+    const preferences = readPalettePreferences(reader);
+    return { $kind: "PaletteSectionOrder", preferences };
+}
+export function writePaletteSectionOrder(writer: WireWriter, value: PaletteSectionOrder): void {
+    writePalettePreferences(writer, value.preferences);
+}
 
 export function readPaletteSettingsPage(reader: WireReader): PaletteSettingsPage {
     const name = reader.readString();
@@ -27949,6 +28706,16 @@ export function writePlaceImportTab(writer: WireWriter, value: PlaceImportTab): 
     writer.writeGuid(value.sourceSpaceId);
     writer.writeGuid(value.tabId);
     writeTabPlacement(writer, value.placement);
+}
+
+export function readPlaceSiteControlTopAction(reader: WireReader): PlaceSiteControlTopAction {
+    const action = readSiteControlAction(reader);
+    const slot = reader.readInt32();
+    return { $kind: "PlaceSiteControlTopAction", action, slot };
+}
+export function writePlaceSiteControlTopAction(writer: WireWriter, value: PlaceSiteControlTopAction): void {
+    writeSiteControlAction(writer, value.action);
+    writer.writeInt32(value.slot);
 }
 
 export function readPopupBlocked(reader: WireReader): PopupBlocked {
@@ -28439,6 +29206,14 @@ export function writeRejectOfferedPage(writer: WireWriter, value: RejectOfferedP
     writer.writeGuid(value.offerId);
 }
 
+export function readReleaseNotesDue(reader: WireReader): ReleaseNotesDue {
+    const version = reader.readString();
+    return { $kind: "ReleaseNotesDue", version };
+}
+export function writeReleaseNotesDue(writer: WireWriter, value: ReleaseNotesDue): void {
+    writer.writeString(value.version);
+}
+
 export function readReleasePage(reader: WireReader): ReleasePage {
     const pageId = reader.readGuid();
     const keepsState = reader.readBool();
@@ -28558,6 +29333,25 @@ export function readRemoveSetupSpace(reader: WireReader): RemoveSetupSpace {
 }
 export function writeRemoveSetupSpace(writer: WireWriter, value: RemoveSetupSpace): void {
     writer.writeGuid(value.spaceId);
+}
+
+export function readRemoveSiteControlTopAction(reader: WireReader): RemoveSiteControlTopAction {
+    const action = readSiteControlAction(reader);
+    return { $kind: "RemoveSiteControlTopAction", action };
+}
+export function writeRemoveSiteControlTopAction(writer: WireWriter, value: RemoveSiteControlTopAction): void {
+    writeSiteControlAction(writer, value.action);
+}
+
+export function readRemovedTabs(reader: WireReader): RemovedTabs {
+    const tabIds = reader.readList(() => reader.readGuid());
+    return { tabIds };
+}
+export function writeRemovedTabs(writer: WireWriter, value: RemovedTabs): void {
+    writer.writeCount(value.tabIds.length);
+    for (const tabIdsItem of value.tabIds) {
+        writer.writeGuid(tabIdsItem);
+    }
 }
 
 export function readRenameFolder(reader: WireReader): RenameFolder {
@@ -28720,6 +29514,12 @@ export function readResetShortcuts(reader: WireReader): ResetShortcuts {
 export function writeResetShortcuts(writer: WireWriter, _value: ResetShortcuts): void {
 }
 
+export function readResetSiteControlTopActions(reader: WireReader): ResetSiteControlTopActions {
+    return { $kind: "ResetSiteControlTopActions" };
+}
+export function writeResetSiteControlTopActions(writer: WireWriter, _value: ResetSiteControlTopActions): void {
+}
+
 export function readResetSitePermission(reader: WireReader): ResetSitePermission {
     const recordId = reader.readGuid();
     return { $kind: "ResetSitePermission", recordId };
@@ -28833,14 +29633,6 @@ export function writeRestoreInteractionState(writer: WireWriter, value: RestoreI
     writer.writeString(value.expectedUrl);
 }
 
-export function readRestoreLook(reader: WireReader): RestoreLook {
-    const text = reader.readString();
-    return { $kind: "RestoreLook", text };
-}
-export function writeRestoreLook(writer: WireWriter, value: RestoreLook): void {
-    writer.writeString(value.text);
-}
-
 export function readRestoreSearchCatalog(reader: WireReader): RestoreSearchCatalog {
     const language = (reader.readPresence() ? reader.readString() : null);
     const region = (reader.readPresence() ? reader.readString() : null);
@@ -28873,19 +29665,6 @@ export function writeRestoreTabHistory(writer: WireWriter, value: RestoreTabHist
     writer.writeGuid(value.spaceId);
     writer.writeGuid(value.tabId);
     writer.writeBytes(value.archive);
-}
-
-export function readRestoredLook(reader: WireReader): RestoredLook {
-    const look = (reader.readPresence() ? readSpaceBranding(reader) : null);
-    return { look };
-}
-export function writeRestoredLook(writer: WireWriter, value: RestoredLook): void {
-    if (value.look !== null && value.look !== undefined) {
-        writer.writePresence(true);
-        writeSpaceBranding(writer, value.look);
-    } else {
-        writer.writePresence(false);
-    }
 }
 
 export function readResumeDownload(reader: WireReader): ResumeDownload {
@@ -29201,7 +29980,9 @@ export function readSearchCatalogChanged(reader: WireReader): SearchCatalogChang
     const providers = reader.readList(() => readSearchProvider(reader));
     const default_ = readSearchProvider(reader);
     const privateDefault = readSearchProvider(reader);
-    return { $kind: "SearchCatalogChanged", catalog, providers, default: default_, privateDefault };
+    const enabled = reader.readList(() => readSearchProvider(reader));
+    const defaultChoices = reader.readList(() => readSearchProvider(reader));
+    return { $kind: "SearchCatalogChanged", catalog, providers, default: default_, privateDefault, enabled, defaultChoices };
 }
 export function writeSearchCatalogChanged(writer: WireWriter, value: SearchCatalogChanged): void {
     writeSearchCatalog(writer, value.catalog);
@@ -29211,6 +29992,14 @@ export function writeSearchCatalogChanged(writer: WireWriter, value: SearchCatal
     }
     writeSearchProvider(writer, value.default);
     writeSearchProvider(writer, value.privateDefault);
+    writer.writeCount(value.enabled.length);
+    for (const enabledItem of value.enabled) {
+        writeSearchProvider(writer, enabledItem);
+    }
+    writer.writeCount(value.defaultChoices.length);
+    for (const defaultChoicesItem of value.defaultChoices) {
+        writeSearchProvider(writer, defaultChoicesItem);
+    }
 }
 
 export function readSearchEngineLimitReached(reader: WireReader): SearchEngineLimitReached {
@@ -29635,6 +30424,14 @@ export function writeSetAppPreferences(writer: WireWriter, value: SetAppPreferen
     writeAppPreferences(writer, value.preferences);
 }
 
+export function readSetBackgroundPageActivity(reader: WireReader): SetBackgroundPageActivity {
+    const activity = readBackgroundPageActivity(reader);
+    return { $kind: "SetBackgroundPageActivity", activity };
+}
+export function writeSetBackgroundPageActivity(writer: WireWriter, value: SetBackgroundPageActivity): void {
+    writeBackgroundPageActivity(writer, value.activity);
+}
+
 export function readSetBrowsingPreferences(reader: WireReader): SetBrowsingPreferences {
     const workspaceId = reader.readGuid();
     const spaceId = reader.readGuid();
@@ -29695,6 +30492,14 @@ export function readSetCustomFilters(reader: WireReader): SetCustomFilters {
 }
 export function writeSetCustomFilters(writer: WireWriter, value: SetCustomFilters): void {
     writer.writeString(value.text);
+}
+
+export function readSetDefaultPageZoom(reader: WireReader): SetDefaultPageZoom {
+    const zoom = reader.readDouble();
+    return { $kind: "SetDefaultPageZoom", zoom };
+}
+export function writeSetDefaultPageZoom(writer: WireWriter, value: SetDefaultPageZoom): void {
+    writer.writeDouble(value.zoom);
 }
 
 export function readSetDefaultSearch(reader: WireReader): SetDefaultSearch {
@@ -29777,6 +30582,14 @@ export function writeSetFolderSymbol(writer: WireWriter, value: SetFolderSymbol)
     writer.writeGuid(value.spaceId);
     writer.writeGuid(value.folderId);
     writer.writeString(value.symbol);
+}
+
+export function readSetHighFrameRate(reader: WireReader): SetHighFrameRate {
+    const allowed = reader.readBool();
+    return { $kind: "SetHighFrameRate", allowed };
+}
+export function writeSetHighFrameRate(writer: WireWriter, value: SetHighFrameRate): void {
+    writer.writeBool(value.allowed);
 }
 
 export function readSetLinkBehavior(reader: WireReader): SetLinkBehavior {
@@ -29913,6 +30726,14 @@ export function writeSetSpaceBranding(writer: WireWriter, value: SetSpaceBrandin
     writer.writeGuid(value.workspaceId);
     writer.writeGuid(value.spaceId);
     writeSpaceBranding(writer, value.branding);
+}
+
+export function readSetSpaceDownloads(reader: WireReader): SetSpaceDownloads {
+    const preferences = readSpaceDownloadPreferences(reader);
+    return { $kind: "SetSpaceDownloads", preferences };
+}
+export function writeSetSpaceDownloads(writer: WireWriter, value: SetSpaceDownloads): void {
+    writeSpaceDownloadPreferences(writer, value.preferences);
 }
 
 export function readSetSpaceIdentity(reader: WireReader): SetSpaceIdentity {
@@ -30331,13 +31152,14 @@ export function readSetupReviewSpace(reader: WireReader): SetupReviewSpace {
     const placements = reader.readList(() => readTabPlacementChoice(reader));
     const includesPasswords = reader.readBool();
     const passwordCount = reader.readInt32();
+    const insecurePasswordCount = reader.readInt32();
     const extensions = reader.readList(() => readImportExtension(reader));
     const includedExtensionIds = reader.readList(() => reader.readString());
     const joinsGroupOf = (reader.readPresence() ? reader.readGuid() : null);
     const shownName = reader.readString();
     const bringsPasswords = reader.readBool();
     const broughtExtensions = reader.readList(() => readImportExtension(reader));
-    return { source, included, destinationId, customization, includedTabIds, duplicateTabIds, matchedTabIds, placements, includesPasswords, passwordCount, extensions, includedExtensionIds, joinsGroupOf, shownName, bringsPasswords, broughtExtensions };
+    return { source, included, destinationId, customization, includedTabIds, duplicateTabIds, matchedTabIds, placements, includesPasswords, passwordCount, insecurePasswordCount, extensions, includedExtensionIds, joinsGroupOf, shownName, bringsPasswords, broughtExtensions };
 }
 export function writeSetupReviewSpace(writer: WireWriter, value: SetupReviewSpace): void {
     writeSpaceState(writer, value.source);
@@ -30367,6 +31189,7 @@ export function writeSetupReviewSpace(writer: WireWriter, value: SetupReviewSpac
     }
     writer.writeBool(value.includesPasswords);
     writer.writeInt32(value.passwordCount);
+    writer.writeInt32(value.insecurePasswordCount);
     writer.writeCount(value.extensions.length);
     for (const extensionsItem of value.extensions) {
         writeImportExtension(writer, extensionsItem);
@@ -30787,6 +31610,25 @@ export function writeSiteContentBlockingChanged(writer: WireWriter, value: SiteC
     }
 }
 
+export function readSiteControlTopActions(reader: WireReader): SiteControlTopActions {
+    const actions = reader.readList(() => readSiteControlAction(reader));
+    return { actions };
+}
+export function writeSiteControlTopActions(writer: WireWriter, value: SiteControlTopActions): void {
+    writer.writeCount(value.actions.length);
+    for (const actionsItem of value.actions) {
+        writeSiteControlAction(writer, actionsItem);
+    }
+}
+
+export function readSiteControlTopActionsChanged(reader: WireReader): SiteControlTopActionsChanged {
+    const topActions = readSiteControlTopActions(reader);
+    return { $kind: "SiteControlTopActionsChanged", topActions };
+}
+export function writeSiteControlTopActionsChanged(writer: WireWriter, value: SiteControlTopActionsChanged): void {
+    writeSiteControlTopActions(writer, value.topActions);
+}
+
 export function readSiteDataRead(reader: WireReader): SiteDataRead {
     const readingId = reader.readGuid();
     const sites = reader.readList(() => readStoredSite(reader));
@@ -31160,6 +32002,23 @@ export function writeSpaceDeletionUnderway(writer: WireWriter, value: SpaceDelet
     writer.writeCount(value.spaceIds.length);
     for (const spaceIdsItem of value.spaceIds) {
         writer.writeGuid(spaceIdsItem);
+    }
+}
+
+export function readSpaceDownloadPreferences(reader: WireReader): SpaceDownloadPreferences {
+    const spaceId = reader.readGuid();
+    const asksWhereToSave = reader.readBool();
+    const folder = (reader.readPresence() ? readDownloadFolder(reader) : null);
+    return { spaceId, asksWhereToSave, folder };
+}
+export function writeSpaceDownloadPreferences(writer: WireWriter, value: SpaceDownloadPreferences): void {
+    writer.writeGuid(value.spaceId);
+    writer.writeBool(value.asksWhereToSave);
+    if (value.folder !== null && value.folder !== undefined) {
+        writer.writePresence(true);
+        writeDownloadFolder(writer, value.folder);
+    } else {
+        writer.writePresence(false);
     }
 }
 
@@ -31766,14 +32625,6 @@ export function writeStoreInstallRequested(writer: WireWriter, value: StoreInsta
     writer.writeString(value.extensionId);
 }
 
-export function readStoreLook(reader: WireReader): StoreLook {
-    const look = readSpaceBranding(reader);
-    return { $kind: "StoreLook", look };
-}
-export function writeStoreLook(writer: WireWriter, value: StoreLook): void {
-    writeSpaceBranding(writer, value.look);
-}
-
 export function readStoreRemovalRequested(reader: WireReader): StoreRemovalRequested {
     const pageId = reader.readGuid();
     const extensionId = reader.readString();
@@ -31782,14 +32633,6 @@ export function readStoreRemovalRequested(reader: WireReader): StoreRemovalReque
 export function writeStoreRemovalRequested(writer: WireWriter, value: StoreRemovalRequested): void {
     writer.writeGuid(value.pageId);
     writer.writeString(value.extensionId);
-}
-
-export function readStoredLook(reader: WireReader): StoredLook {
-    const text = reader.readString();
-    return { text };
-}
-export function writeStoredLook(writer: WireWriter, value: StoredLook): void {
-    writer.writeString(value.text);
 }
 
 export function readStoredSessionClosed(reader: WireReader): StoredSessionClosed {
@@ -32345,6 +33188,12 @@ export function writeTabsImported(writer: WireWriter, value: TabsImported): void
     }
 }
 
+export function readTakeReleaseNotes(reader: WireReader): TakeReleaseNotes {
+    return { $kind: "TakeReleaseNotes" };
+}
+export function writeTakeReleaseNotes(writer: WireWriter, _value: TakeReleaseNotes): void {
+}
+
 export function readTearOffPermission(reader: WireReader): TearOffPermission {
     const allowed = reader.readBool();
     const reason = (reader.readPresence() ? readTearOffRefusal(reader) : null);
@@ -32434,7 +33283,8 @@ export function writeTransientPagePromoted(writer: WireWriter, value: TransientP
 export function readTranslationChoice(reader: WireReader): TranslationChoice {
     const rules = reader.readList(() => readTranslationRule(reader));
     const sourceLanguage = reader.readString();
-    return { $kind: "TranslationChoice", rules, sourceLanguage };
+    const preferredLanguage = (reader.readPresence() ? reader.readString() : null);
+    return { $kind: "TranslationChoice", rules, sourceLanguage, preferredLanguage };
 }
 export function writeTranslationChoice(writer: WireWriter, value: TranslationChoice): void {
     writer.writeCount(value.rules.length);
@@ -32442,12 +33292,19 @@ export function writeTranslationChoice(writer: WireWriter, value: TranslationCho
         writeTranslationRule(writer, rulesItem);
     }
     writer.writeString(value.sourceLanguage);
+    if (value.preferredLanguage !== null && value.preferredLanguage !== undefined) {
+        writer.writePresence(true);
+        writer.writeString(value.preferredLanguage);
+    } else {
+        writer.writePresence(false);
+    }
 }
 
 export function readTranslationDecision(reader: WireReader): TranslationDecision {
     const rule = (reader.readPresence() ? readTranslationRule(reader) : null);
     const target = (reader.readPresence() ? reader.readString() : null);
-    return { rule, target };
+    const offers = reader.readBool();
+    return { rule, target, offers };
 }
 export function writeTranslationDecision(writer: WireWriter, value: TranslationDecision): void {
     if (value.rule !== null && value.rule !== undefined) {
@@ -32462,6 +33319,7 @@ export function writeTranslationDecision(writer: WireWriter, value: TranslationD
     } else {
         writer.writePresence(false);
     }
+    writer.writeBool(value.offers);
 }
 
 export function readTranslationRule(reader: WireReader): TranslationRule {
@@ -32715,6 +33573,16 @@ export function readWatchPage(reader: WireReader): WatchPage {
 }
 export function writeWatchPage(writer: WireWriter, value: WatchPage): void {
     writer.writeGuid(value.pageId);
+}
+
+export function readWearHouseCrest(reader: WireReader): WearHouseCrest {
+    const branding = readSpaceBranding(reader);
+    const house = readSpaceHouse(reader);
+    return { $kind: "WearHouseCrest", branding, house };
+}
+export function writeWearHouseCrest(writer: WireWriter, value: WearHouseCrest): void {
+    writeSpaceBranding(writer, value.branding);
+    writeSpaceHouse(writer, value.house);
 }
 
 export function readWebNotificationClosed(reader: WireReader): WebNotificationClosed {
@@ -33126,13 +33994,6 @@ export function writePageMixedContent(writer: WireWriter, value: PageMixedConten
     writer.writeEnum(value);
 }
 
-export function readPageResourceKind(reader: WireReader): PageResourceKind {
-    return reader.readEnum(3) as PageResourceKind;
-}
-export function writePageResourceKind(writer: WireWriter, value: PageResourceKind): void {
-    writer.writeEnum(value);
-}
-
 export function readPageScriptWorld(reader: WireReader): PageScriptWorld {
     return reader.readEnum(2) as PageScriptWorld;
 }
@@ -33203,24 +34064,10 @@ export function writeSpaceAccessPolicy(writer: WireWriter, value: SpaceAccessPol
     writer.writeEnum(value);
 }
 
-export function readStorageFailure(reader: WireReader): StorageFailure {
-    return reader.readEnum(5) as StorageFailure;
-}
-export function writeStorageFailure(writer: WireWriter, value: StorageFailure): void {
-    writer.writeEnum(value);
-}
-
 export function readSystemPasswordWriteThroughAvailability(reader: WireReader): SystemPasswordWriteThroughAvailability {
     return reader.readEnum(5) as SystemPasswordWriteThroughAvailability;
 }
 export function writeSystemPasswordWriteThroughAvailability(writer: WireWriter, value: SystemPasswordWriteThroughAvailability): void {
-    writer.writeEnum(value);
-}
-
-export function readSystemTint(reader: WireReader): SystemTint {
-    return reader.readEnum(8) as SystemTint;
-}
-export function writeSystemTint(writer: WireWriter, value: SystemTint): void {
     writer.writeEnum(value);
 }
 
@@ -33287,6 +34134,13 @@ export function writeAutomaticDownloadAction(writer: WireWriter, value: Automati
     writer.writeEnum(value.tag);
 }
 
+export function readBackgroundPageActivity(reader: WireReader): BackgroundPageActivity {
+    return BackgroundPageActivity.all[reader.readEnum(BackgroundPageActivity.all.length)];
+}
+export function writeBackgroundPageActivity(writer: WireWriter, value: BackgroundPageActivity): void {
+    writer.writeEnum(value.tag);
+}
+
 export function readBlockedPopupEvent(reader: WireReader): BlockedPopupEvent {
     return BlockedPopupEvent.all[reader.readEnum(BlockedPopupEvent.all.length)];
 }
@@ -33319,13 +34173,6 @@ export function readBuiltInSearchProvider(reader: WireReader): BuiltInSearchProv
     return BuiltInSearchProvider.all[reader.readEnum(BuiltInSearchProvider.all.length)];
 }
 export function writeBuiltInSearchProvider(writer: WireWriter, value: BuiltInSearchProvider): void {
-    writer.writeEnum(value.tag);
-}
-
-export function readCapabilityStatus(reader: WireReader): CapabilityStatus {
-    return CapabilityStatus.all[reader.readEnum(CapabilityStatus.all.length)];
-}
-export function writeCapabilityStatus(writer: WireWriter, value: CapabilityStatus): void {
     writer.writeEnum(value.tag);
 }
 
@@ -33378,6 +34225,13 @@ export function writeCloudZoneLoss(writer: WireWriter, value: CloudZoneLoss): vo
     writer.writeEnum(value.tag);
 }
 
+export function readContentBlockKind(reader: WireReader): ContentBlockKind {
+    return ContentBlockKind.all[reader.readEnum(ContentBlockKind.all.length)];
+}
+export function writeContentBlockKind(writer: WireWriter, value: ContentBlockKind): void {
+    writer.writeEnum(value.tag);
+}
+
 export function readContentBlockingLevel(reader: WireReader): ContentBlockingLevel {
     return ContentBlockingLevel.all[reader.readEnum(ContentBlockingLevel.all.length)];
 }
@@ -33427,6 +34281,13 @@ export function writeCredentialImportEffect(writer: WireWriter, value: Credentia
     writer.writeEnum(value.tag);
 }
 
+export function readCredentialRefusal(reader: WireReader): CredentialRefusal {
+    return CredentialRefusal.all[reader.readEnum(CredentialRefusal.all.length)];
+}
+export function writeCredentialRefusal(writer: WireWriter, value: CredentialRefusal): void {
+    writer.writeEnum(value.tag);
+}
+
 export function readCredentialRowCaution(reader: WireReader): CredentialRowCaution {
     return CredentialRowCaution.all[reader.readEnum(CredentialRowCaution.all.length)];
 }
@@ -33438,6 +34299,13 @@ export function readCredentialRowFlaw(reader: WireReader): CredentialRowFlaw {
     return CredentialRowFlaw.all[reader.readEnum(CredentialRowFlaw.all.length)];
 }
 export function writeCredentialRowFlaw(writer: WireWriter, value: CredentialRowFlaw): void {
+    writer.writeEnum(value.tag);
+}
+
+export function readCredentialUse(reader: WireReader): CredentialUse {
+    return CredentialUse.all[reader.readEnum(CredentialUse.all.length)];
+}
+export function writeCredentialUse(writer: WireWriter, value: CredentialUse): void {
     writer.writeEnum(value.tag);
 }
 
@@ -33770,6 +34638,13 @@ export function writePagePresentation(writer: WireWriter, value: PagePresentatio
     writer.writeEnum(value.tag);
 }
 
+export function readPageResourceKind(reader: WireReader): PageResourceKind {
+    return PageResourceKind.all[reader.readEnum(PageResourceKind.all.length)];
+}
+export function writePageResourceKind(writer: WireWriter, value: PageResourceKind): void {
+    writer.writeEnum(value.tag);
+}
+
 export function readPageSecurity(reader: WireReader): PageSecurity {
     return PageSecurity.all[reader.readEnum(PageSecurity.all.length)];
 }
@@ -33987,6 +34862,20 @@ export function writeSidebarRowKind(writer: WireWriter, value: SidebarRowKind): 
     writer.writeEnum(value.tag);
 }
 
+export function readSiteControlAction(reader: WireReader): SiteControlAction {
+    return SiteControlAction.all[reader.readEnum(SiteControlAction.all.length)];
+}
+export function writeSiteControlAction(writer: WireWriter, value: SiteControlAction): void {
+    writer.writeEnum(value.tag);
+}
+
+export function readSiteControlActionGroup(reader: WireReader): SiteControlActionGroup {
+    return SiteControlActionGroup.all[reader.readEnum(SiteControlActionGroup.all.length)];
+}
+export function writeSiteControlActionGroup(writer: WireWriter, value: SiteControlActionGroup): void {
+    writer.writeEnum(value.tag);
+}
+
 export function readSitePermission(reader: WireReader): SitePermission {
     return SitePermission.all[reader.readEnum(SitePermission.all.length)];
 }
@@ -34071,6 +34960,20 @@ export function writeStartupBehavior(writer: WireWriter, value: StartupBehavior)
     writer.writeEnum(value.tag);
 }
 
+export function readStatusTone(reader: WireReader): StatusTone {
+    return StatusTone.all[reader.readEnum(StatusTone.all.length)];
+}
+export function writeStatusTone(writer: WireWriter, value: StatusTone): void {
+    writer.writeEnum(value.tag);
+}
+
+export function readStorageFailure(reader: WireReader): StorageFailure {
+    return StorageFailure.all[reader.readEnum(StorageFailure.all.length)];
+}
+export function writeStorageFailure(writer: WireWriter, value: StorageFailure): void {
+    writer.writeEnum(value.tag);
+}
+
 export function readSyncDeletionReason(reader: WireReader): SyncDeletionReason {
     return SyncDeletionReason.all[reader.readEnum(SyncDeletionReason.all.length)];
 }
@@ -34138,6 +35041,13 @@ export function readTransientPresentation(reader: WireReader): TransientPresenta
     return TransientPresentation.all[reader.readEnum(TransientPresentation.all.length)];
 }
 export function writeTransientPresentation(writer: WireWriter, value: TransientPresentation): void {
+    writer.writeEnum(value.tag);
+}
+
+export function readUrlScheme(reader: WireReader): UrlScheme {
+    return UrlScheme.all[reader.readEnum(UrlScheme.all.length)];
+}
+export function writeUrlScheme(writer: WireWriter, value: UrlScheme): void {
     writer.writeEnum(value.tag);
 }
 

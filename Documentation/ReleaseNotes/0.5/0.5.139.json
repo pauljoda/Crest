@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "icloud-full-pull-and-merge-recovery",
+      "category": "fixed",
+      "message": "Recover missing iCloud changes with a confirmed Pull from iCloud action, and keep blank tabs from blocking Space and tab updates"
+    }
+  ]
+}

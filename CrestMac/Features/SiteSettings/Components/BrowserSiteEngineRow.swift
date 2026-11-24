@@ -14,7 +14,7 @@ struct BrowserSiteEngineRow: View {
                     Label {
                         Text(engine.kind.title)
                     } icon: {
-                        BrowserSiteEngineMenuIcon(mark: engine.kind.mark)
+                        BrowserSiteEngineMenuIcon(logo: BrowserEngineOption.logo(of: engine.kind))
                     }
                     .tag(engine.kind)
                 }

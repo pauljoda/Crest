@@ -20,7 +20,6 @@ struct BrowserShareSourcePicker: View {
 
     @State private var selection: UUID?
     @State private var sharesAudio = true
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
         VStack(alignment: .leading, spacing: BrowserWebPageSurfaceMetrics.sharePickerSpacing) {
@@ -43,11 +42,7 @@ struct BrowserShareSourcePicker: View {
             panelShape.strokeBorder(.separator, lineWidth: BrowserWebPageSurfaceMetrics.sharePickerStrokeWidth)
         }
         .crestFlyoutStyle(in: panelShape)
-        .shadow(
-            color: .black.opacity(reduceTransparency ? 0 : CrestOpacity.controlShadow),
-            radius: BrowserWebPageSurfaceMetrics.sharePickerShadowRadius,
-            y: BrowserWebPageSurfaceMetrics.sharePickerShadowOffset
-        )
+        .crestElevation(.panel)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(
             Text("Choose what to share", comment: "Accessibility label for the screen sharing picker.")

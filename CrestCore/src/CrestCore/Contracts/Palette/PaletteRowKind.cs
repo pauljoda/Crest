@@ -3,10 +3,11 @@ using CrestCore.Domain;
 namespace CrestCore.Contracts;
 
 /// What a palette row is and does: what activating it does, the symbol it
-/// wears unless the row names its own, the words that say so at its end, the
-/// word the blended layout shows for its kind, whether it is one of the
-/// palette's primary actions, which show larger, whether forgetting it leaves
-/// history too, and where it leads as the palette remembers a pick. A kind travels as its index in `All`, so `All`
+/// wears unless the row names its own, which for a tab is its section's, the
+/// words that say so at its end, the word the blended layout shows for its
+/// kind, whether it is one of the palette's primary actions, which show
+/// larger, whether forgetting it leaves history too, and where it leads as the
+/// palette remembers a pick. A kind travels as its index in `All`, so `All`
 /// is append-only.
 public sealed class PaletteRowKind {
     #region Static Variables
@@ -21,13 +22,13 @@ public sealed class PaletteRowKind {
         symbol: "magnifyingglass", action: "Search", label: "Suggestion", isPrimary: false, forgetsFromHistory: false,
         destination: (_, _) => null);
     public static readonly PaletteRowKind Tab = new(name: "tab", PaletteActivation.SwitchesToTab,
-        symbol: "globe", action: "Switch to Tab", label: "Open Tab", isPrimary: false, forgetsFromHistory: false,
+        symbol: null, action: "Switch to Tab", label: "Open Tab", isPrimary: false, forgetsFromHistory: false,
         destination: (row, tabs) => PaletteDestination.Address(row.TabId is { } tab ? tabs(tab) : null));
     public static readonly PaletteRowKind PinnedTab = new(name: "pinnedTab", PaletteActivation.SwitchesToTab,
-        symbol: "pin.fill", action: "Switch to Tab", label: "Pinned", isPrimary: false, forgetsFromHistory: false,
+        symbol: null, action: "Switch to Tab", label: "Pinned", isPrimary: false, forgetsFromHistory: false,
         destination: (row, tabs) => PaletteDestination.Address(row.TabId is { } tab ? tabs(tab) : null));
     public static readonly PaletteRowKind SavedTab = new(name: "savedTab", PaletteActivation.SwitchesToTab,
-        symbol: "bookmark", action: "Switch to Tab", label: "Saved", isPrimary: false, forgetsFromHistory: false,
+        symbol: null, action: "Switch to Tab", label: "Saved", isPrimary: false, forgetsFromHistory: false,
         destination: (row, tabs) => PaletteDestination.Address(row.TabId is { } tab ? tabs(tab) : null));
     public static readonly PaletteRowKind Folder = new(name: "folder", PaletteActivation.SwitchesToTab,
         symbol: FolderState.DefaultSymbol, action: "Open First Tab", label: "Folder", isPrimary: false, forgetsFromHistory: false,
@@ -70,8 +71,9 @@ public sealed class PaletteRowKind {
 
     public string Name { get; }
 
-    /// The SF Symbol a row of this kind wears unless it names its own.
-    public string Symbol { get; }
+    /// The SF Symbol a row of this kind wears unless it names its own: the
+    /// symbol of the section whose tabs it shows, for a tab's row.
+    public string Symbol => symbol ?? TabPlacement.All.First(placement => placement.PaletteRow == this).Symbol;
 
     /// What activating the row does, shown at its end, or null for nothing.
     [Localized]
@@ -96,16 +98,21 @@ public sealed class PaletteRowKind {
     /// search.
     private readonly Func<PaletteRow, Func<Guid, string?>, PaletteDestination?> destination;
 
+    /// The kind's own symbol, or null for a tab's row, which wears its
+    /// section's. A section names its row, so reading it waits until both
+    /// sets exist.
+    private readonly string? symbol;
+
     #endregion
 
     #region Constructors
 
-    private PaletteRowKind(string name, PaletteActivation activation, string symbol, string? action, string label, bool isPrimary,
+    private PaletteRowKind(string name, PaletteActivation activation, string? symbol, string? action, string label, bool isPrimary,
         bool forgetsFromHistory, Func<PaletteRow, Func<Guid, string?>, PaletteDestination?> destination) {
         Name = name;
         Activation = activation;
         ForgetsFromHistory = forgetsFromHistory;
-        Symbol = symbol;
+        this.symbol = symbol;
         Action = action;
         Label = label;
         IsPrimary = isPrimary;

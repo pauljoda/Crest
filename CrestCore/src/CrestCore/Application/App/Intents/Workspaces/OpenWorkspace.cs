@@ -25,7 +25,7 @@ namespace CrestCore.Contracts;
 /// no session yet (`AdoptLegacySession` gives it its first), `StoredSessionClosed`
 /// once the file's session was closed, and `InvalidSession` for a seed the core
 /// cannot hold.
-[MessageLimit(64 * 1024 * 1024)]
+[MessageLimit(MessageLimitAttribute.SessionBytes)]
 public sealed record OpenWorkspace(WorkspaceKind Kind, SessionState? Seed) : WorkspaceIntent {
     #region Actions - App
 

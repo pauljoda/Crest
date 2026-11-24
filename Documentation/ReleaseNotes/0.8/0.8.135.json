@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "palette-provider-chips-larger-text",
+      "category": "fixed",
+      "message": "On iPhone and iPad, the palette's search provider chips no longer cover what you type at larger text sizes.",
+      "platforms": ["ios"]
+    }
+  ]
+}

@@ -44,7 +44,7 @@ internal static class LegacyLinkPreferencesDocument {
         if (document is null || document.Length == 0) return null;
         JsonDocument parsed;
         try {
-            parsed = JsonDocument.Parse(document, new() { MaxDepth = 8 });
+            parsed = JsonDocument.Parse(document, JsonDepth.Preferences.Options);
         } catch (JsonException) {
             return null;
         }

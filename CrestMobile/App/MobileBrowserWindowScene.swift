@@ -14,7 +14,7 @@ struct MobileBrowserWindowScene: View {
 
     @State private var runtime = Runtime()
     private let makeModel: @MainActor () -> MobileBrowserWindowSceneModel
-    @State private var browsingMode: BrowserBrowsingMode = .standard
+    @State private var workspaceKind: WorkspaceKind = .persistent
     @State private var hasPresentedAutomaticOnboarding = false
 
     init(
@@ -182,7 +182,7 @@ struct MobileBrowserWindowScene: View {
 
     @ViewBuilder
     private var browserSurface: some View {
-        if browsingMode.isPrivate {
+        if workspaceKind.isPrivate {
             MobileBrowserRootView(
                 browser: model.privateBrowser,
                 pages: model.privatePages,
@@ -212,6 +212,7 @@ struct MobileBrowserWindowScene: View {
                 togglePrivateBrowsing: togglePrivateBrowsing,
                 closePrivateBrowsing: closePrivateBrowsing
             )
+            .environment(\.mobileOpenInPrivateBrowsing) { url in openInPrivateBrowsing(url) }
         }
     }
 
@@ -225,7 +226,7 @@ struct MobileBrowserWindowScene: View {
             spaceAccess: model.spaceAccess,
             didOpenGettingStarted: { assignment in
                 if model.presentGettingStartedAfterSetup(matching: assignment) {
-                    browsingMode = .standard
+                    workspaceKind = .persistent
                 }
             }
         )
@@ -277,16 +278,23 @@ struct MobileBrowserWindowScene: View {
     }
 
     private func togglePrivateBrowsing() {
-        let destinationMode = model.togglePrivateBrowsing(from: browsingMode)
+        let destinationMode = model.togglePrivateBrowsing(from: workspaceKind)
         withAnimation(modeAnimation) {
-            browsingMode = destinationMode
+            workspaceKind = destinationMode
+        }
+    }
+
+    private func openInPrivateBrowsing(_ url: URL) {
+        let destinationMode = model.openInPrivateBrowsing(url, from: workspaceKind)
+        withAnimation(modeAnimation) {
+            workspaceKind = destinationMode
         }
     }
 
     private func closePrivateBrowsing() {
         let destinationMode = model.closePrivateBrowsing()
         withAnimation(modeAnimation) {
-            browsingMode = destinationMode
+            workspaceKind = destinationMode
         }
     }
 
@@ -298,7 +306,7 @@ struct MobileBrowserWindowScene: View {
         Task {
             guard await model.routeExternalURL(link) else { return }
             withAnimation(modeAnimation) {
-                browsingMode = .standard
+                workspaceKind = .persistent
             }
         }
     }

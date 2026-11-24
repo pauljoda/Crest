@@ -10,7 +10,6 @@ final class BrowserSoftwareUpdateService {
     static let channelPreferenceKey = "crest.software-update.channel"
     static let bundledChannelPreferenceKey =
         "crest.software-update.bundled-channel"
-    static let defaultChannelInfoKey = "CrestDefaultUpdateChannel"
 
     // MARK: - Variables
 
@@ -48,14 +47,7 @@ final class BrowserSoftwareUpdateService {
         defaultChannel: BrowserSoftwareUpdateChannel? = nil,
         feedURLOverride: URL? = nil
     ) {
-        let bundledDefaultChannel =
-            defaultChannel
-            ?? BrowserSoftwareUpdateChannel.named(
-                Bundle.main.object(
-                    forInfoDictionaryKey: Self.defaultChannelInfoKey
-                ) as? String ?? ""
-            )
-            ?? .stable
+        let bundledDefaultChannel = defaultChannel ?? BrowserSoftwareUpdateChannel.bundled ?? .stable
         let channel = Self.launchChannel(
             bundledDefault: bundledDefaultChannel,
             preferences: preferences
@@ -131,23 +123,16 @@ final class BrowserSoftwareUpdateService {
         let fixture = BrowserSoftwareUpdateFixture.named(components.first ?? "available")
         let version = components.count > 1 ? components[1] : "0.5.99"
         let build = components.count > 2 ? components[2] : "599"
-        let releaseNotes = """
-            ## What's New
-
-            - Software update progress stays visible in the sidebar.
-            - Release notes open only when you ask to review them.
-            """
         model.presentUpdate(
             title: "Crest \(version)",
             version: version,
             build: build,
-            releaseNotes: releaseNotes,
             isInformationOnly: false,
             isFixture: true,
             install: {},
             skip: {}
         )
-        fixture.present(on: model, version: version, build: build, releaseNotes: releaseNotes)
+        fixture.present(on: model, version: version, build: build)
     }
 
     // MARK: - Actions - Launch

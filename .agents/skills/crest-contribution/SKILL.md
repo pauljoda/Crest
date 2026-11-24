@@ -104,12 +104,37 @@ type you touch. The rules that matter most:
   cards. Every interactive control has hover and pressed states from the
   system. Search `CrestShared/DesignSystem` before writing any new fill or
   control.
+- **Dark backgrounds are black, not blue.** In dark mode a page or window
+  ground is `CrestBrandTheme.canvas`, the warm near-black Settings uses, and
+  a raised card or panel on it is `surface` or `flyout`, charcoal. Never fill
+  a dark background with Crest's blues (`ink`, `slate`) or a navy of one's
+  own; the blues are for text, marks and the accent. Onboarding is the one
+  exception: it lies on `BrowserSetupPaper`, ink in the light and the dark,
+  and what lies on it takes `browserSetupPaperContent()`.
+- **Things that appear in place grow from `CrestMotion.entranceScale`.** A
+  card, preview, fan or control that appears beside the row or button it
+  belongs to starts at that scale, 80% of its size, and grows the rest of the
+  way as it fades in. Never use SwiftUI's bare `.scale` transition, which
+  starts from nothing, and never write a scale of your own. A surface that
+  grows out of a frame on screen, as Peek does from its link and the command
+  palette from the address field, morphs from that frame instead; a deliberate
+  pop with its own motion role, such as `colorPop` or `addressSwap`, keeps
+  its own scale.
 - **Every menu item has an icon.** Each item of a menu, context menu or
   submenu Crest builds shows an icon: an SF Symbol for an action, and the
   Space's crest for a Space (`BrowserSpaceIdentityLabel`), as Move to Space
   does. Apply `crestMenuActionLabelStyle()` inside each `Menu` and
   `contextMenu` builder, submenus included; applied to the control that opens
   the menu, it does not reach the rows.
+- **macOS 15 is the Mac minimum; macOS 26 keeps everything.** iOS and
+  iPadOS stay at 26.1. On the Mac, an API newer than macOS 15 goes behind
+  `if #available(macOS 26, *)`, or the version it needs, with a fallback for
+  older systems. Never take something away from macOS 26 to match an older
+  system. Liquid Glass goes through `crestGlass(tint:in:)`, `CrestGlassGroup`
+  and `crestGlassButtonStyle()`, which draw glass on macOS 26 and iOS and the
+  device's material before macOS 26. Shared and Mac code never calls
+  `glassEffect`, `GlassEffectContainer` or `.buttonStyle(.glass)` directly;
+  iOS-only code may.
 - **Every popover uses `crestPopover`.** Present popovers with
   `crestPopover(isPresented:)` or `crestPopover(item:)`, never SwiftUI's
   `popover`. A popover inherits the Space's ink or a forced scheme from the
@@ -142,8 +167,10 @@ type you touch. The rules that matter most:
 ## Pull request
 
 - **Version and release note.** Every commit that changes app code runs
-  `Scripts/set-version.sh --patch`, appends a new entry with a unique
-  lowercase kebab-case ID to `Documentation/ReleaseNotes.json`, stages
+  `Scripts/set-version.sh --patch`, writes its entries, each with a unique
+  lowercase kebab-case `id`, in the new version's file under
+  `Documentation/ReleaseNotes/<major>.<minor>/`, marks a change that reaches
+  only one platform with `"platforms": ["mac"]` or `["ios"]`, stages
   `Config/Version.xcconfig` with the change, and passes
   `Scripts/check-version.sh --fix-commit`. Never change
   `CURRENT_PROJECT_VERSION`.

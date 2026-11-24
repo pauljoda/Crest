@@ -11,11 +11,9 @@ namespace CrestCore.Application;
 internal sealed class Window {
     #region Variables
 
-    /// A split group renders only with at least this many members.
-    private const int MinimumSplitMembers = 2;
 
     /// The most items a Space's recent tabs hold, the shown one included.
-    private const int RecentLimit = 5;
+    internal const int RecentLimit = 5;
 
     /// The tab shown in each Space; null when the window shows none there.
     private readonly Dictionary<Guid, Guid?> tabs;
@@ -343,7 +341,7 @@ internal sealed class Window {
     public static IReadOnlyList<double>? SplitShares(IReadOnlyList<double> requested) {
         ArgumentNullException.ThrowIfNull(requested);
         const double tolerance = 0.0001;
-        if (requested.Count is 0 or > BrowserTabCollection.MaximumSplitMembers
+        if (requested.Count is 0 or > SplitGroupState.MaximumMembers
             || requested.Any(value => !double.IsFinite(value) || value <= 0 || value > 1)) return null;
         double total = requested.Sum();
         return Math.Abs(total - 1) <= tolerance ? [.. requested] : [.. requested.Select(value => value / total)];
@@ -361,7 +359,7 @@ internal sealed class Window {
         int start = space.Tabs.ToList().FindIndex(tab => tab.SplitGroupId == groupId);
         if (start < 0) return 0;
         int length = space.Tabs.Skip(start).TakeWhile(tab => tab.SplitGroupId == groupId).Count();
-        return length >= MinimumSplitMembers ? length : 0;
+        return length >= SplitGroupState.MinimumMembers ? length : 0;
     }
 
     #endregion

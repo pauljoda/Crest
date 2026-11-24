@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "saved-addresses-keep-their-escapes",
+      "category": "fixed",
+      "message": "Saved, pinned, reopened and imported tabs whose address holds characters such as { or [ return to the exact page they were saved at, instead of a broken search, and no longer show as moved away from their saved address."
+    }
+  ]
+}

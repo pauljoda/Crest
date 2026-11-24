@@ -11,8 +11,10 @@ namespace CrestCore.Application;
 internal static class BookmarkFile {
     #region Static Variables
 
-    /// The largest file an export writes.
-    public const int MaximumBytes = 50 * 1024 * 1024;
+    /// The largest bookmark file an export writes or an import reads, in
+    /// megabytes and in bytes.
+    public const int MaximumMegabytes = 50;
+    public const int MaximumBytes = MaximumMegabytes * 1024 * 1024;
 
     private const string Indent = "    ";
 

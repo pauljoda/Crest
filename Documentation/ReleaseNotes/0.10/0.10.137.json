@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "link-route-form-rows",
+      "category": "improved",
+      "message": "Link routes in Settings sit directly in their group instead of a box inside it, the URL pattern uses Crest's field with a focus ring, and the route actions button highlights under the pointer."
+    }
+  ]
+}

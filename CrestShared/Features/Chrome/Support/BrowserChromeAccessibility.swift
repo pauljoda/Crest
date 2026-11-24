@@ -19,18 +19,12 @@ enum BrowserChromeAccessibility {
     static func adjacentSpaceID(
         spaces: [SpaceModel],
         selectedSpaceID: UUID,
-        direction: BrowserChromeAccessibilityDirection
+        direction: AdjacentDirection
     ) -> UUID? {
         guard let index = spaces.firstIndex(where: { $0.id == selectedSpaceID }) else {
             return nil
         }
-        let targetIndex =
-            switch direction {
-            case .previous:
-                index - 1
-            case .next:
-                index + 1
-            }
+        let targetIndex = index + direction.step
         guard spaces.indices.contains(targetIndex) else { return nil }
         return spaces[targetIndex].id
     }
@@ -41,14 +35,5 @@ enum BrowserChromeAccessibility {
 
     static func folderValue(isExpanded: Bool) -> String {
         isExpanded ? "Expanded" : "Collapsed"
-    }
-
-    static func countValue(
-        _ count: Int,
-        singular: String,
-        plural: String
-    ) -> String {
-        let boundedCount = max(0, count)
-        return "\(boundedCount) \(boundedCount == 1 ? singular : plural)"
     }
 }

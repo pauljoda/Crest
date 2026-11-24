@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Shared settings-navigation label used by the native macOS and mobile shells.
+/// Shared settings-navigation label used by the native macOS and mobile shells:
+/// a destination's icon and name. Its subtitle is only read to VoiceOver.
 struct CrestSettingsDestinationLabel: View {
     let title: LocalizedStringResource
     let subtitle: LocalizedStringResource
@@ -20,24 +21,9 @@ struct CrestSettingsDestinationLabel: View {
                 castsShadow: castsShadow
             )
 
-            VStack(
-                alignment: .leading,
-                spacing: CrestSettingsPresentationMetrics.titleSpacing
-            ) {
-                Text(title)
-                    .font(CrestTypography.controlTitle)
-                    .foregroundStyle(CrestColor.textPrimary)
-                if !compact || BrowserSettingsLayout.showsSidebarSubtitles {
-                    Text(subtitle)
-                        .font(
-                            compact
-                                ? CrestTypography.compactMetadata
-                                : CrestTypography.metadata
-                        )
-                        .foregroundStyle(CrestColor.textSecondary)
-                        .lineLimit(1)
-                }
-            }
+            Text(title)
+                .font(CrestTypography.controlTitle)
+                .foregroundStyle(CrestColor.textPrimary)
 
             if compact {
                 Spacer(minLength: 0)

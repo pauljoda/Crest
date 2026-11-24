@@ -85,6 +85,10 @@ public sealed record WindowChanged(WindowState Window) : Change;
 /// A window is no longer open.
 public sealed record WindowClosed(Guid WindowId) : Change;
 
+/// This launch follows an update to the release `Version`, whose notes the
+/// window that took them opens.
+public sealed record ReleaseNotesDue(string Version) : Change;
+
 /// The device store holds the window records an installed release kept.
 /// `Layouts` are the sidebar values those records also carried, which the
 /// platform keeps as its own; the core keeps none of them.

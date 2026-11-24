@@ -34,7 +34,7 @@ internal static class PaletteMemoryDocument {
     public static PaletteMemory? Read(string? document) {
         if (document is null) return null;
         try {
-            if (JsonNode.Parse(document, documentOptions: new() { MaxDepth = 8 }) is not JsonObject value
+            if (JsonNode.Parse(document, documentOptions: JsonDepth.Preferences.Options) is not JsonObject value
                 || Date(value[SinceKey]) is not { } since) return null;
             var places = ImmutableDictionary.CreateBuilder<string, PlaceUse>(StringComparer.Ordinal);
             foreach (var place in (value[PlacesKey] as JsonArray ?? []).OfType<JsonObject>())

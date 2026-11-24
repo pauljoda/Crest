@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-hover-area-width",
+      "category": "new",
+      "message": "Choose how wide the edge of the window is that shows a hidden sidebar, in Appearance settings. The edge lights up while you adjust it."
+    }
+  ]
+}

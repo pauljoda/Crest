@@ -30,7 +30,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let secondSpace = makeSpace(tabs: [secondTab], selectedTabID: secondTab.id)
         let pool = BrowserPagePool(
             browser: hosting(firstSpace, secondSpace),
-            browsingMode: .privateBrowsing
+            workspaceKind: .private
         )
 
         present(pool, tab: firstTab.id, in: firstSpace.id)
@@ -39,7 +39,9 @@ final class BrowserPagePoolTests: XCTestCase {
 
         XCTAssertFalse(firstStore.isPersistent)
         XCTAssertNil(firstStore.identifier)
-        XCTAssertNil(firstPage.webView.configuration.webExtensionController)
+        if #available(macOS 15.4, *) {
+            XCTAssertNil(firstPage.webView.configuration.webExtensionController)
+        }
         // The order the page installs its scripts in is not the contract.
         XCTAssertEqual(
             firstPage.webView.configuration.userContentController.userScripts
@@ -203,7 +205,7 @@ final class BrowserPagePoolTests: XCTestCase {
     func testPrivatePopupAdoptionStaysInsideThePrivatePool() throws {
         let popupURL = try XCTUnwrap(URL(string: "https://example.com/popup"))
         let regular = try makePopupContext()
-        let privateContext = try makePopupContext(browsingMode: .privateBrowsing)
+        let privateContext = try makePopupContext(workspaceKind: .private)
 
         let popupWebView = try XCTUnwrap(
             privateContext.requestPopup(url: popupURL, navigationType: .linkActivated)
@@ -311,7 +313,7 @@ final class BrowserPagePoolTests: XCTestCase {
         let space = makeSpace(tabs: [tab, other], selectedTabID: tab.id)
         let pool = BrowserPagePool(
             browser: hosting(space),
-            browsingMode: .privateBrowsing,
+            workspaceKind: .private,
             tabStateArchive: archive
         )
 
@@ -460,7 +462,7 @@ final class BrowserPagePoolTests: XCTestCase {
     }
 
     private func makePopupContext(
-        browsingMode: BrowserBrowsingMode = .standard,
+        workspaceKind: WorkspaceKind = .persistent,
         tabStateArchive: (any BrowserTabStateArchiving)? = nil
     ) throws -> PopupAdoptionContext {
         let openerTab = TabState.Seed(title: "Opener", url: nil, placement: .current)
@@ -470,7 +472,7 @@ final class BrowserPagePoolTests: XCTestCase {
         )
         let pool = BrowserPagePool(
             browser: store,
-            browsingMode: browsingMode,
+            workspaceKind: workspaceKind,
             usesEphemeralWebsiteDataStores: tabStateArchive == nil,
             tabStateArchive: tabStateArchive
         )
@@ -525,9 +527,6 @@ final class BrowserPagePoolTests: XCTestCase {
         pool.select()
     }
 
-}
-
-final class BrowserPageLifecyclePolicyTests: XCTestCase {
 }
 
 /// One opener page, its pool, and the store that owns their tabs, so popup tests

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "palette-section-symbols",
+      "category": "improved",
+      "message": "In the command palette, the Pinned & Saved search and the rows for pinned, saved and open tabs wear the same filled symbols as their sections in the sidebar."
+    }
+  ]
+}

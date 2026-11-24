@@ -12,8 +12,8 @@ namespace CrestCore.Application;
 ///
 /// A group of the persistent session outlives the engine's: the device store
 /// keeps it, and once the folder's tabs have pages again after a launch the
-/// engine makes the group again under the same identity, as Chrome restores a
-/// group with its tabs. Any other group is memory only. Neither is synced, and
+/// engine makes the group again under the same identity, so an extension sees
+/// the group come back with its tabs. Any other group is memory only. Neither is synced, and
 /// membership in either grants an extension nothing.
 internal sealed class PageGroup {
     #region Variables
@@ -155,7 +155,7 @@ internal sealed class PageGroup {
         if (folder is null) {
             if (!showsFolder) return kept.Count > 0;
             showsFolder = false;
-            var deleted = space.Tabs.Any(tab => filedTabIds.Contains(tab.Id) && tab.Placement == TabPlacement.Current
+            var deleted = space.Tabs.Any(tab => filedTabIds.Contains(tab.Id) && !tab.Placement.IsDurable
                 && tab.FolderId is null);
             Ask(pages, issue, live, heldCollapsed, deleted ? [] : kept);
             return !deleted && kept.Count > 0;

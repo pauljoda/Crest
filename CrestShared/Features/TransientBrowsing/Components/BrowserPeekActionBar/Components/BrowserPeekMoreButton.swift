@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Opens a Peek's link menu: an ellipsis on a disc of Liquid Glass, as tall as
-/// the controls beside it.
+/// Opens a Peek's link menu: an ellipsis on a disc of glass, as tall as the
+/// controls beside it.
 struct BrowserPeekMoreButton: View {
     var style = BrowserPeekControlStyle.actionBar
     let show: () -> Void
@@ -15,7 +15,7 @@ struct BrowserPeekMoreButton: View {
                 .contentShape(.circle)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .circle)
+        .crestGlass(in: .circle)
         .accessibilityIdentifier("peek-link-menu-control")
     }
 }

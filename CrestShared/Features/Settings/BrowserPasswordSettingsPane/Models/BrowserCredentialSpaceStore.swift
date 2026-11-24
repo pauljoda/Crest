@@ -249,7 +249,7 @@ final class BrowserCredentialSpaceStore {
                 synchronizesWithICloud: currentSpace.settings.credentialPreferences.syncsCrestPasswordsWithICloud
             )
         } catch let rejection as Rejection {
-            if case .invalidCredentialFile(let invalid) = rejection {
+            if let invalid = rejection.invalidCredentialFile {
                 errorMessage = String(localized: invalid.flaw.message)
             } else {
                 errorMessage = rejection.explanation

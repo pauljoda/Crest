@@ -6,10 +6,13 @@ import difflib
 import fcntl
 import hashlib
 import html
+import http.server
+import io
 import importlib.util
 import json
 import os
 from pathlib import Path
+import platform
 import plistlib
 import re
 import selectors
@@ -20,11 +23,13 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 
+import chromium_artifact
 import chromium_engine
 
 REPO = Path(__file__).resolve().parents[2]
@@ -35,8 +40,40 @@ VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+")
 # A prepared source directory is named by its preparation key's first 20 hex digits.
 SOURCE_NAME = re.compile(r"[0-9a-f]{20}")
 PREPARATION_FIELDS = ("chromium", "dependencies", "cipd", "crestPatches")
+# Where the architectures' browsers merge into the one universal engine a
+# release packages.
+UNIVERSAL_OUTPUT = "out/CrestUniversal"
+# The macOS name of each architecture the lock names by its GN `target_cpu`.
+MACHINES = {"arm64": "arm64", "x64": "x86_64"}
+# The first bytes of a universal, 64-bit or 32-bit Mach-O file.
+MACH_O_MAGIC = (bytes.fromhex("cafebabe"), bytes.fromhex("cffaedfe"), bytes.fromhex("cefaedfe"))
+# The marker Crest's entry point, Overlay/chrome/app/crest_exe_main_mac.cc,
+# leaves in the browser executable. Keep the two spellings identical.
+LAUNCH_SENTINEL = b"crest-browser-launch"
+# The resources Crest's entry point reads to decide how a launch starts: a
+# product names its own profile folder, an experiment requires one.
+PRODUCT_HOST = "Crest-Native-Host"
+EXPERIMENT_HOST = "Crest-Isolated-Experiment"
+HOST_MARKERS = ("Crest-App-Owned-Host", PRODUCT_HOST, EXPERIMENT_HOST)
+# The status Crest's entry point exits with when an experiment names no profile folder.
+EXPERIMENT_REFUSED = 64
+# Under a home folder: where a product keeps its engine profiles, and Chromium's
+# default folder, which every other Chromium also opens.
+PRODUCT_PROFILES = "Library/Application Support/Crest/Chromium"
+DEFAULT_PROFILES = "Library/Application Support/Chromium"
+# The profile the upgrade check makes with the previous engine.
+UPGRADE_PROFILE = "Crest-Upgrade-Check"
+# A stable app release's tag. Its engine made most people's profiles.
+STABLE_RELEASE = re.compile(r"v[0-9]+\.[0-9]+\.[0-9]+")
+# How long a launch check waits, long enough for Rosetta's first translation
+# of a fresh framework.
+LAUNCH_TIMEOUT = 180
+LSREGISTER = ("/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework"
+              "/Support/lsregister")
 # Present while a tree is being moved to a new release in place.
 ADVANCING = "advancing.json"
+# The free space a fresh source preparation requires.
+PREPARE_FREE_GIB = 50
 ARCHIVE = "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-{version}-lite.tar.xz"
 CIPD = "https://chrome-infra-packages.appspot.com/prpc/cipd.Repository/ResolveVersion"
 # What gclient sets for a source-archive checkout on this host, as
@@ -49,6 +86,9 @@ CIPD_PLATFORM = {"platform": "mac-arm64", "os": "mac", "arch": "arm64"}
 # Google's release notes, which say what each release fixes and whether it is an
 # early stable build that reaches only a small share of people first.
 RELEASE_NOTES = "https://chromereleases.googleblog.com/feeds/posts/default?alt=json&max-results=80"
+# The title of the note that promotes a desktop release to everyone on the
+# Stable channel. Early and Extended Stable notes have titles of their own.
+FULL_STABLE = "Stable Channel Update for Desktop"
 NOTED_VERSIONS = re.compile(r"\b(\d+\.\d+\.\d+\.)(\d+)((?:/\.\d+)*)")
 SEVERITY = re.compile(r"\b(Critical|High|Medium|Low)\s+(CVE-\d{4}-\d+)")
 # Upstream files an update reads to find what changed under Crest's overlay and packaging.
@@ -59,6 +99,10 @@ ANNOTATION = re.compile(r'<item id="([^"]+)"')
 PURE_VIRTUAL = re.compile(r"\bvirtual\s[^;{}]*?=\s*0\s*;")
 INCLUDE = re.compile(r'^\s*#\s*(?:include|import)\s+"([^"]+)"', re.MULTILINE)
 COMPILED = (".c", ".cc", ".cpp", ".m", ".mm")
+
+
+class ArchiveNotPublished(ValueError):
+    """Google publishes a release's source archive a few hours after the release."""
 
 
 def run(*args, cwd=None, capture=False):
@@ -88,19 +132,60 @@ def release_version(version):
     return tuple(map(int, version.split(".")))
 
 
-def select_update(current, releases, allow_major=False):
-    """The newest release to update to: a fix on the pinned milestone, or a new milestone when allowed."""
+def select_update(current, releases, allow_major=False, stable_milestone=None):
+    """The newest release to update to: a fix on the pinned milestone, or a new milestone when allowed.
+
+    chromiumdash lists early stable builds among stable releases. A release
+    past `stable_milestone`, the newest milestone Google's notes promote to
+    full stable, is one of those: never a candidate, and the newest is
+    reported as `earlyStable`. Without that milestone, only the pinned one is
+    eligible and no release is called early stable.
+    """
     current_version = release_version(current)
-    candidates = [version for version in releases
-                  if VERSION.fullmatch(version) and release_version(version) > current_version]
-    eligible = [version for version in candidates
-                if allow_major or release_version(version)[0] == current_version[0]]
+    newer = [version for version in releases
+             if VERSION.fullmatch(version) and release_version(version) > current_version]
+    checked = stable_milestone is not None
+    ceiling = stable_milestone if checked else current_version[0]
+    stable = [version for version in newer if release_version(version)[0] <= ceiling]
+    early = [version for version in newer if release_version(version)[0] > ceiling]
+    eligible = [version for version in stable if allow_major or release_version(version)[0] == current_version[0]]
+
+    def newest(versions):
+        return max(versions, key=release_version) if versions else None
+
     return {
         "current": current,
-        "candidate": max(eligible, key=release_version) if eligible else None,
-        "latest": max(candidates, key=release_version) if candidates else current,
-        "majorReviewRequired": any(release_version(version)[0] > current_version[0] for version in candidates),
+        "candidate": newest(eligible),
+        "latest": newest(stable) or current,
+        "earlyStable": newest(early) if checked else None,
+        "stableMilestone": stable_milestone,
+        "majorReviewRequired": any(release_version(version)[0] > current_version[0] for version in stable),
     }
+
+
+def release_feed():
+    """Google's release notes feed, or None when it can't be read."""
+    try:
+        with urllib.request.urlopen(RELEASE_NOTES, timeout=60) as response:
+            return json.load(response)
+    except (OSError, ValueError):
+        return None
+
+
+def stable_milestone(feed):
+    """The newest milestone Google's release notes promote to full stable on desktop, or None without notes.
+
+    Only a note titled "Stable Channel Update for Desktop" counts, and it names
+    its own release before any other version.
+    """
+    milestones = []
+    for entry in (feed or {}).get("feed", {}).get("entry", []):
+        if entry.get("title", {}).get("$t", "").strip() != FULL_STABLE:
+            continue
+        text = html.unescape(re.sub(r"<[^>]+>", " ", entry.get("content", {}).get("$t", "")))
+        if found := NOTED_VERSIONS.search(text):
+            milestones.append(release_version(found[1] + found[2])[0])
+    return max(milestones, default=None)
 
 
 def upstream_releases(policy):
@@ -189,7 +274,8 @@ def exclusive_workspace(root):
 
 def prune_downloads(root, lock):
     """Remove cached source archives and PGO profiles that `lock` doesn't name, returning their names."""
-    keep = {Path(lock["chromium"]["sourceArchive"]).name, lock["performanceInputs"]["pgoProfile"]}
+    keep = {Path(lock["chromium"]["sourceArchive"]).name}
+    keep |= {architecture["pgoProfile"] for architecture in lock["architectures"].values()}
     stale = [path for pattern in ("downloads/chromium-*-lite.tar.xz", "profiles/*.profdata")
              for path in sorted(root.glob(pattern)) if path.name not in keep]
     # A running build reads its PGO profile in every compile command.
@@ -257,8 +343,9 @@ class Workspace:
         elif self.source.exists() or self.source.with_name("src.partial").exists():
             raise ValueError(f"Incomplete preparation at {self.directory}. Inspect it before removing or resuming it.")
         else:
-            if shutil.disk_usage(self.directory).free < 50 * 1024**3:
-                raise ValueError("A fresh Chromium source preparation needs at least 50 GiB free; existing builds are retained")
+            if (free := shutil.disk_usage(self.directory).free) < PREPARE_FREE_GIB * 1024**3:
+                raise ValueError(f"A fresh Chromium source preparation needs at least {PREPARE_FREE_GIB} GiB free and "
+                                 f"{free // 1024**3} GiB is free; existing builds are retained")
             self.script("prepare-chromium.py", "--source", self.source, "--downloads", self.downloads)
             write_json(marker, {"preparationKey": self.key})
 
@@ -291,23 +378,32 @@ class Workspace:
             self.prepare()
         with timed(timings, "host"):
             self.apply_host()
+        # Each architecture builds in its own output of the one prepared source.
+        architectures = self.lock["architectures"]
         with timed(timings, "configure"):
-            profile = download_profile(self.root, self.lock["performanceInputs"])
-            if performance_configuration_matches(self.source, self.lock, sdk):
-                # Preserve equivalent absolute paths in an adopted build. Rewriting its
-                # PGO path alone invalidates every compile command in Ninja.
-                run(self.source / "out/CrestBaseline/gn", "gen", "out/CrestBaseline", "--fail-on-unused-args", cwd=self.source)
-            else:
-                self.script("configure-chromium.py", "--source", self.source, "--configuration", "performance",
-                            "--sdk", sdk, "--pgo-profile", profile)
-            if not performance_configuration_matches(self.source, self.lock, sdk):
-                raise ValueError("GN arguments contain unpinned overrides; review args.gn before building a published engine")
-            require_overlay_compiled(self.repo, self.source, ninja)
-        with timed(timings, "compile"):
-            self.script("build-chromium-baseline.py", "--source", self.source, "--ninja", ninja,
-                        "--jobs", jobs, "--min-free-gib", reserve)
+            for cpu, architecture in architectures.items():
+                profile = download_profile(self.root, architecture)
+                if performance_configuration_matches(self.source, self.lock, sdk, cpu):
+                    # Preserve equivalent absolute paths in an adopted build. Rewriting its
+                    # PGO path alone invalidates every compile command in Ninja.
+                    run(self.source / "buildtools/mac/gn", "gen", architecture["output"], "--fail-on-unused-args",
+                        cwd=self.source)
+                else:
+                    self.script("configure-chromium.py", "--source", self.source, "--configuration", "performance",
+                                "--cpu", cpu, "--sdk", sdk, "--pgo-profile", profile)
+                if not performance_configuration_matches(self.source, self.lock, sdk, cpu):
+                    raise ValueError(f"{architecture['output']}/args.gn contains unpinned overrides; review it before "
+                                     "building a published engine")
+                require_overlay_compiled(self.repo, self.source, ninja, architecture["output"])
+        for cpu, architecture in architectures.items():
+            with timed(timings, f"compile-{cpu}"):
+                self.script("build-chromium-baseline.py", "--source", self.source, "--ninja", ninja,
+                            "--jobs", jobs, "--min-free-gib", reserve, "--output", architecture["output"])
+        with timed(timings, "universal"):
+            browser = universal_engine(self.source, self.lock)
+            require_crest_launch(browser)
         with timed(timings, "smoke"):
-            smoke_engine(self.source, self.root, self.lock["chromium"]["version"])
+            smoke_engine(browser, self.root, self.lock, previous_engine(self.root, self.repo))
         return timings
 
     def advance(self, target, previous_archive):
@@ -424,22 +520,382 @@ class Workspace:
         return {"changed": len(changed), "removed": len(removed)}
 
 
-def smoke_engine(source, workspace, version):
-    browser = source / "out/CrestBaseline/Chromium.app/Contents/MacOS/Chromium"
-    with (browser.parent.parent / "Info.plist").open("rb") as stream:
+def universal_engine(source, lock):
+    """Merge each architecture's browser into one universal `Chromium.app`,
+    with the universalizer Chromium ships for its own universal builds, and
+    answer it. Every executable must then hold every architecture."""
+    browsers = [source / architecture["output"] / "Chromium.app" for architecture in lock["architectures"].values()]
+    merged = source / UNIVERSAL_OUTPUT / "Chromium.app"
+    if merged.exists():
+        shutil.rmtree(merged)
+    merged.parent.mkdir(parents=True, exist_ok=True)
+    run(sys.executable, source / "chrome/installer/mac/universalizer.py", *browsers, merged, cwd=source)
+    require_universal(merged, lock)
+    return merged
+
+
+def require_universal(browser, lock):
+    """Refuse a browser in which any executable or library lacks one of the
+    lock's architectures."""
+    machines = {MACHINES[cpu] for cpu in lock["architectures"]}
+    for path in sorted(browser.rglob("*")):
+        if path.is_file() and not path.is_symlink() and is_mach_o(path):
+            held = set(subprocess.run(["lipo", "-archs", str(path)], capture_output=True, text=True).stdout.split())
+            if missing := machines - held:
+                raise ValueError(f"{path.relative_to(browser)} lacks {', '.join(sorted(missing))}")
+
+
+def require_crest_launch(browser):
+    """Refuse a browser whose own executable lacks Crest's entry point.
+
+    That entry point names the product's engine profile folder, refuses an
+    experiment without one and runs Crest's native host before it opens the
+    framework. Upstream's links the framework and calls `ChromeMain` at once;
+    a host patch can still apply cleanly to a file the browser target no
+    longer builds, so check the executable itself, in every architecture."""
+    executable = browser / "Contents/MacOS/Chromium"
+    machines = subprocess.run(["lipo", "-archs", str(executable)], capture_output=True, text=True,
+                              check=True).stdout.split()
+    universal = "Non-fat" not in subprocess.run(["lipo", "-info", str(executable)], capture_output=True,
+                                                 text=True, check=True).stdout
+    for machine in machines:
+        linked = subprocess.run(["otool", "-arch", machine, "-L", str(executable)], capture_output=True,
+                                text=True, check=True).stdout
+        if " Framework.framework/" in linked:
+            raise ValueError(f"The browser executable links the Chromium framework ({machine}); Crest's entry "
+                             "point must open it only when Chromium is needed")
+        with tempfile.TemporaryDirectory(prefix="crest-launch-") as temporary:
+            image = executable
+            if universal:
+                image = Path(temporary) / executable.name
+                subprocess.run(["lipo", "-thin", machine, "-output", str(image), str(executable)], check=True)
+            if LAUNCH_SENTINEL not in image.read_bytes():
+                raise ValueError(f"The browser executable lacks Crest's entry point ({machine}); check the "
+                                 "source the chrome_app target builds")
+
+
+def is_mach_o(path):
+    """Whether `path` is a Mach-O file, thin or universal."""
+    with path.open("rb") as stream:
+        return stream.read(4) in MACH_O_MAGIC
+
+
+def smoke_engine(browser, workspace, lock, previous=None):
+    """Require the universal `browser` to report the pinned version, and, as
+    each of the lock's architectures, the others through Rosetta, to render a
+    page, to open Crest's own profile folder when a launch names none, and to
+    open unchanged the profiles the `previous` engine made there."""
+    with (browser / "Contents/Info.plist").open("rb") as stream:
         actual = plistlib.load(stream)["CFBundleShortVersionString"]
-    if version != actual:
+    if lock["chromium"]["version"] != actual:
         raise ValueError(f"Built engine reports an unexpected version: {actual}")
     scratch = workspace / "scratch"
     scratch.mkdir(exist_ok=True)
-    check_renders_page(browser, scratch)
+    native = platform.machine()
+    machines = [MACHINES[cpu] for cpu in lock["architectures"]]
+    with launch_directory("hosts-", scratch) as temporary:
+        product = host_copy(browser, temporary / "Product.app", PRODUCT_HOST)
+        experiment = host_copy(browser, temporary / "Experiment.app", EXPERIMENT_HOST)
+        for machine in machines:
+            # Rosetta translates the whole framework on a fresh build's first
+            # launch, about 35 s on the build Mac, before the page runs.
+            timeout = 30 if machine == native else LAUNCH_TIMEOUT
+            check_renders_page(browser / "Contents/MacOS/Chromium", scratch, timeout=timeout, machine=machine)
+            check_launches_without_profile_folder(product, experiment, scratch, machine)
+    if previous:
+        check_profile_upgrade(browser / "Contents/MacOS/Chromium", previous / "Contents/MacOS/Chromium", scratch,
+                              machines)
 
 
-def check_renders_page(browser, scratch, timeout=30):
-    """Require `browser`, run headless in a throwaway profile, to run a page's JavaScript."""
+@contextlib.contextmanager
+def launch_directory(prefix, parent=None):
+    """A temporary directory for the app copies a check launches. Launch
+    Services records each launched app, and the helper apps inside it, a moment
+    after it starts; once the directory is gone, every app that was in it is
+    unregistered, so no record outlives its copy."""
+    apps = []
+    try:
+        with tempfile.TemporaryDirectory(prefix=prefix, dir=parent) as temporary:
+            root = Path(temporary).resolve()
+            try:
+                yield root
+            finally:
+                apps = [path for path in root.rglob("*.app") if path.is_dir() and not path.is_symlink()]
+    finally:
+        for app in apps:
+            subprocess.run([LSREGISTER, "-u", str(app)], capture_output=True)
+
+
+def host_copy(browser, copy, marker):
+    """Clone `browser` to `copy` carrying only the host resource `marker`, so a
+    check can launch it as that composition starts. Its executable and
+    framework are the built ones."""
+    run("cp", "-cR", browser, copy)
+    resources = copy / "Contents/Resources"
+    for name in HOST_MARKERS:
+        (resources / name).unlink(missing_ok=True)
+    (resources / marker).write_text("Launch check.\n")
+    return copy
+
+
+def launch_without_profile_folder(app, home, machine=None):
+    """Run `app` as `machine` in a new `home`, naming no profile folder and
+    asking only for the folder its browser settles on, which it prints before
+    any profile is read. Answers the finished launch."""
+    home.mkdir(parents=True)
+    launcher = ["arch", f"-{machine}"] if machine else []
+    # Only the switch that reports the folder, and the mock keychain, so the
+    # launch never reaches a real keychain item.
+    process = subprocess.Popen([*launcher, str(app / "Contents/MacOS/Chromium"), "--crest-print-user-data-dir",
+                                "--use-mock-keychain"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                               start_new_session=True,
+                               env={**os.environ, "HOME": str(home), "CFFIXED_USER_HOME": str(home)})
+    try:
+        output, errors = process.communicate(timeout=LAUNCH_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        raise ValueError(f"{app.name} kept running instead of reporting its profile folder; the engine lacks "
+                         "Crest's launch checks") from None
+    finally:
+        stop_process_group(process)
+    return subprocess.CompletedProcess(process.args, process.returncode, output, errors)
+
+
+def check_launches_without_profile_folder(product, experiment, scratch, machine=None):
+    """Require Crest's launch to decide the profile folder when nothing names one.
+
+    Finder, the Dock, a login item, the default-browser role and an update's
+    relaunch start Crest with no switches, while every harness and review
+    launch names a `--user-data-dir`. Without the folder Crest's entry point
+    names, Chromium opens its default one, which every other Chromium shares,
+    and every Space starts empty. `product` and `experiment` carry only that
+    composition's host resource: the product must settle on Crest's own folder
+    and the experiment must refuse to start."""
+    with tempfile.TemporaryDirectory(prefix="launch-", dir=scratch) as temporary:
+        root = Path(temporary).resolve()
+        home = root / "product"
+        launch = launch_without_profile_folder(product, home, machine)
+        expected = str(home / PRODUCT_PROFILES)
+        reported = launch.stdout.strip().rpartition("\n")[2] if launch.returncode == 0 else "nothing"
+        if reported != expected:
+            raise ValueError(f"A product launch without a profile folder opened {reported} instead of {expected} "
+                             f"(exit {launch.returncode}): {launch.stderr[-2000:]}")
+        require_no_default_profiles(home)
+        home = root / "experiment"
+        launch = launch_without_profile_folder(experiment, home, machine)
+        if (launch.returncode != EXPERIMENT_REFUSED or (home / DEFAULT_PROFILES).exists()
+                or (home / PRODUCT_PROFILES).exists()):
+            raise ValueError(f"An experiment started without a profile folder (exit {launch.returncode}): "
+                             f"{launch.stderr[-2000:]}")
+
+
+def require_no_default_profiles(home):
+    if strays := sorted(path.name for path in (home / DEFAULT_PROFILES).glob("Crest-*")):
+        raise ValueError("A launch made engine profiles in Chromium's default folder: " + ", ".join(strays))
+
+
+def stop_process_group(process):
+    """End a check's browser and every helper it started, and wait until all
+    are gone: a helper can outlive the browser and write into its folders."""
+    for stop, grace in ((signal.SIGTERM, 10), (signal.SIGKILL, 10)):
+        deadline = time.monotonic() + grace
+        try:
+            os.killpg(process.pid, stop)
+            while time.monotonic() < deadline:
+                process.poll()
+                os.killpg(process.pid, 0)
+                time.sleep(0.1)
+        except (ProcessLookupError, PermissionError):  # The whole group has exited.
+            break
+    process.wait()
+
+
+def stop_helpers(folder, grace=30):
+    """Wait for every process whose command line names `folder` to exit, and
+    end any still running after `grace` seconds. Some helpers run outside the
+    browser's process group and keep writing its profile for a moment after it
+    exits, longer under Rosetta."""
+    deadline = time.monotonic() + grace
+    while True:
+        listing = run("ps", "-axww", "-o", "pid=,command=", capture=True)
+        helpers = [int(pid) for pid, _, command in (line.strip().partition(" ") for line in listing.splitlines())
+                   if folder in command and pid.isdigit()]
+        if not helpers:
+            return
+        if time.monotonic() > deadline:
+            for pid in helpers:
+                with contextlib.suppress(ProcessLookupError, PermissionError):
+                    os.kill(pid, signal.SIGKILL)
+        time.sleep(0.2)
+
+
+class FixtureSite:
+    """A local site for the upgrade check. `/signin` sets a persistent session
+    cookie; every page's title says whether the browser still sends it."""
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/signin":
+                self.send_response(302)
+                self.send_header("Set-Cookie", "session=upgrade-check; Max-Age=31536000; Path=/; SameSite=Lax")
+                self.send_header("Location", "/")
+                self.end_headers()
+                return
+            signed_in = "session=upgrade-check" in self.headers.get("Cookie", "")
+            body = f"<title>{'Signed in' if signed_in else 'Signed out'}</title>".encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format, *args):
+            pass
+
+    def __enter__(self):
+        self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), self.Handler)
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        return self
+
+    def __exit__(self, *exception):
+        self.server.shutdown()
+        self.server.server_close()
+
+    def url(self, path):
+        return f"http://127.0.0.1:{self.server.server_address[1]}/{path}"
+
+
+def open_in_product_profile(executable, home, url, machine=None):
+    """Load `url` with `executable`, as `machine`, in the upgrade check's
+    profile in Crest's folder under `home`, and answer the page's title once
+    the browser exits by itself, which is when it has written the profile."""
+    data = home / PRODUCT_PROFILES
+    launcher = ["arch", f"-{machine}"] if machine else []
+    with tempfile.TemporaryFile() as output:
+        process = subprocess.Popen([*launcher, str(executable), "--headless", "--disable-gpu",
+                                    "--disable-background-networking", "--no-first-run", "--no-default-browser-check",
+                                    "--use-mock-keychain", f"--user-data-dir={data}",
+                                    f"--profile-directory={UPGRADE_PROFILE}", "--dump-dom", url],
+                                   stdout=output, stderr=subprocess.DEVNULL, start_new_session=True,
+                                   env={**os.environ, "HOME": str(home), "CFFIXED_USER_HOME": str(home)})
+        try:
+            process.wait(timeout=LAUNCH_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            raise ValueError(f"{executable.name} did not finish loading {url}") from None
+        finally:
+            stop_process_group(process)
+            stop_helpers(str(data))
+        if process.returncode != 0:
+            raise ValueError(f"{executable.name} exited with status {process.returncode} after loading {url}")
+        output.seek(0)
+        title = re.search(r"<title>([^<]*)</title>", output.read().decode(errors="replace"))
+    return title[1] if title else None
+
+
+def require_settings_kept(profile, engine):
+    """Chromium records when it resets tracked settings, the extensions Crest
+    installs among them, because it could not trust what was stored."""
+    for name in ("Secure Preferences", "Preferences"):
+        path = profile / name
+        if path.is_file() and read_json(path).get("prefs", {}).get("preference_reset_time"):
+            raise ValueError(f"{engine} reset the tracked settings of a profile it opened, extensions among them")
+
+
+def check_profile_upgrade(executable, previous, scratch, machines=(None,)):
+    """Require `executable` to open, unchanged, a profile the engine
+    `previous` made in Crest's folder.
+
+    The previous engine signs in to a local site in that profile. The new one
+    opens a copy of the folder as each of `machines`, then again, and must
+    still send the cookie and keep every tracked setting. A milestone that
+    stops reading what an earlier engine wrote, for example by changing the
+    keychain key for Crest's folder, signs every Space out and uninstalls its
+    extensions."""
+    with FixtureSite() as site, tempfile.TemporaryDirectory(prefix="upgrade-", dir=scratch) as temporary:
+        root = Path(temporary).resolve()
+        made = root / "previous"
+        if open_in_product_profile(previous, made, site.url("signin")) != "Signed in":
+            raise ValueError("The previous engine could not sign in to the upgrade check's local site")
+        for machine in machines:
+            home = root / f"upgraded-{machine or 'native'}"
+            run("ditto", made, home)
+            for launch in ("launch", "relaunch"):
+                if (title := open_in_product_profile(executable, home, site.url(""), machine)) != "Signed in":
+                    raise ValueError(f"On its {launch} as {machine or 'native'}, the engine found the previous "
+                                     f"engine's profile {title or 'unreadable'}: its cookies are lost")
+                require_settings_kept(home / PRODUCT_PROFILES / UPGRADE_PROFILE, "The engine")
+
+
+def stable_engine_key(repo, repository):
+    """The key of the engine the newest stable release was built with, which
+    made most people's profiles. Its tag is fetched if the checkout lacks it."""
+    releases = json.loads(run("gh", "release", "list", "--repo", repository, "--exclude-drafts",
+                              "--exclude-pre-releases", "--limit", "100", "--json", "tagName", capture=True))
+    tags = [release["tagName"] for release in releases if STABLE_RELEASE.fullmatch(release["tagName"])]
+    if not tags:
+        raise ValueError(f"{repository} has no stable release to check profile upgrades from")
+    ref = "refs/tags/" + max(tags, key=lambda tag: tuple(int(part) for part in tag[1:].split(".")))
+    if subprocess.run(["git", "-C", repo, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+                      capture_output=True).returncode:
+        run("git", "-C", repo, "fetch", "--quiet", "--depth=1", "--no-tags", f"https://github.com/{repository}.git",
+            f"{ref}:{ref}")
+    archive = subprocess.run(["git", "-C", repo, "archive", "--format=tar", ref, "--", *chromium_engine.INPUTS],
+                             capture_output=True, check=True).stdout
+    with tempfile.TemporaryDirectory(prefix="stable-inputs-") as temporary:
+        with tarfile.open(fileobj=io.BytesIO(archive)) as inputs:
+            inputs.extractall(temporary, filter="data")
+        return chromium_engine.engine_key(Path(temporary))
+
+
+def published_engine(key, directory, repository):
+    """The published engine `key` as a `Chromium.app` in `directory`,
+    downloaded once and checked against its published checksum."""
+    browser = directory / "Chromium.app"
+    if browser.is_dir():
+        return browser
+    tag = chromium_engine.release_tag(key)
+    release = chromium_artifact.published_release(repository, key)
+    if release is None or release.get("draft") or key not in (release.get("body") or ""):
+        raise ValueError(f"{tag}, the engine to check profile upgrades from, is not published")
+    # Engines published before universal builds name their architecture.
+    names = {item["name"] for item in release.get("assets", []) if item.get("state") == "uploaded"}
+    archives = sorted(name for name in names if name.startswith(f"Crest-Chromium-Engine-{key[:16]}-")
+                      and name.endswith(".zip") and f"{name}.sha256" in names)
+    if not archives:
+        raise ValueError(f"{tag} has no zipped engine with a checksum")
+    asset = archives[0]
+    directory.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="download-", dir=directory) as temporary:
+        download = Path(temporary)
+        run("gh", "release", "download", tag, "--repo", repository, "--pattern", asset, "--pattern",
+            f"{asset}.sha256", "--dir", download)
+        if sha256(download / asset) != (download / f"{asset}.sha256").read_text().split()[0]:
+            raise ValueError(f"{asset} does not match its published checksum")
+        run("ditto", "-x", "-k", download / asset, download / "unpacked")
+        (download / "unpacked/Chromium.app").rename(browser)
+    return browser
+
+
+def previous_engine(root, repo):
+    """The published engine whose profiles a new engine must open: the newest
+    stable release's, kept in the workspace. None when that is this engine."""
+    repository = os.environ.get("GITHUB_REPOSITORY") or chromium_artifact.REPOSITORY
+    key = stable_engine_key(repo, repository)
+    if key == chromium_engine.engine_key(repo):
+        return None
+    engines = root / "engines"
+    for stale in engines.glob("*"):
+        if stale.name != key[:16]:
+            remove_path(stale)
+    return published_engine(key, engines / key[:16], repository)
+
+
+def check_renders_page(browser, scratch, timeout=30, machine=None):
+    """Require `browser`, run headless in a throwaway profile, to run a page's
+    JavaScript, as `machine` (an `arch` name) where one is given."""
     with tempfile.TemporaryDirectory(prefix="smoke-", dir=scratch) as profile:
         page = "data:text/html,<script>document.title='crest-'+(6*7)</script>"
-        process = subprocess.Popen([str(browser), "--headless", "--disable-gpu", "--disable-background-networking",
+        launcher = ["arch", f"-{machine}"] if machine else []
+        process = subprocess.Popen([*launcher, str(browser), "--headless", "--disable-gpu", "--disable-background-networking",
             "--no-first-run", "--no-default-browser-check", "--use-mock-keychain", "--timeout=10000",
             f"--user-data-dir={profile}", "--dump-dom", page], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, start_new_session=True)
@@ -464,19 +920,10 @@ def check_renders_page(browser, scratch, timeout=30):
         finally:
             # macOS helpers can keep output pipes open after dump-dom completes.
             # This checks rendering, then explicitly closes only its own process group.
-            try:
-                os.killpg(process.pid, signal.SIGTERM)
-            except (ProcessLookupError, PermissionError):  # The group has already exited.
-                pass
-            if process.poll() is None:
-                try:
-                    process.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    os.killpg(process.pid, signal.SIGKILL)
-                    process.wait()
+            stop_process_group(process)
 
 
-def require_overlay_compiled(repo, source, ninja):
+def require_overlay_compiled(repo, source, ninja, output="out/CrestBaseline"):
     """Refuse a build whose browser target compiles none of an overlay source.
 
     Chromium sometimes folds the target Crest's host sources sit in into
@@ -484,7 +931,6 @@ def require_overlay_compiled(repo, source, ninja):
     overlay source must be an input of the `chrome` target the build makes,
     not merely of some target in the graph, before hours are spent compiling.
     """
-    output = "out/CrestBaseline"
     listing = run(ninja, "-C", source / output, "-t", "inputs", "chrome", capture=True)
     inputs = {os.path.normpath(os.path.join(output, line)) for line in listing.splitlines() if line}
     overlay = repo / ENGINE / "Overlay"
@@ -495,7 +941,9 @@ def require_overlay_compiled(repo, source, ninja):
                          + ", ".join(missing))
 
 
-def performance_configuration_matches(source, lock, sdk=None):
+def performance_configuration_matches(source, lock, sdk=None, cpu="arm64"):
+    """Whether `cpu`'s output is configured exactly as the lock pins it: its
+    arguments, the SDK and its architecture's PGO profile."""
     def assignments(text):
         values = {}
         for line in text.splitlines():
@@ -507,11 +955,12 @@ def performance_configuration_matches(source, lock, sdk=None):
             values[match[1]] = json.loads(match[2])
         return values
 
+    architecture = lock["architectures"][cpu]
     try:
-        values = assignments((source / "out/CrestBaseline/args.gn").read_text())
+        values = assignments((source / architecture["output"] / "args.gn").read_text())
     except (ValueError, OSError):
         return False
-    expected_flags = {**lock["buildArguments"], **lock["performanceBuildArguments"]}
+    expected_flags = {"target_cpu": cpu, **lock["buildArguments"], **lock["performanceBuildArguments"]}
     actual_flags = {name: value for name, value in values.items() if name not in ("mac_sdk_path", "pgo_data_path")}
     if actual_flags != expected_flags:
         return False
@@ -525,16 +974,19 @@ def performance_configuration_matches(source, lock, sdk=None):
     if not (sdk_path / "SDKSettings.json").is_file() or read_json(sdk_path / "SDKSettings.json")["Version"] != expected["macSDKVersion"]:
         return False
     profile = Path(values.get("pgo_data_path", ""))
-    return (profile.is_file() and profile.name == expected["pgoProfile"]
-            and sha256(profile) == expected["pgoSHA256"]
-            and (source / "chrome/build/mac-arm.pgo.txt").read_text().strip() == profile.name)
+    return (profile.is_file() and profile.name == architecture["pgoProfile"]
+            and sha256(profile) == architecture["pgoSHA256"]
+            and (source / architecture["pgoProfileFile"]).read_text().strip() == profile.name)
 
 
 def download(url, destination):
     destination.parent.mkdir(parents=True, exist_ok=True)
-    partial = destination.with_suffix(destination.suffix + ".partial")
+    # Planning downloads without the workspace lock, so each download writes
+    # its own file and installs it whole.
+    descriptor, name = tempfile.mkstemp(dir=destination.parent, prefix=destination.name + ".", suffix=".partial")
+    partial = Path(name)
     try:
-        with urllib.request.urlopen(url, timeout=120) as response, partial.open("wb") as output:
+        with os.fdopen(descriptor, "wb") as output, urllib.request.urlopen(url, timeout=120) as response:
             shutil.copyfileobj(response, output)
         partial.replace(destination)
     finally:
@@ -692,7 +1144,7 @@ def candidate_lock(repo, root, version):
         with urllib.request.urlopen(url + ".hashes", timeout=120) as response:
             manifest = response.read().decode()
     except urllib.error.HTTPError as error:
-        raise ValueError(f"Chromium has not published the {version} source archive yet") from error
+        raise ArchiveNotPublished(f"Chromium has not published the {version} source archive yet") from error
     checksums = re.findall(r"^sha256\s+([a-f0-9]{64})\s+(\S+)\s*$", manifest, re.MULTILINE)
     if len(checksums) != 1 or checksums[0][1] != url.rsplit("/", 1)[1]:
         raise ValueError("Source manifest does not identify the requested archive")
@@ -705,8 +1157,8 @@ def candidate_lock(repo, root, version):
             raise ValueError("Chromium source archive does not match its published manifest")
     # The archive's own DEPS names the CIPD tool versions and the PGO profile.
     deps = ("src/", "src/third_party/dawn/", "src/third_party/devtools-frontend/src/")
-    profile_file = "src/chrome/build/mac-arm.pgo.txt"
-    found = archive_files(archive, version, [directory + "DEPS" for directory in deps] + [profile_file])
+    profile_files = {cpu: "src/" + architecture["pgoProfileFile"] for cpu, architecture in lock["architectures"].items()}
+    found = archive_files(archive, version, [directory + "DEPS" for directory in deps] + list(profile_files.values()))
     packages = {}
     for directory in deps:
         for path, entries in deps_cipd(found[directory + "DEPS"], directory).items():
@@ -726,9 +1178,10 @@ def candidate_lock(repo, root, version):
         if (package, package_version) != (pinned["package"], pinned["version"]):
             lock["cipd"][path] = {"package": package, "version": package_version,
                                   "sha256": resolve_cipd(package, package_version)}
-    profile_name = found[profile_file].strip()
-    profile = download_profile(root, {"pgoProfile": profile_name})
-    lock["performanceInputs"].update(pgoProfile=profile_name, pgoSHA256=sha256(profile))
+    for cpu, profile_file in profile_files.items():
+        profile_name = found[profile_file].strip()
+        profile = download_profile(root, {"pgoProfile": profile_name})
+        lock["architectures"][cpu].update(pgoProfile=profile_name, pgoSHA256=sha256(profile))
     return lock
 
 
@@ -951,7 +1404,8 @@ def plan_update(repo, root, version, allow_major=False, report=None):
     plan = {
         "current": current, "version": version, "milestone": milestone,
         "path": "fresh" if reasons else "advance", "reasons": reasons,
-        "pgoChanged": candidate["performanceInputs"]["pgoProfile"] != lock["performanceInputs"]["pgoProfile"],
+        "pgoChanged": any(candidate["architectures"][cpu]["pgoProfile"] != architecture["pgoProfile"]
+                          for cpu, architecture in lock["architectures"].items()),
         "patches": {status: sorted(f"{name}: {path}" for name, files in patches.items()
                                    for path, value in files.items() if value == status)
                     for status in ("applies", "rebased", "upstream", "conflict", "missing")},
@@ -982,8 +1436,34 @@ def deps_dependencies(text):
         return {"src/" + path.removeprefix("src/"): value for path, value in module.deps_dependencies(Path(temporary)).items()}
 
 
-def prepare_update(repo, root, version, allow_major=False, timings=None):
-    """Plan the update, then prepare its source: the pinned tree advanced in place, or a fresh one."""
+def make_room_for_milestone(root, pinned, workspace, pinned_key, repository=None):
+    """Remove the pinned source when a new milestone's fresh source doesn't fit beside it.
+
+    Once Google promotes a milestone to full stable, the one before it gets no
+    more stable fixes, so its source only rebuilds an engine that isn't
+    published yet. An unpublished pinned engine keeps its source, and the
+    update stops saying how much space it needs.
+    """
+    free = shutil.disk_usage(root).free
+    if free >= PREPARE_FREE_GIB * 1024**3 or not pinned.directory.is_dir() or pinned.directory == workspace.directory:
+        return []
+    repository = repository or os.environ.get("GITHUB_REPOSITORY") or chromium_artifact.REPOSITORY
+    tag = chromium_engine.release_tag(pinned_key)
+    if not chromium_artifact.release_ready(chromium_artifact.published_release(repository, pinned_key), pinned_key):
+        version = workspace.lock["chromium"]["version"]
+        raise ValueError(f"A fresh Chromium {version} source needs {PREPARE_FREE_GIB} GiB free and "
+                         f"{free // 1024**3} GiB is free. The pinned engine {tag} isn't published, so its "
+                         "source stays: publish it or free the space, then run the update again.")
+    return prune_sources(root, {workspace.directory.name})
+
+
+def prepare_update(repo, root, version, allow_major=False, timings=None, replace_published_pinned=False):
+    """Plan the update, then prepare its source: the pinned tree advanced in place, or a fresh one.
+
+    With `replace_published_pinned`, a milestone whose fresh source doesn't fit
+    beside the pinned one removes the pinned source first, when its engine is
+    published.
+    """
     timings = {} if timings is None else timings
     with timed(timings, "plan"):
         plan, candidate = plan_update(repo, root, version, allow_major)
@@ -993,6 +1473,9 @@ def prepare_update(repo, root, version, allow_major=False, timings=None):
     lock_path, host_path = repo / ENGINE / "source.lock.json", repo / ENGINE / "host-inputs.json"
     original_lock, original_host = lock_path.read_bytes(), host_path.read_bytes()
     pinned = Workspace(root, repo)
+    # The pinned engine, whose source a milestone may replace once it is published.
+    replace_pinned = replace_published_pinned and plan.get("milestone")
+    pinned_key = chromium_engine.engine_key(repo) if replace_pinned else None
     if (pinned.directory / ADVANCING).exists():
         raise ValueError(f"An advance to a new release stopped partway at {pinned.directory}. Inspect it before updating.")
     # Only a pinned tree that a build installed Crest's host in can be reversed and advanced.
@@ -1010,6 +1493,9 @@ def prepare_update(repo, root, version, allow_major=False, timings=None):
                 # which its branch still builds from, and this update's; any other is superseded.
                 for name in prune_sources(root, {pinned.directory.name, workspace.directory.name}):
                     print(f"Removed superseded Chromium source {name}", flush=True)
+                if replace_pinned:
+                    for name in make_room_for_milestone(root, pinned, workspace, pinned_key):
+                        print(f"Removed the pinned Chromium source {name}; its engine is published", flush=True)
                 workspace.prepare()
                 refresh_host_inputs(repo, workspace.source, workspace.directory / "host.json")
         return Workspace(root, repo), plan

@@ -15,47 +15,54 @@ public sealed class FilterList {
     internal const string AdGuard = "https://filters.adtidy.org/extension/ublock/filters/";
 
     public static readonly FilterList EasyList = new(name: "easylist", title: "EasyList", FilterListGroup.Ads,
-        source: "https://easylist.to/easylist/easylist.txt", isDefault: true);
+        source: "https://easylist.to/easylist/easylist.txt", isDefault: true, blocks: [ContentBlockKind.Ads]);
     public static readonly FilterList EasyPrivacy = new(name: "easyprivacy", title: "EasyPrivacy", FilterListGroup.Ads,
-        source: "https://easylist.to/easylist/easyprivacy.txt", isDefault: true);
+        source: "https://easylist.to/easylist/easyprivacy.txt", isDefault: true, blocks: [ContentBlockKind.Trackers]);
     public static readonly FilterList UBlockFilters = new(name: "ublock-filters", title: "uBlock filters", FilterListGroup.Ads,
-        source: UBlock + "filters.min.txt", isDefault: true);
+        source: UBlock + "filters.min.txt", isDefault: true, blocks: [ContentBlockKind.Ads]);
     public static readonly FilterList UBlockPrivacy = new(name: "ublock-privacy", title: "uBlock filters – Privacy",
-        FilterListGroup.Ads, source: UBlock + "privacy.min.txt", isDefault: true);
+        FilterListGroup.Ads, source: UBlock + "privacy.min.txt", isDefault: true, blocks: [ContentBlockKind.Trackers]);
     public static readonly FilterList UBlockBadware = new(name: "ublock-badware", title: "uBlock filters – Badware risks",
-        FilterListGroup.Ads, source: UBlock + "badware.min.txt", isDefault: true);
+        FilterListGroup.Ads, source: UBlock + "badware.min.txt", isDefault: true, blocks: [ContentBlockKind.Scams]);
     public static readonly FilterList UBlockQuickFixes = new(name: "ublock-quick-fixes", title: "uBlock filters – Quick fixes",
         FilterListGroup.Ads, source: UBlock + "quick-fixes.min.txt", isDefault: true);
     public static readonly FilterList UBlockUnbreak = new(name: "ublock-unbreak", title: "uBlock filters – Unbreak",
         FilterListGroup.Ads, source: UBlock + "unbreak.min.txt", isDefault: true);
     public static readonly FilterList AdGuardBase = new(name: "adguard-base", title: "AdGuard Base", FilterListGroup.Ads,
-        source: AdGuard + "2_without_easylist.txt", isStrict: true);
+        source: AdGuard + "2_without_easylist.txt", isStrict: true, blocks: [ContentBlockKind.Ads]);
 
     public static readonly FilterList EasyListGermany = new(name: "easylist-germany", title: "EasyList Germany",
-        FilterListGroup.Regional, source: "https://easylist.to/easylistgermany/easylistgermany.txt", languages: ["de"]);
+        FilterListGroup.Regional, source: "https://easylist.to/easylistgermany/easylistgermany.txt", languages: ["de"],
+        blocks: [ContentBlockKind.Ads]);
     public static readonly FilterList ListeFr = new(name: "liste-fr", title: "Liste FR", FilterListGroup.Regional,
-        source: EasyListDownloads + "liste_fr.txt", languages: ["fr"]);
+        source: EasyListDownloads + "liste_fr.txt", languages: ["fr"], blocks: [ContentBlockKind.Ads]);
     public static readonly FilterList EasyListItaly = new(name: "easylist-italy", title: "EasyList Italy",
-        FilterListGroup.Regional, source: EasyListDownloads + "easylistitaly.txt", languages: ["it"]);
+        FilterListGroup.Regional, source: EasyListDownloads + "easylistitaly.txt", languages: ["it"],
+        blocks: [ContentBlockKind.Ads]);
     public static readonly FilterList EasyListDutch = new(name: "easylist-dutch", title: "EasyList Dutch",
-        FilterListGroup.Regional, source: EasyListDownloads + "easylistdutch.txt", languages: ["nl"]);
+        FilterListGroup.Regional, source: EasyListDownloads + "easylistdutch.txt", languages: ["nl"],
+        blocks: [ContentBlockKind.Ads]);
     public static readonly FilterList EasyListSpanish = new(name: "easylist-spanish", title: "EasyList Spanish",
-        FilterListGroup.Regional, source: EasyListDownloads + "easylistspanish.txt", languages: ["es"]);
+        FilterListGroup.Regional, source: EasyListDownloads + "easylistspanish.txt", languages: ["es"],
+        blocks: [ContentBlockKind.Ads]);
     public static readonly FilterList EasyListPolish = new(name: "easylist-polish", title: "EasyList Polish",
-        FilterListGroup.Regional, source: EasyListDownloads + "easylistpolish.txt", languages: ["pl"]);
+        FilterListGroup.Regional, source: EasyListDownloads + "easylistpolish.txt", languages: ["pl"],
+        blocks: [ContentBlockKind.Ads]);
     public static readonly FilterList EasyListChina = new(name: "easylist-china", title: "EasyList China",
-        FilterListGroup.Regional, source: EasyListDownloads + "easylistchina.txt", languages: ["zh"]);
+        FilterListGroup.Regional, source: EasyListDownloads + "easylistchina.txt", languages: ["zh"],
+        blocks: [ContentBlockKind.Ads]);
     public static readonly FilterList AdGuardJapanese = new(name: "adguard-japanese", title: "AdGuard Japanese",
-        FilterListGroup.Regional, source: AdGuard + "7.txt", languages: ["ja"]);
+        FilterListGroup.Regional, source: AdGuard + "7.txt", languages: ["ja"], blocks: [ContentBlockKind.Ads]);
     public static readonly FilterList AdGuardRussian = new(name: "adguard-russian", title: "AdGuard Russian",
-        FilterListGroup.Regional, source: AdGuard + "1.txt", languages: ["ru", "uk", "be"]);
+        FilterListGroup.Regional, source: AdGuard + "1.txt", languages: ["ru", "uk", "be"], blocks: [ContentBlockKind.Ads]);
     public static readonly FilterList AdGuardTurkish = new(name: "adguard-turkish", title: "AdGuard Turkish",
-        FilterListGroup.Regional, source: AdGuard + "13.txt", languages: ["tr"]);
+        FilterListGroup.Regional, source: AdGuard + "13.txt", languages: ["tr"], blocks: [ContentBlockKind.Ads]);
 
     public static readonly FilterList EasyListCookie = new(name: "easylist-cookie", title: "EasyList Cookie List",
-        FilterListGroup.Annoyances, source: "https://secure.fanboy.co.nz/fanboy-cookiemonster_ubo.txt", isStrict: true);
+        FilterListGroup.Annoyances, source: "https://secure.fanboy.co.nz/fanboy-cookiemonster_ubo.txt", isStrict: true,
+        blocks: [ContentBlockKind.CookieNotices]);
     public static readonly FilterList AdGuardAnnoyances = new(name: "adguard-annoyances", title: "AdGuard Annoyances",
-        FilterListGroup.Annoyances, source: AdGuard + "14.txt", isStrict: true);
+        FilterListGroup.Annoyances, source: AdGuard + "14.txt", isStrict: true, blocks: [ContentBlockKind.Annoyances]);
 
     public static IReadOnlyList<FilterList> All { get; } = [
         EasyList, EasyPrivacy, UBlockFilters, UBlockPrivacy, UBlockBadware, UBlockQuickFixes, UBlockUnbreak, AdGuardBase,
@@ -88,12 +95,16 @@ public sealed class FilterList {
     /// unless they turn it off.
     public IReadOnlyList<string> Languages { get; }
 
+    /// What the list keeps off a page, or nothing for one that only fixes
+    /// what the others break.
+    public IReadOnlyList<ContentBlockKind> Blocks { get; }
+
     #endregion
 
     #region Constructors
 
     private FilterList(string name, string title, FilterListGroup group, string source, bool isDefault = false,
-        bool isStrict = false, IReadOnlyList<string>? languages = null) {
+        bool isStrict = false, IReadOnlyList<string>? languages = null, IReadOnlyList<ContentBlockKind>? blocks = null) {
         Name = name;
         Title = title;
         Group = group;
@@ -101,6 +112,7 @@ public sealed class FilterList {
         IsDefault = isDefault;
         IsStrict = isStrict;
         Languages = languages ?? [];
+        Blocks = blocks ?? [];
     }
 
     #endregion

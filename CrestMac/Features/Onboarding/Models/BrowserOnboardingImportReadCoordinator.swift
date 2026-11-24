@@ -15,37 +15,15 @@ struct BrowserOnboardingImportReadOutput: Sendable {
     var leftOut: [ImportLeftOut] = []
 }
 
-enum BrowserOnboardingImportReadPhase: Equatable {
-    case idle
-    case reading(id: UUID, application: ImportSource)
-
-    var application: ImportSource? {
-        switch self {
-        case .idle:
-            nil
-        case .reading(_, let application):
-            application
-        }
-    }
-
-    var requestID: UUID? {
-        switch self {
-        case .idle:
-            nil
-        case .reading(let id, _):
-            id
-        }
-    }
-}
-
 @Observable
 @MainActor
 final class BrowserOnboardingImportReadCoordinator {
 
-    private(set) var phase: BrowserOnboardingImportReadPhase = .idle
+    /// The read under way, if any.
+    private var readingID: UUID?
 
     var isInFlight: Bool {
-        phase.requestID != nil
+        readingID != nil
     }
 
     @ObservationIgnored private let reader: any BrowserOnboardingImportReading
@@ -67,7 +45,7 @@ final class BrowserOnboardingImportReadCoordinator {
 
         let requestID = UUID()
         let reader = self.reader
-        phase = .reading(id: requestID, application: payload.application)
+        readingID = requestID
         readTask = Task { @MainActor [weak self] in
             defer { onFinish() }
 
@@ -92,14 +70,14 @@ final class BrowserOnboardingImportReadCoordinator {
     func cancel() {
         readTask?.cancel()
         readTask = nil
-        phase = .idle
+        readingID = nil
     }
 
     @discardableResult
     private func finish(requestID: UUID) -> Bool {
-        guard phase.requestID == requestID else { return false }
+        guard readingID == requestID else { return false }
         readTask = nil
-        phase = .idle
+        readingID = nil
         return true
     }
 }

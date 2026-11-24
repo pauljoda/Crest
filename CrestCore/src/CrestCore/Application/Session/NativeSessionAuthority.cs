@@ -15,7 +15,7 @@ namespace CrestCore.Application;
 public sealed partial class NativeSessionAuthority {
     #region Variables
 
-    public const int MaximumBytes = 64 * 1024 * 1024;
+    public const int MaximumBytes = MessageLimitAttribute.SessionBytes;
     internal static readonly object Gate = new();
     private SessionState session;
     internal SessionState AcceptedSession => session;

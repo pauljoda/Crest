@@ -19,7 +19,7 @@ struct BrowserCommandPaletteSearchField: View {
     }
 
     var body: some View {
-        HStack(spacing: BrowserCommandPaletteMetrics.searchFieldSpacing) {
+        HStack(spacing: CrestSpacing.medium) {
             if presentation.input.showsSearchGlyph {
                 Image(systemName: "magnifyingglass")
                     .font(.system(presentation.input.textStyle, weight: .medium))
@@ -62,7 +62,7 @@ struct BrowserCommandPaletteSearchField: View {
                 BrowserSearchProviderPill(
                     provider: provider, showsCloseControl: true, isInteractive: true, profileID: model.space?.profileID)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.browserPaletteChip)
             .help("Stop searching \(provider.title)")
             .accessibilityLabel("Stop searching \(provider.title)")
             .accessibilityIdentifier("command-palette-provider-token")
@@ -72,7 +72,7 @@ struct BrowserCommandPaletteSearchField: View {
             } label: {
                 BrowserPaletteScopeChip(scope: scope, showsCloseControl: true, isInteractive: true)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.browserPaletteChip)
             .help("Show all results")
             .accessibilityLabel(Text("Stop searching \(Text(scope.title))"))
             .accessibilityIdentifier("command-palette-scope-token")
@@ -94,7 +94,7 @@ struct BrowserCommandPaletteSearchField: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.browserPaletteChip)
             .help("Press Tab to \(provider.actionTitle)")
             .accessibilityLabel(Text(verbatim: provider.actionTitle))
             .accessibilityHint("Press Tab, enter your query, then press Return.")
@@ -122,7 +122,7 @@ struct BrowserCommandPaletteSearchField: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.browserPaletteChip)
             .accessibilityLabel(Text("Search \(Text(scope.title))"))
             .accessibilityIdentifier("command-palette-scope-offer")
         }

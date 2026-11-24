@@ -6,6 +6,9 @@ enum BrowserDeferredWebsiteDataStoreCleanup {
     private static let defaultsKey =
         "crest.browser.pending-empty-website-data-stores"
     private static var scheduledCleanup: Task<Void, Never>?
+    /// How long the cleanup waits, once scheduled, for the pages still using
+    /// the stores to let them go.
+    private static let cleanupDelay: Duration = .seconds(5)
 
     static func record(_ identifier: UUID) {
         guard allowsPersistentMaintenance else { return }
@@ -64,7 +67,7 @@ enum BrowserDeferredWebsiteDataStoreCleanup {
     private static func scheduleCleanup() {
         scheduledCleanup?.cancel()
         scheduledCleanup = Task { @MainActor in
-            try? await Task.sleep(for: .seconds(5))
+            try? await Task.sleep(for: cleanupDelay)
             guard !Task.isCancelled else { return }
             await cleanupPendingStores()
             scheduledCleanup = nil

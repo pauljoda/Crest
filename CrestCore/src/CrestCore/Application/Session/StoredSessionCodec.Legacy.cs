@@ -33,7 +33,7 @@ internal static partial class StoredSessionCodec {
             var space = spaces[index];
             bool Joins(TabState tab) => members.Contains(tab.Id) && !tab.Placement.IsDurable && tab.FolderId is null;
             if (!space.Tabs.Any(Joins)) continue;
-            var folder = new FolderState(folderId, TabPlacement.Current, Text(group[Key.Title]) ?? UntitledFolder,
+            var folder = new FolderState(folderId, TabPlacement.Current, Text(group[Key.Title]) ?? FolderState.UntitledTitle,
                 LegacyFolderSymbol, (TabGroupColor.Named(TolerantText(group[Key.Color])) ?? TabGroupColor.Grey).Color,
                 IsCollapsed: TolerantFlag(group[Key.IsCollapsed]) ?? false);
             spaces[index] = space with {
@@ -63,7 +63,7 @@ internal static partial class StoredSessionCodec {
     /// the newest entries it may keep, or none when the bytes do not decode.
     internal static IReadOnlyList<HistoryEntryState> DecodeInstalledHistory(ReadOnlySpan<byte> entries) {
         try {
-            return JsonNode.Parse(entries, documentOptions: new() { MaxDepth = 64 }) is JsonArray history
+            return JsonNode.Parse(entries, documentOptions: JsonDepth.Session.Options) is JsonArray history
                 ? [.. history.Take(HistoryEntryState.MaximumEntries).Select(DecodeHistoryEntry)]
                 : [];
         } catch (Exception error) when (error is System.Text.Json.JsonException or BrowserRuleException or InvalidOperationException

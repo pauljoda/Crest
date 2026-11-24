@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "quit-after-space-deletion-fails",
+      "category": "fixed",
+      "message": "Crest quits instead of waiting indefinitely when a Space couldn’t be fully deleted, and tries deleting that Space again the next time it opens."
+    }
+  ]
+}

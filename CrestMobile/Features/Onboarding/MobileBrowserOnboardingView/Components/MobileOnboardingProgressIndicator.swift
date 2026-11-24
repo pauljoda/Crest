@@ -9,7 +9,7 @@ struct MobileOnboardingProgressIndicator: View {
                 Capsule()
                     .fill(
                         index <= (currentIndex ?? -1)
-                            ? Color.accentColor
+                            ? CrestBrandTheme.accent
                             : Color.secondary.opacity(
                                 MobileOnboardingLayout.incompleteProgressOpacity
                             )

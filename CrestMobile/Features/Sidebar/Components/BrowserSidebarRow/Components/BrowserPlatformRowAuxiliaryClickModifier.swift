@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A sidebar row's auxiliary-button click, which a touch shell has no way to
+/// A sidebar row's or pinned tile's auxiliary-button click, which a touch shell has no way to
 /// deliver: there is no third button under a finger, and the actions a middle
 /// click reaches on macOS are already on the row's context menu here.
 ///

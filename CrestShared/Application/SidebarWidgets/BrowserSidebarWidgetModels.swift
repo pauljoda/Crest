@@ -74,20 +74,6 @@ extension BrowserSidebarWidgetRegistration {
     )
 }
 
-/// Who authored a widget. Sources still tag what they publish, but the deck is a
-/// single global layer: visibility never consults the scope, so a tab playing
-/// media in one profile stays on the card stack in every Space of every profile.
-enum BrowserSidebarWidgetScope: Equatable, Sendable {
-    case application
-    case profile(UUID)
-}
-
-enum BrowserMediaSessionPlaybackState: String, Encodable, Equatable, Sendable {
-    case none
-    case paused
-    case playing
-}
-
 struct BrowserMediaSessionID: Hashable, Identifiable, Sendable {
     let tabID: UUID
     let documentIdentifier: String
@@ -107,7 +93,7 @@ struct BrowserMediaSessionSnapshot: Equatable, Identifiable, Sendable {
     let artist: String?
     let album: String?
     let artworkData: Data?
-    let playbackState: BrowserMediaSessionPlaybackState
+    let playbackState: MediaPlaybackState
     let isAudible: Bool
     /// Every media element the page has surfaced is muted. Distinct from
     /// `isAudible`, which also goes false for paused or zero-volume playback.
@@ -115,13 +101,13 @@ struct BrowserMediaSessionSnapshot: Equatable, Identifiable, Sendable {
     let availableActions: Set<MediaSessionAction>
     let orderingOrdinal: UInt64
 
-    var ownerDisplayTitle: String { ownerTitle ?? "Media tab" }
+    var ownerDisplayTitle: String { ownerTitle ?? String(localized: "Media tab") }
 
-    var mediaDisplayTitle: String { title ?? "Media from this tab" }
+    var mediaDisplayTitle: String { title ?? String(localized: "Media from this tab") }
 
     /// System Now Playing still needs a single primary title. Prefer the
     /// standards-provided media title, with the stable tab title as its fallback.
-    var displayTitle: String { title ?? ownerTitle ?? "Untitled media" }
+    var displayTitle: String { title ?? ownerTitle ?? String(localized: "Untitled media") }
 
     var secondaryMetadata: String? {
         [artist, album]
@@ -139,7 +125,6 @@ struct BrowserSoftwareUpdateWidgetSnapshot: Equatable, Sendable {
     let title: String
     let version: String?
     let build: String?
-    let releaseNotes: String?
     let informationURL: URL?
     let message: String?
     let progress: Double?
@@ -154,7 +139,6 @@ struct BrowserSoftwareUpdateWidgetSnapshot: Equatable, Sendable {
 
 struct BrowserSidebarWidgetInstance: Equatable, Identifiable, Sendable {
     let id: BrowserSidebarWidgetID
-    let scope: BrowserSidebarWidgetScope
     let orderingOrdinal: UInt64
     let presentation: BrowserSidebarWidgetPresentation
     let availableActions: Set<BrowserSidebarWidgetAction>

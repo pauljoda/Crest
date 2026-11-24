@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "settings-controls-take-clicks-on-macos-26",
+      "category": "fixed",
+      "message": "On macOS 26, switches, pickers and the house choices in Settings take every click instead of ignoring clicks after the first.",
+      "platforms": ["mac"]
+    }
+  ]
+}

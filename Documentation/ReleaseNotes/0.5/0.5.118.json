@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "mobile-settings-sheet-activation",
+      "category": "fixed",
+      "message": "Open Settings as a dismissible sheet on iPhone and iPad while keeping your current page selected",
+      "platforms": ["ios"]
+    }
+  ]
+}

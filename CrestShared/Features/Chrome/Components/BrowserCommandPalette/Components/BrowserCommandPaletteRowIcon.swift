@@ -36,7 +36,7 @@ struct BrowserCommandPaletteRowIcon: View {
         )
         .background(
             .primary.opacity(BrowserCommandPaletteMetrics.rowIconBackgroundOpacity),
-            in: .rect(cornerRadius: BrowserCommandPaletteMetrics.rowIconCornerRadius)
+            in: .rect(cornerRadius: CrestRadius.compact)
         )
     }
 

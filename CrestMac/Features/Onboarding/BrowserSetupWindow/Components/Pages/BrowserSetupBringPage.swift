@@ -26,6 +26,7 @@ struct BrowserSetupBringPage: View {
             } header: {
                 BrowserSetupPageHeading("Bring Tabs")
             }
+            .browserSetupRaisedRows()
             Section {
                 if !flow.hasScanned {
                     Button("Look for Other Browsers", systemImage: "magnifyingglass", action: flow.scanForMore)
@@ -50,6 +51,7 @@ struct BrowserSetupBringPage: View {
                     }
                 }
             }
+            .browserSetupRaisedRows()
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
@@ -88,7 +90,7 @@ struct BrowserSetupBringPage: View {
                 }
                 .contentShape(.rect)
             }
-            .buttonStyle(.browserSetupRow)
+            .buttonStyle(.crestFormRow)
             .disabled(flow.isImportSelectionLocked && !isReady)
         }
     }

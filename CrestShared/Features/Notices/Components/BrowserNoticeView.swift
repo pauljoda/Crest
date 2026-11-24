@@ -13,7 +13,6 @@ struct BrowserNoticeView: View {
     var sideInset = BrowserRootMetrics.noticeInset
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
         HStack(spacing: CrestSpacing.medium) {
@@ -36,13 +35,7 @@ struct BrowserNoticeView: View {
         .frame(minHeight: BrowserRootMetrics.noticeHeight)
         .fixedSize(horizontal: false, vertical: true)
         .crestFloatingFlyoutStyle(in: .rect(cornerRadius: BrowserRootMetrics.noticeHeight / 2))
-        .shadow(
-            color: .black.opacity(
-                reduceTransparency ? 0 : CrestOpacity.controlShadow
-            ),
-            radius: BrowserRootMetrics.noticeShadowRadius,
-            y: BrowserRootMetrics.noticeShadowYOffset
-        )
+        .crestElevation(.panel)
         // The capsule fits its words, which wrap once it is this wide.
         .frame(maxWidth: BrowserRootMetrics.noticeMaximumWidth, alignment: alignment)
         .padding(.horizontal, sideInset)

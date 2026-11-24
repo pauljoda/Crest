@@ -25,6 +25,9 @@ struct BrowserInteractionCapabilities: Equatable, Sendable {
     var supportsMultiSelection = true
 
     var allowsMultiSelection: Bool { supportsOrganization && supportsMultiSelection }
+
+    /// The least a control gives the least precise input the shell accepts.
+    var minimumHitTarget: CGFloat { supportsTouch ? CrestLayout.touchHitTarget : CrestLayout.pointerHitTarget }
 }
 
 extension EnvironmentValues {

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "peek-close-returns-keyboard",
+      "category": "fixed",
+      "message": "Closing a Peek gives the keyboard back to the page underneath, so the arrow keys and Space scroll it again without a click."
+    }
+  ]
+}

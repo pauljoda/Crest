@@ -12,13 +12,6 @@ namespace CrestCore.Application;
 /// relaunch erases it again before that deletion finishes. Nothing here is
 /// saved.
 internal sealed class DataDeletions(Engines engines, IIdSource ids, IClock clock) {
-    #region Static Variables
-
-    /// The longest host a site can have.
-    internal const int MaximumHostLength = 253;
-
-    #endregion
-
     #region Types
 
     /// One deletion, until every engine asked has answered.

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "chromium-host-patch-applies-to-fresh-sources",
+      "category": "internal",
+      "message": "Crest's Chromium changes apply cleanly to freshly prepared engine sources, so upstream Chromium updates can build."
+    }
+  ]
+}

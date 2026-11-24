@@ -40,6 +40,7 @@ struct BrowserSetupStepChips: View {
     var open: ((BrowserSetupStep) -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.liesOnBrowserSetupPaper) private var liesOnPaper
 
     private var reached: Int {
         current.flatMap { steps.firstIndex(of: $0) } ?? -1
@@ -72,7 +73,7 @@ struct BrowserSetupStepChips: View {
 
     /// The chips in a row, each as `content` draws it, set at its angle.
     private func chips<Chip: View>(@ViewBuilder _ content: @escaping (Int, BrowserSetupStep) -> Chip) -> some View {
-        BrowserSetupStepChipsFlow(gap: size.gap) {
+        CrestFlowLayout(gap: size.gap, alignment: .center) {
             ForEach(Array(steps.enumerated()), id: \.element) { index, step in
                 content(index, step)
                     .rotationEffect(.degrees(BrowserSetupStepChipsMetrics.tilt(at: index)))
@@ -87,7 +88,7 @@ struct BrowserSetupStepChips: View {
         let isOpen = index == reached
         let isColored = size.namesEvery || index <= reached
         let shape = RoundedRectangle(cornerRadius: size.radius, style: .continuous)
-        return HStack(spacing: BrowserSetupStepChipsMetrics.numberSpacing) {
+        return HStack(spacing: CrestSpacing.small) {
             Text(verbatim: String(format: "%02d", index + 1))
                 .font(CrestTypography.display(size.number))
                 .fixedSize()
@@ -97,7 +98,7 @@ struct BrowserSetupStepChips: View {
                     .font(CrestTypography.display(size.title))
                     .lineLimit(1)
                     .fixedSize()
-                    .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .leading)))
+                    .transition(.opacity.combined(with: .scale(scale: CrestMotion.entranceScale, anchor: .leading)))
             }
         }
         .foregroundStyle(isColored ? AnyShapeStyle(CrestBrandPalette.ink) : AnyShapeStyle(.secondary))
@@ -107,15 +108,15 @@ struct BrowserSetupStepChips: View {
             if isColored {
                 shape.fill(step.color)
             } else {
-                shape.fill(CrestBrandTheme.surface)
-                    .overlay { shape.strokeBorder(CrestBrandTheme.line, lineWidth: CrestLayout.hairline) }
+                shape.fill(liesOnPaper ? BrowserSetupPaper.raisedFill : CrestBrandTheme.surface)
+                    .overlay {
+                        shape.strokeBorder(
+                            liesOnPaper ? BrowserSetupPaper.raisedEdge : CrestBrandTheme.line,
+                            lineWidth: CrestLayout.hairline)
+                    }
             }
         }
-        .shadow(
-            color: CrestBrandPalette.ink.opacity(
-                isOpen ? BrowserSetupStepChipsMetrics.liftedShadow : BrowserSetupStepChipsMetrics.restingShadow),
-            radius: isOpen ? 5 : 1.5, y: isOpen ? 3 : 1
-        )
+        .crestElevation(isOpen ? .lifted : .control)
         .scaleEffect(isOpen && !size.namesEvery ? BrowserSetupStepChipsMetrics.liftedScale : 1)
         .zIndex(isOpen ? 1 : 0)
     }
@@ -124,11 +125,7 @@ struct BrowserSetupStepChips: View {
 enum BrowserSetupStepChipsMetrics {
     /// The angles the chips sit at, in turn, as if laid down by hand.
     static let tilts: [Double] = [-2, 1.5, -1, 2]
-    static let numberSpacing: CGFloat = 8
     static let numberOpacity = 0.7
-    /// The paper shadow a chip casts lying flat, and lifted while open.
-    static let restingShadow = 0.16
-    static let liftedShadow = 0.28
     static let liftedScale: CGFloat = 1.06
     /// How the chips move as the walk does.
     static let motion = Animation.smooth(duration: 0.45)
@@ -138,67 +135,6 @@ enum BrowserSetupStepChipsMetrics {
 
     static func tilt(at index: Int) -> Double {
         tilts[index % tilts.count]
-    }
-}
-
-/// Lays the chips out in rows no wider than the room offered, each row
-/// centered, so the welcome's chips wrap on a phone rather than run off it.
-private struct BrowserSetupStepChipsFlow: Layout {
-    // MARK: - Types
-
-    /// The chips one row holds, and how wide and tall the row is.
-    private struct Row {
-        var indices: [Int] = []
-        var width: CGFloat = 0
-        var height: CGFloat = 0
-    }
-
-    // MARK: - Variables
-
-    let gap: CGFloat
-
-    // MARK: - Actions - Layout
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let rows = rows(of: subviews, within: proposal.width ?? .infinity)
-        let height = rows.map(\.height).reduce(0, +) + gap * CGFloat(max(rows.count - 1, 0))
-        return CGSize(width: rows.map(\.width).max() ?? 0, height: height)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var y = bounds.minY
-        for row in rows(of: subviews, within: bounds.width) {
-            var x = bounds.minX + (bounds.width - row.width) / 2
-            for index in row.indices {
-                let size = subviews[index].sizeThatFits(.unspecified)
-                subviews[index].place(
-                    at: CGPoint(x: x, y: y + (row.height - size.height) / 2), proposal: ProposedViewSize(size))
-                x += size.width + gap
-            }
-            y += row.height + gap
-        }
-    }
-
-    // MARK: - Actions - Reading
-
-    /// The chips in rows, each taking chips while they fit within `width`.
-    private func rows(of subviews: Subviews, within width: CGFloat) -> [Row] {
-        var rows: [Row] = []
-        var row = Row()
-        for (index, subview) in subviews.enumerated() {
-            let size = subview.sizeThatFits(.unspecified)
-            let widened = row.indices.isEmpty ? size.width : row.width + gap + size.width
-            if !row.indices.isEmpty, widened > width {
-                rows.append(row)
-                row = Row(indices: [index], width: size.width, height: size.height)
-            } else {
-                row.indices.append(index)
-                row.width = widened
-                row.height = max(row.height, size.height)
-            }
-        }
-        if !row.indices.isEmpty { rows.append(row) }
-        return rows
     }
 }
 

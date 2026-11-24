@@ -19,14 +19,7 @@ extension BrowserOnboardingFlow {
 
     /// The Spaces the chosen browser brings in new, which the preview marks.
     var incomingSpaceIDs: Set<UUID> {
-        Set(reviewSpaces.filter { $0.isIncluded && $0.destination.spaceID == nil }.map(\.id))
-    }
-
-    /// What Bring Tabs holds now: the chosen browser and its tabs.
-    var bringValue: String {
-        guard let source = chosenSource else { return String(localized: "Nothing") }
-        guard let review, hasIncomingSpaces else { return source.title }
-        return String(localized: "\(source.title) · \(review.includedTabCount) tabs")
+        Set(reviewSpaces.filter { $0.isIncluded && $0.destinationSpaceID == nil }.map(\.id))
     }
 
     /// The Space the preview opens on once the chosen browser's Spaces are
@@ -58,12 +51,19 @@ extension BrowserOnboardingFlow {
 
     /// Whether the chosen browser's passwords come in.
     var includesPasswords: Bool {
-        reviewSpaces.contains { $0.isIncluded && $0.record.includesPasswords }
+        reviewSpaces.contains { $0.record.bringsPasswords }
     }
 
     /// How many saved passwords the chosen browser keeps.
     var passwordCount: Int {
         reviewSpaces.reduce(0) { $0 + $1.record.passwordCount }
+    }
+
+    /// How many of the passwords that come in are for sites without HTTPS,
+    /// which are never filled in automatically.
+    var insecurePasswordCount: Int {
+        reviewSpaces.filter { $0.record.bringsPasswords }
+            .reduce(0) { $0 + $1.record.insecurePasswordCount }
     }
 
     /// Whether the chosen browser's extensions come in.
@@ -81,7 +81,7 @@ extension BrowserOnboardingFlow {
     /// The Space of the preview that `review` shows as: the Space it joins,
     /// or its own.
     func previewSpaceID(of review: BrowserImportSpaceReview) -> UUID {
-        review.destination.spaceID ?? review.id
+        review.destinationSpaceID ?? review.id
     }
 
     // MARK: - Actions - Live setup

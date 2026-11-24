@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 
 using CrestCore.Contracts;
+using CrestCore.Domain;
 
 namespace CrestCore.Application;
 
@@ -49,7 +50,7 @@ internal sealed record BrowserDataHistoryEntry(string Url, string Title, DateTim
     }
 
     private BrowserDataHistoryEntry Materialize() {
-        if (!ImportText.IsKept(Title, ImportText.MaximumTitle) || VisitCount is <= 0 or > MaximumVisitCount
+        if (!ImportText.IsKept(Title, BrowserTab.MaximumTitleLength) || VisitCount is <= 0 or > MaximumVisitCount
             || FirstVisitedAt > LastVisitedAt || !ImportAddress.TryReadStored(Url, removesFragment: true, out var address)
             || address is null)
             throw BrowserDataValue.Invalid();

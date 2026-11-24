@@ -35,7 +35,7 @@ struct MobileSetupView: View {
     @State private var shownSpaceID: UUID?
     /// The live copy an iPad held wide shows beside the steps, kept here so a
     /// turn of the device keeps it and what the person changed in it.
-    @State private var live = MobileSetupLiveSession()
+    @State private var live = BrowserSetupLiveSession()
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     // MARK: - Actions - Drawing

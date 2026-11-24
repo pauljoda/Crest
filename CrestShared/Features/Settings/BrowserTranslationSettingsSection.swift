@@ -8,7 +8,9 @@ struct BrowserTranslationSettingsSection: View {
     @Environment(\.scenePhase) private var scenePhase
 
     private var rules: [TranslationRule] { preferences.preferences.translationRules }
-    private var automaticallyTranslates: Bool { preferences.automaticallyTranslates }
+    private var automaticallyTranslates: Bool {
+        BrowserPageTranslation.canTranslateAutomatically && preferences.automaticallyTranslates
+    }
     private var sourceIDs: [String] {
         let installed = catalog.installedIDs
         let saved = rules.map(\.sourceLanguage).filter { saved in
@@ -23,8 +25,10 @@ struct BrowserTranslationSettingsSection: View {
     var body: some View {
         Section("Translation") {
             Toggle("Offer to translate pages", isOn: $preferences.offersTranslation)
-            Toggle("Translate automatically", isOn: $preferences.automaticallyTranslates)
-                .accessibilityIdentifier("automatic-translation-toggle")
+            if BrowserPageTranslation.canTranslateAutomatically {
+                Toggle("Translate automatically", isOn: $preferences.automaticallyTranslates)
+                    .accessibilityIdentifier("automatic-translation-toggle")
+            }
         }
         if automaticallyTranslates {
             languagesSection
@@ -41,11 +45,11 @@ struct BrowserTranslationSettingsSection: View {
                 Text("No downloaded languages")
                     .foregroundStyle(.secondary)
             }
-            HStack(spacing: 12) { languageActions }
+            HStack(spacing: CrestSpacing.medium) { languageActions }
         } header: {
             Text("Translate automatically from")
         } footer: {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
                 #if os(macOS)
                     CrestFormFootnote("Add languages in System Settings › General › Language & Region.")
                 #else
@@ -102,7 +106,7 @@ struct BrowserTranslationSettingsSection: View {
         let enabled = saved?.isEnabled ?? false
         let available = targets.contains(target)
         return LabeledContent {
-            HStack(spacing: 12) {
+            HStack(spacing: CrestSpacing.medium) {
                 destinationPicker(source, target: target, targets: targets, enabled: enabled)
                     .labelsHidden()
                     .fixedSize()
@@ -110,7 +114,7 @@ struct BrowserTranslationSettingsSection: View {
                     .labelsHidden()
             }
         } label: {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: CrestSpacing.extraExtraSmall) {
                 Text(BrowserTranslationLanguageCatalog.name(source))
                 if !target.isEmpty && !available && catalog.hasChecked {
                     Text("Download both languages to translate")

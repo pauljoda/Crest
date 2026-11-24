@@ -42,7 +42,7 @@ struct BrowserSetupSpacesPage: View {
                             Label("Add Sub-Space", systemImage: "plus")
                         }
                         .buttonStyle(.crestTertiary)
-                        .padding(.leading, BrowserSetupSpacesPageMetrics.subSpaceIndent)
+                        .padding(.leading, BrowserSidebarMetrics.subSpaceIndent)
                         .accessibilityLabel(Text("Add a Sub-Space to \(group.primary.name)"))
                         .accessibilityIdentifier("setup-add-sub-space")
                     }
@@ -54,6 +54,7 @@ struct BrowserSetupSpacesPage: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
+            .browserSetupRaisedRows()
             Section {
                 Button("New Space", systemImage: "plus") {
                     if let added = setup.addSpace() { open(added) }
@@ -61,6 +62,7 @@ struct BrowserSetupSpacesPage: View {
                 .buttonStyle(.crestTertiary)
                 .accessibilityIdentifier("setup-add-space")
             }
+            .browserSetupRaisedRows()
             if let message = setup.errorMessage {
                 Section {
                     Text(message).foregroundStyle(CrestColor.danger)
@@ -97,10 +99,10 @@ struct BrowserSetupSpacesPage: View {
                 Spacer(minLength: CrestSpacing.small)
                 CrestFormDisclosureChevron()
             }
-            .padding(.leading, isSubSpace ? BrowserSetupSpacesPageMetrics.subSpaceIndent - CrestSpacing.large : 0)
+            .padding(.leading, isSubSpace ? BrowserSidebarMetrics.subSpaceIndent - CrestSpacing.large : 0)
             .contentShape(.rect)
         }
-        .buttonStyle(.browserSetupRow)
+        .buttonStyle(.crestFormRow)
         .accessibilityLabel(isSubSpace ? Text("\(space.name), Sub-Space") : Text(space.name))
         .contextMenu { arrangeMenu(for: space.id, isSubSpace: isSubSpace) }
     }
@@ -164,6 +166,4 @@ struct BrowserSetupSpacesPage: View {
 enum BrowserSetupSpacesPageMetrics {
     static let icon: CGFloat = 26
     static let subSpaceIcon: CGFloat = 22
-    /// How far a Sub-Space's row and the row adding one sit in from a Space's.
-    static let subSpaceIndent: CGFloat = 30
 }

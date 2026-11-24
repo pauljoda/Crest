@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "mobile-layout-uses-design-tokens",
+      "category": "internal",
+      "message": "Gaps, padding, corners, hit targets and glyph sizes in the iPhone and iPad chrome, Settings and Getting Started come from the shared design tokens or one named value each, with no visible change.",
+      "platforms": ["ios"]
+    }
+  ]
+}

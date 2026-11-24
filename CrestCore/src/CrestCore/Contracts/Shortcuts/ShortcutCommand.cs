@@ -84,7 +84,10 @@ public sealed class ShortcutCommand {
         ShowBlockedElements,
         OpenNextExtension,
         ClearAllTabs,
-        CollapseAllFolders
+        CollapseAllFolders,
+        CopyPageTitle,
+        ShowPageQRCode,
+        OpenPageInPrivateWindow
     }
 
     #endregion
@@ -161,7 +164,7 @@ public sealed class ShortcutCommand {
             new(DevicePlatform.Mobile, Character("e", Command), YieldsToOverrides: false),
             new(DevicePlatform.Windows, Character("e", Command | Shift), YieldsToOverrides: false)
         ],
-        availableWhen: facts => facts.ShownTab is { IsStartPage: false } shown && shown.Placement == TabPlacement.Current);
+        availableWhen: facts => facts.ShownTab is { IsStartPage: false } shown && !shown.Placement.IsDurable);
     // Windows' browsers move between tabs with Ctrl+PgUp and Ctrl+PgDn.
     public static readonly ShortcutCommand PreviousTab = new(Kinds.PreviousTab, name: "previousTab", ShortcutSection.Tabs,
         title: "Previous Tab", symbol: "chevron.up",
@@ -275,7 +278,7 @@ public sealed class ShortcutCommand {
         ShortcutSection.Tabs, title: "Split With Next Tab", symbol: "rectangle.split.2x1",
         searchTerms: "split view cards side by side columns", availableWhen: facts => facts.HasSplitCandidate);
     // ⌃⌘←/→ is the one arrow pair left free: ⌥⌘←/→ switch Spaces and ⌥⌘↑/↓ tabs.
-    // Splitting a single card stays menu-only because Arc's ⌘⇧+ collides with
+    // Splitting a single card stays menu-only because ⌘⇧+ collides with
     // zoom and ⌘W already closes the focused card. On Windows the same keys
     // move between virtual desktops, so the cards there wait for keys a
     // person chooses.
@@ -383,6 +386,20 @@ public sealed class ShortcutCommand {
         ShortcutSection.View, title: "Collapse All Folders", symbol: "rectangle.compress.vertical",
         searchTerms: "close fold folders sidebar tidy", availableWhen: facts => facts.HasOpenFolder);
 
+    // Copies the page's title as it reads in the tab, without its address.
+    public static readonly ShortcutCommand CopyPageTitle = new(Kinds.CopyPageTitle, name: "copyPageTitle", ShortcutSection.Page,
+        title: "Copy Page Title", symbol: "textformat", searchTerms: "copy title name heading clipboard", availableWhen: ShowingWebPage);
+    // Shows the page's address as a code another device's camera reads, in
+    // Site Controls.
+    public static readonly ShortcutCommand ShowPageQRCode = new(Kinds.ShowPageQRCode, name: "showPageQRCode", ShortcutSection.Page,
+        title: "Show QR Code", symbol: "qrcode", searchTerms: "qr code scan camera phone send link address",
+        availableWhen: ShowingWebPage);
+    // Opens the page's address in private browsing, which keeps nothing of
+    // the visit. A private window has nowhere more private to send it.
+    public static readonly ShortcutCommand OpenPageInPrivateWindow = new(Kinds.OpenPageInPrivateWindow,
+        name: "openPageInPrivateWindow", ShortcutSection.Page, title: "Open Page in Private Window", symbol: "eyeglasses",
+        searchTerms: "incognito private browsing open again", availableWhen: facts => ShowingWebPage(facts) && !facts.IsPrivate);
+
     public static IReadOnlyList<ShortcutCommand> All { get; } = [
         NewWindow, NewBlankWindow, NewTab, NewQuickWindow, NewPrivateWindow, CloseTabOrWindow, CloseWindow, OpenLocation, Back,
         Forward, ReloadPage, StopLoading, ReloadFromOrigin, ToggleSelectedTabPinned, DuplicateTab, ReopenClosedTab,
@@ -394,7 +411,7 @@ public sealed class ShortcutCommand {
         SplitWithNextTab, FocusNextSplitCard, FocusPreviousSplitCard, RemoveTabFromSplit, SeparateSplitTabs,
         MoveSplitCardLeft, MoveSplitCardRight, ToggleDeveloperToolbar, ToggleTranslationToolbar, OpenFile, FindNext,
         FindPrevious, CapturePage, MostRecentTabBackward, ClearSiteCookies, ClearSiteCache, ToggleSelectedTabSaved,
-        OpenNextExtension, ClearAllTabs, CollapseAllFolders
+        OpenNextExtension, ClearAllTabs, CollapseAllFolders, CopyPageTitle, ShowPageQRCode, OpenPageInPrivateWindow
     ];
 
     public Kinds Kind { get; }

@@ -6,17 +6,21 @@ struct BrowserQuickWindowReleasedPageView: View {
 
     var body: some View {
         ContentUnavailableView {
-            Label("Quick Window Released", systemImage: "memorychip")
+            Label {
+                Text("Quick Window Released").font(CrestTypography.displayPage)
+            } icon: {
+                Image(systemName: "memorychip")
+            }
         } description: {
             Text("Crest released this temporary page to reduce memory use.")
         } actions: {
             Button("Reload Page", action: restore)
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.crestPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
             Rectangle()
-                .fill(.background.opacity(reduceTransparency ? 1 : 0.9))
+                .fill(CrestBrandTheme.canvas.opacity(reduceTransparency ? 1 : 0.9))
         }
     }
 }

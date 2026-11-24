@@ -21,7 +21,7 @@ internal sealed record LegacyWindowRecord(Guid Id, Guid SelectedSpaceId, IReadOn
     private const string SidebarWidthKey = "sidebarWidth";
     private const string SidebarPresentedKey = "sidebarIsPresented";
     private const string SharesKey = "splitColumnFractionsByGroup";
-    private static readonly JsonDocumentOptions DocumentOptions = new() { MaxDepth = 64 };
+    private static readonly JsonDocumentOptions DocumentOptions = JsonDepth.Session.Options;
 
     #endregion
 

@@ -106,7 +106,7 @@ struct BrowserCrestStudioChoice<Artwork: View>: View {
 
     var body: some View {
         CrestSelectableCard(isSelected: selected, accessibilityLabel: Text(title), density: .compact, action: select) {
-            VStack(spacing: 4) {
+            VStack(spacing: CrestSpacing.extraSmall) {
                 artwork.frame(width: 64, height: 58)
                 // Every tile keeps room for two lines, so a long name wraps
                 // where the tile is narrow and the tiles in a row stay even.

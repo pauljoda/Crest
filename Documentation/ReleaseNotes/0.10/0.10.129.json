@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "extension-toolbar-crest-styles",
+      "category": "improved",
+      "message": "Extension badges are Crest's red with slightly larger text, and pinned extension buttons use the same hover highlight as Crest's other toolbar buttons.",
+      "platforms": ["mac"]
+    }
+  ]
+}

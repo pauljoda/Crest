@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /// Steps a page back or forward when a finger swipes in from the page's own
-/// edge, as Safari does, through the core's history. WebKit's own swipe stays
+/// edge, through the core's history. WebKit's own swipe stays
 /// off because it would walk WebKit's list instead.
 ///
 /// The page follows the finger a little and the gap it opens shows which way

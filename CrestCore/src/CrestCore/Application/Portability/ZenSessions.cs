@@ -114,7 +114,6 @@ internal static class ZenSessions {
         ["water"] = "drop.fill",
         ["weight"] = "dumbbell.fill"
     };
-    private const string UntitledFolder = "Untitled Folder";
     private const double DefaultOpacity = 0.65;
     /// The group of the workspaces that share the profile's session.
     private const string SharedSession = "profile";
@@ -165,7 +164,7 @@ internal static class ZenSessions {
             }
             var spaceGroups = all.Where(group => !group.IsSplit && group.Workspace == workspace).ToArray();
             HashSet<string> kept = [.. spaceGroups.Select(group => group.Id)];
-            var spaceFolders = spaceGroups.Select(group => new SessionFolder(group.Id, group.Name ?? UntitledFolder,
+            var spaceFolders = spaceGroups.Select(group => new SessionFolder(group.Id, group.Name ?? FolderState.UntitledTitle,
                 Holder(group.ParentId, groups, kept))).ToArray();
             List<SessionTab> spaceTabs = [];
             foreach (var (tab, owner, essential) in owned)

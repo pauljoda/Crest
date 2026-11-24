@@ -1,0 +1,14 @@
+{
+  "release": {
+    "fixed": [
+      "On pinned tabs, the sound and sharing badge sits in the tile’s bottom corner instead of over the site icon, so the icon is easy to click."
+    ]
+  },
+  "entries": [
+    {
+      "id": "pinned-tab-status-badge-corner",
+      "category": "fixed",
+      "message": "On pinned tabs, the sound and sharing badge sits in the tile’s bottom corner instead of over the site icon, so the icon is easy to click."
+    }
+  ]
+}

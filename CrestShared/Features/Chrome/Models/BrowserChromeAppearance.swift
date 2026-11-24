@@ -64,6 +64,7 @@ struct BrowserChromeAppearance: Equatable {
     /// The window's corner radius, read from the container corner insets of a
     /// view that reaches the bottom of the window. The bottom corners stand for
     /// the window: the top leading one also makes room for the window controls.
+    @available(macOS 26, *)
     static func windowCornerRadius(from insets: RectangleCornerInsets) -> CGFloat? {
         let radius = max(
             min(insets.bottomLeading.width, insets.bottomLeading.height),
@@ -121,13 +122,7 @@ enum BrowserChromeAppearancePreference {
     static let defaults = defaults(for: .current)
 
     static func defaults(for environment: BrowserLaunchEnvironment) -> UserDefaults {
-        let defaults: UserDefaults
-        if environment.requiresIsolation {
-            let id = environment.persistentIsolationID ?? "ephemeral-\(UUID().uuidString)"
-            defaults = UserDefaults(suiteName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(isolationID: id))!
-        } else {
-            defaults = .standard
-        }
+        let defaults = environment.deviceDefaults
         migrateLegacyMobilePreference(in: defaults)
         migrateBorderWidth(in: defaults)
         return defaults

@@ -41,10 +41,10 @@ struct PinnedTabGridContent: View {
                 )
             }
             RoundedRectangle(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(), style: .continuous)
-                .fill(.primary.opacity(0.035))
+                .fill(.primary.opacity(CrestOpacity.dropSlot))
                 .overlay {
                     RoundedRectangle(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(), style: .continuous)
-                        .strokeBorder(.primary.opacity(0.12), lineWidth: 0.5)
+                        .strokeBorder(.primary.opacity(CrestOpacity.border), lineWidth: 0.5)
                 }
                 .opacity(projection.insertionIndex == nil ? 0 : 1)
                 .allowsHitTesting(false)

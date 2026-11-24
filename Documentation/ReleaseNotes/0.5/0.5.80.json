@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-07-sidebar-menu-dismissal-hover",
+      "category": "fixed",
+      "message": "Keep the auto-expanded sidebar open after dismissing a menu while the pointer remains inside it"
+    }
+  ]
+}

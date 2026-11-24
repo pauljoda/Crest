@@ -62,3 +62,9 @@ struct BrowserFindMatchState: Hashable, Sendable {
         hasher.combine(name)
     }
 }
+
+/// Which way find steps through the page's matches.
+enum BrowserFindDirection: Equatable, Sendable {
+    case forward
+    case backward
+}

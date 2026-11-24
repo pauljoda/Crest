@@ -83,7 +83,7 @@ enum BrowserFaviconResourceLoader {
     }
 
     private static func publicResourceURL(_ url: URL) -> URL? {
-        guard ["http", "https"].contains(url.scheme?.lowercased()),
+        guard url.webScheme != nil,
             var components = URLComponents(url: url, resolvingAgainstBaseURL: true),
             components.host != nil
         else { return nil }

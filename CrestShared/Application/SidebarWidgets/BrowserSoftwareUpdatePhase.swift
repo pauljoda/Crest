@@ -6,13 +6,6 @@ import Foundation
 struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
     // MARK: - Types
 
-    /// The color a phase's symbol takes, which the view that draws it names.
-    enum Tones: Sendable {
-        case accent
-        case success
-        case warning
-    }
-
     /// A button in the update window, with the card action it performs.
     struct WindowButton: Sendable {
         let title: LocalizedStringResource
@@ -74,7 +67,7 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
         })
     static let checking = BrowserSoftwareUpdatePhase(
         name: "checking", title: "Checking for Updates", statusLabel: "Checking",
-        showsMessage: false, isWorking: true, windowShowsActivity: true, isHideable: true,
+        showsMessage: false, isWorking: true, isHideable: true,
         cardActions: cancellableCardActions, windowButtons: cancellableWindowButtons)
     static let available = BrowserSoftwareUpdatePhase(
         name: "available", title: "Update Available", statusLabel: "Ready to download",
@@ -109,7 +102,7 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
         isHideable: true, cardActions: cancellableCardActions, windowButtons: cancellableWindowButtons)
     static let extracting = BrowserSoftwareUpdatePhase(
         name: "extracting", title: "Preparing Update", statusLabel: "Preparing",
-        showsMessage: false, isTransferring: true, isWorking: true, windowShowsActivity: true, isHideable: true)
+        showsMessage: false, isTransferring: true, isWorking: true, isHideable: true)
     static let readyToInstall = BrowserSoftwareUpdatePhase(
         name: "readyToInstall", title: "Ready to Install", statusLabel: "Ready to install",
         symbol: installSymbol, isHideable: true,
@@ -127,7 +120,7 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
         })
     static let installing = BrowserSoftwareUpdatePhase(
         name: "installing", title: "Installing Update", statusLabel: "Installing",
-        symbol: installSymbol, isWorking: true, windowShowsActivity: true, isHideable: true,
+        symbol: installSymbol, isWorking: true, isHideable: true,
         cardActions: { snapshot in
             snapshot.allowsInstallationRetry ? [.retryUpdateInstallation] : []
         },
@@ -138,14 +131,14 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
         })
     static let upToDate = BrowserSoftwareUpdatePhase(
         name: "upToDate", title: "Crest Is Up to Date", statusLabel: "Up to date",
-        symbol: settledSymbol, tone: .success, cardActions: settledCardActions, windowButtons: settledWindowButtons)
+        symbol: settledSymbol, cardActions: settledCardActions, windowButtons: settledWindowButtons)
     static let failed = BrowserSoftwareUpdatePhase(
         name: "failed", title: "Update Check Failed", statusLabel: "Update error",
-        symbol: "exclamationmark.triangle.fill", tone: .warning, cardActions: settledCardActions,
+        symbol: "exclamationmark.triangle.fill", cardActions: settledCardActions,
         windowButtons: settledWindowButtons)
     static let installed = BrowserSoftwareUpdatePhase(
         name: "installed", title: "Update Installed", statusLabel: "Installed",
-        symbol: settledSymbol, tone: .success, cardActions: settledCardActions, windowButtons: settledWindowButtons)
+        symbol: settledSymbol, cardActions: settledCardActions, windowButtons: settledWindowButtons)
     /// Updates can't run in this build at all.
     static let unavailable = BrowserSoftwareUpdatePhase(
         name: "unavailable", title: "Software Update Unavailable", statusLabel: "Unavailable")
@@ -172,7 +165,6 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
     let informationOnlyStatusLabel: LocalizedStringResource?
 
     let symbol: String
-    let tone: Tones
 
     /// Whether the card shows the update's message under the phase. A phase
     /// whose progress says enough leaves it out.
@@ -184,10 +176,6 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
 
     /// Whether the card shows that work is under way.
     let isWorking: Bool
-
-    /// Whether the update window shows work under way while it has no
-    /// measured progress.
-    let windowShowsActivity: Bool
 
     /// Whether the person can hide the sidebar card while the update is in
     /// this phase: one that waits on nothing they must answer and has no
@@ -208,9 +196,8 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
     private init(
         name: String, title: LocalizedStringResource, statusLabel: LocalizedStringResource,
         informationOnlyStatusLabel: LocalizedStringResource? = nil, isTitledByUpdate: Bool = false,
-        symbol: String = BrowserSoftwareUpdatePhase.waitingSymbol, tone: Tones = .accent, showsMessage: Bool = true,
-        isTransferring: Bool = false, isWorking: Bool = false, windowShowsActivity: Bool = false,
-        isHideable: Bool = false,
+        symbol: String = BrowserSoftwareUpdatePhase.waitingSymbol, showsMessage: Bool = true,
+        isTransferring: Bool = false, isWorking: Bool = false, isHideable: Bool = false,
         cardActions: @escaping CardOffer = { _ in [] },
         windowButtons: @escaping WindowOffer = { _ in nil }
     ) {
@@ -220,11 +207,9 @@ struct BrowserSoftwareUpdatePhase: Hashable, Identifiable, Sendable {
         self.statusLabel = statusLabel
         self.informationOnlyStatusLabel = informationOnlyStatusLabel
         self.symbol = symbol
-        self.tone = tone
         self.showsMessage = showsMessage
         self.isTransferring = isTransferring
         self.isWorking = isWorking
-        self.windowShowsActivity = windowShowsActivity
         self.isHideable = isHideable
         offeredCardActions = cardActions
         offeredWindowButtons = windowButtons

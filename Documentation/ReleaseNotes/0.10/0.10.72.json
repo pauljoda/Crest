@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-long-folder-scroll",
+      "category": "fixed",
+      "message": "Scrolling down a sidebar with long open folders no longer jumps back up, and folders inside them no longer shrink to their title and grow again as they scroll into view."
+    }
+  ]
+}

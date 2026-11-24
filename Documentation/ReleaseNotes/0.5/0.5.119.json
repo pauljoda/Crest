@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "mobile-native-upload-sources",
+      "category": "fixed",
+      "message": "Choose Photos, camera, or Files when uploading to webpages on iPhone and iPad",
+      "platforms": ["ios"]
+    }
+  ]
+}

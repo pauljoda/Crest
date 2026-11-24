@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-04-extension-side-panel-switching",
+      "category": "improved",
+      "message": "Show each extension's icon in the side panel switcher, and let the panel you open last take over the card"
+    }
+  ]
+}

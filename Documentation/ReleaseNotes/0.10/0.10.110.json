@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "twins-folded",
+      "category": "improved",
+      "message": "Download badges show how far the transferring downloads are together, as the Dock does."
+    },
+    {
+      "id": "ios-reload-peek",
+      "category": "improved",
+      "message": "A Peek offers Reload Peek on iPhone and iPad, as on the Mac.",
+      "platforms": ["ios"]
+    }
+  ]
+}

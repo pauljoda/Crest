@@ -1,22 +1,16 @@
 import SwiftUI
 
 struct BrowserAboutSettingsPane: View {
-    static let startsWhatsNewExpanded = false
+    /// The app icon's corner, as the icon's own rounding draws it at the
+    /// size the pane shows it.
+    private static let appIconCornerRadius: CGFloat = 13
 
-    let buildInformation: BrowserAboutBuildInformation
-    let releaseNotes: [BrowserAboutReleaseNote]
+    var buildInformation = BrowserAboutBuildInformation.current
 
-    @State private var showsWhatsNew: Bool
-
-    init(
-        buildInformation: BrowserAboutBuildInformation = .current,
-        releaseNotes: [BrowserAboutReleaseNote] =
-            BrowserAboutReleaseNotes.bundled.currentHighlights()
-    ) {
-        self.buildInformation = buildInformation
-        self.releaseNotes = releaseNotes
-        _showsWhatsNew = State(initialValue: Self.startsWhatsNewExpanded)
-    }
+    @Environment(\.browserOpenWebsite) private var openWebsite
+    /// This build's release page, found when the pane appears, so What's New
+    /// opens it in the Space and Settings it was chosen from.
+    @State private var releasePage: BrowserReleasePage?
 
     var body: some View {
         BrowserSettingsPane(.about) {
@@ -28,27 +22,19 @@ struct BrowserAboutSettingsPane: View {
                 BrowserSoftwareUpdateSettingsSection()
             #endif
 
-            if !releaseNotes.isEmpty {
+            if let openWebsite, let releasePage {
                 Section {
-                    DisclosureGroup(isExpanded: $showsWhatsNew) {
-                        VStack(
-                            alignment: .leading,
-                            spacing: CrestSpacing.medium
-                        ) {
-                            ForEach(releaseNotes) { releaseNote in
-                                BrowserAboutReleaseNoteRow(
-                                    releaseNote: releaseNote
-                                )
-                            }
-                        }
-                        .padding(.vertical, CrestSpacing.small)
+                    // This build's release page on the site lists what changed in it.
+                    Button {
+                        openWebsite(releasePage.url)
                     } label: {
-                        Text("What's New in Crest \(buildInformation.version)")
-                            .font(.body.weight(.medium))
+                        BrowserAboutLinkLabel(
+                            title: "What's New in Crest \(buildInformation.version)",
+                            icon: Image(systemName: "sparkles")
+                        )
                     }
-                    .disclosureGroupStyle(
-                        BrowserAboutWhatsNewDisclosureStyle()
-                    )
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("about-whats-new-link")
                 }
             }
 
@@ -77,16 +63,17 @@ struct BrowserAboutSettingsPane: View {
                 CrestFormFootnote("Reddit is public. Leave out private details.")
             }
         }
+        .task { releasePage = await BrowserReleasePage.current() }
     }
 
     private var appIdentity: some View {
         HStack(spacing: 14) {
             BrowserPlatformCurrentAppIcon()
                 .frame(width: 56, height: 56)
-                .clipShape(.rect(cornerRadius: 13))
+                .clipShape(.rect(cornerRadius: Self.appIconCornerRadius))
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: CrestSpacing.extraExtraSmall) {
                 Text(ProductIdentity.name)
                     .font(.title3.weight(.semibold))
                     .accessibilityAddTraits(.isHeader)
@@ -104,49 +91,10 @@ struct BrowserAboutSettingsPane: View {
                     .help(buildInformation.bundleIdentifier)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, CrestSpacing.extraExtraSmall)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-}
-
-private struct BrowserAboutWhatsNewDisclosureStyle: DisclosureGroupStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Button {
-                configuration.isExpanded.toggle()
-            } label: {
-                HStack(spacing: CrestSpacing.small) {
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .rotationEffect(
-                            .degrees(configuration.isExpanded ? 90 : 0)
-                        )
-                        .accessibilityHidden(true)
-
-                    configuration.label
-
-                    Spacer(minLength: CrestSpacing.small)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("about-whats-new-disclosure")
-            .accessibilityValue(
-                configuration.isExpanded ? "Expanded" : "Collapsed"
-            )
-            .accessibilityHint(
-                configuration.isExpanded
-                    ? "Hides recent changes"
-                    : "Shows recent changes"
-            )
-
-            if configuration.isExpanded {
-                configuration.content
-            }
-        }
-    }
 }
 
 private struct BrowserAboutLink: View {
@@ -157,70 +105,37 @@ private struct BrowserAboutLink: View {
 
     var body: some View {
         Link(destination: destination) {
-            HStack(spacing: CrestSpacing.medium) {
-                Image(imageName)
-                    .renderingMode(.original)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 18, height: 18)
-                    .accessibilityHidden(true)
-                Text(title)
-                    .foregroundStyle(.primary)
-                Spacer(minLength: CrestSpacing.small)
-                Image(systemName: "arrow.up.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(.rect)
+            BrowserAboutLinkLabel(
+                title: title,
+                icon: Image(imageName).renderingMode(.original).resizable()
+            )
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(identifier)
     }
 }
 
-private struct BrowserAboutReleaseNoteRow: View {
-    let releaseNote: BrowserAboutReleaseNote
+/// A row that leads to a page on the web: its icon, its title, and an arrow
+/// that says it leaves Settings.
+private struct BrowserAboutLinkLabel: View {
+    let title: LocalizedStringResource
+    let icon: Image
 
     var body: some View {
-        let mark = BrowserAboutReleaseNoteMark.marking(releaseNote.category)
-        HStack(alignment: .firstTextBaseline, spacing: CrestSpacing.small) {
-            Image(systemName: mark.symbol)
-                .foregroundStyle(mark.color)
-                .frame(width: 18)
+        HStack(spacing: CrestSpacing.medium) {
+            icon
+                .scaledToFit()
+                .frame(width: 18, height: 18)
                 .accessibilityHidden(true)
-            Text(releaseNote.message)
-                .fixedSize(horizontal: false, vertical: true)
+            Text(title)
+                .foregroundStyle(.primary)
+            Spacer(minLength: CrestSpacing.small)
+            Image(systemName: "arrow.up.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
         }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// The glyph that marks each kind of release note in What's New.
-private struct BrowserAboutReleaseNoteMark: Sendable {
-    // MARK: - Static Variables
-
-    static let new = BrowserAboutReleaseNoteMark(category: .new, symbol: "sparkles", color: CrestBrandPalette.sky)
-    static let improved = BrowserAboutReleaseNoteMark(
-        category: .improved, symbol: "arrow.up.circle.fill", color: CrestBrandPalette.butter)
-    static let fixed = BrowserAboutReleaseNoteMark(
-        category: .fixed, symbol: "checkmark.circle.fill", color: CrestBrandPalette.sage)
-    static let `internal` = BrowserAboutReleaseNoteMark(
-        category: .internal, symbol: "wrench.and.screwdriver.fill", color: .secondary)
-
-    /// A mark for every category.
-    static let all: [BrowserAboutReleaseNoteMark] = [new, improved, fixed, `internal`]
-
-    // MARK: - Variables
-
-    let category: BrowserAboutReleaseNoteCategory
-    let symbol: String
-    let color: Color
-
-    // MARK: - Actions - Lookup
-
-    static func marking(_ category: BrowserAboutReleaseNoteCategory) -> BrowserAboutReleaseNoteMark {
-        all.first { $0.category == category } ?? .internal
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(.rect)
     }
 }

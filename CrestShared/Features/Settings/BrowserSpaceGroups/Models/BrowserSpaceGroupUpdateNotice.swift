@@ -11,12 +11,7 @@ enum BrowserSpaceGroupUpdateNotice {
 
     private static let shownKey = "crest.subSpaces.updateNoticeShown"
 
-    private static let defaults: UserDefaults = {
-        let environment = BrowserLaunchEnvironment.current
-        guard environment.requiresIsolation else { return .standard }
-        let id = environment.persistentIsolationID ?? "ephemeral-\(UUID().uuidString)"
-        return UserDefaults(suiteName: BrowserLaunchEnvironment.isolatedDefaultsSuiteName(isolationID: id))!
-    }()
+    private static let defaults = BrowserLaunchEnvironment.current.deviceDefaults
 
     // MARK: - Actions - Showing
 

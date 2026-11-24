@@ -32,9 +32,10 @@ public sealed record LanguageMatches(IReadOnlyList<bool> Matches);
 public sealed record LaunchDecision(bool RequiresIsolation, bool UsesEphemeralProfileStorage, bool PresentsInstalledApplicationUI,
     StartupBehavior Startup);
 
-/// The rule that applies to a source language, or null, and the language its
-/// pages are translated into, or null when they are not.
-public sealed record TranslationDecision(TranslationRule? Rule, string? Target);
+/// The rule that applies to a source language, or null, the language its
+/// pages are translated into, or null when they are not, and whether its pages
+/// are offered translation.
+public sealed record TranslationDecision(TranslationRule? Rule, string? Target, bool Offers);
 
 #endregion
 

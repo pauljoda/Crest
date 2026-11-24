@@ -120,7 +120,7 @@ internal sealed record SearchTemplate(string Pattern) {
         if (uri.Host.Length == 0) throw Flawed(SearchEngineFlaw.InvalidTemplate);
         if (uri.UserInfo.Length != 0) throw Flawed(SearchEngineFlaw.CredentialsInTemplate);
         if (uri.Port != scheme.DefaultPort) throw Flawed(SearchEngineFlaw.NonstandardPort);
-        if (!IsPublicHost(uri.Host)) throw Flawed(SearchEngineFlaw.UnsafeHost);
+        if (!IsPublicHost(IdnHost(uri))) throw Flawed(SearchEngineFlaw.UnsafeHost);
         if (!allowsFragmentPlaceholder && uri.Fragment.Contains(ProbeMarker, StringComparison.Ordinal))
             throw Flawed(SearchEngineFlaw.PlaceholderInFragment);
         // A page that reads its query from the fragment reads the rest of it
@@ -137,14 +137,31 @@ internal sealed record SearchTemplate(string Pattern) {
     private static string Probe(string value) => value.Replace(PercentPlaceholder, ProbeMarker, StringComparison.Ordinal)
         .Replace(OpenSearchPlaceholder, ProbeMarker, StringComparison.Ordinal);
 
-    /// A named public host: never local, numeric, or the query itself.
-    private static bool IsPublicHost(string host) =>
-        host.Contains('.') && !host.Contains(':')
-        && !host.EndsWith(".local", StringComparison.OrdinalIgnoreCase)
-        && !host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
-        && !host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase)
-        && !host.Contains(ProbeMarker, StringComparison.OrdinalIgnoreCase)
-        && !IPAddress.TryParse(host.Trim('[', ']'), out _);
+    /// `uri`'s host in its IDNA form. A host with a character that maps to a
+    /// delimiter, such as a full-width slash, has none, so its template is
+    /// invalid.
+    private static string IdnHost(Uri uri) {
+        try {
+            return uri.IdnHost;
+        } catch (UriFormatException) {
+            throw Flawed(SearchEngineFlaw.InvalidTemplate);
+        }
+    }
+
+    /// A named public host: never local, numeric, or the query itself. It
+    /// reads the host's IDNA form, where every label separator is a plain dot,
+    /// and a trailing dot names the same host, so `localhost.` is local too. The
+    /// local names stay these few rather than `AddressResolution`'s, because a
+    /// saved engine that stops passing is dropped when its settings load.
+    private static bool IsPublicHost(string host) {
+        string name = host.TrimEnd('.');
+        return host.Contains('.') && !host.Contains(':')
+            && !name.EndsWith(".local", StringComparison.OrdinalIgnoreCase)
+            && !name.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+            && !name.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase)
+            && !host.Contains(ProbeMarker, StringComparison.OrdinalIgnoreCase)
+            && !IPAddress.TryParse(name.Trim('[', ']'), out _);
+    }
 
     private static int Occurrences(string value, string placeholder) {
         int count = 0;

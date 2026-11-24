@@ -21,6 +21,7 @@ struct BrowserSetupSourcePage: View {
             } header: {
                 BrowserSetupPageHeading(verbatim: flow.chosenSource?.title ?? flow.review?.title ?? "")
             }
+            .browserSetupRaisedRows()
             Section {
                 if flow.passwordCount > 0 {
                     Toggle(isOn: Binding(get: { flow.includesPasswords }, set: flow.setPasswordsIncluded)) {
@@ -34,7 +35,12 @@ struct BrowserSetupSourcePage: View {
                     }
                     .accessibilityIdentifier("setup-import-extensions")
                 }
+            } footer: {
+                if flow.includesPasswords, flow.insecurePasswordCount > 0 {
+                    Text("Passwords for sites without HTTPS come in, but Crest won’t fill them in.")
+                }
             }
+            .browserSetupRaisedRows()
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
@@ -65,7 +71,7 @@ struct BrowserSetupSourcePage: View {
             }
             .contentShape(.rect)
         }
-        .buttonStyle(.browserSetupRow)
+        .buttonStyle(.crestFormRow)
         .accessibilityAddTraits(shownSpaceID == shownID ? .isSelected : [])
     }
 

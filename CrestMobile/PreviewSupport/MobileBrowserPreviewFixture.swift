@@ -52,7 +52,7 @@ struct MobileBrowserPreviewFixture {
             tabs: []
         )
         let browser = BrowserStore(
-            seed: SessionState.Seed(spaces: [space, alternateSpace]), browsingMode: .privateBrowsing)
+            seed: SessionState.Seed(spaces: [space, alternateSpace]), workspaceKind: .private)
         guard let workSpace = browser.spaceModel(space.id), let personalSpace = browser.spaceModel(alternateSpace.id)
         else { preconditionFailure("The preview store must open both preview Spaces.") }
         browser.core.engines.register(
@@ -62,7 +62,7 @@ struct MobileBrowserPreviewFixture {
             isDefault: true)
         let pages = MobileBrowserPageStore(
             browser: browser,
-            browsingMode: .privateBrowsing,
+            workspaceKind: .private,
             usesEphemeralWebsiteDataStores: true,
             permissionCenter: BrowserSitePermissionCenter()
         )

@@ -348,6 +348,8 @@ const appliers: ChangeAppliers = {
   SiteContentBlockingChanged: (state, change) => {
     state.blockingSites = change.sites;
   },
+  // The Windows interface doesn't offer Site Controls yet.
+  SiteControlTopActionsChanged: unread,
   SpaceLockChanged: (state, change) => void state.spaceAccess.set(change.spaceId, change),
   StorageFailed: unread,
   SyncJournalChanged: unread,
@@ -363,4 +365,10 @@ const appliers: ChangeAppliers = {
   WebsiteDataRead: (state, change) => void state.websiteDataReads.set(change.requestId, change),
   WindowBroughtForward: unread,
   WindowRecordsAdopted: unread,
+  // The device's page and download choices, which the window doesn't offer
+  // yet: pages zoom from 100% and downloads go where Chromium puts them.
+  DownloadPreferencesChanged: unread,
+  PagePreferencesChanged: unread,
+  // The Mac opens What's New on crestbrowser.com; Windows has no release page to open yet.
+  ReleaseNotesDue: unread,
 };

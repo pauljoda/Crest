@@ -14,10 +14,11 @@ behavior, and user confusion over which build supports extensions.
 The Homebrew cask fetches un-modified binaries from GitHub Releases, 
 thus it is still updated through Sparkle 2. 
 
-Crest 0.10 opened the release line with `MARKETING_VERSION = 0.10.0`, and its
-first stable tag is `v0.10.8`; later releases on the line, such as security
-updates, follow as `0.10.x` with tags such as `v0.10.9`. User-facing release copy calls it Crest 0.10. Mac requires Apple
-silicon and macOS 26.1 or later; iPhone and iPad remain WebKit apps with 26.1
+Crest 0.11 opened the release line with `MARKETING_VERSION = 0.11.0`, and its
+first stable tag is `v0.11.0`; later releases on the line, such as security
+updates, follow as `0.11.x` with tags such as `v0.11.1`. User-facing release
+copy calls it Crest 0.11. Mac requires macOS 15 or later on Apple silicon or
+Intel, as one universal app; iPhone and iPad remain WebKit apps with 26.1
 deployment targets. The packaged Mac app and Sparkle feed take the higher
 minimum macOS version required by the engine and the native UI framework.
 
@@ -38,9 +39,9 @@ release before signing.
 | Development | PR merged into `main`, or manual workflow dispatch | New `development-<version>-<date>-<build>-r<run>.<attempt>` prerelease | `development` |
 | Experimental | Manual dispatch of **Publish experimental macOS release** for a branch | New `experimental-<version>-<branch>-<date>-<build>-r<run>.<attempt>` prerelease | `experimental` |
 
-Browse [Stable](https://github.com/pauljoda/Crest/releases?q=prerelease%3Afalse),
-[Nightly](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22), or
-[Development](https://github.com/pauljoda/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22).
+Browse [Stable](https://github.com/crest-browser/Crest/releases?q=prerelease%3Afalse),
+[Nightly](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22), or
+[Development](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22).
 The README links to every channel, and each release's notes link to its own
 channel. GitHub's
 [release search](https://docs.github.com/en/repositories/releasing-projects-on-github/searching-a-repositorys-releases)
@@ -65,14 +66,20 @@ subsequent published update newer than the prior build. Preflight also reads
 every signed appcast and raises the build number above every published build,
 so retries and delayed runs cannot publish an update that Sparkle considers older.
 
-The appcast is hosted at:
+The release workflows write the appcasts to the `updates` branch, and the
+**Publish update feeds** workflow publishes that branch to this repository's
+Pages site after every release run. Crest reads the appcast at:
 
-`https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast.xml`
+`https://updates.crestbrowser.com/appcast.xml`
 
 Development builds use a separate signed feed so frequent commits cannot prune
 stable or nightly entries:
 
-`https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-development.xml`
+`https://updates.crestbrowser.com/appcast-development.xml`
+
+Builds older than 0.10.141 read the same files straight from the branch, at
+`https://raw.githubusercontent.com/crest-browser/Crest/updates/`, so the
+`updates` branch keeps every feed current for them.
 
 Experimental builds use `appcast-experimental.xml`. Each feed also has a
 `-webkit` twin, such as `appcast-webkit.xml`, which WebKit-only builds of Crest
@@ -106,16 +113,44 @@ notarizing, creating a release, or advancing an appcast. If no nightly appcast
 exists, preflight builds even if a GitHub Release exists, because that release
 may belong to an interrupted publication.
 
-Release notes come from the explicit `Documentation/ReleaseNotes.json` catalog.
-Every product or architecture commit adds a stable entry ID, category, and
-purpose-written message. The generator reads the selected channel's cursor,
-groups the later public entries into New, Improved, and Fixed highlights, omits
-`internal` entries, and limits long ranges to the 12 most recent highlights.
-The catalog's immutable publication baselines name each channel's starting
-entry until the workflow writes the live cursor file. Because entry identity and cursor position are independent
-of commit hashes, rebases and other history rewrites do not repeat published
-copy or block a nightly. The same concise notes appear on GitHub and as
-structured Markdown in Sparkle's update interface.
+Release notes come from `Documentation/ReleaseNotes`, one file per version.
+Every product or architecture commit adds entries, each with a stable ID,
+category, and purpose-written message, to the file for its version. A Stable
+release publishes its version's curated write-up. Other releases read the
+selected channel's cursor, group the later public entries that reach the Mac
+into New, Improved, and Fixed highlights, omit `internal` entries, and limit
+long ranges to the 12 most recent highlights. Because entry identity and cursor
+position are independent of commit hashes, rebases and other history rewrites
+do not repeat published copy or block a nightly. The same concise notes appear
+on GitHub and in the appcast, and each links to the release's page on the
+product site.
+
+The apps show no release notes of their own. What's New in Settings › About
+opens the running release's page, and the Mac's update card opens the page of
+the update it offers, each in a new tab. After an update, the first window
+opens the new release's page; the core keeps the release each device launched
+last and decides when a launch follows an update.
+
+The product site, built from
+[crest-browser/crestbrowser.com](https://github.com/crest-browser/crestbrowser.com),
+renders its release notes from the history `Scripts/export-release-history.py`
+exports from the same files and the release tags. Crest's **Refresh
+crestbrowser.com** workflow starts the site's deploy after every Mac
+publication, on an `ios-v` tag, when the Help Center or the release notes
+change, and once a day. The site has a page for every Stable, Nightly, and
+Development release at
+`https://crestbrowser.com/releases/mac/<channel>/<version>/`, and for iPhone and
+iPad, App Store releases from `ios-v<version>` tags and a TestFlight timeline of
+every version with iPhone and iPad changes, at
+`https://crestbrowser.com/releases/ios/<app-store|testflight>/<version>/`. Each
+page opens the channel's timeline at that release, with `release.json` beside
+it. An address for a version without its own page goes to the release that
+contains it, then to the channel.
+
+The site's credits page, `https://crestbrowser.com/credits/`, is built in the
+site repository from its `data/credits.json`, Crest's GitHub contributors and the
+Patreon campaign; that repository's README explains who it lists and how to
+change a listing.
 
 ## Publication order
 
@@ -124,9 +159,11 @@ contract tests locally for the exact commit, following the
 [repository guardrails](RepositoryGuardrails.md). The production workflow follows
 these steps:
 
-1. validate the exact source SHA through the reusable **Build Crest** workflow
-   and find the Chromium engine for its engine key, building it on the registered
-   Mac when it is missing and that builder is enabled. Signing waits for both;
+1. validate the exact source SHA through the checks of the reusable
+   **Build Crest** workflow (the signing job builds the Mac product itself, so
+   the workflow's app builds are skipped here) and find the Chromium engine for
+   its engine key, building it on the registered Mac when it is missing and
+   that builder is enabled. Signing waits for both;
 2. regenerate the project and check version metadata, product identity, and
    cache hygiene;
 3. import the Developer ID identity into a temporary keychain and install the
@@ -193,11 +230,13 @@ the old signing path retained long enough to update installed copies safely.
 
 Before publishing a stable tag:
 
-1. confirm `CHANGELOG.md`, `Documentation/ReleaseNotes.json`, and the marketing
-   version are ready;
+1. confirm the version's write-up in `Documentation/ReleaseNotes` and the
+   marketing version are ready;
 2. complete local app and release-script tests for the commit being published;
-3. confirm **Build Crest** passed on the intended `main` commit and the Pages
-   workflow is green. The stable release will validate its exact source again;
+3. confirm **Build Crest** passed on the intended `main` commit, the latest
+   **Refresh crestbrowser.com** run in Crest is green, and the latest
+   **Deploy crestbrowser.com** run in `crest-browser/crestbrowser.com` is green.
+   The stable release will validate its exact source again;
 4. confirm the commit's Chromium engine is published:
    `gh release view "$(python3 Scripts/control-plane/chromium_engine.py tag)"`;
 5. confirm all seven release secrets are available to the production job;
@@ -216,18 +255,21 @@ Before publishing a stable tag:
 For a new release line, explicitly set the intended version with
 `Scripts/set-version.sh --release X.Y.Z`. Routine fixes use
 `Scripts/set-version.sh --patch`. Keep `CURRENT_PROJECT_VERSION` unchanged;
-the distribution workflows own build numbers. Update the changelog, refresh
+the distribution workflows own build numbers. Write the version's `release`
+write-up in its notes file, refresh
 the public roadmap with `Scripts/render-roadmap.py --write`, and review the
-maintained [iPhone and iPad listing](../Marketing/AppStore/README.md) against
+maintained [iPhone and iPad listing](https://github.com/crest-browser/crestbrowser.com/blob/main/marketing/AppStore/README.md) against
 the release's mobile capabilities.
 
 Commit the version and release documentation together, push that commit to
 `main`, and wait for a **Build Crest** run on it to pass before creating and
 pushing an annotated `vX.Y.Z` tag at that same commit. A new release line uses
-`Scripts/check-version.sh` and the release-note catalog check;
+`Scripts/check-version.sh` and the release notes check;
 `--fix-commit` applies only to patch increases on the existing line.
 Pushing the stable tag starts macOS publication. App Store build selection,
-submission, and release are separate steps in App Store Connect.
+submission, and release are separate steps in App Store Connect. When an App
+Store version goes live, push an annotated `ios-vX.Y.Z` tag at the commit it was
+built from; the product site then lists it under App Store.
 
 Nightly, development, and experimental builds use the same signing,
 notarization, and verification gates as a stable build. Each prerelease retains

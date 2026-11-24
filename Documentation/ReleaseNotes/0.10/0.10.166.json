@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "counted-copy-plural-rules",
+      "category": "improved",
+      "message": "Counts such as selected tabs, passwords, import warnings, Sub-Spaces and downloads in progress follow each language's plural rules, and the password count and deletion message in Passwords settings can be translated."
+    }
+  ]
+}

@@ -14,11 +14,6 @@ final class BrowserCosmeticFilterSession {
     typealias Evaluate =
         @MainActor (_ body: String, _ arguments: [String: Any], _ frame: BrowserContentFrame) async throws -> Any?
 
-    // MARK: - Static Variables
-
-    /// The element kinds the bridge names, by its spelling.
-    private static let kinds: [String: PageResourceKind] = ["frame": .frame, "image": .image, "object": .object]
-
     // MARK: - Variables
 
     private let core: CrestCore
@@ -55,7 +50,7 @@ final class BrowserCosmeticFilterSession {
     /// Answers one message from the bridge in `frame`'s document.
     func receive(_ body: Any, from frame: BrowserContentFrame) {
         guard let message = body as? [String: Any], let documentURL = message["url"] as? String,
-            let site = siteURL(), ["http", "https"].contains(site.scheme?.lowercased() ?? "")
+            let site = siteURL(), site.webScheme != nil
         else { return }
         if frame.isMainFrame {
             mainFrame = frame
@@ -92,7 +87,7 @@ final class BrowserCosmeticFilterSession {
 
     /// An element the bridge named, or nil for one it named oddly.
     private static func resource(_ named: [String: Any]) -> PageResource? {
-        guard let kind = (named["kind"] as? String).flatMap({ kinds[$0] }), let url = named["url"] as? String else {
+        guard let kind = PageResourceKind.named(named["kind"] as? String), let url = named["url"] as? String else {
             return nil
         }
         return PageResource(kind: kind, url: url)

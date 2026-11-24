@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "paste-without-formatting-shortcut",
+      "category": "improved",
+      "message": "Shift-Command-V pastes without formatting on Mac, as it does in Chrome and Arc, alongside Paste and Match Style in the Edit menu."
+    }
+  ]
+}

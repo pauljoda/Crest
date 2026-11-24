@@ -215,7 +215,7 @@ internal sealed class SessionIdentities {
     }
 
     /// The Spaces whose deletion is under way.
-    private static HashSet<Guid> Deleting(SessionState value) => [.. value.SpaceDeletions.Select(deletion => deletion.SpaceId)];
+    private static HashSet<Guid> Deleting(SessionState value) => value.DeletingSpaceIds;
 
     /// The first rule the Space deletions break against the Spaces the session
     /// holds.

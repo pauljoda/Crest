@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "web-inspector-shortcut-toggles",
+      "category": "fixed",
+      "message": "Pressing Option-Command-I again closes the Web Inspector or Chromium DevTools instead of leaving it open.",
+      "platforms": ["mac"]
+    }
+  ]
+}

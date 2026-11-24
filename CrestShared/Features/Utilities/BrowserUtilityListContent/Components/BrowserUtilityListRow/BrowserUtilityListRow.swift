@@ -18,9 +18,7 @@ struct BrowserUtilityListRow: View {
                     BrowserUtilityListRowLabel(
                         title: archived.tab.shownTitle,
                         subtitle: archiveSubtitle(archived),
-                        subtitleStyle: AnyShapeStyle(
-                            archived.reason.tint.color
-                        )
+                        subtitleStyle: CrestStatusTone(archived.reason.tone).map { AnyShapeStyle($0.color) }
                     ) {
                         TabFaviconView(
                             subject: BrowserTabFaviconSubject(
@@ -67,7 +65,7 @@ struct BrowserUtilityListRow: View {
             }
         }
         .crestHoverSurface(
-            cornerRadius: CrestLayout.sidebarControlCornerRadius
+            cornerRadius: CrestRadius.compact
         )
     }
 
@@ -250,7 +248,7 @@ private struct BrowserDownloadRowLabel: View {
             }
             .lineLimit(1)
         case .stacked:
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: CrestSpacing.extraExtraSmall) {
                 primaryLine(presentation)
                 secondaryLine(presentation)
             }

@@ -1,0 +1,21 @@
+{
+  "entries": [
+    {
+      "id": "folder-rows-align-with-tabs",
+      "category": "fixed",
+      "message": "In the sidebar, a folder's icon, title and … button now line up with the icons, titles and buttons of the tabs beside it."
+    },
+    {
+      "id": "peek-closes-into-link",
+      "category": "improved",
+      "message": "On Mac, closing a Peek shrinks it back into the link it grew out of, instead of it vanishing.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "space-swipe-shortcut-pace",
+      "category": "improved",
+      "message": "On Mac, a quick swipe between Spaces now finishes as fast as switching with the keyboard shortcut.",
+      "platforms": ["mac"]
+    }
+  ]
+}

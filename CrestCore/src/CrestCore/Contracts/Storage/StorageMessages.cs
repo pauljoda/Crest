@@ -78,19 +78,55 @@ public sealed record StorageUnreadable(StorageFailure Reason) : Rejection;
 
 #region Models
 
-/// Why the session's storage could not be read or written.
-public enum StorageFailure {
+/// Why the session's storage could not be read or written. A reason travels
+/// as its index in `All`, so `All` is append-only.
+public sealed class StorageFailure {
+    #region Static Variables
+
     /// The disk has no room for the write.
-    DiskFull,
+    public static readonly StorageFailure DiskFull = new(name: "disk_full",
+        message: "Crest couldn’t save your session because the disk is full.");
+
     /// The file or its directory cannot be written.
-    ReadOnly,
+    public static readonly StorageFailure ReadOnly = new(name: "read_only",
+        message: "Crest couldn’t save your session because its folder can’t be written to.");
+
     /// Another connection held the file for longer than the core waits.
-    Busy,
+    public static readonly StorageFailure Busy = new(name: "busy",
+        message: "Crest couldn’t save your session because another app is using its file.");
+
     /// The file is not a readable session: a damaged database, a missing part
     /// or a part that does not decode.
-    Damaged,
+    public static readonly StorageFailure Damaged = new(name: "damaged",
+        message: "Crest couldn’t save your session because its file is damaged.");
+
     /// Any other failure to open, read or write the file.
-    Unavailable
+    public static readonly StorageFailure Unavailable = new(name: "unavailable",
+        message: "Crest couldn’t save your session.");
+
+    public static IReadOnlyList<StorageFailure> All { get; } = [DiskFull, ReadOnly, Busy, Damaged, Unavailable];
+
+    #endregion
+
+    #region Variables
+
+    /// The reason's stored spelling.
+    public string Name { get; }
+
+    /// What the app says while saves fail for this reason.
+    [Localized]
+    public string Message { get; }
+
+    #endregion
+
+    #region Constructors
+
+    private StorageFailure(string name, string message) {
+        Name = name;
+        Message = message;
+    }
+
+    #endregion
 }
 
 #endregion

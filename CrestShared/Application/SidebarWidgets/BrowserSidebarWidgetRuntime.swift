@@ -24,7 +24,7 @@ struct BrowserSidebarWidgetHostRegistration: Equatable, Sendable {
 
 @Observable
 @MainActor
-final class BrowserSidebarWidgetRuntime: BrowserSidebarWidgetPreferenceObserving {
+final class BrowserSidebarWidgetRuntime {
     let registry: BrowserSidebarWidgetRegistry
 
     private(set) var publishedInstances: [BrowserSidebarWidgetInstance] = []

@@ -7,7 +7,7 @@ struct MobileCompactAddressBar: View {
     let isSecure: Bool
     let progress: Double
     let isLoading: Bool
-    let pageActions: (any MobilePageActions)?
+    let pageActions: MobileSelectedPageActionPort?
     let downloadsAccess: MobileDownloadsMenuAccess?
     let hideToolbar: (() -> Void)?
     let reloadOrStop: (() -> Void)?
@@ -32,7 +32,7 @@ struct MobileCompactAddressBar: View {
     @Environment(\.layoutDirection) private var layoutDirection
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: MobileCompactAddressBarLayout.itemSpacing) {
             if let pageActions, pageActions.isAvailable, !isEditing {
                 HStack(spacing: 0) {
                     MobilePageActionsMenu(
@@ -47,12 +47,15 @@ struct MobileCompactAddressBar: View {
                         BrowserTranslationMenu(translation: page.translation)
                             .gesture(MobileTranslationLongPressGesture(action: page.translation.start))
                             .accessibilityHint("Tap for options. Touch and hold to translate now.")
-                            .frame(width: 44)
+                            .frame(width: MobileCompactAddressBarLayout.translationControlWidth)
                             .scaleEffect(offersTranslation || reduceMotion ? 1 : 0.4)
                             .offset(x: translationOffset, y: offersTranslation || reduceMotion ? 0 : 3)
                             .opacity(offersTranslation ? 1 : 0)
-                            .padding(.leading, 8)
-                            .frame(width: offersTranslation ? 52 : 0, alignment: .leading)
+                            .padding(.leading, MobileCompactAddressBarLayout.translationLeadingGap)
+                            .frame(
+                                width: offersTranslation ? MobileCompactAddressBarLayout.translationSlotWidth : 0,
+                                alignment: .leading
+                            )
                             .allowsHitTesting(offersTranslation)
                             .accessibilityHidden(!offersTranslation)
                             .zIndex(1)
@@ -60,9 +63,9 @@ struct MobileCompactAddressBar: View {
                 }
             } else {
                 Image(systemName: isSecure ? "lock.fill" : "magnifyingglass")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(CrestTypography.compactControlGlyph)
                     .foregroundStyle(.secondary)
-                    .frame(width: 20)
+                    .frame(width: MobileCompactAddressBarLayout.leadingGlyphWidth)
                     .accessibilityHidden(true)
             }
 
@@ -81,7 +84,9 @@ struct MobileCompactAddressBar: View {
                     .labelStyle(.iconOnly)
                     .buttonStyle(.plain)
                     .foregroundStyle(.tertiary)
-                    .frame(width: 28, height: 36)
+                    .frame(
+                        width: MobileCompactAddressBarLayout.clearControlSize.width,
+                        height: MobileCompactAddressBarLayout.clearControlSize.height)
             } else if reloadOrStop != nil {
                 BrowserReloadControl(
                     isLoading: isLoading,
@@ -103,8 +108,8 @@ struct MobileCompactAddressBar: View {
                 : offersTranslation ? .spring(duration: 0.42, bounce: 0.08) : .easeOut(duration: 0.16),
             value: offersTranslation
         )
-        .padding(.horizontal, 14)
-        .frame(maxWidth: .infinity, minHeight: 48)
+        .padding(.horizontal, MobileCompactAddressBarLayout.horizontalPadding)
+        .frame(maxWidth: .infinity, minHeight: MobileCompactAddressBarLayout.minimumHeight)
         .contentShape(.capsule)
         .background {
             fieldShape
@@ -136,7 +141,7 @@ struct MobileCompactAddressBar: View {
     }
 
     /// The bar's frame, carrying the palette's identity while the bar holds
-    /// it, so the palette's glass grows out of the bar's.
+    /// it, so the palette's surface grows out of the bar's glass.
     @ViewBuilder
     private var commandPaletteAnchor: some View {
         if commandPaletteHandoff.fieldHoldsMorph, let commandSurfaceNamespace, let space = browser.shownSpace {

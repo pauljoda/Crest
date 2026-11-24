@@ -55,8 +55,13 @@ struct MobileSetupSteps: View {
     }
 
     /// Whether the welcome waits on iCloud and offers no way past it yet.
-    private var isCheckingCloud: Bool {
-        path.isEmpty && welcome.waitsOnCloud && !welcome.offersSetupWithoutCloud
+    private var isCheckingCloud: Bool { moves.isCheckingCloud(path) }
+
+    /// How the steps move, as on every platform.
+    private var moves: BrowserSetupStepMoves {
+        BrowserSetupStepMoves(
+            walk: walk, welcome: welcome, firstSpaceID: setup.spaces.first?.spaceID,
+            setUpWithoutCloud: setUpWithoutCloud)
     }
 
     /// Whether the welcome's buttons run the width of a phone.
@@ -88,6 +93,7 @@ struct MobileSetupSteps: View {
                     .transition(.opacity)
             }
         }
+        .browserSetupPaperContent(wearing: wornLook, over: colorScheme)
         .background {
             if standsAlone { background }
         }
@@ -129,19 +135,27 @@ struct MobileSetupSteps: View {
                 otherWayIn
             }
         } else {
-            BrowserSetupLanding(steps: walk.steps, welcome: welcome, open: welcomeOpener) {
-                otherWayIn
-            } forward: {
-                continueButton
-            }
-            .overlay(alignment: .bottom) {
-                if let errorMessage {
-                    Text(errorMessage)
-                        .font(.callout)
-                        .foregroundStyle(CrestColor.danger)
-                        .multilineTextAlignment(.center)
-                        .padding(MobileSetupStepsMetrics.footerInset)
+            // At the largest text sizes the welcome can outgrow the screen,
+            // so it scrolls rather than hide the way in.
+            GeometryReader { geometry in
+                ScrollView {
+                    BrowserSetupLanding(steps: walk.steps, welcome: welcome, open: welcomeOpener) {
+                        otherWayIn
+                    } forward: {
+                        continueButton
+                    }
+                    .overlay(alignment: .bottom) {
+                        if let errorMessage {
+                            Text(errorMessage)
+                                .font(.callout)
+                                .foregroundStyle(CrestColor.danger)
+                                .multilineTextAlignment(.center)
+                                .padding(MobileSetupStepsMetrics.footerInset)
+                        }
+                    }
+                    .frame(minHeight: geometry.size.height)
                 }
+                .scrollBounceBehavior(.basedOnSize)
             }
         }
     }
@@ -160,7 +174,7 @@ struct MobileSetupSteps: View {
         }
         .buttonStyle(.crestPrimary)
         .disabled(isCheckingCloud)
-        .accessibilityIdentifier("setup-continue")
+        .accessibilityIdentifier(BrowserSetupAccessibilityID.continue)
     }
 
     /// What the welcome offers beside the way in: Cancel when setup was
@@ -172,18 +186,17 @@ struct MobileSetupSteps: View {
                 Text("Cancel").frame(maxWidth: fillsWidth ? .infinity : nil)
             }
             .buttonStyle(.crestSecondary)
-            .accessibilityIdentifier("setup-cancel")
+            .accessibilityIdentifier(BrowserSetupAccessibilityID.cancel)
         } else if welcome.opensCrest {
             Button(action: openCrest) {
                 Text("Start Browsing").frame(maxWidth: fillsWidth ? .infinity : nil)
             }
             .buttonStyle(.crestSecondary)
-            .accessibilityIdentifier("setup-open-crest")
+            .accessibilityIdentifier(BrowserSetupAccessibilityID.openCrest)
         }
     }
 
-    /// The step open now, its page, and the way on, in the scheme the open
-    /// Space's look reads in when the steps wear it. The page runs the
+    /// The step open now, its page, and the way on. The page runs the
     /// whole height, to the bottom of the screen, and the chips and the
     /// buttons float over it: the page fades out under the chips and scrolls
     /// on under the buttons.
@@ -191,7 +204,6 @@ struct MobileSetupSteps: View {
         GeometryReader { geometry in
             stepsLayers(bottomInset: geometry.safeAreaInsets.bottom)
         }
-        .environment(\.colorScheme, wornLook?.colorScheme(over: colorScheme) ?? colorScheme)
     }
 
     /// The page under the chips and the buttons, its end clear of the
@@ -275,9 +287,12 @@ struct MobileSetupSteps: View {
                     .multilineTextAlignment(.center)
             }
             HStack(spacing: CrestSpacing.small) {
+                // Frosted glass under the quiet pill, so the page scrolling
+                // behind it doesn't show through its title.
                 Button("Back", systemImage: "chevron.left", action: goBack)
                     .buttonStyle(.crestSecondary)
-                    .accessibilityIdentifier("setup-back")
+                    .glassEffect(.regular, in: .capsule)
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.back)
                 Spacer(minLength: 0)
                 if isFinishing { ProgressView() }
                 forward
@@ -294,13 +309,13 @@ struct MobileSetupSteps: View {
         if let current = path.last {
             if current.stepPage != nil {
                 Button("Done", action: goBack)
-                    .accessibilityIdentifier("setup-done")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.done)
             } else if let next = walk.page(after: current) {
                 Button("Continue") { go(to: next, replacing: true) }
-                    .accessibilityIdentifier("setup-continue")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.continue)
             } else {
                 Button("Start Browsing", action: startBrowsing)
-                    .accessibilityIdentifier("setup-start-browsing")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.startBrowsing)
             }
         }
     }
@@ -308,9 +323,8 @@ struct MobileSetupSteps: View {
     // MARK: - Mutators
 
     private func go(to destination: BrowserSetupDestination, replacing: Bool = false) {
-        isGoingBack = false
-        if replacing { path = [destination] } else { path.append(destination) }
-        if destination == .yourSpace, let first = setup.spaces.first?.spaceID { shownSpaceID = first }
+        moves.go(
+            to: destination, replacing: replacing, path: &path, isGoingBack: &isGoingBack, shownSpaceID: &shownSpaceID)
     }
 
     /// What the welcome's chips open, once nothing holds the way in.
@@ -319,27 +333,12 @@ struct MobileSetupSteps: View {
         return { step in openStep(step) }
     }
 
-    /// Opens `step` from its chip, sliding back or on as the step lies, and
-    /// leaving the welcome's wait on iCloud as Continue does.
     private func openStep(_ step: BrowserSetupStep) {
-        guard let page = walk.page(opening: step), path.first != page || path.count > 1 else { return }
-        if path.isEmpty, welcome.waitsOnCloud { setUpWithoutCloud() }
-        isGoingBack = walk.goesBack(to: step, from: path.first)
-        path = [page]
-        if page == .yourSpace, let first = setup.spaces.first?.spaceID { shownSpaceID = first }
+        moves.open(step, path: &path, isGoingBack: &isGoingBack, shownSpaceID: &shownSpaceID)
     }
 
-    /// Up from a page deeper in a step, else to the step before, or from
-    /// the first step to the welcome.
     private func goBack() {
-        isGoingBack = true
-        if path.count > 1 {
-            path.removeLast()
-        } else if let current = path.last, let before = walk.page(before: current) {
-            path = [before]
-        } else {
-            path = []
-        }
+        moves.back(path: &path, isGoingBack: &isGoingBack)
     }
 }
 

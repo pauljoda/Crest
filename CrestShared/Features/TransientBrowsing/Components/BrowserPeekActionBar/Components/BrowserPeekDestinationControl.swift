@@ -19,7 +19,7 @@ struct BrowserPeekDestinationControl: View {
     }
 
     private var spaceTint: Color {
-        selectedSpace?.branding.backgroundColor.color ?? .accentColor
+        selectedSpace?.branding.backgroundColor.color ?? CrestBrandTheme.accent
     }
 
     var body: some View {
@@ -50,10 +50,7 @@ struct BrowserPeekDestinationControl: View {
         .frame(height: style.height)
         .browserReadableForeground(over: spaceTint)
         .contentShape(style.shape)
-        .glassEffect(
-            .regular.tint(spaceTint).interactive(),
-            in: style.shape
-        )
+        .crestGlass(tint: spaceTint, in: style.shape)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("peek-space-control")
     }

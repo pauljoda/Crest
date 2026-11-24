@@ -1,6 +1,13 @@
 import Foundation
 
 struct BrowserLaunchEnvironment: Equatable, Sendable {
+    // MARK: - Static Variables
+
+    /// The longest isolation or cloud sync identifier a launch may name.
+    private static let maximumIsolationIDLength = 48
+
+    // MARK: - Variables
+
     /// Opens the launch's windows without taking focus, for a tool that
     /// starts Crest in the background.
     let launchesInBackground: Bool
@@ -13,6 +20,8 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
     /// An isolated launch opens a session whose Work Space leads two
     /// Sub-Spaces, for reviewing groups.
     let presentsSubSpacesSession: Bool
+    /// Keeps passwords in memory, even beside a persistent isolated store,
+    /// for a review package that can't reach the Keychain.
     let usesInMemoryCredentialVault: Bool
     let forcesOnboardingWelcome: Bool
     let forcesMacOnboardingSetup: Bool
@@ -39,9 +48,9 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         explicitlyRequiresIsolation = Self.isEnabled(.isolatedSession, in: values)
         persistentIsolationID = values[Key.persistentIsolationID.rawValue]
             .flatMap(Self.normalizedIsolationID)
-        requestsIsolatedCloudSync = values["CREST_ISOLATED_CLOUD_SYNC_ID"] != nil
-        isolatedCloudSyncID = values["CREST_ISOLATED_CLOUD_SYNC_ID"].flatMap { value in
-            guard (1...48).contains(value.count),
+        requestsIsolatedCloudSync = values[Key.isolatedCloudSyncID.rawValue] != nil
+        isolatedCloudSyncID = values[Key.isolatedCloudSyncID.rawValue].flatMap { value in
+            guard (1...Self.maximumIsolationIDLength).contains(value.count),
                 value.allSatisfy({
                     $0.isASCII && ($0.isLowercase || $0.isNumber || $0 == "-")
                 })
@@ -91,6 +100,26 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         "\(ProductIdentity.serviceNamespace).isolated.\(isolationID)"
     }
 
+    /// Has this process open the isolated session `persistenceID` names,
+    /// unless its launch named another: a review build never opens the
+    /// installed profile. It runs before anything reads the launch.
+    static func applyReviewBuildDefaults(persistenceID: String) {
+        setenv(Key.isolatedSession.rawValue, "1", 1)
+        setenv(Key.persistentIsolationID.rawValue, persistenceID, 0)
+    }
+
+    /// The defaults this launch's device choices live in: the installed
+    /// app's own, or a named isolated profile's, or for an isolated launch
+    /// that names none, a domain of its own that no other launch reads.
+    var deviceDefaults: UserDefaults {
+        guard requiresIsolation else { return .standard }
+        let id = persistentIsolationID ?? "ephemeral-\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: Self.isolatedDefaultsSuiteName(isolationID: id)) else {
+            preconditionFailure("A domain under the product's namespace is never the app's own or the global one.")
+        }
+        return defaults
+    }
+
     private static func isEnabled(
         _ key: Key,
         in values: [String: String]
@@ -103,7 +132,7 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
             $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-")
         }
         guard !normalized.isEmpty else { return nil }
-        return String(normalized.prefix(48))
+        return String(normalized.prefix(Self.maximumIsolationIDLength))
     }
 
     private static func loopbackSoftwareUpdateFeedURL(_ value: String?) -> URL? {
@@ -112,7 +141,7 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         }
         let loopbackHosts = ["127.0.0.1", "localhost", "::1"]
         guard
-            components.scheme?.lowercased() == "http",
+            WebScheme.named(components.scheme?.lowercased()) == .http,
             components.user == nil,
             components.password == nil,
             let host = components.host?.lowercased(),
@@ -127,6 +156,7 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         case backgroundLaunch = "CREST_BACKGROUND_LAUNCH"
         case isolatedSession = "CREST_ISOLATED_SESSION"
         case persistentIsolationID = "CREST_ISOLATED_PERSISTENCE_ID"
+        case isolatedCloudSyncID = "CREST_ISOLATED_CLOUD_SYNC_ID"
         case resetSession = "CREST_RESET_SESSION"
         case showcaseSession = "CREST_SHOWCASE_SESSION"
         case subSpacesSession = "CREST_SUBSPACES_SESSION"

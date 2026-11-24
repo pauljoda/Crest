@@ -12,10 +12,10 @@ enum BrowserSpaceSwitcherLayout {
 
     /// The inset that keeps the compact strip in the same column as the rows
     /// above it.
-    static let compactStripHorizontalInset: CGFloat = 12
+    static let compactStripHorizontalInset = CrestSpacing.medium
 
     /// The gap between the strip's utilities and the picker between them.
-    static let compactStripSpacing: CGFloat = 2
+    static let compactStripSpacing = CrestSpacing.extraExtraSmall
 
     /// VoiceOver follows the same leading-to-trailing order users see even
     /// though the centred picker is composed in a `ZStack`.
@@ -25,7 +25,7 @@ enum BrowserSpaceSwitcherLayout {
 
     /// The inset that lines the scrolling track up with the sidebar's rows,
     /// and the gap between it and the chrome above.
-    static let scrollingTrackHorizontalInset: CGFloat = 12
+    static let scrollingTrackHorizontalInset = CrestSpacing.medium
     static let scrollingTrackTopInset: CGFloat = 6
 
     /// Resolves the compact picker's centred viewport inside the utility

@@ -7,7 +7,7 @@ const config = {
   favicon: 'img/crest-favicon.svg',
   url: 'https://crestbrowser.com',
   baseUrl: '/guides/',
-  organizationName: 'pauljoda',
+  organizationName: 'crest-browser',
   projectName: 'Crest-Website',
   trailingSlash: true,
   onBrokenLinks: 'throw',
@@ -73,7 +73,7 @@ const config = {
         {to: '/extension-api-compatibility/', label: 'Compatibility', position: 'left'},
         {href: 'https://crestbrowser.com/', label: 'Product site', position: 'right'},
         {href: 'https://crestbrowser.com/support/', label: 'Support', position: 'right'},
-        {href: 'https://github.com/pauljoda/Crest/releases/latest', label: 'Download for Mac', position: 'right', className: 'navbar-download'},
+        {href: 'https://github.com/crest-browser/Crest/releases/latest', label: 'Download for Mac', position: 'right', className: 'navbar-download'},
       ],
     },
     docs: {
@@ -89,7 +89,7 @@ const config = {
           title: 'Crest',
           items: [
             {label: 'Product site', href: 'https://crestbrowser.com/'},
-            {label: 'Download for Mac', href: 'https://github.com/pauljoda/Crest/releases/latest'},
+            {label: 'Download for Mac', href: 'https://github.com/crest-browser/Crest/releases/latest'},
             {label: 'iPhone & iPad TestFlight', href: 'https://testflight.apple.com/join/vV1CM49Q'},
           ],
         },
@@ -106,7 +106,7 @@ const config = {
         {
           title: 'Community',
           items: [
-            {label: 'GitHub Issues', href: 'https://github.com/pauljoda/Crest/issues/new/choose'},
+            {label: 'GitHub Issues', href: 'https://github.com/crest-browser/Crest/issues/new/choose'},
             {label: 'r/CrestBrowser', href: 'https://www.reddit.com/r/CrestBrowser'},
             {label: 'Discord', href: 'https://discord.gg/gjrM5qMB6x'},
             {label: 'Donate', href: 'https://ko-fi.com/pauljoda/tiers'},

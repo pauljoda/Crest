@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct CrestButtonSurface: View {
+    // MARK: - Variables
+
     let role: CrestButtonRole
     let tint: Color?
     let configuration: ButtonStyleConfiguration
@@ -13,6 +15,36 @@ struct CrestButtonSurface: View {
     /// Whether the button is the one large call to action of a page, as
     /// `controlSize(.extraLarge)` asks.
     private var isLarge: Bool { controlSize == .extraLarge }
+
+    /// Whether the button sits in a compact space, such as a card in the
+    /// sidebar, as `controlSize(.small)` asks.
+    private var isCompact: Bool { controlSize == .small || controlSize == .mini }
+
+    /// The title's type at the button's size.
+    private var titleFont: Font {
+        if isLarge { return CrestTypography.largeButtonTitle }
+        return isCompact ? CrestTypography.compactButtonTitle : CrestTypography.buttonTitle
+    }
+
+    // MARK: - Actions - Sizing
+
+    /// The height of a primary or secondary button at its size.
+    private var height: CGFloat {
+        if isLarge { return CrestButtonMetrics.largeHeight }
+        if isCompact { return CrestButtonMetrics.compactHeight }
+        return CrestButtonMetrics.height
+    }
+
+    /// The room either side of a primary button's title at its size, and of
+    /// a secondary one's.
+    private func horizontalPadding(isProminent: Bool) -> CGFloat {
+        if isLarge { return CrestButtonMetrics.largeHorizontalPadding }
+        if isCompact { return CrestButtonMetrics.compactHorizontalPadding }
+        return isProminent
+            ? CrestButtonMetrics.prominentHorizontalPadding : CrestButtonMetrics.standardHorizontalPadding
+    }
+
+    // MARK: - Actions - Drawing
 
     var body: some View {
         rendered
@@ -45,13 +77,10 @@ struct CrestButtonSurface: View {
     private var primary: some View {
         let fill = tint ?? CrestBrandTheme.action
         return configuration.label
-            .font(isLarge ? CrestTypography.largeButtonTitle : CrestTypography.buttonTitle)
+            .font(titleFont)
             .foregroundStyle(fill.perceptualForeground(in: colorScheme))
-            .padding(
-                .horizontal,
-                isLarge ? CrestButtonMetrics.largeHorizontalPadding : CrestButtonMetrics.prominentHorizontalPadding
-            )
-            .frame(minHeight: isLarge ? CrestButtonMetrics.largeHeight : CrestButtonMetrics.prominentHeight)
+            .padding(.horizontal, horizontalPadding(isProminent: true))
+            .frame(minHeight: height)
             .background {
                 Capsule().fill(fill.opacity(primaryFillOpacity))
             }
@@ -63,10 +92,7 @@ struct CrestButtonSurface: View {
                     lineWidth: CrestButtonMetrics.strokeWidth
                 )
             }
-            .shadow(
-                color: .black.opacity(CrestButtonMetrics.primaryShadowOpacity),
-                radius: CrestButtonMetrics.primaryShadowRadius, y: 1
-            )
+            .crestElevation(.control)
             .crestCapsuleInteractionShape()
     }
 
@@ -74,13 +100,10 @@ struct CrestButtonSurface: View {
     /// enough to show the surface under it.
     private var secondary: some View {
         configuration.label
-            .font(isLarge ? CrestTypography.largeButtonTitle : CrestTypography.buttonTitle)
+            .font(titleFont)
             .foregroundStyle(.primary)
-            .padding(
-                .horizontal,
-                isLarge ? CrestButtonMetrics.largeHorizontalPadding : CrestButtonMetrics.standardHorizontalPadding
-            )
-            .frame(minHeight: isLarge ? CrestButtonMetrics.largeHeight : CrestButtonMetrics.standardHeight)
+            .padding(.horizontal, horizontalPadding(isProminent: false))
+            .frame(minHeight: height)
             .background {
                 Capsule().fill(Color.primary.opacity(secondaryFillOpacity))
             }
@@ -106,15 +129,10 @@ struct CrestButtonSurface: View {
     private var destructive: some View {
         let tint = resolvedTint
         return configuration.label
-            .font(
-                CrestTypography.sans(
-                    CrestButtonMetrics.standardLabelSize,
-                    weight: .semibold
-                )
-            )
+            .font(CrestTypography.label)
             .foregroundStyle(resolvedTextTint)
             .padding(.horizontal, CrestButtonMetrics.standardHorizontalPadding)
-            .frame(minHeight: CrestButtonMetrics.standardHeight)
+            .frame(minHeight: CrestButtonMetrics.height)
             .background {
                 Capsule().fill(tint.opacity(tintedFillOpacity(isEmphasized: false)))
             }
@@ -198,6 +216,7 @@ struct CrestButtonSurface: View {
             Button("Delete") {}.buttonStyle(.crestDestructive)
             Button("Manage Filter Lists") {}.buttonStyle(.crestTertiary)
             Button("Disabled") {}.buttonStyle(.crestPrimary).disabled(true)
+            Button("Install") {}.buttonStyle(.crestPrimary).controlSize(.small)
         }.padding().frame(width: 300)
     }
 #endif

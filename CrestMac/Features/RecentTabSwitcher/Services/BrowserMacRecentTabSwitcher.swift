@@ -34,9 +34,6 @@ final class BrowserMacRecentTabSwitcher {
     private var monitors: [Any] = []
     private var observers: [NSObjectProtocol] = []
 
-    /// Whether the panel is up.
-    var isShowingPanel: Bool { hold?.isPresented == true }
-
     // MARK: - Actions - Monitoring
 
     /// Watches modifier releases and clicks, and what takes Crest out of use.

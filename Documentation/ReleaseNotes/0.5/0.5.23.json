@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-02-clear-completed-page-progress",
+      "category": "fixed",
+      "message": "Prevent the page loading bar from staying visible after in-page navigation"
+    }
+  ]
+}

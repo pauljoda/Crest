@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "core-owned-tab-history",
+      "category": "internal",
+      "message": "The core keeps each page's back and forward history, with an identity per entry that engines report and traverse by."
+    },
+    {
+      "id": "core-history-load-identity-on-failure",
+      "category": "internal",
+      "message": "A page the core asks to load in place of a history entry gives up that entry's identity when the load fails or is cancelled, so a later page never takes it."
+    }
+  ]
+}

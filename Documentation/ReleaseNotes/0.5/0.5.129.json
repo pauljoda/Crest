@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "shared-interaction-and-presentation-ownership",
+      "category": "internal",
+      "message": "Centralize shared interaction and content-blocking policy, isolate platform adapters, and separate reusable presentation components"
+    },
+    {
+      "id": "space-switch-page-metadata-ownership",
+      "category": "fixed",
+      "message": "Keep page titles and browsing history in the correct Space while switching tabs or Spaces"
+    }
+  ]
+}

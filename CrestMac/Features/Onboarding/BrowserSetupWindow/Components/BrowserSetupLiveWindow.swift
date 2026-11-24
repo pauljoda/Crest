@@ -19,18 +19,30 @@ struct BrowserSetupLiveWindow: View {
             BrowserSetupLiveWindowHost(content: browser(copy), cornerRadius: cornerRadius)
                 .overlay {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.14), lineWidth: CrestLayout.hairline)
+                        .strokeBorder(
+                            Color.primary.opacity(CrestOpacity.windowOutline), lineWidth: CrestLayout.hairline
+                        )
                         .allowsHitTesting(false)
                 }
-                .shadow(color: .black.opacity(cornerRadius > 0 ? 0.22 : 0), radius: 30, y: 16)
+                .background { shadow }
                 .accessibilityElement(children: .contain)
                 .accessibilityLabel(Text("Preview of Crest"))
         }
     }
 
+    /// The window's shadow on the room, cast by a plain shape behind it
+    /// rather than by the browser it hosts, which would be worked out again
+    /// from the browser's views on every frame the window moves or grows.
+    /// It goes once the window fills the setup window.
+    private var shadow: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(CrestBrandPalette.ink)
+            .crestElevation(.window, scale: cornerRadius > 0 ? 1 : 0)
+    }
+
     /// Crest's browser over the copy, with the copy's own core, a line where
     /// a web page would load, and nothing of the window around it to style.
-    private func browser(_ copy: BrowserSetupLiveSession.Copy) -> some View {
+    private func browser(_ copy: BrowserPlatformSetupLiveCopy) -> some View {
         BrowserRootView(
             browser: copy.store,
             pages: copy.pages,
@@ -68,8 +80,11 @@ extension BrowserSetupLiveWindow {
         HStack(spacing: BrowserSetupLiveWindowMetrics.windowButtonSpacing) {
             ForEach(0..<3, id: \.self) { _ in
                 Circle()
-                    .fill(Color.primary.opacity(0.2))
-                    .overlay { Circle().strokeBorder(Color.primary.opacity(0.12), lineWidth: CrestLayout.hairline) }
+                    .fill(Color.primary.opacity(BrowserSetupLiveWindowMetrics.windowButtonOpacity))
+                    .overlay {
+                        Circle()
+                            .strokeBorder(Color.primary.opacity(CrestOpacity.border), lineWidth: CrestLayout.hairline)
+                    }
                     .frame(
                         width: BrowserSetupLiveWindowMetrics.windowButton,
                         height: BrowserSetupLiveWindowMetrics.windowButton)
@@ -95,6 +110,9 @@ extension BrowserSetupLiveWindow {
 enum BrowserSetupLiveWindowMetrics {
     static let cornerRadius: CGFloat = 14
     static let windowButton: CGFloat = 13
+    /// How strongly the window's buttons are filled, dimmed as a window in
+    /// the background shows them.
+    static let windowButtonOpacity = 0.2
     static let windowButtonSpacing: CGFloat = 9
     static let windowButtonInset = EdgeInsets(top: 18, leading: 20, bottom: 0, trailing: 0)
 }

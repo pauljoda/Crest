@@ -19,7 +19,6 @@ struct MobilePageHistoryControls: View {
                     enabled: false,
                     action: {}
                 )
-                .glassEffect(.regular.interactive(), in: .circle)
             }
         }
         .animation(
@@ -36,7 +35,6 @@ struct MobilePageHistoryControls: View {
             backAndForwardControls(pageActions: pageActions)
         } else {
             backButton(pageActions: pageActions)
-                .glassEffect(.regular.interactive(), in: .circle)
                 .transition(.opacity)
         }
     }
@@ -45,7 +43,7 @@ struct MobilePageHistoryControls: View {
         pageActions: MobileSelectedPageActionPort
     ) -> some View {
         HStack(spacing: 0) {
-            backButton(pageActions: pageActions)
+            backButton(pageActions: pageActions, wearsGlass: false)
             Divider()
                 .frame(height: MobileBrowserChromeLayout.historyDividerHeight)
                 .opacity(MobileBrowserChromeLayout.historyDividerOpacity)
@@ -55,17 +53,19 @@ struct MobilePageHistoryControls: View {
             .horizontal,
             MobileBrowserChromeLayout.historyCapsuleHorizontalPadding
         )
-        .glassEffect(.regular.interactive(), in: .capsule)
+        .crestInteractiveGlass(in: .capsule)
         .transition(.opacity)
     }
 
     private func backButton(
-        pageActions: MobileSelectedPageActionPort
+        pageActions: MobileSelectedPageActionPort,
+        wearsGlass: Bool = true
     ) -> some View {
         historyButton(
             title: "Back",
             systemImage: "chevron.left",
             enabled: pageActions.canGoBack,
+            wearsGlass: wearsGlass,
             action: pageActions.goBack
         )
         .contextMenu {
@@ -86,6 +86,7 @@ struct MobilePageHistoryControls: View {
             title: "Forward",
             systemImage: "chevron.right",
             enabled: true,
+            wearsGlass: false,
             action: pageActions.goForward
         )
         .contextMenu {
@@ -103,12 +104,14 @@ struct MobilePageHistoryControls: View {
         title: String,
         systemImage: String,
         enabled: Bool,
+        wearsGlass: Bool = true,
         action: @escaping () -> Void
     ) -> some View {
         MobileCompactIconButton(
             title: title,
             systemImage: systemImage,
             enabled: enabled,
+            wearsGlass: wearsGlass,
             action: action
         )
     }

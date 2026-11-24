@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "chromium-pages-retain-requested-zoom",
+      "category": "fixed",
+      "message": "Chromium pages use your default zoom when they open and keep your chosen zoom as you navigate.",
+      "platforms": ["mac"]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "screen-sharing-tab-picker",
+      "category": "new",
+      "message": "Sharing your screen on a page that runs in Chromium now lets you share a single tab, with its sound, as well as a window or your whole screen.",
+      "platforms": ["mac"]
+    }
+  ]
+}

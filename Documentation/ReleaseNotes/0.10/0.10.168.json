@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "arabic-pin-tabs-plural",
+      "category": "improved",
+      "message": "In Arabic, the Pin row of the tab selection menu reads in Arabic for any number of tabs."
+    }
+  ]
+}

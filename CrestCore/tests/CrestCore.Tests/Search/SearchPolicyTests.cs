@@ -47,10 +47,6 @@ public sealed class SearchPolicyTests {
         Assert.Equal("https://kagi.com/find/" + encoded + "?source=crest", kagi.Provider.Search(query));
     }
 
-    private static IEnumerable<string> Values(SearchProviderOption option) => option.IsSwitch ? [SearchProviderOption.On]
-        : option.AcceptsText ? ["gpt-5 mini"]
-        : [.. option.Choices.Select(choice => choice.Name), .. option.Locales.Select(code => code.Code)];
-
     [Theory]
     [InlineData("https://example.com/search?q=%s", "Example", null)]
     [InlineData("  https://example.com/search?q=%s  ", "  Example  ", null)]
@@ -68,6 +64,11 @@ public sealed class SearchPolicyTests {
     [InlineData("https://%s.example.com/search", "Example", "unsafeHost")]
     [InlineData("https://localhost/search?q=%s", "Example", "unsafeHost")]
     [InlineData("https://printer.local/search?q=%s", "Example", "unsafeHost")]
+    [InlineData("https://localhost./search?q=%s", "Example", "unsafeHost")]
+    [InlineData("https://printer.local./search?q=%s", "Example", "unsafeHost")]
+    [InlineData("https://printer.local\u3002/search?q=%s", "Example", "unsafeHost")]
+    [InlineData("https://localhost\uFF0E/search?q=%s", "Example", "unsafeHost")]
+    [InlineData("https://exa\uFF0Fmple.com/search?q=%s", "Example", "invalidTemplate")]
     [InlineData("https://192.168.1.1/search?q=%s", "Example", "unsafeHost")]
     [InlineData("https://example.com/#query=%s", "Example", null)]
     [InlineData("https://example.com/search?q=%s", "Example", "placeholderInFragment", "https://example.com/suggest#q=%s")]

@@ -198,10 +198,15 @@ inline bool ReadAdoptionRecord(const std::string& preferred,
   return valid;
 }
 
+// The engine profile folder a product bundle opens: Crest's own, which no
+// other Chromium opens by default. The browser treats it as its default folder.
+inline std::string ProductUserDataDirectory(const std::string& home) {
+  return home + "/Library/Application Support/Crest/Chromium";
+}
+
 inline std::string AdoptProductUserDataDirectory(const std::string& home) {
-  const std::string support = home + "/Library/Application Support";
-  const std::string preferred = support + "/Crest/Chromium";
-  const std::string previous = support + "/Chromium";
+  const std::string preferred = ProductUserDataDirectory(home);
+  const std::string previous = home + "/Library/Application Support/Chromium";
   if (!MakeDirectoryTree(preferred)) {
     StopProfileAdoption(preferred);
   }
@@ -231,9 +236,18 @@ inline std::string AdoptProductUserDataDirectory(const std::string& home) {
   for (const std::string& name : names) {
     const std::string source = previous + "/" + name;
     const std::string destination = preferred + "/" + name;
+    // A profile already in Crest's folder is the one Crest opens. A namesake
+    // still in the previous folder came from a build that opened Chromium's
+    // default folder instead; it stays there, unread and never merged.
     if (PathExists(destination)) {
-      if (PathExists(source) || !IsDirectory(destination))
+      if (!IsDirectory(destination))
         StopProfileAdoption(preferred);
+      if (PathExists(source)) {
+        fprintf(stderr,
+                "Crest: kept engine profile %s in %s and left the copy in "
+                "%s.\n",
+                name.c_str(), preferred.c_str(), previous.c_str());
+      }
       continue;
     }
     if (!IsDirectory(source) ||

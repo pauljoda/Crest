@@ -23,6 +23,13 @@ final class BrowserCommandPaletteModel {
     let browser: BrowserStore
     /// The Space the palette speaks for, or nil when the window shows none.
     let space: SpaceModel?
+    /// The color the selected row is tinted in: the Space's accent where
+    /// the person chose it in Appearance, else none, and the row is a sheet
+    /// of paper as the sidebar's selected tab is.
+    var selectionAccent: Color? {
+        guard BrowserDeviceAppearanceStore.shared.address.tintsPaletteWithSpaceAccent else { return nil }
+        return space?.settings.look.primaryColor.color
+    }
     let selectedTabID: UUID?
     let commands: BrowserCommandPaletteCommandRegistry?
     /// Whether the palette offers the platform's resting commands before
@@ -121,6 +128,25 @@ final class BrowserCommandPaletteModel {
     var urlCompletion: AddressCompletion? {
         guard isUnscoped, isCompletionSourceAvailable, completionEditing.canPropose(for: query) else { return nil }
         return completionProposal?.continued(to: query)
+    }
+
+    /// What the empty field says: the provider it searches with, the scope it
+    /// searches, or that it searches or opens what is typed.
+    var fieldPlaceholder: String {
+        activeProvider.map { "\($0.actionTitle)…" }
+            ?? activeScope.map { String(localized: "Search \(String(localized: $0.title))…") }
+            ?? String(localized: "Search or Enter URL…")
+    }
+
+    /// What assistive technology hears about the completion or provider offer
+    /// the field shows, or nil when it shows neither.
+    var completionHelp: String? {
+        if urlCompletion == nil, let provider = providerOffer {
+            return String(localized: "\(provider.actionTitle). Press Tab to enter a query.")
+        }
+        return urlCompletion.map {
+            String(localized: "URL completion: \($0.accepted). Press Tab or Right Arrow to accept.")
+        }
     }
 
     var isCompletionSourceAvailable: Bool {
@@ -560,64 +586,5 @@ extension PalettePreferences {
     /// Whether the palette offers results of `source`.
     func offers(_ source: PaletteSource) -> Bool {
         sources.first { $0.source == source }?.isEnabled ?? false
-    }
-}
-
-enum BrowserSearchSuggestionResponseParser {
-    static func suggestions(from data: Data) -> [String] {
-        guard data.count <= BrowserSearchSuggestionClient.maximumResponseByteCount else {
-            return []
-        }
-        guard
-            let payload = try? JSONSerialization.jsonObject(with: data) as? [Any],
-            payload.count >= 2,
-            let values = payload[1] as? [Any]
-        else { return [] }
-        return values.compactMap { $0 as? String }.prefix(20).map { $0 }
-    }
-}
-
-/// Fetches an engine's search suggestions from the address the core names,
-/// without cookies or caching.
-actor BrowserSearchSuggestionClient {
-    static let shared = BrowserSearchSuggestionClient()
-    static let maximumResponseByteCount = 64 * 1_024
-
-    nonisolated static var sessionConfiguration: URLSessionConfiguration {
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.httpCookieStorage = nil
-        configuration.httpShouldSetCookies = false
-        configuration.urlCache = nil
-        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-        configuration.timeoutIntervalForRequest = 5
-        configuration.timeoutIntervalForResource = 5
-        return configuration
-    }
-
-    private let session: URLSession
-
-    init(session: URLSession? = nil) {
-        self.session = session ?? URLSession(configuration: Self.sessionConfiguration)
-    }
-
-    func suggestions(from address: URL) async throws -> [String] {
-        var request = URLRequest(url: address)
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        let (bytes, response) = try await session.bytes(for: request)
-        guard
-            let response = response as? HTTPURLResponse,
-            (200...299).contains(response.statusCode),
-            response.expectedContentLength <= 0
-                || response.expectedContentLength <= Self.maximumResponseByteCount
-        else { return [] }
-
-        var data = Data()
-        data.reserveCapacity(min(Self.maximumResponseByteCount, 8 * 1_024))
-        for try await byte in bytes {
-            guard data.count < Self.maximumResponseByteCount else { return [] }
-            data.append(byte)
-        }
-        return BrowserSearchSuggestionResponseParser.suggestions(from: data)
     }
 }

@@ -18,6 +18,8 @@ public sealed class NativeSyncAuthority {
     #region Variables
 
     private readonly SyncStager stager;
+    /// The time staging stamps on what it stages, and that delays wait on.
+    internal IClock Clock { get; }
     private NativeSyncJournal journal;
     private NativeSyncTransaction? pending;
     internal NativeSessionAuthority? Session { get; set; }
@@ -37,8 +39,9 @@ public sealed class NativeSyncAuthority {
 
     #region Constructors
 
-    public NativeSyncAuthority(NativeSyncJournal initial) {
+    public NativeSyncAuthority(NativeSyncJournal initial, IClock? clock = null) {
         journal = initial;
+        Clock = clock ?? new SystemClock();
         stager = new(this);
     }
 
@@ -144,7 +147,7 @@ public sealed class NativeSyncAuthority {
         value.Superseded = replaced;
         try {
             var removals = (replaced?.Removals ?? SyncRemovals.None).Adding(new(previous, session, reason, staging.Deleted, staging.Emptied));
-            value.Stage(session, reason, removals.Reasons(reason), StoredSessionCodec.Seconds(DateTimeOffset.UtcNow), removals.Emptied);
+            value.Stage(session, reason, removals.Reasons(reason), StoredSessionCodec.Seconds(Clock.Now), removals.Emptied);
             _ = value.Seal();
             return value;
         } catch (Exception error) {
@@ -165,7 +168,7 @@ public sealed class NativeSyncAuthority {
         }
         try {
             value.Stage(request.Session, request.Reason, request.Removals.Reasons(request.Reason),
-                StoredSessionCodec.Seconds(DateTimeOffset.UtcNow), request.Removals.Emptied);
+                StoredSessionCodec.Seconds(Clock.Now), request.Removals.Emptied);
             if (!value.Seal()) {
                 value.Dispose();
                 return false;

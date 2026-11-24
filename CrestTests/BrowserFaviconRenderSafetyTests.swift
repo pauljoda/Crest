@@ -14,7 +14,7 @@ final class BrowserFaviconRenderSafetyTests: XCTestCase {
             data: nil,
             iconMode: .automatic
         )
-        let request = tab.renderRequest(profileID: fixedUUID(tail: 0x91), maximumPixelSize: 64, isUnlocked: false)
+        let request = tab.renderRequest(profileID: UUID(fixed: 0x91), maximumPixelSize: 64, isUnlocked: false)
         XCTAssertNil(request.fallbackPageURL)
         XCTAssertNil(request.fallbackProfileID)
 
@@ -48,11 +48,7 @@ final class BrowserFaviconRenderSafetyTests: XCTestCase {
     }
 
     private func tabID(tail: UInt8) -> UUID {
-        fixedUUID(tail: tail)
-    }
-
-    private func fixedUUID(tail: UInt8) -> UUID {
-        UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, tail))
+        UUID(fixed: Int(tail))
     }
 
     private actor RecordingFallback {

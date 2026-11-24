@@ -25,7 +25,7 @@ struct BrowserSettingsPage<Content: View>: View {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .background(BrowserSettingsCanvas.background)
+        .background(CrestBrandTheme.canvas)
         .controlSize(.regular)
     }
 }

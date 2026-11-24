@@ -8,12 +8,16 @@ Crest ships these third-party runtime components:
 | [.NET runtime](https://github.com/dotnet/runtime) (Native AOT) | 10.0.5 | Crest's core, compiled ahead of time into every app | MIT, with bundled third-party notices |
 | [adblock-rust](https://github.com/brave/adblock-rust), Brave's ad-block engine | 0.13.5 | Crest's content filter, compiled into the core on every platform | MPL-2.0, built from MIT, Apache-2.0, Unicode-3.0 and Unlicense Rust crates |
 | [Chromium](https://www.chromium.org/), with Crest's patches, some adapted from [ungoogled-chromium](https://github.com/ungoogled-software/ungoogled-chromium) | 156.0.8078.80 | The Chromium engine in Crest's Chromium build for macOS | BSD-3-Clause, with bundled third-party licenses |
+| [Allo](https://allo.joshpuckett.me) by Josh Puckett, built from [Inter](https://github.com/rsms/inter) | 1.0.3 | Crest's display type for headings, buttons and labels, in the app and on its website | SIL Open Font License 1.1 |
 
 The complete notices are preserved in
 [`ThirdParty/Sparkle-LICENSE.txt`](ThirdParty/Sparkle-LICENSE.txt),
 [`ThirdParty/DotNet-LICENSE.txt`](ThirdParty/DotNet-LICENSE.txt),
 [`ThirdParty/ContentFilter-LICENSES.txt`](ThirdParty/ContentFilter-LICENSES.txt) and
-[`ThirdParty/Chromium-LICENSE.txt`](ThirdParty/Chromium-LICENSE.txt). The content
+[`ThirdParty/Chromium-LICENSE.txt`](ThirdParty/Chromium-LICENSE.txt). Allo's license
+ships beside the font, in
+[`CrestShared/Resources/Fonts/AlloVariable-OFL.txt`](CrestShared/Resources/Fonts/AlloVariable-OFL.txt)
+and the Help Center's font folder. The content
 filter's notices cover adblock-rust and every Rust crate its lock file resolves,
 and the license audit keeps that list in step with the lock.
 Chromium includes many third-party components under their own licenses; the

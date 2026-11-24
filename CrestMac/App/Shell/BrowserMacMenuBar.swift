@@ -105,10 +105,11 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
         let pasteAsPlainText = NSMenuItem(
             title: String(localized: "Paste and Match Style"), action: #selector(pasteAsPlainText(_:)),
             keyEquivalent: "v")
+        pasteAsPlainText.image = NSImage(systemSymbolName: "clipboard", accessibilityDescription: nil)
         pasteAsPlainText.target = self
         pasteAsPlainText.keyEquivalentModifierMask = [.command, .option, .shift]
         edit.addItem(pasteAsPlainText)
-        // Chrome and Arc paste without formatting with ⇧⌘V.
+        // ⇧⌘V pastes without formatting too, the shortcut many people know for it.
         let alias = NSMenuItem(title: pasteAsPlainText.title, action: pasteAsPlainText.action, keyEquivalent: "v")
         alias.target = self
         alias.keyEquivalentModifierMask = [.command, .shift]

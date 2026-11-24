@@ -27,6 +27,10 @@ enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     case pinsFillRow
     case colorBorders
     case selectedTabOutline
+    /// Drawing the selected tab on white paper or on the material.
+    case selectedTabStyle
+    case selectedTabOpacity
+    case selectedPinTint
     case websitePinColors
     case dimUnloadedTabs
     case pinnedFill
@@ -38,6 +42,7 @@ enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     case addressBorder
     case addressEditingOutline
     case commandPaletteMotion
+    case commandPaletteAccent
     case addressDisplay
     case copyURLButton
     case superCopy
@@ -60,7 +65,8 @@ enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     static let onPage: Set<BrowserAppearanceSetting> = [
         .sidebarOnRight, .appearanceMode, .followSpaceAccent, .spacePageMotion, .sidebarRevealDelay,
         .sidebarSlideDuration, .fullScreenSidebarReveal, .defaultPageZoom, .cornerRadius, .tabScale, .sidebarSpacing,
-        .pinLayout, .websitePinColors, .dimUnloadedTabs, .tabStatus, .addressDisplay, .copyURLButton, .superCopy,
+        .pinLayout, .websitePinColors, .dimUnloadedTabs, .tabStatus, .addressDisplay, .commandPaletteAccent,
+        .copyURLButton, .superCopy,
         .folderIconOnly, .folderTabCounts, .groupTabCounts, .appIcon, .tabHoverPreview, .folderHoverPreview,
     ]
 

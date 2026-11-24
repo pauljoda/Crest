@@ -32,6 +32,7 @@ import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import content_filter  # noqa: E402
+from repository import REPOSITORY  # noqa: E402
 
 DOWNLOADS = "https://github.com/{repository}/releases/download/{tag}/{asset}"
 DOWNLOAD_ATTEMPTS = 5
@@ -149,7 +150,7 @@ def mac_test_library(static_library: Path, folder: Path) -> Path:
         return library
     library.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(["xcrun", "clang", "-dynamiclib", "-arch", "arm64",
-                    f"-mmacosx-version-min={content_filter.DEPLOYMENT_TARGET}",
+                    f"-mmacosx-version-min={content_filter.DEPLOYMENT_TARGETS['MACOSX_DEPLOYMENT_TARGET']}",
                     f"-Wl,-force_load,{static_library}", "-install_name", "@rpath/libcrest_content_filter.dylib",
                     "-o", library], check=True)
     stamp.write_text(content_filter.sha256(static_library))
@@ -160,7 +161,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runtime", required=True, choices=[*content_filter.TARGETS, "host"])
     parser.add_argument("--cache", type=Path, default=content_filter.REPOSITORY / "CrestCore/artifacts/content-filter")
-    parser.add_argument("--repository", default=os.environ.get("CREST_CONTENT_FILTER_REPOSITORY", "pauljoda/Crest"))
+    parser.add_argument("--repository", default=os.environ.get("CREST_CONTENT_FILTER_REPOSITORY", REPOSITORY))
     args = parser.parse_args()
 
     from_source = os.environ.get("CREST_CONTENT_FILTER_FROM_SOURCE") == "1"

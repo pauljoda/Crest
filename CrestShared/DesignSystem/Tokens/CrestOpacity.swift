@@ -1,28 +1,50 @@
 /// Shared opacity roles for custom interaction and accessibility states.
 enum CrestOpacity {
-    static let brandHairline = 0.18
     static let dropIndicator = 0.72
     static let hover = 0.08
-    static let interactionSelection = 0.13
-    static let interactionSelectionBorder = 0.10
+    /// The wash of ink under a selected row or control.
+    static let selection = 0.13
+    /// The edge a selected row or control wears.
+    static let selectedBorder = 0.10
     static let interactionSelectionShadow = 0.08
-    static let selection = interactionSelection
-    static let chromeSurface = 0.055
-    static let selectedSurface = selection
-    static let border = 0.12
-    static let selectedBorder = interactionSelectionBorder
-    /// How far a selected row lifts dark glass toward white, so it stands off
-    /// a dark sidebar as light glass does off any.
+    /// The ink shadow a selection on Crest's paper casts on the layer under
+    /// it.
+    static let paperShadow = 0.16
+    /// How opaque the sheet of paper under a selected tab is, unless the
+    /// person chooses otherwise: enough to read as paper, with what lies
+    /// under it, such as a pin's site color, still showing through.
+    static let selectedTabPaper = 0.8
+    /// How strongly a selected pin's color is washed over the paper laid on
+    /// it, on top of what shows through the paper, so the color still comes
+    /// through solid paper.
+    static let selectedPinTint = 0.3
+    /// How far a selected tab on the device's material lifts dark glass
+    /// toward white, so it stands off a dark sidebar as light glass does off
+    /// any.
     static let darkSelectionLift = 0.10
-    /// The edge a selected row's dark glass wears over a dark sidebar.
+    /// The edge a selected tab's dark glass wears over a dark sidebar.
     static let darkSelectionBorder = 0.18
-    static let disabled = 0.5
+    static let chromeSurface = 0.055
+    static let border = 0.12
+    /// The hairline round a window Crest draws inside its own, such as
+    /// setup's live window.
+    static let windowOutline = 0.14
+    /// The dim over the page behind a preview brought up over it, such as
+    /// the one a Peek or Quick Window shows while it opens.
+    static let scrim = 0.28
+    /// The faint fill of the vacant slot a dragged item will drop into, such
+    /// as the gap a sidebar row leaves or a pinned tile's open slot.
+    static let dropSlot = 0.035
+    /// The track a progress ring or bar fills along.
+    static let progressTrack = 0.25
+    /// A disabled glyph, drawn in the secondary label color at this
+    /// opacity so it stays visible against both page and sidebar glass.
+    static let disabledGlyph = 0.5
+    /// A disabled control, such as a filled button, faded as a whole.
+    static let disabledControl = 0.42
     /// Chrome that belongs to a part of the window without focus but stays
     /// usable, such as the bar of a split card another card has focus over.
     static let unfocusedChrome = 0.5
-    /// Disabled chrome glyphs remain visible against both page and sidebar glass.
-    static let controlDisabledForeground = 0.48
-    static let controlShadow = 0.16
     /// A status drawn across a sidebar row, under its title.
     static let statusSurface = 0.35
     /// A status drawn across a pinned tile, which is small and sits on its

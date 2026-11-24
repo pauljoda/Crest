@@ -46,7 +46,7 @@ struct BrowserGettingStartedFolderActions: View {
 struct BrowserGettingStartedClearHint: View {
     var body: some View {
         Text("Use Clear on the line in the practice sidebar.")
-            .font(CrestTypography.sans(12)).foregroundStyle(.secondary)
+            .font(CrestTypography.note).foregroundStyle(.secondary)
     }
 }
 

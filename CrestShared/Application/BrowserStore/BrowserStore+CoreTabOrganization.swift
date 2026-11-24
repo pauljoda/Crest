@@ -32,10 +32,7 @@ extension BrowserStore {
         guard let space = spaceModel(spaceID) else { return nil }
         let sources = BrowserTabCopySources(space)
         guard let sent = family.perform(intent, from: self) else { return nil }
-        let copies: [TabCopied] = sent.changes.compactMap {
-            guard case .tabCopied(let copied) = $0, copied.workspaceID == family.workspaceID else { return nil }
-            return copied
-        }
+        let copies = sent.changes.compactMap(\.tabCopied).filter { $0.workspaceID == family.workspaceID }
         prepareAcceptedCopies(copies, from: sources)
         return copies
     }

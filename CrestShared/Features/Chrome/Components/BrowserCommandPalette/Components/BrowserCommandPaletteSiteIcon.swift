@@ -48,7 +48,7 @@ struct BrowserCommandPaletteSiteIcon<Placeholder: View>: View {
     }
 
     /// The row's symbol on the disc a tab icon's corner badge sits on, hung
-    /// off the icon's corner as an engine's mark is. The palette's glass
+    /// off the icon's corner as an engine's mark is. The palette's material
     /// would let the icon show through the disc's usual ground, so the disc
     /// takes the window's opaque one.
     private var badgeView: some View {

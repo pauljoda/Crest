@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-08-31-stable-extension-package-refreshes",
+      "category": "fixed",
+      "message": "Keep extension popups working when their packages are refreshed"
+    }
+  ]
+}

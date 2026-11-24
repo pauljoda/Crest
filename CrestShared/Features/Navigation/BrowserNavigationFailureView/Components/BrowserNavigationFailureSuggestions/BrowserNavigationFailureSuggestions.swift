@@ -20,12 +20,7 @@ struct BrowserNavigationFailureSuggestions: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(BrowserNavigationFailureMetrics.surfacePadding)
-        .background(
-            .primary.opacity(BrowserNavigationFailureMetrics.surfaceOpacity),
-            in: .rect(
-                cornerRadius: BrowserNavigationFailureMetrics.surfaceCornerRadius
-            )
-        )
+        .background(.primary.opacity(CrestOpacity.chromeSurface), in: .rect(cornerRadius: CrestRadius.card))
     }
 }
 

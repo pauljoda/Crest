@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-09-synchronized-extension-toolbar",
+      "category": "improved",
+      "message": "Smoothly blend extension toolbars and tab spacing when switching Spaces"
+    },
+    {
+      "id": "2026-09-09-background-extension-staging",
+      "category": "improved",
+      "message": "Keep extension package preparation from blocking browser interactions"
+    }
+  ]
+}

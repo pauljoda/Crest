@@ -16,8 +16,7 @@ struct BrowserNavigationFailureDetailsButton: View {
                 Image(systemName: showsDetails ? "chevron.up" : "info.circle")
             }
         }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
+        .buttonStyle(.crestSecondary)
         .accessibilityIdentifier("navigation-failure-details")
     }
 }

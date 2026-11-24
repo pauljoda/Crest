@@ -11,29 +11,6 @@ namespace CrestCore.Tests;
 /// lands, what its section refuses, what closing keeps, and which tab a window
 /// shows afterwards.
 public sealed partial class BrowserContractsTests {
-    /// A saved session whose saved tab is an open split member with a partner,
-    /// followed by an open tab of its own.
-    private static (JsonNode Session, Guid Space, Guid Member, Guid Partner, Guid Plain) SplitSession() {
-        var f = SavedSession(); var space = f.Document["session"]!["spaces"]![0]!;
-        var group = SwiftId(Guid.NewGuid()); var partner = Guid.NewGuid(); var plain = Guid.NewGuid();
-        var first = space["tabs"]![0]!.AsObject();
-        first["placement"] = "current"; first["folderID"] = null; first["savedURL"] = null; first["splitGroupID"] = group.DeepClone();
-        JsonObject Current(Guid id, JsonNode? split) => new() {
-            ["id"] = SwiftId(id),
-            ["title"] = "Page",
-            ["url"] = "https://example.org/" + id,
-            ["placement"] = "current",
-            ["symbol"] = "globe",
-            ["lastActivatedAt"] = 800000000.0,
-            ["splitGroupID"] = split
-        };
-        space["tabs"]!.AsArray().Add(Current(partner, group.DeepClone()));
-        space["tabs"]!.AsArray().Add(Current(plain, null));
-        return (f.Document["session"]!, f.Space, f.Tab, partner, plain);
-    }
-
-    private static TabContent Page(string address, string? title = null) => new(address, View: null, title);
-
     [Fact]
     public void ClosingArchivesAnOpenTabAndPutsASavedTabsPageAwayReturningTheWindowToItsPreviousTab() {
         using var device = new TestDevice(MaximalDocument());

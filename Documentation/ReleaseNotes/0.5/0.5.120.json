@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "continuous-default-page-zoom",
+      "category": "improved",
+      "message": "Adjust default page zoom smoothly across a wider range from 25% to 500%"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "full-screen-sidebar-flicker",
+      "category": "fixed",
+      "message": "The strip along the top of a full-screen window no longer flickers when the sidebar opens."
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 import Foundation
 
-/// A house as the starting point of a Space's look.
+/// A house as the starting point of a Space's look: a template, which is a
+/// full set of icon and colors, or a crest the Space wears as its icon in its
+/// own colors.
 extension SpaceHouse {
     /// The house a crest started from, by the name it recorded. Earlier builds
     /// recorded the house's English title, which differs only in case.
@@ -9,31 +11,18 @@ extension SpaceHouse {
         return all.first { $0.name.caseInsensitiveCompare(recorded) == .orderedSame }
     }
 
-    /// `branding` starting over from the house's look and texture, keeping the
-    /// Space's own strengths, folder and text choices. A look that started
-    /// from a scheme wore the scheme's strength, fade, text and icon color
-    /// rather than the person's, so it takes the house's own instead.
+    /// `branding` starting over from the house as a template: its colors,
+    /// texture and sidebar, and its crest as the icon, as the core applies
+    /// it. A core that cannot answer keeps the look as it is.
     func applying(to branding: SpaceBranding) -> SpaceBranding {
-        var updated = branding
-        if SpaceScheme.startingPoint(of: branding) != nil {
-            updated.bannerStrength = look.bannerStrength
-            updated.readabilityFade = look.readabilityFade
-            updated.textColorMode = look.textColorMode
-            updated.symbolColor = look.symbolColor
-            updated.symbolGradient = look.symbolGradient
-        }
-        updated.colors = look.colors
-        updated.colorGradients = look.colorGradients
-        updated.textureStrength = look.textureStrength
-        updated.themeMode = look.themeMode
-        updated.bannerPattern = look.bannerPattern
-        updated.gradientAngle = look.gradientAngle
-        updated.gradientKind = look.gradientKind
-        updated.iconStyle = .layeredCrest
-        updated.crest = look.crest
-        updated.crest.startingPresetID = name
-        updated.hasCustomAppearance = false
-        return updated.normalized()
+        (try? CrestCore.answer(ApplyHouse(branding: branding, house: self)))?.branding ?? branding
+    }
+
+    /// `branding` wearing the house's crest as its icon, in the Space's own
+    /// colors, which stay as they are. A core that cannot answer keeps the
+    /// look as it is.
+    func wearingCrest(on branding: SpaceBranding) -> SpaceBranding {
+        (try? CrestCore.answer(WearHouseCrest(branding: branding, house: self)))?.branding ?? branding
     }
 
     /// Whether `branding` still wears the house's look unchanged.

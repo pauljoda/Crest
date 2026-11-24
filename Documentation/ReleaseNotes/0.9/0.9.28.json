@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "quick-window-opens-over-app-in-use",
+      "category": "fixed",
+      "message": "On Mac, a Quick Window that a link from another app or the New Quick Window shortcut opens appears over the app you're using, on the display you're using it on, instead of over another app's window. Links in Crest's own Settings open over Crest.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "quick-window-returns-to-app",
+      "category": "new",
+      "message": "On Mac, closing a Quick Window that opened over another app, from one of its links or the New Quick Window shortcut, takes you back to that app. Crest's other windows stay behind that app while the Quick Window is open.",
+      "platforms": ["mac"]
+    }
+  ]
+}

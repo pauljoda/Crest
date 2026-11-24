@@ -74,9 +74,9 @@ private struct BrowserTabPreviewCardSlot: View {
     // MARK: - Static Variables
 
     /// The space between the sidebar, or the row, and the card.
-    private static let gap: CGFloat = 8
+    private static let gap = CrestSpacing.small
     /// The closest the card comes to the window's edge.
-    private static let margin: CGFloat = 8
+    private static let margin = CrestSpacing.small
     /// How far above the row's top the card's top sits, so the card's title
     /// lines up with the row's.
     private static let rise: CGFloat = 6
@@ -85,7 +85,7 @@ private struct BrowserTabPreviewCardSlot: View {
     /// The widest a held card grows across a narrow window.
     private static let heldMaximumWidth: CGFloat = 360
     /// How the card grows out of its row.
-    private static let opening = Spring(duration: 0.3, bounce: 0.12)
+    private static let opening = Spring(duration: 0.22, bounce: 0.12)
 
     // MARK: - Variables
 

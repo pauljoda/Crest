@@ -141,8 +141,15 @@ def release_tag(key: str, host: str = MAC) -> str:
     return f"chromium-engine-{key[:16]}" if host == MAC else f"chromium-engine-{host}-{key[:16]}"
 
 
+def candidate_tag(key: str) -> str:
+    """The draft release a built but unpublished engine waits in. Release
+    packaging asks only for `release_tag`, so it never reads one."""
+    return f"chromium-engine-candidate-{key[:16]}"
+
+
 def asset_name(key: str, host: str = MAC) -> str:
-    return f"Crest-Chromium-Engine-{key[:16]}-arm64.zip" if host == MAC else f"Crest-Chromium-Engine-{key[:16]}-{host}.zip"
+    """The Mac's universal engine, or another host's own."""
+    return f"Crest-Chromium-Engine-{key[:16]}-universal.zip" if host == MAC else f"Crest-Chromium-Engine-{key[:16]}-{host}.zip"
 
 
 def main():

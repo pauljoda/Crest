@@ -4,12 +4,12 @@ enum BrowserUtilitySwitcherLayout {
     static let destinations = BrowserUtilitySurface.all
     static let step: CGFloat = 64
     static let buttonSize = CrestLayout.glassIconButtonDiameter
-    static let collapsedScale: CGFloat = 0.08
     static let destinationGap: CGFloat = 18
     static let staggerInterval = 0.045
     static let notificationBadgeMinimumSize: CGFloat = 16
-    static let notificationBadgeHorizontalPadding: CGFloat = 4
     static let notificationBadgeOffset: CGFloat = 4
+    /// How strongly the ring round a badge draws its progress.
+    static let notificationBadgeProgressOpacity = 0.72
 
     static var expansionSteps: [any BrowserUtilityFanExpansionStep] {
         destinations.enumerated().flatMap { index, surface -> [any BrowserUtilityFanExpansionStep] in

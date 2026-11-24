@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-reorder-configuration-cleanup",
+      "category": "internal",
+      "message": "Remove unused sidebar drag configuration and stale selection commentary"
+    }
+  ]
+}

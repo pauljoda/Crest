@@ -3,6 +3,8 @@ using System.Text.Json.Nodes;
 using CrestCore.Application;
 using CrestCore.Contracts;
 
+using CrestCore.Tests.Session;
+
 using Xunit;
 
 namespace CrestCore.Tests;
@@ -190,7 +192,7 @@ public sealed partial class BrowserContractsTests {
     public void AGroupAnotherDeviceEmptiedWaitsOutOfSightWithItsRecordKept() {
         const double now = 811679532;
         var f = new BatchSpace();
-        var grouped = NativeSessionMaintenance.Repair(f.Session.DeepClone().AsObject(), now)["session"]!;
+        var grouped = StoredSessionMaintenance.Repair(f.Session.DeepClone().AsObject(), now)["session"]!;
         grouped["spaces"]![0]!["folders"]!.AsArray().Single(folder => JsonNode.DeepEquals(folder!["id"], SwiftId(f.OpenFolder)))!
             ["isGroup"] = true;
         var emptied = grouped.DeepClone();

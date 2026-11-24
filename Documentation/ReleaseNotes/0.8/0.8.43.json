@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "setup-color-strip-clip",
+      "category": "fixed",
+      "message": "In setup, the color and emblem rows on Make it yours stay inside their panel while you scroll them, instead of drawing over the window preview."
+    }
+  ]
+}

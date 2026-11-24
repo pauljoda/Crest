@@ -51,8 +51,15 @@ extension BrowserStore {
         sendRecords(SweepExpiredRecords(workspaceID: family.workspaceID))
     }
 
+    /// How long an active scene waits between sweeps of each Space's tab
+    /// cleanup and stored-data retention. The policies are hour-granular, so a
+    /// low-frequency sweep keeps up with them; the core spaces the sweeps
+    /// windows ask for together.
+    private static let expiredDataSweepInterval: Duration = .seconds(15 * 60)
+
     /// Sweeps once for the scene that just became active, then keeps sweeping on
-    /// `BrowserCurrentTabCleanupSchedule.sweepInterval`.
+    /// `expiredDataSweepInterval`, so a session that stays open for days still
+    /// archives.
     ///
     /// The caller owns the lifetime: a scene ties this to being active, so the
     /// loop is cancelled — and the sweep suspends — as soon as the scene stops
@@ -61,9 +68,7 @@ extension BrowserStore {
         sweepExpiredBrowsingData()
         while !Task.isCancelled {
             do {
-                try await Task.sleep(
-                    for: .seconds(BrowserCurrentTabCleanupSchedule.sweepInterval)
-                )
+                try await Task.sleep(for: Self.expiredDataSweepInterval)
             } catch {
                 return
             }

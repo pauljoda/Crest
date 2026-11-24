@@ -11,7 +11,7 @@ struct MobileCompactDomainChip: View {
                 .lineLimit(1)
                 .padding(.horizontal, MobileCompactDomainChipLayout.horizontalPadding)
                 .frame(height: MobileCompactDomainChipLayout.visibleHeight)
-                .glassEffect(.regular.interactive(), in: .capsule)
+                .crestInteractiveGlass(in: .capsule)
         }
         .buttonStyle(.plain)
         .frame(minHeight: MobileCompactDomainChipLayout.minimumHitTarget)
@@ -20,7 +20,7 @@ struct MobileCompactDomainChip: View {
         .accessibilityLabel("Show Toolbar")
         .accessibilityValue(domain)
         .accessibilityHint("Expands the browser controls")
-        .accessibilityIdentifier("collapsed-domain-chip")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.collapsedDomainChip)
     }
 
     private var domain: String {

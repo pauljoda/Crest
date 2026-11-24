@@ -9,11 +9,13 @@ set -euo pipefail
 
 repository_root="${0:A:h:h}"
 application_path="/Applications/Crest.app"
-repository="pauljoda/Crest"
-team_id="3U2R97HLXF"
+repository="$(/usr/bin/python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); from repository import REPOSITORY; print(REPOSITORY)' "$repository_root/Scripts/control-plane")"
+# Crest signs as the team project.yml builds with.
+team_id="$(sed -n 's/^    DEVELOPMENT_TEAM: //p' "$repository_root/project.yml")"
+[[ -n "$team_id" ]] || { print -u2 "project.yml names no DEVELOPMENT_TEAM."; exit 1; }
 signing_identity="Developer ID Application"
 provisioning_profile="Crest Developer ID"
-development_appcast_url="https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast-development.xml"
+development_appcast_url="https://updates.crestbrowser.com/appcast-development.xml"
 derived_data_path="${CREST_LOCAL_RELEASE_DERIVED_DATA:-$HOME/Library/Developer/Xcode/DerivedData/Crest-LocalRelease}"
 engine_cache_root="${CREST_ENGINE_CACHE:-$HOME/Library/Caches/Crest-local-release}"
 lsregister="/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister"
@@ -200,9 +202,9 @@ fi
 
 # --- Crest: the native core and interface framework, packaged with the
 # engine. ---
-(cd CrestCore && "$dotnet" publish src/CrestCore.Native -c Release -r osx-arm64 --nologo -v quiet)
-core_library="$PWD/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish/CrestCore.Native.dylib"
-[[ -f "$core_library" ]]
+CREST_DOTNET="$dotnet" python3 Scripts/control-plane/mac_core.py >/dev/null
+core_library="$PWD/CrestCore/artifacts/mac-core/CrestCore.Native.dylib"
+for arch in arm64 x86_64; do lipo "$core_library" -verify_arch "$arch"; done
 
 xcodebuild build \
   -quiet \

@@ -21,7 +21,7 @@ struct BrowserSpaceSymbolArtworkContent: View {
                 if identity.requiresAuthentication {
                     Image(systemName: "lock.fill")
                         .font(.system(size: lockSize, weight: .bold))
-                        .padding(2)
+                        .padding(CrestSpacing.extraExtraSmall)
                         .background(.background, in: .circle)
                 }
             }

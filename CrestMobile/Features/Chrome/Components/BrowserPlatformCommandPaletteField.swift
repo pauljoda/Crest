@@ -40,7 +40,7 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
         field.text = model.query
         field.font = .preferredFont(forTextStyle: presentation.input.platformTextStyle)
         field.adjustsFontForContentSizeCategory = true
-        field.placeholder = String(localized: "Search or Enter URL…")
+        field.placeholder = model.fieldPlaceholder
         // A URL keyboard would remove the space bar multi-word searches need.
         field.keyboardType = .default
         field.textContentType = nil
@@ -237,6 +237,7 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
         }
 
         func refreshSuffix() {
+            if let model, placeholder != model.fieldPlaceholder { placeholder = model.fieldPlaceholder }
             guard isFirstResponder, markedTextRange == nil,
                 let proposal = model?.urlCompletion, let range = selectedTextRange
             else {
@@ -261,8 +262,7 @@ struct BrowserPlatformCommandPaletteField: UIViewRepresentable {
             suffixLabel.frame = CGRect(
                 x: caret.maxX, y: caret.minY, width: max(0, bounds.maxX - caret.maxX), height: caret.height)
             suffixLabel.isHidden = false
-            accessibilityHint = String(
-                localized: "URL completion: \(proposal.accepted). Press Tab or Right Arrow to accept.")
+            accessibilityHint = model?.completionHelp
         }
     }
 }

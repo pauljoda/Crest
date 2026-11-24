@@ -8,12 +8,15 @@ import socket
 import subprocess
 
 from chromium_fork import REPO, RUNNER_WORK, download, run, sha256, validate_workspace
+from repository import REPOSITORY
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", type=Path, default=Path.home() / "Dev/CrestChromium")
-    parser.add_argument("--repository", default="pauljoda/Crest")
+    parser.add_argument("--repository", default=REPOSITORY)
+    parser.add_argument("--runner-group", default="chromium-builders",
+                        help="Organization runner group that admits only Crest's Chromium workflows")
     args = parser.parse_args()
     if platform.system() != "Darwin" or platform.machine() != "arm64":
         parser.error("The Chromium runner requires an Apple Silicon Mac")
@@ -32,11 +35,15 @@ def main():
         parser.error("GitHub runner checksum verification failed")
     runner.mkdir(parents=True, exist_ok=True)
     run("tar", "-xzf", archive, "-C", runner)
+    # The runner belongs to the organization, in a group limited to Crest's
+    # Chromium workflows. Requesting its token needs gh's admin:org scope.
+    organization = args.repository.split("/")[0]
     registration = json.loads(run("gh", "api", "--method", "POST",
-                                  f"repos/{args.repository}/actions/runners/registration-token", capture=True))
+                                  f"orgs/{organization}/actions/runners/registration-token", capture=True))
     # Do not print the registration token or store it in a command transcript.
-    subprocess.run([str(runner / "config.sh"), "--unattended", "--url", f"https://github.com/{args.repository}",
-                    "--token", registration["token"], "--name", f"crest-chromium-{socket.gethostname().split('.')[0]}",
+    subprocess.run([str(runner / "config.sh"), "--unattended", "--url", f"https://github.com/{organization}",
+                    "--token", registration["token"], "--runnergroup", args.runner_group,
+                    "--name", f"crest-chromium-{socket.gethostname().split('.')[0]}",
                     "--labels", "crest-chromium", "--work", str(root / RUNNER_WORK)], cwd=runner, check=True)
     (runner / ".path").write_text(f"{root / 'tools/bin'}:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
     run(runner / "svc.sh", "install", cwd=runner)

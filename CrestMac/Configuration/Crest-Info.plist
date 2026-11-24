@@ -131,7 +131,7 @@
 		<string>NSUserActivityTypeBrowsingWeb</string>
 	</array>
 	<key>SUFeedURL</key>
-	<string>https://raw.githubusercontent.com/pauljoda/Crest/updates/appcast.xml</string>
+	<string>https://updates.crestbrowser.com/appcast.xml</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUScheduledCheckInterval</key>

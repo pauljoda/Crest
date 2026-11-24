@@ -12,12 +12,31 @@ import SwiftUI
 /// whenever a choice changes.
 @MainActor @Observable
 final class BrowserTabAppearance {
+    // MARK: - Static Variables
+
+    /// The opacities the paper under a selected tab may take: never so clear
+    /// that its ink text falls below 4.5:1, even over the darkest sidebar.
+    nonisolated static let selectedTabOpacityRange = 0.5...1.0
+
+    // MARK: - Types
+
     enum Borders: String, Codable, CaseIterable { case selected, pinned, all }
     /// How a tab shows a status its page is in, such as playing sound: as a
     /// badge on its icon, or in place of its icon.
     enum StatusStyle: String, Codable, CaseIterable { case badge, icon }
+
+    // MARK: - Variables
+
     var borders: Borders = .selected { didSet { changed() } }
     var outlinesSelectedTabs = false { didSet { changed() } }
+    /// What the selected tab and the selected pin are drawn on.
+    var selectedTabStyle = BrowserSelectedTabStyle.standard { didSet { changed() } }
+    /// How opaque the paper under the selected tab and pin is, where
+    /// ``selectedTabStyle`` lies on paper.
+    var selectedTabOpacity = CrestOpacity.selectedTabPaper { didSet { changed() } }
+    /// Whether a selected pin's paper takes the pin's color, under it and
+    /// washed over it, rather than staying the white a selected tab is.
+    var tintsSelectedPins = true { didSet { changed() } }
     var usesWebsitePinColor = true { didSet { changed() } }
     var dimsUnloadedTabs = true { didSet { changed() } }
     var pinFill: Double = 0 { didSet { changed() } }
@@ -30,10 +49,21 @@ final class BrowserTabAppearance {
     /// Called after any choice changes, so its owner can save it.
     @ObservationIgnored var changed: () -> Void = {}
 
+    // MARK: - Initializers
+
     init() {}
+
+    // MARK: - Actions - Limits
 
     nonisolated static func intensity(_ value: Double) -> Double {
         value.isFinite ? min(max(value, 0), 1) : 0
+    }
+
+    /// `value` held to ``selectedTabOpacityRange``, or the standard opacity
+    /// where it is not a number.
+    nonisolated static func selectedTabOpacity(_ value: Double) -> Double {
+        guard value.isFinite else { return CrestOpacity.selectedTabPaper }
+        return min(max(value, selectedTabOpacityRange.lowerBound), selectedTabOpacityRange.upperBound)
     }
 }
 
@@ -56,6 +86,10 @@ final class BrowserAddressAppearance {
     /// Whether the field grows into the command palette and the palette
     /// shrinks back into it, rather than the palette opening in place.
     var animatesIntoCommandPalette = true { didSet { changed() } }
+    /// Whether the command palette tints its selected row in the Space's
+    /// accent, rather than laying it on paper as the sidebar's selected tab
+    /// is.
+    var tintsPaletteWithSpaceAccent = false { didSet { changed() } }
     /// Whether a live site's address field offers a button that copies its
     /// URL, beside Site Controls. Only the Mac's sidebar field draws it.
     var showsCopyURLButton = false { didSet { changed() } }
@@ -69,8 +103,9 @@ final class BrowserAddressAppearance {
 
 extension BrowserTabAppearance: @MainActor Codable {
     private enum CodingKeys: String, CodingKey {
-        case borders, outlinesSelectedTabs, usesWebsitePinColor, dimsUnloadedTabs
-        case pinFill, pinGlow, hoverFill, color, statusStyle, showsAudioVisualizer
+        case borders, outlinesSelectedTabs, selectedTabStyle, selectedTabOpacity, tintsSelectedPins
+        case usesWebsitePinColor, dimsUnloadedTabs, pinFill, pinGlow, hoverFill, color, statusStyle
+        case showsAudioVisualizer
     }
 
     convenience init(from decoder: Decoder) throws {
@@ -78,6 +113,13 @@ extension BrowserTabAppearance: @MainActor Codable {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         borders = (try? values.decode(Borders.self, forKey: .borders)) ?? .selected
         outlinesSelectedTabs = (try? values.decode(Bool.self, forKey: .outlinesSelectedTabs)) ?? false
+        // Choices saved before the style existed, or by a later build with a
+        // style this one does not know, take the standard style.
+        selectedTabStyle =
+            (try? values.decode(BrowserSelectedTabStyle.self, forKey: .selectedTabStyle)) ?? .standard
+        selectedTabOpacity = Self.selectedTabOpacity(
+            (try? values.decode(Double.self, forKey: .selectedTabOpacity)) ?? CrestOpacity.selectedTabPaper)
+        tintsSelectedPins = (try? values.decode(Bool.self, forKey: .tintsSelectedPins)) ?? true
         usesWebsitePinColor = (try? values.decode(Bool.self, forKey: .usesWebsitePinColor)) ?? true
         dimsUnloadedTabs = (try? values.decode(Bool.self, forKey: .dimsUnloadedTabs)) ?? true
         pinFill = Self.intensity((try? values.decode(Double.self, forKey: .pinFill)) ?? 0)
@@ -92,6 +134,9 @@ extension BrowserTabAppearance: @MainActor Codable {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try values.encode(borders, forKey: .borders)
         try values.encode(outlinesSelectedTabs, forKey: .outlinesSelectedTabs)
+        try values.encode(selectedTabStyle, forKey: .selectedTabStyle)
+        try values.encode(selectedTabOpacity, forKey: .selectedTabOpacity)
+        try values.encode(tintsSelectedPins, forKey: .tintsSelectedPins)
         try values.encode(usesWebsitePinColor, forKey: .usesWebsitePinColor)
         try values.encode(dimsUnloadedTabs, forKey: .dimsUnloadedTabs)
         try values.encode(pinFill, forKey: .pinFill)
@@ -105,7 +150,8 @@ extension BrowserTabAppearance: @MainActor Codable {
 
 extension BrowserAddressAppearance: @MainActor Codable {
     private enum CodingKeys: String, CodingKey {
-        case fill, border, usesAccentWhenEditing, animatesIntoCommandPalette, showsCopyURLButton, display, color
+        case fill, border, usesAccentWhenEditing, animatesIntoCommandPalette, tintsPaletteWithSpaceAccent
+        case showsCopyURLButton, display, color
     }
 
     convenience init(from decoder: Decoder) throws {
@@ -116,6 +162,8 @@ extension BrowserAddressAppearance: @MainActor Codable {
         usesAccentWhenEditing = (try? values.decode(Bool.self, forKey: .usesAccentWhenEditing)) ?? false
         animatesIntoCommandPalette =
             (try? values.decode(Bool.self, forKey: .animatesIntoCommandPalette)) ?? true
+        tintsPaletteWithSpaceAccent =
+            (try? values.decode(Bool.self, forKey: .tintsPaletteWithSpaceAccent)) ?? false
         showsCopyURLButton = (try? values.decode(Bool.self, forKey: .showsCopyURLButton)) ?? false
         display = (try? values.decode(Display.self, forKey: .display)) ?? .twoLines
         color = try? values.decode(BrandColor.self, forKey: .color)
@@ -127,6 +175,7 @@ extension BrowserAddressAppearance: @MainActor Codable {
         try values.encode(border, forKey: .border)
         try values.encode(usesAccentWhenEditing, forKey: .usesAccentWhenEditing)
         try values.encode(animatesIntoCommandPalette, forKey: .animatesIntoCommandPalette)
+        try values.encode(tintsPaletteWithSpaceAccent, forKey: .tintsPaletteWithSpaceAccent)
         try values.encode(showsCopyURLButton, forKey: .showsCopyURLButton)
         try values.encode(display, forKey: .display)
         try values.encodeIfPresent(color, forKey: .color)
@@ -165,9 +214,11 @@ final class BrowserDeviceAppearanceStore {
     static let legacySidebarSlideDurationKey = "crest.appearance.sidebar-slide-duration"
     static let legacySidebarSlideDefault: Double = 240
     static let peekSizeKey = "crest.appearance.peek-size"
+    static let peekOpenDurationKey = "crest.appearance.peek-open-length"
     static let tabHoverPreviewKey = "crest.appearance.hover-preview.tabs"
     static let folderHoverPreviewKey = "crest.appearance.hover-preview.folders"
     static let spaceIconsKey = "crest.appearance.space-icons"
+    static let allowsFloatingSidebarKey = "crest.sidebar.allows-floating"
     static let maximumCornerRadius: Double = 40
     /// How long the choices stay still before the store writes them out.
     static let settleDelay = Duration.milliseconds(300)
@@ -225,6 +276,18 @@ final class BrowserDeviceAppearanceStore {
     /// ``BrowserTransientCardArrangement/pointerCardShares``. Only the Mac's
     /// Peek floats in that room.
     var peekSize: Double {
+        didSet { saveSoon() }
+    }
+    /// How long, in milliseconds, a Peek takes to grow out of its link, the
+    /// length its every motion is measured against; zero puts it in place
+    /// at once.
+    var peekOpenDuration: Double {
+        didSet { saveSoon() }
+    }
+    /// Whether a narrow window may float its sidebar over the page instead of
+    /// keeping the full-screen tab viewer. Off unless the person allows it;
+    /// only iPhone and iPad offer it.
+    var allowsFloatingSidebar: Bool {
         didSet { saveSoon() }
     }
     /// Whether a sidebar tab or pin the pointer rests on shows its preview
@@ -390,6 +453,7 @@ final class BrowserDeviceAppearanceStore {
                 $0 == Self.legacySidebarSlideDefault ? nil : $0
             }
             ?? BrowserLookAndFeelDefaults.sidebarSlideDuration
+        allowsFloatingSidebar = chrome.bool(forKey: Self.allowsFloatingSidebarKey)
         previewsTabsOnHover =
             defaults.object(forKey: Self.tabHoverPreviewKey) as? Bool ?? BrowserLookAndFeelDefaults.previewsTabsOnHover
         previewsFoldersOnHover =
@@ -400,6 +464,8 @@ final class BrowserDeviceAppearanceStore {
             (defaults.object(forKey: Self.peekSizeKey) as? Double).flatMap {
                 $0.isFinite ? min(max($0, shares.lowerBound), shares.upperBound) : nil
             } ?? shares.upperBound
+        peekOpenDuration =
+            defaults.object(forKey: Self.peekOpenDurationKey) as? Double ?? BrowserLookAndFeelDefaults.peekOpenDuration
         if defaults.object(forKey: Self.cornerRadiusKey) != nil {
             cornerRadius = defaults.double(forKey: Self.cornerRadiusKey)
         } else {
@@ -526,6 +592,7 @@ final class BrowserDeviceAppearanceStore {
         write(tabScale, forKey: BrowserSidebarDensityPreference.scaleKey, in: defaults)
         write(sidebarSpacing.name, forKey: BrowserSidebarDensityPreference.spacingKey, in: defaults)
         write(peekSize, forKey: Self.peekSizeKey, in: defaults)
+        write(peekOpenDuration, forKey: Self.peekOpenDurationKey, in: defaults)
         write(previewsTabsOnHover, forKey: Self.tabHoverPreviewKey, in: defaults)
         write(previewsFoldersOnHover, forKey: Self.folderHoverPreviewKey, in: defaults)
         write(pinColumns, forKey: BrowserSidebarDensityPreference.pinColumnsKey, in: defaults)
@@ -545,6 +612,7 @@ final class BrowserDeviceAppearanceStore {
         write(sidebarRevealWidth, forKey: Self.sidebarRevealWidthKey, in: chrome)
         write(sidebarRevealDelay, forKey: Self.sidebarRevealDelayKey, in: chrome)
         write(sidebarSlideDuration, forKey: Self.sidebarSlideDurationKey, in: chrome)
+        write(allowsFloatingSidebar, forKey: Self.allowsFloatingSidebarKey, in: chrome)
     }
 
     /// Writes the choices once they have stayed still for ``settleDelay``.

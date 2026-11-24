@@ -29,7 +29,7 @@
        extensions::BrowserContextKeyedAPIFactory<extensions::WebRequestAPI>::Get(
 --- a/chrome/browser/BUILD.gn
 +++ b/chrome/browser/BUILD.gn
-@@ -5263,6 +5263,7 @@
+@@ -4668,6 +4668,7 @@
        "ui/crest/crest_browser_window.mm",
        "ui/crest/crest_chrome_hooks.h",
        "ui/crest/crest_chrome_host.mm",
@@ -37,7 +37,7 @@
        "ui/crest/crest_app.h",
        "ui/crest/crest_core.h",
        "ui/crest/crest_engine.h",
-@@ -5301,11 +5302,17 @@
+@@ -4706,11 +4707,17 @@
        "ui/crest/crest_engine_store.h",
        "ui/crest/crest_engine_tab_groups.cc",
        "ui/crest/crest_engine_tab_groups.h",
@@ -48,8 +48,8 @@
        "ui/crest/CrestChromiumHost.h",
      ]
  
-     public_deps = [ ":browser_public_dependencies" ]
      deps = [
+       ":browser",
 +      "//components/js_injection/common:common_mojom",
 +      "//components/origin_matcher",
        "//media/mojo/mojom",

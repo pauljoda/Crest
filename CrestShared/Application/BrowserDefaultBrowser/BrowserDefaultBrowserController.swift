@@ -5,30 +5,22 @@ import Observation
 
 /// What the system says about whether Crest opens links.
 struct BrowserDefaultBrowserStatus: Hashable, Sendable {
-    // MARK: - Types
-
-    /// The color a status's symbol takes, which the view that draws it names.
-    enum Tones: Sendable {
-        case quiet
-        case success
-        case warning
-    }
-
     // MARK: - Static Variables
 
     static let unknown = BrowserDefaultBrowserStatus(
-        name: "unknown", title: "Not checked", symbol: "circle.dotted", tone: .quiet)
+        name: "unknown", title: "Not checked", symbol: "circle.dotted", tone: nil)
     static let isDefault = BrowserDefaultBrowserStatus(
         name: "isDefault", title: "Crest", symbol: "checkmark.circle.fill", tone: .success)
     static let notDefault = BrowserDefaultBrowserStatus(
-        name: "notDefault", title: "Another browser", symbol: "circle", tone: .quiet)
+        name: "notDefault", title: "Another browser", symbol: "circle", tone: nil)
 
     // MARK: - Variables
 
     let name: String
     let title: LocalizedStringResource
     let symbol: String
-    let tone: Tones
+    /// The core's tone for how the status reads; nil reads quietly.
+    let tone: StatusTone?
 
     /// Why the system could not say, for a status it could not determine.
     let message: String?
@@ -36,7 +28,7 @@ struct BrowserDefaultBrowserStatus: Hashable, Sendable {
     // MARK: - Initializers
 
     private init(
-        name: String, title: LocalizedStringResource, symbol: String, tone: Tones, message: String? = nil
+        name: String, title: LocalizedStringResource, symbol: String, tone: StatusTone?, message: String? = nil
     ) {
         self.name = name
         self.title = title

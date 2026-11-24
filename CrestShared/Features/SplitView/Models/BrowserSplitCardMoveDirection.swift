@@ -9,7 +9,7 @@ import SwiftUI
 /// *right*, and "move left" has to mean `+1`.
 ///
 /// Resolving the physical direction at the input boundary and leaving order
-/// semantics everywhere else is the same shape `BrowserSpaceSwipeDirection` uses
+/// semantics everywhere else is the same shape the Space pager uses
 /// to turn a swipe into a direction. The arrow chords bound to
 /// these commands follow the label rather than the order: ⇧⌘← moves the card to
 /// the person's left in both layouts.

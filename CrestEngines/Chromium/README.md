@@ -80,17 +80,34 @@ LLD, and profile-guided V8 builtins. It keeps debug checks disabled and preserve
 Chromium's normal sandbox and accessibility behavior. This is a build
 configuration, not a claim of distribution readiness or measured parity.
 
-Retrieve the exact mac-arm profile named by `performanceInputs` in the lock from
-Chromium's `chromium-optimization-profiles/pgo_profiles` Google Storage bucket
-(also named in `chrome/build/mac-arm.pgo.txt`). With the build stopped, run:
+The engine is universal. Each architecture in the lock's `architectures` builds
+in its own output directory of the same prepared source: arm64 in
+`out/CrestBaseline`, the one preparation generates, and x64 in
+`out/CrestBaseline-x64`, cross-compiled on the same Apple silicon Mac. Each
+architecture has its own PGO profile, named by its `pgoProfile` in the lock and
+by its `pgoProfileFile` in the source (`chrome/build/mac-arm.pgo.txt` and
+`chrome/build/mac.pgo.txt`). Retrieve them from Chromium's
+`chromium-optimization-profiles/pgo_profiles` Google Storage bucket. With the
+build stopped, configure and build each architecture:
 
 ```sh
 python Scripts/control-plane/configure-chromium.py \
-  --source /absolute/chromium/src --configuration performance \
-  --sdk /absolute/MacOSX26.5.sdk --pgo-profile /absolute/pinned-profile.profdata
+  --source /absolute/chromium/src --configuration performance --cpu arm64 \
+  --sdk /absolute/MacOSX26.5.sdk --pgo-profile /absolute/pinned-arm64-profile.profdata
 python Scripts/control-plane/build-chromium-baseline.py \
-  --source /absolute/chromium/src --jobs 12 --min-free-gib 15
+  --source /absolute/chromium/src --output out/CrestBaseline --jobs 12 --min-free-gib 15
+python Scripts/control-plane/configure-chromium.py \
+  --source /absolute/chromium/src --configuration performance --cpu x64 \
+  --sdk /absolute/MacOSX26.5.sdk --pgo-profile /absolute/pinned-x64-profile.profdata
+python Scripts/control-plane/build-chromium-baseline.py \
+  --source /absolute/chromium/src --output out/CrestBaseline-x64 --jobs 12 --min-free-gib 15
 ```
+
+`chromium-fork.py build` does this for every architecture, then merges the
+browsers into `out/CrestUniversal/Chromium.app` with Chromium's own
+`chrome/installer/mac/universalizer.py` and smoke-tests it as each architecture,
+the others through Rosetta. A second architecture adds a full compile and about
+as much disk as the first output directory.
 
 The configuration helper verifies the SDK version and PGO checksum before GN
 generation. Check the generated compile and link commands for profile use and
@@ -190,9 +207,30 @@ directories the previous default directory still holds, and only those:
 directory and is left alone. Each adopted directory is named on standard error.
 A durable adoption record lists every profile before any directory moves. The
 next launch resumes an interrupted move, including a destination created by an
-earlier build that did not yet write its record. Conflicting copies and I/O
-failures stop startup without opening a partial profile set. The record remains
-for a retry after the filesystem problem is resolved.
+earlier build that did not yet write its record. A profile Crest's folder
+already holds is always the one it opens: a namesake still in the previous
+folder, made by a build that opened Chromium's default folder, stays there
+untouched and is named on standard error. I/O failures stop startup without
+opening a partial profile set. The record remains for a retry after the
+filesystem problem is resolved.
+
+Chromium encrypts cookies and the validators that keep extensions installed
+with a key from the keychain, and gives a folder other than its default one a
+separate key. The browser treats the folder Crest's launch names as its default,
+so profiles there keep the key they were written with.
+
+That `main` is Crest's own, `Overlay/chrome/app/crest_exe_main_mac.cc`, which
+`chrome_app` builds from in place of upstream's entry point. It also refuses a
+packaged experiment without an explicit `--user-data-dir`, and runs Crest's
+native host before it opens the framework with `dlopen`, so WebKit-only browsing
+never loads Chromium. Upstream's entry point links the framework and calls
+`ChromeMain` at once, so none of this can run there. The build's library check
+for `chrome_app` allows only `libSystem`, so an executable that links the
+framework fails to build. In the framework, a Crest browser started without a
+usable `--user-data-dir` stops before any profile is read. Every engine build and
+every `--distribution` package also launch the engine with no profile folder and
+open a profile an earlier engine made, as "Engine testing" in
+`ForkMaintenance.md` describes.
 
 Moving directories runs before the framework is loaded and has no JSON reader.
 The browser process finishes the recorded metadata edits in
@@ -574,10 +612,19 @@ host restores its core-managed Spaces directly, without Chrome's profile picker.
 ## Releasing
 
 The release workflow calls `Build Crest` for the exact source SHA and waits for
-its core tests, generated-contract and architecture checks, script tests,
-native ABI checks, and product builds before publication. Building the
+its core tests, generated-contract and architecture checks, and script tests
+before publication, then builds the products in its signing job. The native
+ABI checks and app builds run on the pull request, or on a direct push to
+`main`. Building the
 Chromium host directly also builds its current native core into the same
 Xcode products directory.
+
+Every engine change, not only stable promotion, needs the engine testing in
+`ForkMaintenance.md` before its engine is published. The engine build and
+`--distribution` packaging launch it with no profile folder and open a profile
+the newest stable release's engine made, and refuse it if either fails. The
+manual upgrade check, with Spaces, open tabs, a sign-in and a Chrome Web Store
+extension, is required too, on Apple silicon and under Rosetta.
 
 Stable promotion still needs a signed upgrade from each supported previous
 composition, a restart that preserves profiles and session data, and the
@@ -593,7 +640,9 @@ App signing jobs download the published engine and build Crest's UI.
 `Scripts/control-plane/chromium_engine.py` names it by a key over every engine
 input: the source lock, the host patch and its input hashes, the overlay, the
 host header and the scripts that prepare, configure and build it. After
-changing any of them, apply the host, build, and publish from the build Mac:
+changing any of them, apply the host, build every architecture, and publish the
+universal engine from the build Mac. The publisher merges the current builds
+again and refuses an executable that lacks an architecture:
 
 ```
 python3 Scripts/control-plane/publish-chromium-engine.py \

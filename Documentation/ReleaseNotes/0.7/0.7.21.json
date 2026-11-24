@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "concentric-page-corners",
+      "category": "improved",
+      "message": "On Mac, a page’s corners now follow the rounded corners of its window, so the window border stays the same width all the way around at any border size.",
+      "platforms": ["mac"]
+    }
+  ]
+}

@@ -26,7 +26,57 @@ internal sealed class FilterLibrary {
     /// list says a copy stays current; how many attempts in a row failed; and,
     /// for a list, what it calls itself.
     private sealed record Copy(string? Digest, string? EntityTag, string? LastModified, DateTimeOffset? UpdatedAt,
-        DateTimeOffset DueAt, TimeSpan Refresh, int Failures, string? Title = null, bool TooLarge = false);
+        DateTimeOffset DueAt, TimeSpan Refresh, int Failures, string? Title = null, bool TooLarge = false) {
+        #region Types
+
+        /// How the library's state file spells a copy's members.
+        private static class Key {
+            public const string Digest = "digest";
+            public const string EntityTag = "entityTag";
+            public const string LastModified = "lastModified";
+            public const string UpdatedAt = "updatedAt";
+            public const string DueAt = "dueAt";
+            public const string Refresh = "refresh";
+            public const string Failures = "failures";
+            public const string Title = "title";
+            public const string TooLarge = "tooLarge";
+        }
+
+        #endregion
+
+        #region Actions - Coding
+
+        /// The copy as the library's state file keeps it.
+        public JsonObject Encoded() => new() {
+            [Key.Digest] = Digest,
+            [Key.EntityTag] = EntityTag,
+            [Key.LastModified] = LastModified,
+            [Key.UpdatedAt] = UpdatedAt?.ToUnixTimeSeconds(),
+            [Key.DueAt] = DueAt.ToUnixTimeSeconds(),
+            [Key.Refresh] = (long)Refresh.TotalSeconds,
+            [Key.Failures] = Failures,
+            [Key.Title] = Title,
+            [Key.TooLarge] = TooLarge
+        };
+
+        /// The copy the state file kept in `state`; a member it lacks takes
+        /// its default, and a missing refresh takes `usualRefresh`.
+        public static Copy Decoded(JsonObject state, TimeSpan usualRefresh) {
+            long? updated = state[Key.UpdatedAt]?.GetValue<long>();
+            return new(state[Key.Digest]?.GetValue<string>(), state[Key.EntityTag]?.GetValue<string>(),
+                state[Key.LastModified]?.GetValue<string>(), updated is { } seconds ? DateTimeOffset.FromUnixTimeSeconds(seconds) : null,
+                DateTimeOffset.FromUnixTimeSeconds(state[Key.DueAt]?.GetValue<long>() ?? 0),
+                TimeSpan.FromSeconds(state[Key.Refresh]?.GetValue<long>() ?? (long)usualRefresh.TotalSeconds),
+                state[Key.Failures]?.GetValue<int>() ?? 0, state[Key.Title]?.GetValue<string>(),
+                state[Key.TooLarge]?.GetValue<bool>() ?? false);
+        }
+
+        /// The digest a kept state names, read before the rest so a copy
+        /// whose text is gone can be left out.
+        public static string? DigestIn(JsonObject state) => state[Key.Digest]?.GetValue<string>();
+
+        #endregion
+    }
 
     /// One thing the library downloads: a catalog list or one the person
     /// added, named on the device by `Name` and on the wire by `Id`.
@@ -69,7 +119,7 @@ internal sealed class FilterLibrary {
     private const string ResourcesName = "resources";
     internal static readonly Guid ResourcesId = new("6f0b8c52-3d1e-4f7a-9a51-7c2d4e8b1f30");
     public const string PublishedResourcesUrl =
-        "https://github.com/pauljoda/Crest/releases/download/" + ResourcesRelease + "/ublock-resources.json";
+        "https://github.com/crest-browser/Crest/releases/download/" + ResourcesRelease + "/ublock-resources.json";
 
     /// AdGuard's URL Tracking filter, in its build for uBlock Origin, and how
     /// it is named on the device and on the wire. The device keeps it while
@@ -86,11 +136,16 @@ internal sealed class FilterLibrary {
     private static readonly TimeSpan UsualRefresh = TimeSpan.FromDays(4);
     private static readonly TimeSpan FirstRetry = TimeSpan.FromMinutes(30);
     private static readonly TimeSpan LongestRetry = TimeSpan.FromHours(12);
+    /// The most times a failed download's retry wait doubles from the first.
+    private const int MostRetryDoublings = 16;
+    /// How much later than its refresh a copy is due at most, as a share of
+    /// the refresh, so devices do not all ask at once.
+    private const double RefreshSpread = 0.1;
     /// How long a download the core handed out keeps the list from being
     /// handed out again.
     private static readonly TimeSpan FetchLease = TimeSpan.FromMinutes(10);
 
-    /// The `!#if` tokens that hold in WebKit's content rules: Safari's, and
+    /// The `!#if` tokens that hold in WebKit's content rules: WebKit's own, and
     /// uBlock Origin's own syntax, which the engine reads.
     private static readonly string[] WebKitConditions = ["env_safari", "ext_ublock"];
 
@@ -166,6 +221,13 @@ internal sealed class FilterLibrary {
     private string? engineKey;
     private string? buildingEngineKey;
     private bool engineRebuildWanted;
+    /// The workers converting the rules or compiling the engine filter that
+    /// may still run, including one a newer worker replaced while it
+    /// announced its rules; whether the library stopped, after which none
+    /// starts; and whether it closed, after which nothing writes in the folder.
+    private readonly List<Task> workers = [];
+    private bool stopped;
+    private bool closed;
 
     #endregion
 
@@ -368,7 +430,7 @@ internal sealed class FilterLibrary {
         lock (gate) {
             var copy = copies.GetValueOrDefault(source.Name) ?? new(null, null, null, null, now, UsualRefresh, 0);
             int failures = copy.Failures + 1;
-            var retry = TimeSpan.FromTicks(Math.Min(LongestRetry.Ticks, FirstRetry.Ticks << Math.Min(failures - 1, 16)));
+            var retry = TimeSpan.FromTicks(Math.Min(LongestRetry.Ticks, FirstRetry.Ticks << Math.Min(failures - 1, MostRetryDoublings)));
             copies[source.Name] = copy with { DueAt = now + retry, Failures = failures, TooLarge = tooLarge || copy.TooLarge };
             leases.Remove(source.Name);
             SaveState();
@@ -385,7 +447,7 @@ internal sealed class FilterLibrary {
                 copies.Remove(gone);
                 leases.Remove(gone);
                 heldTexts.Remove(gone);
-                if (folder is not null) File.Delete(Path.Combine(folder, "lists", gone + ".txt"));
+                if (folder is not null && !closed) File.Delete(Path.Combine(folder, "lists", gone + ".txt"));
             }
             SaveState();
         }
@@ -414,10 +476,10 @@ internal sealed class FilterLibrary {
         return refresh < ShortestRefresh ? ShortestRefresh : refresh > LongestRefresh ? LongestRefresh : refresh;
     }
 
-    /// When a copy brought up to date `now` is due, spread over a tenth of
-    /// its refresh so devices do not all ask at once.
+    /// When a copy brought up to date `now` is due, spread over
+    /// `RefreshSpread` of its refresh.
     private static DateTimeOffset Next(DateTimeOffset now, TimeSpan refresh) =>
-        now + refresh + TimeSpan.FromTicks((long)(refresh.Ticks * 0.1 * Random.Shared.NextDouble()));
+        now + refresh + TimeSpan.FromTicks((long)(refresh.Ticks * RefreshSpread * Random.Shared.NextDouble()));
 
     #endregion
 
@@ -477,13 +539,15 @@ internal sealed class FilterLibrary {
     }
 
     /// Converts the lists again unless their rules are the ones in force: at
-    /// once from what an earlier conversion stored, or on a worker.
+    /// once from what an earlier conversion stored, or on a worker. A stopped
+    /// library converts nothing.
     private void RebuildRules() {
         var chosen = preferences();
         string key;
         List<(string Name, string Digest)> inputs;
         ContentRuleListSet? restored = null;
         lock (gate) {
+            if (stopped) return;
             inputs = Inputs(chosen);
             key = RulesKey(inputs);
             if (key == publishedKey) return;
@@ -495,10 +559,10 @@ internal sealed class FilterLibrary {
                 return;
             } else {
                 buildingKey = key;
+                StartWorker(() => Build(key, inputs, chosen.CustomFilters));
             }
         }
         if (restored is not null) announce(new ContentRuleListsChanged(restored));
-        else _ = Task.Run(() => Build(key, inputs, chosen.CustomFilters));
     }
 
     /// The lists in force that the device holds a copy of, with their digests,
@@ -678,7 +742,7 @@ internal sealed class FilterLibrary {
         var style = new StringBuilder();
         foreach (var selector in site.Concat(generic).Distinct())
             style.Append(selector).Append("{display:none!important}\n");
-        var collapse = resources.Where(resource => current.Blocks(new ContentFilter.Request(resource.Url, url, KindOf(resource.Kind))))
+        var collapse = resources.Where(resource => current.Blocks(new ContentFilter.Request(resource.Url, url, resource.Kind.RequestKind)))
             .Select(resource => resource.Url).Distinct();
         return new(true, style.ToString(), first ? page.ProceduralActions : [], [.. collapse]);
     }
@@ -715,19 +779,15 @@ internal sealed class FilterLibrary {
     }
 
     /// What the filter calls the load of an element of `kind`.
-    private static ContentFilter.RequestKind KindOf(PageResourceKind kind) => kind switch {
-        PageResourceKind.Frame => ContentFilter.RequestKind.Subdocument,
-        PageResourceKind.Image => ContentFilter.RequestKind.Image,
-        _ => ContentFilter.RequestKind.Object,
-    };
-
     /// Compiles the engine filter again unless the one in force matches the
-    /// lists: at once from what an earlier compile saved, or on a worker.
+    /// lists: at once from what an earlier compile saved, or on a worker. A
+    /// stopped library compiles nothing.
     private void RebuildEngine() {
         var chosen = preferences();
         string key;
         List<(string Name, string Digest)> inputs;
         lock (gate) {
+            if (stopped) return;
             inputs = Inputs(chosen);
             if (copies.GetValueOrDefault(ResourcesName)?.Digest is { } resources && resources == resourcesDigest)
                 inputs.Add((ResourcesName, resources));
@@ -738,8 +798,8 @@ internal sealed class FilterLibrary {
                 return;
             }
             buildingEngineKey = key;
+            StartWorker(() => BuildEngine(key, inputs, chosen.CustomFilters));
         }
-        _ = Task.Run(() => BuildEngine(key, inputs, chosen.CustomFilters));
     }
 
     /// The key the lists in force compile to, with the pinned resources and
@@ -851,10 +911,11 @@ internal sealed class FilterLibrary {
         }
     }
 
-    /// Keeps a download's text. The caller holds the lock.
+    /// Keeps a download's text, unless the library closed. The caller holds
+    /// the lock.
     private void WriteText(string name, byte[] bytes, string text) {
         if (folder is null) heldTexts[name] = text;
-        else WriteAtomically(Path.Combine(folder, "lists", name + ".txt"), bytes);
+        else if (!closed) WriteAtomically(Path.Combine(folder, "lists", name + ".txt"), bytes);
     }
 
     private static void WriteAtomically(string path, byte[] bytes) {
@@ -864,22 +925,13 @@ internal sealed class FilterLibrary {
         File.Move(pending, path, overwrite: true);
     }
 
-    /// Writes every copy's state, and the rules in force. The caller holds the lock.
+    /// Writes every copy's state, and the rules in force, unless the library
+    /// closed. The caller holds the lock.
     private void SaveState() {
-        if (folder is null) return;
+        if (folder is null || closed) return;
         var lists = new JsonObject();
         foreach (var (name, copy) in copies)
-            lists[name] = new JsonObject {
-                ["digest"] = copy.Digest,
-                ["entityTag"] = copy.EntityTag,
-                ["lastModified"] = copy.LastModified,
-                ["updatedAt"] = copy.UpdatedAt?.ToUnixTimeSeconds(),
-                ["dueAt"] = copy.DueAt.ToUnixTimeSeconds(),
-                ["refresh"] = (long)copy.Refresh.TotalSeconds,
-                ["failures"] = copy.Failures,
-                ["title"] = copy.Title,
-                ["tooLarge"] = copy.TooLarge
-            };
+            lists[name] = copy.Encoded();
         try {
             WriteAtomically(Path.Combine(folder, "state.json"), Encoding.UTF8.GetBytes(new JsonObject { ["lists"] = lists }.ToJsonString()));
             if (publishedKey is not null)
@@ -904,16 +956,36 @@ internal sealed class FilterLibrary {
             bool known = FilterList.Named(name) is not null || name == ResourcesName || name == LinkTrackingName
                 || name.StartsWith("custom-", StringComparison.Ordinal);
             if (!known || value is not JsonObject state) continue;
-            string? digest = state["digest"]?.GetValue<string>();
-            if (digest is not null && !File.Exists(Path.Combine(folder, "lists", name + ".txt"))) continue;
-            long? updated = state["updatedAt"]?.GetValue<long>();
-            copies[name] = new(digest, state["entityTag"]?.GetValue<string>(), state["lastModified"]?.GetValue<string>(),
-                updated is { } seconds ? DateTimeOffset.FromUnixTimeSeconds(seconds) : null,
-                DateTimeOffset.FromUnixTimeSeconds(state["dueAt"]?.GetValue<long>() ?? 0),
-                TimeSpan.FromSeconds(state["refresh"]?.GetValue<long>() ?? (long)UsualRefresh.TotalSeconds),
-                state["failures"]?.GetValue<int>() ?? 0, state["title"]?.GetValue<string>(),
-                state["tooLarge"]?.GetValue<bool>() ?? false);
+            if (Copy.DigestIn(state) is not null && !File.Exists(Path.Combine(folder, "lists", name + ".txt"))) continue;
+            copies[name] = Copy.Decoded(state, UsualRefresh);
         }
+    }
+
+    #endregion
+
+    #region Actions - Lifetime
+
+    /// Starts no worker from now on, waits for every one still converting,
+    /// compiling or announcing so they keep and announce what they made, and
+    /// then closes: a download reported or a list changed afterwards writes
+    /// nothing, so once this returns no worker runs and nothing writes in the
+    /// folder. A worker that failed stays unreported, as it was while the
+    /// library ran.
+    public void Stop() {
+        Task[] running;
+        lock (gate) {
+            stopped = true;
+            running = [.. workers];
+        }
+        Task.WhenAll(running).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing).GetAwaiter().GetResult();
+        lock (gate) closed = true;
+    }
+
+    /// Runs `work` on a worker that `Stop` waits for, forgetting those that
+    /// finished. The caller holds the lock.
+    private void StartWorker(Action work) {
+        workers.RemoveAll(worker => worker.IsCompleted);
+        workers.Add(Task.Run(work));
     }
 
     #endregion

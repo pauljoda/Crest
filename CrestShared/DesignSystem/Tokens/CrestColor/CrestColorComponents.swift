@@ -14,4 +14,10 @@ struct CrestColorComponents: Equatable, Sendable {
             opacity: 1
         )
     }
+
+    /// These components as the color a Space's look is mixed in, for a
+    /// ground the look's own colors soften toward.
+    var brandColor: BrandColor {
+        BrandColor(red: Double(red) / 255, green: Double(green) / 255, blue: Double(blue) / 255)
+    }
 }

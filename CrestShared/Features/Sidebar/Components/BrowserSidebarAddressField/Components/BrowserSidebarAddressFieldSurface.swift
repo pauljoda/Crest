@@ -16,9 +16,6 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
     let isLoading: Bool
     let isEditing: Bool
     var branding: SpaceBranding? = nil
-    /// Whether the field stands on Liquid Glass, as the command palette it
-    /// grows into does, rather than the device's surface material.
-    var isGlass = false
     /// What a click on the surface means where nothing inside the field takes
     /// it, such as the band above and below a one-line address. Nil leaves
     /// the surface inert, as a picture of the field is.
@@ -38,7 +35,7 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
 
     private var appearance: BrowserAddressAppearance { BrowserDeviceAppearanceStore.shared.address }
     private var accent: Color {
-        appearance.color?.color ?? spaceAccent ?? (branding?.primaryColor ?? .indigo).color
+        appearance.color?.color ?? spaceAccent ?? (branding?.primaryColor ?? SpaceBranding.fallbackColor).color
     }
 
     private var fieldShape: RoundedRectangle {
@@ -56,7 +53,6 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
         .background {
             activating(layers)
         }
-        .modifier(GlassLayer(isGlass: isGlass, shape: fieldShape, reduceTransparency: reduceTransparency))
         .overlay {
             fieldShape
                 .strokeBorder(
@@ -76,9 +72,7 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
     /// The material, the tint and the loading fill under the field's contents.
     private var layers: some View {
         ZStack(alignment: .leading) {
-            if !isGlass {
-                CrestSurfaceLayer(shape: fieldShape)
-            }
+            CrestSurfaceLayer(shape: fieldShape)
             if !reduceTransparency {
                 fieldShape.fill(accent.opacity(BrowserTabAppearance.intensity(appearance.fill) * 0.4))
             }
@@ -116,23 +110,6 @@ struct BrowserSidebarAddressFieldSurface: ViewModifier {
             content.frame(height: metrics.height)
         }
     }
-
-    /// The command palette's own glass under a field that stands on it.
-    private struct GlassLayer: ViewModifier {
-        let isGlass: Bool
-        let shape: RoundedRectangle
-        let reduceTransparency: Bool
-
-        @ViewBuilder
-        func body(content: Content) -> some View {
-            if isGlass {
-                content.modifier(
-                    BrowserCommandPaletteShellMaterial(shape: shape, reduceTransparency: reduceTransparency))
-            } else {
-                content
-            }
-        }
-    }
 }
 
 extension View {
@@ -143,7 +120,6 @@ extension View {
         isLoading: Bool,
         isEditing: Bool,
         branding: SpaceBranding? = nil,
-        isGlass: Bool = false,
         activate: (() -> Void)? = nil
     ) -> some View {
         modifier(
@@ -154,7 +130,6 @@ extension View {
                 isLoading: isLoading,
                 isEditing: isEditing,
                 branding: branding,
-                isGlass: isGlass,
                 activate: activate
             )
         )

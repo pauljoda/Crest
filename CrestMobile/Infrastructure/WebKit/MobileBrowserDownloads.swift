@@ -16,7 +16,7 @@ struct MobileBrowserDownloads {
 
     init(
         core: CrestCore,
-        browsingMode: BrowserBrowsingMode = .standard,
+        workspaceKind: WorkspaceKind = .persistent,
         permissionCenter: BrowserSitePermissionCenter
     ) {
         let riskConfirmation = MobileDownloadRiskConfirmationCoordinator()
@@ -35,7 +35,7 @@ struct MobileBrowserDownloads {
         )
         // The mode answers for its own Spaces: private windows' for private
         // browsing, every other one's otherwise.
-        let isPrivate = browsingMode.isPrivate
+        let isPrivate = workspaceKind.isPrivate
         let space: @MainActor (UUID?) -> SpaceModel? = { [weak core] spaceID in
             guard let spaceID, let core else { return nil }
             return core.state.workspaces.values.lazy.filter { $0.kind.isPrivate == isPrivate }

@@ -7,31 +7,29 @@ struct BrowserSoftwareUpdateFixture: Sendable {
 
     /// The offered update alone, also standing for any name Crest does not
     /// know.
-    static let available = Self(name: "available") { _, _, _, _ in }
-    static let checking = Self(name: "checking") { model, _, _, _ in
+    static let available = Self(name: "available") { _, _, _ in }
+    static let checking = Self(name: "checking") { model, _, _ in
         model.presentChecking(cancellation: {})
     }
-    static let automaticDownloading = Self(name: "automatic-downloading") { model, version, build, releaseNotes in
+    static let automaticDownloading = Self(name: "automatic-downloading") { model, version, build in
         model.presentAutomaticDownload(
             title: "Crest \(version)",
             version: version,
             build: build,
-            releaseNotes: releaseNotes,
             informationURL: nil,
             isFixture: true
         )
     }
-    static let downloading = Self(name: "downloading") { model, _, _, _ in
+    static let downloading = Self(name: "downloading") { model, _, _ in
         model.presentDownload(cancellation: {})
         model.setExpectedDownloadLength(100)
         model.receiveDownloadedBytes(42)
     }
-    static let automaticReady = Self(name: "automatic-ready") { model, version, build, releaseNotes in
+    static let automaticReady = Self(name: "automatic-ready") { model, version, build in
         model.presentAutomaticUpdateReady(
             title: "Crest \(version)",
             version: version,
             build: build,
-            releaseNotes: releaseNotes,
             informationURL: nil,
             isFixture: true,
             installAndRelaunch: { [weak model] in
@@ -42,7 +40,7 @@ struct BrowserSoftwareUpdateFixture: Sendable {
             }
         )
     }
-    static let ready = Self(name: "ready") { model, _, _, _ in
+    static let ready = Self(name: "ready") { model, _, _ in
         model.presentReadyToInstall(
             install: { [weak model] in
                 model?.presentInstalling(
@@ -53,7 +51,7 @@ struct BrowserSoftwareUpdateFixture: Sendable {
             cancel: {}
         )
     }
-    static let failed = Self(name: "failed") { model, _, _, _ in
+    static let failed = Self(name: "failed") { model, _, _ in
         model.presentError(
             message: "This isolated fixture simulates an update error.",
             acknowledgement: {}
@@ -69,10 +67,10 @@ struct BrowserSoftwareUpdateFixture: Sendable {
     let name: String
 
     /// Presents the state on the model, which already offers the update with
-    /// the version, build and release notes it is given.
+    /// the version and build it is given.
     private let presentation:
         @MainActor @Sendable (
-            _ model: BrowserSoftwareUpdateModel, _ version: String, _ build: String, _ releaseNotes: String
+            _ model: BrowserSoftwareUpdateModel, _ version: String, _ build: String
         ) -> Void
 
     // MARK: - Initializers
@@ -81,7 +79,7 @@ struct BrowserSoftwareUpdateFixture: Sendable {
         name: String,
         presentation:
             @escaping @MainActor @Sendable (
-                _ model: BrowserSoftwareUpdateModel, _ version: String, _ build: String, _ releaseNotes: String
+                _ model: BrowserSoftwareUpdateModel, _ version: String, _ build: String
             ) -> Void
     ) {
         self.name = name
@@ -97,9 +95,9 @@ struct BrowserSoftwareUpdateFixture: Sendable {
     }
 
     /// Presents the fixture's state on `model`, which already offers the
-    /// update with `version`, `build` and `releaseNotes`.
+    /// update with `version` and `build`.
     @MainActor
-    func present(on model: BrowserSoftwareUpdateModel, version: String, build: String, releaseNotes: String) {
-        presentation(model, version, build, releaseNotes)
+    func present(on model: BrowserSoftwareUpdateModel, version: String, build: String) {
+        presentation(model, version, build)
     }
 }

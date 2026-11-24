@@ -43,10 +43,9 @@ internal sealed partial class InstalledBrowser {
     public static IReadOnlyList<InstalledBrowser> All { get; } = [Arc, Zen, Chrome, Safari, Firefox, ChromeBeta, ChromeDev, ChromeCanary,
         Chromium, Brave, Edge, Vivaldi, Opera, Dia, Comet, Aside, EgoLite, OtherChromium];
 
-    /// The largest session file an import reads.
-    public const long MaximumSessionBytes = 512L * 1024 * 1024;
-    /// The largest bookmark file an import reads.
-    public const long MaximumBookmarkBytes = 50L * 1024 * 1024;
+    /// The largest session file an import reads, in megabytes and in bytes.
+    public const int MaximumSessionMegabytes = 512;
+    public const long MaximumSessionBytes = MaximumSessionMegabytes * 1024L * 1024;
     /// The largest list of profiles a Mozilla browser keeps that an import reads.
     private const long MaximumProfileListBytes = 1024 * 1024;
 
@@ -414,7 +413,7 @@ internal sealed partial class InstalledBrowser {
         var draft = new BookmarkDraft();
         foreach (string file in bookmarkFiles(path)) {
             try {
-                var contents = ImportFile.Read(file, MaximumBookmarkBytes, new BookmarksTooLarge(), new FileUnreadable());
+                var contents = ImportFile.Read(file, BookmarkFile.MaximumBytes, new BookmarksTooLarge(), new FileUnreadable());
                 draft.BeginFile();
                 bookmarks!(contents, now, draft);
             } catch (Rejected rejected) {

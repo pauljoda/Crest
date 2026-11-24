@@ -42,14 +42,14 @@ struct CrestAngleKnob: View {
             Circle()
                 .fill(.white)
                 .overlay { Circle().strokeBorder(CrestBrandTheme.line, lineWidth: CrestLayout.hairline) }
-                .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+                .crestElevation(.handle)
                 .frame(width: CrestAngleKnobMetrics.handle, height: CrestAngleKnobMetrics.handle)
                 .scaleEffect(isTurning ? CrestAngleKnobMetrics.turningScale : 1)
                 .offset(handleOffset)
                 .animation(CrestMotion.press.unlessReducingMotion(reduceMotion), value: isTurning)
         }
         .frame(width: diameter, height: diameter)
-        .opacity(isEnabled ? 1 : CrestOpacity.disabled)
+        .opacity(isEnabled ? 1 : CrestOpacity.disabledControl)
         .contentShape(.circle)
         .gesture(turn)
         .sensoryFeedback(.alignment, trigger: degrees) { old, new in

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-10-now-playing-player-lifetime",
+      "category": "fixed",
+      "message": "Keep incidental previews and notification sounds out of Now Playing, and clear playback controls when their media is gone"
+    }
+  ]
+}

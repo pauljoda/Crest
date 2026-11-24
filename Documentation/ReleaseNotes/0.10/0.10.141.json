@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "update-feeds-at-crestbrowser",
+      "category": "internal",
+      "message": "Crest for Mac checks for updates at updates.crestbrowser.com, which serves the same signed feeds it read before.",
+      "platforms": ["mac"]
+    }
+  ]
+}

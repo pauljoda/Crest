@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "pdf-preview-download",
+      "category": "fixed",
+      "message": "Save the displayed PDF directly from the built-in preview"
+    }
+  ]
+}

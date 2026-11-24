@@ -71,7 +71,7 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
             .browserAppearanceSetting(.sidebarOnRight)
             BrowserAppearanceAccentRow(
                 color: accent,
-                fallback: space?.branding.primaryColor ?? .indigo,
+                fallback: space?.branding.primaryColor ?? SpaceBranding.fallbackColor,
                 identifier: "follows-space-accent"
             )
             .browserAppearanceSetting(.followSpaceAccent)

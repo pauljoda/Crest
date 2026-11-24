@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "chromium-touch-id-offered-to-sites",
+      "category": "fixed",
+      "message": "On Chromium pages, sites that check for Touch ID before offering it, such as Duo, now offer it when this Mac can keep passkeys.",
+      "platforms": ["mac"]
+    }
+  ]
+}

@@ -5,13 +5,14 @@ import Foundation
 extension SpaceBranding {
     // MARK: - Static Variables
 
-    /// The most colors a Space's banner holds, as the core enforces it.
-    static var maximumColorCount: Int { CapacityLimits.current.brandColors }
+    /// The color a Space whose palette is empty, or a view with no Space,
+    /// draws with.
+    static let fallbackColor = BrandColor.indigo
 
     // MARK: - Variables
 
     var backgroundColor: BrandColor {
-        color(for: .background) ?? .indigo
+        color(for: .background) ?? Self.fallbackColor
     }
 
     var primaryColor: BrandColor {
@@ -22,12 +23,6 @@ extension SpaceBranding {
         color(for: .pattern) ?? primaryColor
     }
 
-    /// The icon's own color, or the Space's primary color, which it follows
-    /// as the palette changes, when it has none.
-    var resolvedSymbolColor: BrandColor {
-        symbolColor ?? primaryColor
-    }
-
     // MARK: - Actions - Text
 
     /// The tone that reads best over the colors the sidebar paints, unless
@@ -36,7 +31,7 @@ extension SpaceBranding {
     func foregroundTone(system: BrowserSpaceForegroundTone) -> BrowserSpaceForegroundTone {
         if let override = textColorMode.foregroundTone(system: system) { return override }
         let painted = paintedColors
-        return ColorPalette(colors: painted.isEmpty ? [.indigo] : painted).foregroundTone(
+        return ColorPalette(colors: painted.isEmpty ? [Self.fallbackColor] : painted).foregroundTone(
             strength: bannerStrength, readabilityFade: readabilityFade, system: system)
     }
 

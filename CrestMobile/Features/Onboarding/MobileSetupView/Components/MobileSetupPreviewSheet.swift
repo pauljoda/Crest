@@ -13,7 +13,7 @@ struct MobileSetupPreviewSheet: View {
     let spaceID: UUID
 
     @State private var draftPreview = BrowserSetupDraftPreview()
-    @State private var live = MobileSetupLiveSession()
+    @State private var live = BrowserSetupLiveSession()
     @Environment(\.dismiss) private var dismiss
 
     // MARK: - Actions - Drawing
@@ -29,9 +29,10 @@ struct MobileSetupPreviewSheet: View {
                 Spacer(minLength: CrestSpacing.small)
                 Button("Done") { dismiss() }
                     .buttonStyle(.crestSecondary)
-                    .accessibilityIdentifier("setup-preview-done")
+                    .accessibilityIdentifier(BrowserSetupAccessibilityID.previewDone)
             }
             .padding(.horizontal, CrestSpacing.small)
+            .browserSetupPaperContent()
             MobileSetupLiveWindow(session: live, cornerRadius: MobileSetupPreviewSheetMetrics.cornerRadius)
                 .allowsHitTesting(false)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

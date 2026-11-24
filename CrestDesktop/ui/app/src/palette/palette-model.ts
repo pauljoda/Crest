@@ -467,7 +467,7 @@ export class PaletteModel {
     // Beside the tab, in a split with it, as the core arranges it.
     if (opening.name === "splitView" && tabId) {
       send(core, OpenLinkInSplit({
-        workspaceId, windowId, spaceId, tabId: crypto.randomUUID(), targetTabId: tabId, address, title: hostOf(address),
+        workspaceId, windowId, spaceId, tabId: crypto.randomUUID(), targetTabId: tabId, address,
       }));
       return true;
     }

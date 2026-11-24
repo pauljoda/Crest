@@ -72,6 +72,7 @@ struct BrowserDeveloperViewportMenu: View {
                     .tag(Selection.custom)
             }
             .pickerStyle(.inline)
+            .crestMenuActionLabelStyle()
         } label: {
             Label("Viewport Preview", systemImage: "macbook.and.iphone")
                 .labelStyle(.iconOnly)
@@ -79,7 +80,7 @@ struct BrowserDeveloperViewportMenu: View {
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
-        .foregroundStyle(page.developerViewport == nil ? Color.primary : Color.accentColor)
+        .foregroundStyle(page.developerViewport == nil ? Color.primary : CrestBrandTheme.accent)
         .help("Viewport Preview")
         .accessibilityLabel("Viewport Preview")
         .accessibilityValue(

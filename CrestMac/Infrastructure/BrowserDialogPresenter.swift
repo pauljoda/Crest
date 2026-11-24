@@ -31,7 +31,7 @@ final class BrowserDialogPresenter {
         completion: @escaping @MainActor @Sendable () -> Void
     ) {
         let alert = makeAlert(message: message, request: request)
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: String(localized: "OK"))
         present(alert, on: window, dismissal: dismissal) { _ in completion() }
     }
 
@@ -43,8 +43,8 @@ final class BrowserDialogPresenter {
         completion: @escaping @MainActor @Sendable (Bool) -> Void
     ) {
         let alert = makeAlert(message: message, request: request)
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: String(localized: "OK"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
         present(alert, on: window, dismissal: dismissal) { completion($0 == .alertFirstButtonReturn) }
     }
 
@@ -57,11 +57,12 @@ final class BrowserDialogPresenter {
         completion: @escaping @MainActor @Sendable (Bool) -> Void
     ) {
         let alert = NSAlert()
-        alert.messageText = "Leave this page?"
-        alert.informativeText = "Changes you made on \(Self.sourceLabel(for: request)) may not be saved."
+        alert.messageText = String(localized: "Leave this page?")
+        alert.informativeText = String(
+            localized: "Changes you made on \(Self.sourceLabel(for: request)) may not be saved.")
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "Leave Page")
-        alert.addButton(withTitle: "Stay on Page")
+        alert.addButton(withTitle: String(localized: "Leave Page"))
+        alert.addButton(withTitle: String(localized: "Stay on Page"))
         present(alert, on: window, comesForward: true, dismissal: dismissal) {
             completion($0 == .alertFirstButtonReturn)
         }
@@ -79,8 +80,8 @@ final class BrowserDialogPresenter {
         let input = NSTextField(string: defaultText ?? "")
         input.frame = NSRect(x: 0, y: 0, width: 300, height: 24)
         alert.accessoryView = input
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: String(localized: "OK"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
         present(alert, on: window, dismissal: dismissal) { response in
             completion(response == .alertFirstButtonReturn ? input.stringValue : nil)
         }
@@ -99,7 +100,7 @@ final class BrowserDialogPresenter {
 
     private func makeAlert(message: String, request: URLRequest) -> NSAlert {
         let alert = NSAlert()
-        alert.messageText = "\(Self.sourceLabel(for: request)) says"
+        alert.messageText = String(localized: "\(Self.sourceLabel(for: request)) says")
         alert.informativeText = message
         alert.alertStyle = .informational
         return alert
@@ -113,7 +114,7 @@ final class BrowserDialogPresenter {
         completion: @escaping @MainActor @Sendable ([URL]?) -> Void
     ) {
         let panel = NSOpenPanel()
-        panel.title = "Choose Files for \(Self.sourceLabel(for: request))"
+        panel.title = String(localized: "Choose Files for \(Self.sourceLabel(for: request))")
         panel.canChooseFiles = true
         panel.canChooseDirectories = options.allowsDirectories
         panel.allowsMultipleSelection = options.allowsMultipleSelection
@@ -125,26 +126,32 @@ final class BrowserDialogPresenter {
         }
     }
 
+    /// Files the person chose that Crest couldn't read. Only macOS denying
+    /// access asks something of the person, whether to open the setting that
+    /// allows it, so that one is an alert and any other failure is a notice.
     func presentFileAccessFailure(
         _ error: Error,
         request: URLRequest,
         completion: @escaping @MainActor @Sendable () -> Void
     ) {
-        let alert = makeAlert(message: "Crest couldn’t open the selected files.", request: request)
-        alert.informativeText = error.localizedDescription
         let denied =
             (error as NSError).domain == NSCocoaErrorDomain
             && (error as NSError).code == CocoaError.fileReadNoPermission.rawValue
-        if denied {
-            alert.informativeText +=
-                " Allow Crest in Privacy & Security > Files and Folders, then choose the files again."
-            alert.addButton(withTitle: "Open Files and Folders Settings")
+        guard denied else {
+            let summary = String(localized: "Crest couldn’t open the selected files.")
+            BrowserNoticeCenter.shared.post(.failure("\(summary) \(error.localizedDescription)"))
+            completion()
+            return
         }
-        alert.addButton(withTitle: "OK")
+        let alert = makeAlert(
+            message: error.localizedDescription + " "
+                + String(
+                    localized: "Allow Crest in Privacy & Security > Files and Folders, then choose the files again."),
+            request: request)
+        alert.addButton(withTitle: String(localized: "Open Files and Folders Settings"))
+        alert.addButton(withTitle: String(localized: "OK"))
         present(alert) { response in
-            if denied, response == .alertFirstButtonReturn,
-                let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders")
-            {
+            if response == .alertFirstButtonReturn, let url = BrowserSystemPermission.files.settingsURL {
                 NSWorkspace.shared.open(url)
             }
             completion()
@@ -160,7 +167,7 @@ final class BrowserDialogPresenter {
     ) async -> BrowserHTTPAuthenticationPromptResponse? {
         let descriptor = prompt.descriptor
         let alert = NSAlert()
-        alert.messageText = "Sign in to \(descriptor.source)"
+        alert.messageText = String(localized: "Sign in to \(descriptor.source)")
         alert.informativeText = authenticationMessage(
             prompt: prompt,
             spaceName: spaceName
@@ -168,19 +175,19 @@ final class BrowserDialogPresenter {
         alert.alertStyle = descriptor.isSecureTransport ? .informational : .warning
 
         let username = NSTextField(string: prompt.suggestedUsername ?? "")
-        username.placeholderString = "Username"
-        username.setAccessibilityLabel("Username")
+        username.placeholderString = String(localized: "Username")
+        username.setAccessibilityLabel(String(localized: "Username"))
         let password = NSSecureTextField(string: "")
-        password.placeholderString = "Password"
-        password.setAccessibilityLabel("Password")
+        password.placeholderString = String(localized: "Password")
+        password.setAccessibilityLabel(String(localized: "Password"))
 
         let savePassword = NSButton(
-            checkboxWithTitle: "Save in \(spaceName)",
+            checkboxWithTitle: String(localized: "Save in \(spaceName)"),
             target: nil,
             action: nil
         )
         savePassword.state = .on
-        savePassword.setAccessibilityLabel("Save this sign-in in the \(spaceName) Space")
+        savePassword.setAccessibilityLabel(String(localized: "Save this sign-in in the \(spaceName) Space"))
 
         let accessoryHeight: CGFloat = prompt.allowsSaving ? 84 : 56
         let fields = NSView(frame: NSRect(x: 0, y: 0, width: 280, height: accessoryHeight))
@@ -193,8 +200,8 @@ final class BrowserDialogPresenter {
             fields.addSubview(savePassword)
         }
         alert.accessoryView = fields
-        alert.addButton(withTitle: "Sign In")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: String(localized: "Sign In"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
         alert.window.initialFirstResponder = username
 
         return await withCheckedContinuation { continuation in
@@ -221,24 +228,28 @@ final class BrowserDialogPresenter {
         let descriptor = prompt.descriptor
         var components: [String] = []
         if let realm = descriptor.realm, !realm.isEmpty {
-            components.append("Realm: \(realm)")
+            components.append(String(localized: "Realm: \(realm)"))
         }
         if prompt.allowsSaving {
             components.append(
-                "This sign-in belongs only to the \(spaceName) Space. "
-                    + "Crest saves it only after the site accepts it."
+                String(
+                    localized:
+                        "This sign-in belongs only to the \(spaceName) Space. Crest saves it only after the site accepts it."
+                )
             )
         } else {
             components.append(
-                "This sign-in belongs only to the \(spaceName) Space and cannot "
-                    + "be saved because the connection is not protected by HTTPS."
+                String(
+                    localized:
+                        "This sign-in belongs only to the \(spaceName) Space and cannot be saved because the connection is not protected by HTTPS."
+                )
             )
         }
         if descriptor.previousFailureCount > 0 {
-            components.append("The previous credentials were not accepted.")
+            components.append(String(localized: "The previous credentials were not accepted."))
         }
         if !descriptor.isSecureTransport {
-            components.append("Warning: this connection is not protected by HTTPS.")
+            components.append(String(localized: "Warning: this connection is not protected by HTTPS."))
         }
         return components.joined(separator: "\n\n")
     }
@@ -249,38 +260,27 @@ final class BrowserDialogPresenter {
     /// The caller keeps the page's original request pending, then rechecks the
     /// system authorization after Crest becomes active again.
     func recoverGeolocationSystemAuthorization() async {
-        guard
-            let settingsURL = URL(
-                string:
-                    "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices"
-            )
-        else { return }
+        guard let settingsURL = BrowserSystemPermission.location.settingsURL else { return }
         await presentSystemPermissionRecovery(
-            title: "Location Access Is Off for Crest",
-            message:
-                "macOS is blocking Crest from receiving a location, even when this site is allowed. "
-                + "Turn on Crest in Privacy & Security > Location Services. "
-                + "This request will continue when you return.",
-            openButtonTitle: "Open Location Settings",
+            title: String(localized: "Location Access Is Off for Crest"),
+            message: String(
+                localized:
+                    "macOS is blocking Crest from receiving a location, even when this site is allowed. Turn on Crest in Privacy & Security > Location Services. This request will continue when you return."
+            ),
+            openButtonTitle: String(localized: "Open Location Settings"),
             settingsURL: settingsURL
         )
     }
 
     func recoverNotificationSystemAuthorization() async {
-        var components = URLComponents(
-            string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension"
-        )
-        components?.queryItems = [
-            URLQueryItem(name: "id", value: Bundle.main.bundleIdentifier)
-        ]
-        guard let settingsURL = components?.url else { return }
+        guard let settingsURL = BrowserSystemPermission.notifications.settingsURL else { return }
         await presentSystemPermissionRecovery(
-            title: "Notifications Are Off for Crest",
-            message:
-                "macOS is blocking Crest notifications, even when this site is allowed. "
-                + "Turn on Allow notifications for Crest. "
-                + "This request will continue when you return.",
-            openButtonTitle: "Open Notification Settings",
+            title: String(localized: "Notifications Are Off for Crest"),
+            message: String(
+                localized:
+                    "macOS is blocking Crest notifications, even when this site is allowed. Turn on Allow notifications for Crest. This request will continue when you return."
+            ),
+            openButtonTitle: String(localized: "Open Notification Settings"),
             settingsURL: settingsURL
         )
     }
@@ -297,7 +297,7 @@ final class BrowserDialogPresenter {
             alert.informativeText = message
             alert.alertStyle = .warning
             alert.addButton(withTitle: openButtonTitle)
-            alert.addButton(withTitle: "Not Now")
+            alert.addButton(withTitle: String(localized: "Not Now"))
             present(alert) { response in
                 continuation.resume(
                     returning: response == .alertFirstButtonReturn
@@ -308,14 +308,17 @@ final class BrowserDialogPresenter {
         await waitForApplicationReturn()
     }
 
+    /// Waits for Crest to step aside for System Settings, then to come back.
     private func waitForApplicationReturn() async {
-        var observedInactiveApplication = !NSApp.isActive
-        while !observedInactiveApplication {
-            try? await Task.sleep(for: .milliseconds(100))
-            observedInactiveApplication = !NSApp.isActive
+        if NSApp.isActive {
+            for await _ in NotificationCenter.default.notifications(named: NSApplication.didResignActiveNotification) {
+                break
+            }
         }
-        while !NSApp.isActive {
-            try? await Task.sleep(for: .milliseconds(100))
+        if !NSApp.isActive {
+            for await _ in NotificationCenter.default.notifications(named: NSApplication.didBecomeActiveNotification) {
+                break
+            }
         }
     }
 
@@ -332,16 +335,16 @@ final class BrowserDialogPresenter {
         let scheme = destinationURL.scheme?.lowercased() ?? "link"
         return await withCheckedContinuation { continuation in
             let alert = NSAlert()
-            alert.messageText = "Open this “\(scheme)” link in another app?"
-            alert.informativeText =
-                "\(origin.host) wants to leave Crest and open "
-                + "\(Self.externalDestinationLabel(for: destinationURL)). "
-                + "The choice belongs only to the \(spaceName) Space and can be "
-                + "changed in Settings > Site Permissions."
+            alert.messageText = String(localized: "Open this “\(scheme)” link in another app?")
+            let destination = Self.externalDestinationLabel(for: destinationURL)
+            alert.informativeText = String(
+                localized:
+                    "\(origin.host) wants to leave Crest and open \(destination). The choice belongs only to the \(spaceName) Space and can be changed in Settings > Site Permissions."
+            )
             alert.alertStyle = .informational
-            alert.addButton(withTitle: "Open")
-            alert.addButton(withTitle: "Always Allow in \(spaceName)")
-            alert.addButton(withTitle: "Cancel")
+            alert.addButton(withTitle: String(localized: "Open"))
+            alert.addButton(withTitle: String(localized: "Always Allow in \(spaceName)"))
+            alert.addButton(withTitle: String(localized: "Cancel"))
             present(alert) { response in
                 switch response {
                 case .alertFirstButtonReturn:
@@ -376,18 +379,19 @@ final class BrowserDialogPresenter {
     ) async -> Bool {
         await withCheckedContinuation { continuation in
             let alert = NSAlert()
-            alert.messageText = "Download “\(assessment.sanitizedFilename)”?"
+            alert.messageText = String(localized: "Download “\(assessment.sanitizedFilename)”?")
             var paragraphs = assessment.reasons.map { String(localized: $0.message) }
             if let host = sourceURL?.host() {
-                paragraphs.append("Source: \(host) · Space: \(spaceName)")
+                paragraphs.append(String(localized: "Source: \(host) · Space: \(spaceName)"))
             } else {
-                paragraphs.append("Space: \(spaceName)")
+                paragraphs.append(String(localized: "Space: \(spaceName)"))
             }
-            paragraphs.append("macOS will quarantine the completed file. Open it only if you trust its source.")
+            paragraphs.append(
+                String(localized: "macOS will quarantine the completed file. Open it only if you trust its source."))
             alert.informativeText = paragraphs.joined(separator: "\n\n")
             alert.alertStyle = .warning
-            alert.addButton(withTitle: "Download")
-            alert.addButton(withTitle: "Cancel")
+            alert.addButton(withTitle: String(localized: "Download"))
+            alert.addButton(withTitle: String(localized: "Cancel"))
             present(alert) { response in
                 continuation.resume(returning: response == .alertFirstButtonReturn)
             }
@@ -404,26 +408,31 @@ final class BrowserDialogPresenter {
         await withCheckedContinuation { continuation in
             let alert = NSAlert()
             let keeps = asked.warning != nil
-            alert.messageText = keeps ? "Keep “\(asked.filename)”?" : "Download “\(asked.filename)”?"
+            alert.messageText =
+                keeps
+                ? String(localized: "Keep “\(asked.filename)”?")
+                : String(localized: "Download “\(asked.filename)”?")
             var paragraphs = asked.reasons.map { String(localized: $0.message) }
             if let warning = asked.warning { paragraphs.append(String(localized: warning.approvalMessage)) }
             switch (asked.sourceHost, spaceName) {
-            case (let host?, let space?): paragraphs.append("Source: \(host) · Space: \(space)")
-            case (let host?, nil): paragraphs.append("Source: \(host)")
-            case (nil, let space?): paragraphs.append("Space: \(space)")
+            case (let host?, let space?): paragraphs.append(String(localized: "Source: \(host) · Space: \(space)"))
+            case (let host?, nil): paragraphs.append(String(localized: "Source: \(host)"))
+            case (nil, let space?): paragraphs.append(String(localized: "Space: \(space)"))
             case (nil, nil): break
             }
             if !keeps {
-                paragraphs.append("macOS will quarantine the completed file. Open it only if you trust its source.")
+                paragraphs.append(
+                    String(localized: "macOS will quarantine the completed file. Open it only if you trust its source.")
+                )
             }
             alert.informativeText = paragraphs.joined(separator: "\n\n")
             alert.alertStyle = .warning
             if keeps {
-                alert.addButton(withTitle: "Cancel")
-                alert.addButton(withTitle: "Keep Download")
+                alert.addButton(withTitle: String(localized: "Cancel"))
+                alert.addButton(withTitle: String(localized: "Keep Download"))
             } else {
-                alert.addButton(withTitle: "Download")
-                alert.addButton(withTitle: "Cancel")
+                alert.addButton(withTitle: String(localized: "Download"))
+                alert.addButton(withTitle: String(localized: "Cancel"))
             }
             present(alert, dismissal: dismissal) { response in
                 continuation.resume(
@@ -558,10 +567,7 @@ final class BrowserDialogPresenter {
     func approveQuitWithDownloads(count: Int, dismissal: BrowserPromptDismissal? = nil) async -> Bool {
         await withCheckedContinuation { continuation in
             let alert = NSAlert()
-            alert.messageText =
-                count == 1
-                ? String(localized: "Quit and cancel the download in progress?")
-                : String(localized: "Quit and cancel \(count) downloads in progress?")
+            alert.messageText = String(localized: "Quit and cancel \(count) downloads in progress?")
             alert.alertStyle = .warning
             alert.addButton(withTitle: String(localized: "Keep Browsing"))
             alert.addButton(withTitle: String(localized: "Quit"))

@@ -9,16 +9,18 @@ options:
   bundleIdPrefix: com.pauldavis
   deploymentTarget:
     iOS: "26.1"
-    macOS: "26.1"
+    macOS: "15.0"
   xcodeVersion: "27.0"
 settings:
   base:
+    # The Mac app is universal; iPhone and iPad are arm64.
     ARCHS: arm64
+    "ARCHS[sdk=macosx*]": "arm64 x86_64"
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: 3U2R97HLXF
     DEVELOPMENT_LANGUAGE: en
     ENABLE_HARDENED_RUNTIME: YES
-    MACOSX_DEPLOYMENT_TARGET: "26.1"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_EMIT_LOC_STRINGS: YES
     SWIFT_STRICT_CONCURRENCY: complete
@@ -106,15 +108,11 @@ targetTemplates:
     type: framework
     platform: macOS
     sources:
-      - path: Documentation/ReleaseNotes.json
-        buildPhase: resources
       # The WebKit composition (its entry point and the shell's WebKit host),
       # engine selection and engine-contributed views; the Chromium sources
       # supply their own.
       - path: CrestShared
         excludes:
-          - Resources/CrestIcon/Sources
-          - Resources/CrestIcon/Validation
           - Infrastructure/Engines/BrowserEngineRegistration+Composition.swift
           - Features/Settings/Components/BrowserEngineExtensionSettingsPane.swift
           - Features/Settings/Components/BrowserEngineRegistration+FeatureFlags.swift
@@ -191,12 +189,7 @@ targets:
     type: application
     platform: macOS
     sources:
-      - path: Documentation/ReleaseNotes.json
-        buildPhase: resources
       - path: CrestShared
-        excludes:
-          - Resources/CrestIcon/Sources
-          - Resources/CrestIcon/Validation
       - path: CrestMac
       - path: CrestAgents
     dependencies:
@@ -240,7 +233,8 @@ targets:
         CREST_DEFAULT_UPDATE_CHANNEL: development
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) CREST_REVIEW_BUILD"
         SWIFT_INCLUDE_PATHS: "$(PROJECT_DIR)/CrestContracts/include"
-        CREST_CORE_LIBRARY_DIR: "$(PROJECT_DIR)/CrestCore/src/CrestCore.Native/bin/Release/net10.0/osx-arm64/publish"
+        # Scripts/control-plane/mac_core.py publishes it here.
+        CREST_CORE_LIBRARY_DIR: "$(PROJECT_DIR)/CrestCore/artifacts/mac-core"
         OTHER_LDFLAGS: '$(inherited) "$(CREST_CORE_LIBRARY_DIR)/CrestCore.Native.dylib"'
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
         SWIFT_EMIT_LOC_STRINGS: NO
@@ -256,57 +250,12 @@ targets:
           - "$(CREST_CORE_LIBRARY_DIR)/CrestCore.Native.dylib"
         outputFiles:
           - "$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/CrestCore.Native.dylib"
-  CrestNativeCoreTests:
-    type: bundle.unit-test
-    platform: macOS
-    sources:
-      - path: CrestTests
-        includes:
-          - BrowserTabStateArchiveTests.swift
-          - BrowserDataRetentionTests.swift
-          - BrowserWebHostViewTests.swift
-          - BrowserPageNavigationMarkerTests.swift
-          - BrowserShortcutTests.swift
-          - BrowserDurableTabCloseTests.swift
-          - BrowserWebsiteDataStoreTests.swift
-          - BrowserPagePoolTests.swift
-          - BrowserCurrentTabFolderTests.swift
-          - BrowserStoreTests.swift
-          - BrowserStoreWorkspaceTests.swift
-          - BrowserCloudRecordCodecTests.swift
-          - BrowserCloudSyncStateTests.swift
-          - BrowserLaunchEnvironmentTests.swift
-          - BrowserCoreSessionAuthorityTests.swift
-          - Support/CrestCore+ProfileErasure.swift
-          - Support/BrowserPage+WebKitTestAccess.swift
-          - Support/BrowserPagePool+Presenting.swift
-          - Support/BrowserInstalledRelease.swift
-          - Support/BrowserPrivacyHTTPServer.swift
-          - Support/BrowserStore+Unlocking.swift
-          - Support/BrowserStoredSessionHarness.swift
-          - Support/StoredSyncJournal.swift
-    dependencies:
-      - target: CrestNativeCore
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest.native-core.tests
-        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited)"
-        SWIFT_INCLUDE_PATHS: "$(PROJECT_DIR)/CrestContracts/include"
-        GENERATE_INFOPLIST_FILE: YES
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/CrestNativeCore.app/Contents/MacOS/CrestNativeCore"
-        BUNDLE_LOADER: "$(TEST_HOST)"
-        SWIFT_EMIT_LOC_STRINGS: NO
   Crest:
     templates: [PortableCoreMac]
     type: application
     platform: macOS
     sources:
-      - path: Documentation/ReleaseNotes.json
-        buildPhase: resources
       - path: CrestShared
-        excludes:
-          - Resources/CrestIcon/Sources
-          - Resources/CrestIcon/Validation
       - path: CrestMac
       - path: CrestAgents
     dependencies:
@@ -408,12 +357,7 @@ targets:
     # committed schemes instead of emitting CrestMobile.app.
     productName: CrestNativeCore
     sources:
-      - path: Documentation/ReleaseNotes.json
-        buildPhase: resources
       - path: CrestShared
-        excludes:
-          - Resources/CrestIcon/Sources
-          - Resources/CrestIcon/Validation
       - path: CrestMobile
     dependencies:
       - sdk: AuthenticationServices.framework
@@ -465,12 +409,7 @@ targets:
     # committed schemes instead of emitting CrestMobile.app.
     productName: Crest
     sources:
-      - path: Documentation/ReleaseNotes.json
-        buildPhase: resources
       - path: CrestShared
-        excludes:
-          - Resources/CrestIcon/Sources
-          - Resources/CrestIcon/Validation
       - path: CrestMobile
     dependencies:
       - target: CrestShareExtension
@@ -548,9 +487,6 @@ schemes:
         CrestNativeCore: all
     run:
       customLLDBInit: "$(SRCROOT)/Config/Crest.lldbinit"
-    test:
-      targets:
-        - CrestNativeCoreTests
   CrestMobile:
     build:
       targets:
@@ -579,13 +515,3 @@ schemes:
       config: Release
     archive:
       config: Release
-  CrestKeychainIntegration:
-    build:
-      targets:
-        Crest: all
-        CrestTests: [test]
-    test:
-      environmentVariables:
-        CREST_RUN_KEYCHAIN_INTEGRATION: "1"
-      targets:
-        - CrestTests

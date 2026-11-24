@@ -3,7 +3,8 @@ namespace CrestCore.Contracts;
 /// What the person chose for one Space an import brings, and what those
 /// choices mean: whether it comes in, the existing Space it joins or none for
 /// a new Space, the name and look it takes, the tabs it brings and the
-/// placements they move to, its saved passwords, and the extensions it offers
+/// placements they move to, its saved passwords and how many of them are for
+/// sites without a secure scheme, and the extensions it offers
 /// with those left on. `DuplicateTabIds` are its tabs the destination
 /// already holds, which it leaves out until the person asks for them;
 /// `MatchedTabIds` are the destination's tabs it matches. `JoinsGroupOf` is
@@ -12,7 +13,8 @@ namespace CrestCore.Contracts;
 /// that does.
 public sealed record SetupReviewSpace(SpaceState Source, bool Included, Guid? DestinationId, SpaceCustomization Customization,
     IReadOnlyList<Guid> IncludedTabIds, IReadOnlyList<Guid> DuplicateTabIds, IReadOnlyList<Guid> MatchedTabIds,
-    IReadOnlyList<TabPlacementChoice> Placements, bool IncludesPasswords, int PasswordCount, IReadOnlyList<ImportExtension> Extensions,
+    IReadOnlyList<TabPlacementChoice> Placements, bool IncludesPasswords, int PasswordCount, int InsecurePasswordCount,
+    IReadOnlyList<ImportExtension> Extensions,
     IReadOnlyList<string> IncludedExtensionIds, Guid? JoinsGroupOf) {
     #region Variables
 
@@ -47,15 +49,16 @@ public sealed record SetupReviewSpace(SpaceState Source, bool Included, Guid? De
     /// The review of `space` as a review starts it: joining `match`, taking
     /// its name and look and leaving out the tabs it holds, or coming in new
     /// with its own in `look`. It comes in when `included`, with the
-    /// `passwordCount` saved passwords that belong with it, offering
-    /// `offered`, all of them left on.
+    /// `passwordCount` saved passwords that belong with it, `insecurePasswordCount`
+    /// of them for sites without a secure scheme, offering `offered`, all of
+    /// them left on.
     internal static SetupReviewSpace Started(SpaceState space, SpaceState? match, bool included, int passwordCount,
-        IReadOnlyList<ImportExtension> offered, SetupLook look) {
+        int insecurePasswordCount, IReadOnlyList<ImportExtension> offered, SetupLook look) {
         ArgumentNullException.ThrowIfNull(look);
         var duplicates = match is null ? [] : space.TabsAlsoIn(match).ToHashSet();
         return new(space, included, match?.Id, match?.Customization ?? look.Applying(space.Customization),
             included ? [.. space.Tabs.Where(tab => !duplicates.Contains(tab.Id)).Select(tab => tab.Id)] : [], [], [], [],
-            IncludesPasswords: true, passwordCount, offered, [.. offered.Select(extension => extension.ExtensionId)], JoinsGroupOf: null);
+            IncludesPasswords: true, passwordCount, insecurePasswordCount, offered, [.. offered.Select(extension => extension.ExtensionId)], JoinsGroupOf: null);
     }
 
     /// The Space with what joining `destination` means: its tabs the

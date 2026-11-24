@@ -5,20 +5,10 @@ extension BrowserQuickWindowRequest: MobileBrowserTransientRequest {
 
     var isQuickWindow: Bool { true }
     var accessibilityLabel: String { "Quick Window" }
-    var accessibilityIdentifier: String { "mobile-quick-window-overlay" }
+    var accessibilityIdentifier: String { BrowserMobileAccessibilityID.quickWindowOverlay }
     var previewSystemImage: String { "sparkle.magnifyingglass" }
 
-    var overlayVocabulary: BrowserTransientOverlayVocabulary {
-        BrowserTransientOverlayVocabulary(
-            closeAccessibilityLabel: "Close Quick Window",
-            closeHelp: "Close Quick Window (Esc or ⌘W)",
-            loadingTitle: "Opening Quick Window…",
-            releasedTitle: "Quick Window Released",
-            releasedDescription:
-                "Crest released this temporary page to reduce memory use.",
-            restoreTitle: "Reload Page"
-        )
-    }
+    var overlayVocabulary: BrowserTransientOverlayVocabulary { .quickWindow }
 
     // MARK: - Actions - Presentation
 

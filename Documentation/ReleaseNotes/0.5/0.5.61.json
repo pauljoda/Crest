@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-04-extension-window-resolution",
+      "category": "fixed",
+      "message": "Let extensions group tabs and open side panels in your window even while one of their popup windows has focus"
+    }
+  ]
+}

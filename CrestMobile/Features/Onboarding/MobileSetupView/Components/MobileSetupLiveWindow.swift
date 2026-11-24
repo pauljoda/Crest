@@ -6,7 +6,7 @@ import SwiftUI
 struct MobileSetupLiveWindow: View {
     // MARK: - Variables
 
-    let session: MobileSetupLiveSession
+    let session: BrowserSetupLiveSession
     /// How round the copy's corners are; none once it fills the screen.
     var cornerRadius = MobileSetupLiveWindowMetrics.cornerRadius
 
@@ -17,17 +17,29 @@ struct MobileSetupLiveWindow: View {
             MobileSetupLiveWindowHost(content: browser(copy), cornerRadius: cornerRadius)
                 .overlay {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.14), lineWidth: CrestLayout.hairline)
+                        .strokeBorder(
+                            Color.primary.opacity(CrestOpacity.windowOutline), lineWidth: CrestLayout.hairline
+                        )
                         .allowsHitTesting(false)
                 }
-                .shadow(color: .black.opacity(cornerRadius > 0 ? 0.22 : 0), radius: 20, y: 10)
+                .background { shadow }
                 .accessibilityElement(children: .contain)
                 .accessibilityLabel(Text("Preview of Crest"))
         }
     }
 
+    /// The copy's shadow, cast by a plain shape behind it rather than by the
+    /// browser it hosts, which would be worked out again from the browser's
+    /// views on every frame the copy moves or grows. It goes once the copy
+    /// fills the screen.
+    private var shadow: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(CrestBrandPalette.ink)
+            .crestElevation(.window, scale: cornerRadius > 0 ? 1 : 0)
+    }
+
     /// Crest's browser over the copy, with the copy's own core.
-    private func browser(_ copy: MobileSetupLiveSession.Copy) -> some View {
+    private func browser(_ copy: BrowserPlatformSetupLiveCopy) -> some View {
         MobileBrowserRootView(
             browser: copy.store,
             pages: copy.pages,

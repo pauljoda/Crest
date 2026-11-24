@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-09-immediate-url-completion-preview",
+      "category": "fixed",
+      "message": "Keep URL completions aligned with the cursor and replace them immediately as you type"
+    }
+  ]
+}

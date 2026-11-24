@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "closed-tab-sidebar-live-state",
+      "category": "fixed",
+      "message": "Keep the sidebar's tabs and selection up to date when closing a tab"
+    }
+  ]
+}

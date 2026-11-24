@@ -3,6 +3,9 @@ import SwiftUI
 /// How a tab or folder row being dragged out of the sidebar looks while it is
 /// away: risen, faded and shadowed.
 struct BrowserDragSourceLiftStyle: ViewModifier {
+    /// How faintly the row shows in its place while it is away.
+    private static let awayOpacity = 0.42
+
     /// Whether the row's own drag is in flight.
     let isDragging: Bool
 
@@ -12,12 +15,8 @@ struct BrowserDragSourceLiftStyle: ViewModifier {
         let isDragging = usesPersistentSourceStyle
         content
             .scaleEffect(isDragging ? 1.04 : 1)
-            .opacity(isDragging ? 0.42 : 1)
-            .shadow(
-                color: .black.opacity(isDragging ? 0.24 : 0),
-                radius: isDragging ? 10 : 0,
-                y: isDragging ? 5 : 0
-            )
+            .opacity(isDragging ? Self.awayOpacity : 1)
+            .crestElevation(isDragging ? .dragged : nil)
             .zIndex(isDragging ? 2 : 0)
             .animation(
                 CrestMotion.dragSource.unlessReducingMotion(reduceMotion),

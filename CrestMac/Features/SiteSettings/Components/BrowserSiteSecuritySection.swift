@@ -17,9 +17,7 @@ struct BrowserSiteSecuritySection: View {
                         Spacer(minLength: CrestSpacing.small)
                         Text("Certificate")
                             .foregroundStyle(.secondary)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 8, weight: .semibold))
-                            .foregroundStyle(.tertiary)
+                        CrestFormDisclosureChevron()
                     }
                     .contentShape(.rect)
                 }
@@ -50,7 +48,7 @@ struct BrowserSiteSecuritySection: View {
     /// secure; the engine's warnings for other states still stand.
     private var isUnconfirmedSecure: Bool {
         security.isSecure
-            && page.live.displayURL?.scheme?.lowercased() == "https"
+            && page.live.displayURL?.webScheme?.isSecure == true
             && !canReviewCertificate
     }
 

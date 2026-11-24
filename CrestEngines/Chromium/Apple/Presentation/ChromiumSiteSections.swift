@@ -25,8 +25,30 @@
         }
     }
 
-    /// Per-site extension actions and access, alongside Crest's own site controls.
-    struct BrowserEngineSiteControlsSection: View {
+    /// The page's extension tiles in Site Controls, while it runs in Chromium.
+    struct BrowserEngineSiteControlsTiles: View {
+        let page: BrowserPage
+        /// The page's Space in the read model.
+        let space: SpaceModel
+        let url: URL?
+        let dismiss: () -> Void
+        let openPage: () -> Void
+
+        /// Whether Site Controls show the engine's extensions for `page`: it
+        /// runs in Chromium.
+        static func offers(_ page: BrowserPage) -> Bool { page.chromiumPage != nil }
+
+        var body: some View {
+            if let native = page.chromiumPage {
+                ChromiumExtensionControls(
+                    page: native, space: space, url: url, dismiss: dismiss, openPage: openPage)
+            }
+        }
+    }
+
+    /// Site Controls' Extensions page: the page's extensions, Manage
+    /// Extensions, and Install Extension on a Chrome Web Store page.
+    struct BrowserEngineSiteControlsExtensionsPage: View {
         let page: BrowserPage
         /// The page's Space in the read model.
         let space: SpaceModel
@@ -35,8 +57,7 @@
 
         var body: some View {
             if let native = page.chromiumPage {
-                ChromiumExtensionControls(
-                    page: native, space: space, url: url, dismiss: dismiss)
+                ChromiumExtensionsPage(page: native, space: space, url: url, dismiss: dismiss)
             }
         }
     }

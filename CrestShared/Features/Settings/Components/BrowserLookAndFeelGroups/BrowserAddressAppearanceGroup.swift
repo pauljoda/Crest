@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// The address field's fill, border, how much of the address it shows, how
-/// it opens the command palette, and what copying its address copies, on
-/// every Space on this device.
+/// it opens the command palette and the color the palette's selected row
+/// takes, and what copying its address copies, on every Space on this
+/// device.
 struct BrowserAddressAppearanceGroup: View {
     var space: BrowserSpaceAppearance?
     var showsPreview = false
@@ -57,6 +58,14 @@ struct BrowserAddressAppearanceGroup: View {
                     .labelsHidden()
             }
             .browserAppearanceSetting(.commandPaletteMotion)
+            CrestSettingRow(
+                "Space accent in command palette",
+                setting: paletteAccent.resettable("Space accent in command palette")
+            ) {
+                Toggle("Space accent in command palette", isOn: paletteAccent.binding)
+                    .labelsHidden()
+            }
+            .browserAppearanceSetting(.commandPaletteAccent)
             #if os(macOS)
                 CrestSettingRow("Copy URL button", setting: copyURLButton.resettable("Copy URL button")) {
                     Toggle("Copy URL button", isOn: copyURLButton.binding)
@@ -112,6 +121,12 @@ struct BrowserAddressAppearanceGroup: View {
             default: BrowserLookAndFeelDefaults.address.animatesIntoCommandPalette)
     }
 
+    private var paletteAccent: CrestSettingValue<Bool> {
+        CrestSettingValue(
+            $appearance.address.tintsPaletteWithSpaceAccent,
+            default: BrowserLookAndFeelDefaults.address.tintsPaletteWithSpaceAccent)
+    }
+
     private var copyURLButton: CrestSettingValue<Bool> {
         CrestSettingValue(
             $appearance.address.showsCopyURLButton,
@@ -125,6 +140,7 @@ struct BrowserAddressAppearanceGroup: View {
             (.addressDisplay, display.resettable("Address")),
             (.addressEditingOutline, outline.resettable("Accent outline while editing")),
             (.commandPaletteMotion, paletteMorph.resettable("Animate into command palette")),
+            (.commandPaletteAccent, paletteAccent.resettable("Space accent in command palette")),
         ]
         #if os(macOS)
             rows.append((.copyURLButton, copyURLButton.resettable("Copy URL button")))

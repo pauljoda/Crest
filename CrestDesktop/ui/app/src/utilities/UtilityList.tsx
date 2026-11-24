@@ -1,4 +1,4 @@
-import { type ArchivedTabState, type HistoryEntryState, RestoreArchivedTab, type SpaceState, SystemTint } from "@crest/contracts";
+import { type ArchivedTabState, type HistoryEntryState, RestoreArchivedTab, type SpaceState, type StatusTone } from "@crest/contracts";
 import { type MouseEvent, useEffect, useMemo, useState } from "react";
 
 import type { Session } from "../boot";
@@ -163,7 +163,7 @@ function UtilityRow({ session, item, space, downloads, onRestore, onOpenHistory 
           <span className="utility-row-icon"><TabIcon session={session} tab={archived.tab} pageId={null} /></span>
           <span className="utility-row-text">
             <span className="utility-row-title">{archived.tab.displayTitle}</span>
-            <span className="utility-row-subtitle" style={{ color: tintColor(archived.reason.tint) }}>
+            <span className="utility-row-subtitle" style={{ color: toneColor(archived.reason.tone) }}>
               <Symbol name={archived.reason.symbol} size={9} strokeWidth={2.5} />
               {` ${archived.reason.title}${host ? ` · ${host}` : ""}`}
             </span>
@@ -201,7 +201,11 @@ function hostOf(url: string | null | undefined): string | null {
   }
 }
 
-/** The system colour an archive reason wears, in the scheme the sidebar reads in. */
-function tintColor(tint: SystemTint): string {
-  return `var(--system-${SystemTint[tint].toLowerCase()}, var(--fg-secondary))`;
+/**
+ * The status colour an archive reason wears, as the Mac's CrestStatusTone
+ * draws it from Crest's tokens in the scheme the sidebar reads in; a reason
+ * without a tone stays secondary.
+ */
+function toneColor(tone: StatusTone | null): string {
+  return tone ? `var(--status-${tone.name}, var(--fg-secondary))` : "var(--fg-secondary)";
 }

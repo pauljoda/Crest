@@ -11,10 +11,6 @@ namespace CrestCore.Application;
 public static class NativeSyncMaterializer {
     #region Actions - Materialization
 
-    public static JsonObject Materialize(JsonObject session, JsonNode preferences, IReadOnlyList<JsonObject> records, double now,
-        SpaceAccessAuthority? access = null) => StoredSessionCodec.Encode(Materialize(StoredSessionCodec.DecodeSession(session),
-            NativeSyncProjection.Preferences(preferences), records.Select(SyncSessionRecord.Read).ToArray(), StoredSessionCodec.Date(now), access));
-
     internal static SessionState Materialize(SessionState session, SyncPreferences policy, IReadOnlyList<SyncSessionRecord> records,
         DateTimeOffset now, SpaceAccessAuthority? access) {
         var owners = records.Where(record => record.Kind == SyncRecordKind.Folder).ToDictionary(record => record.Id, record => record.SpaceId);
@@ -23,7 +19,7 @@ public static class NativeSyncMaterializer {
             .ToDictionary(record => record.Id, record => record.Tombstone!.DeletedAt.Moment);
         var deleted = deletedAt.Keys.ToHashSet();
         var locals = session.Spaces.ToDictionary(space => space.Id);
-        var pending = session.SpaceDeletions.Select(deletion => deletion.SpaceId).ToHashSet();
+        var pending = session.DeletingSpaceIds;
         var brandingIds = records.Where(record => record.Kind == SyncRecordKind.Space && record.SuppliesBranding).Select(record => record.Id).ToHashSet();
         var spaces = new List<SpaceState>();
         var profiles = new HashSet<Guid>();
@@ -162,7 +158,7 @@ public static class NativeSyncMaterializer {
     /// a tab sits in it, and its record stays meanwhile.
     private static List<FolderState> Shown(IReadOnlyList<FolderState> folders, IReadOnlySet<Guid> holding, IReadOnlySet<Guid> emptied) {
         var hidden = new FolderTree(folders).Empty(holding,
-            folder => folder.Location == TabPlacement.Current && ((folder.IsGroup && folder.ParentId is null) || emptied.Contains(folder.Id)));
+            folder => folder.GoesWhenEmptied && ((folder.IsGroup && folder.ParentId is null) || emptied.Contains(folder.Id)));
         return [.. folders.Where(folder => !hidden.Contains(folder.Id))];
     }
 

@@ -78,16 +78,28 @@ generator. The performance preset links with LLD and does not use them.
 Crest follows the upstream Stable channel for Mac; `fork.json` names the channel
 and the chromiumdash feed it is read from. A new milestone ships about every two
 weeks, with security fixes on the current one in between, so updating is routine
-work. Every update starts with
-a plan that changes nothing:
+work.
+
+chromiumdash lists early stable builds among its stable releases: a new
+milestone reaches a small share of people about a week before everyone. Google's
+release notes tell them apart by title. Only a "Stable Channel Update for
+Desktop" note promotes a milestone to full stable; "Early Stable Update for
+Desktop" and "Extended Stable Update for Desktop" notes never do. A release is
+eligible when it is newer than the pinned one and its milestone is no newer than
+the last one a full stable note promoted, which keeps respins that have no note
+of their own. A release of a newer milestone is reported as early stable. When
+the notes can't be read, only fixes on the pinned milestone are eligible.
+
+Every update starts with a plan that changes nothing:
 
 ```sh
 python Scripts/control-plane/chromium-fork.py check-upstream
 python Scripts/control-plane/chromium-fork.py plan --version 157.0.8103.80
 ```
 
-`check-upstream` names the newest release on the pinned milestone and the newest
-milestone, each with what Google's release notes say about it: how many security
+`check-upstream` names the newest release on the pinned milestone, the newest full
+stable milestone and the newest early stable release, each with what Google's
+release notes say about it: how many security
 fixes it carries, how many are Critical or High, whether one fixes a vulnerability
 exploited in the wild, and whether it is an early stable release, which reaches a
 small share of people about a week before everyone. A release with no note of its
@@ -159,6 +171,67 @@ build passes everything a hardened signature can break. That check runs the
 engine without Crest's interface, so before publishing an engine, also load real
 pages, an extension and a sign-in in Crest packaged with `--distribution`, in an
 isolated copy (`CREST_ISOLATED_SESSION=1`).
+The engine testing below is required as well.
+
+### Engine testing
+
+Every engine change must open Crest's own profile folder, and open the
+profiles an earlier engine made there unchanged: a milestone, a fix release,
+a host patch or an overlay change alike. Harnesses and review launches name a
+`--user-data-dir`, but people start Crest with none, and an update can change
+the browser's entry point or how Chromium treats a folder it didn't choose,
+such as which keychain key it reads.
+
+These checks run automatically. A failure stops the engine build, and with it
+a scheduled draft:
+
+- **Launch without a profile folder.** Copies carrying only the product or the
+  experiment host resource launch with no `--user-data-dir` and a temporary
+  `HOME`. The product must report
+  `$HOME/Library/Application Support/Crest/Chromium` for
+  `--crest-print-user-data-dir`, and Chromium's default folder must hold no
+  `Crest-*` profile. The experiment must refuse to start.
+- **Profile upgrade.** The engine the newest stable release (`vX.Y.Z`) was
+  built with signs in to a local site in a profile in Crest's folder. The new
+  engine then opens a copy of that folder, and opens it again. The site must
+  still see the cookie, and no profile may gain a `prefs.preference_reset_time`,
+  which Chromium writes when it resets tracked settings, extensions among them.
+  A build of the stable engine itself has nothing to upgrade from.
+- **Entry point.** The browser executable must carry Crest's entry point and
+  link only `libSystem`.
+
+The engine smoke of `chromium-fork.py build` and `update` runs them as each
+architecture, the others under Rosetta. `package-chromium-host.py
+--distribution` runs them natively on the signed package, and
+`publish-chromium-engine.py` checks the entry point again. The upgrade check
+downloads the stable engine, so both need `gh`.
+
+Spaces, open tabs and Chrome Web Store installs need Crest's interface, so
+this part stays manual. It is required before publishing any engine:
+
+1. Package the newest stable release's engine and the new one with
+   `--distribution`. Make each a product-mode copy: replace its
+   `Crest-Isolated-Experiment` resource with `Crest-Native-Host`, give both the
+   same bundle identifier of their own, and sign them again.
+2. Open the stable engine's copy through Launch Services (`open -n -g`) with
+   no `--user-data-dir`, a temporary `HOME` and `CFFIXED_USER_HOME`,
+   `CREST_ISOLATED_SESSION=1` with a persistence ID, and `--use-mock-keychain`.
+   Finish Setup, sign in to a local fixture site in two Spaces, leave tabs open
+   in each, and install an extension from the Chrome Web Store in one. Quit
+   Crest, and copy that `HOME` before anything opens it again.
+3. Open the new engine's copy the same way on that `HOME`, then quit and open
+   it again. Each time, require:
+   - the browser's helpers carry
+     `--user-data-dir=$HOME/Library/Application Support/Crest/Chromium`, its
+     `Last Version` names the new release, and no `Crest-*` profile appears in
+     `$HOME/Library/Application Support/Chromium`;
+   - each Space reopens its tabs, still sends its own fixture cookie, and keeps
+     the extension installed and running;
+   - no profile's `Secure Preferences` gained a `prefs.preference_reset_time`.
+4. Repeat step 3 on the copy saved in step 2, which the new engine has not
+   opened yet: point `HOME` and `CFFIXED_USER_HOME` at that copy, and run the
+   new engine copy's executable with `arch -x86_64`, the rest of step 2's
+   environment and the same switches, which runs it under Rosetta.
 
 ### Deciding what ships
 
@@ -167,7 +240,7 @@ isolated copy (`CREST_ISOLATED_SESSION=1`).
 | A fix on the pinned milestone | `plan`, `update`, open the PR while the `--distribution` package is tested | Development once a maintainer publishes the engine and merges, then stable with the next release |
 | A fix for a vulnerability exploited in the wild | The same, at once: other engine work in the workspace waits | Stable the same day, once Development is checked |
 | A toolchain change on the pinned milestone | `update` prepares a fresh source | As a fix |
-| A new milestone | Days ahead, `plan --allow-major` against its early stable release; rebase the patches it reports and review its requests. Once it is stable, `update --allow-major` | When its PR is reviewed and merged |
+| A new milestone | The schedule checks Crest's patches against its early stable release and opens a draft listing what a session must rebase and which requests to review. Once it is full stable, the schedule builds it, or opens a rebase draft when its patches still stop the build. By hand: `plan --allow-major`, then `update --allow-major` | When its PR is reviewed and merged |
 
 A milestone prepares its source beside the pinned one. Once its engine is
 published and its PR merged, run `chromium-fork.py prune` from the merged
@@ -258,16 +331,11 @@ uses the blocklist, root store and log list compiled into its source. Chromium
 stops enforcing Certificate Transparency 70 days after the built-in log list's
 date, which the component update replaces.
 
-`native-host.patch` carries upstream distrust changes the pinned source does not
-yet contain, copied hunk for hunk from Chromium:
-
-| Files | Change | Upstream |
-| --- | --- | --- |
-| `net/data/ssl/chrome_root_store/root_store.textproto`, `root_store.certs` | Removes emSign ECC Root CA - G3 | Chrome Root Store version 43, Chromium `8793082f793c` |
-
-The root store keeps its pinned version number. Once an upstream release
-contains a change, its hunks no longer apply and the update stops there: remove
-those sections from the host patch and refresh the host inputs.
+When Chromium distrusts a root that the pinned source still trusts,
+`native-host.patch` carries the change, copied hunk for hunk from Chromium, and
+the root store keeps its pinned version number. The patch carries no such
+change now. Once an upstream release contains a carried change, the plan reports
+its sections as already upstream and drops them from the rebased host patch.
 
 ## Safe Browsing
 
@@ -293,14 +361,18 @@ Disney+, Max and Prime Video, whose sites open in WebKit from the start.
 
 ## GitHub Actions
 
-Install the repository-scoped runner on the build Mac:
+Install the runner on the build Mac:
 
 ```sh
+gh auth refresh -h github.com -s admin:org
 python Scripts/control-plane/install-chromium-runner.py
 ```
 
 This verifies GitHub's runner archive checksum and installs a user LaunchAgent
-with the `crest-chromium` label. It starts at login; the Mac must remain awake and
+with the `crest-chromium` label. The runner registers with the `crest-browser`
+organization in the `chromium-builders` runner group, which admits only Crest
+and only `chromium.yml` and `chromium-engine.yml` on `main`. A job from any
+other workflow or ref, including a pull request, can't reach the Mac. It starts at login; the Mac must remain awake and
 online to accept builds. Use `~/Dev/CrestChromium/runner/svc.sh stop` and `start`
 from that directory to control it. Signing keys stay in the existing release
 environment. The maintenance workflow has no pull-request trigger; never run
@@ -314,20 +386,25 @@ Configure these repository variables:
 | `CHROMIUM_SDK` | Absolute path to the SDK pinned by the source lock |
 | `CHROMIUM_BUILD_JOBS` | Compiler parallelism, default 8 |
 | `CHROMIUM_CI_ENABLED` | `true` allows manual and scheduled engine builds |
-| `CHROMIUM_UPSTREAM_ENABLED` | `true` builds new fixes on the pinned milestone every six hours and opens a draft PR for each |
+| `CHROMIUM_UPSTREAM_ENABLED` | `true` checks every six hours, builds each new full stable release and opens a draft PR for it, and checks Crest's patches against each early stable milestone |
+| `CHROMIUM_UPDATE_REVIEWER` | The maintainer's GitHub login. Each draft is assigned to them with a review request, and a fix exploited in the wild mentions them |
 
 The workflow must be present on the default branch for its schedule to run. Its
 `fork.json` integration branch must also contain the maintenance scripts. Use the
 Actions UI or `gh workflow run chromium.yml --ref <workflow-branch> -f operation=check`
 to check upstream. `operation=build` builds and publishes the pinned engine;
-`operation=update` builds a released update and opens it as a draft PR.
-`upstream_version` can select a specific release, and `allow_major=true` allows
-a milestone. The repository must allow Actions to create pull requests.
+`operation=update` builds a released update and opens it as a draft PR;
+`operation=preflight` checks Crest's patches against the newest early stable
+release. `upstream_version` can select a specific release, and
+`allow_major=true` allows a milestone. The repository must allow Actions to
+create pull requests.
 
 An update PR contains the new pins, host hashes, a patch version increment, a
 release-note entry, and the plan's summary. Its engine is built in the workspace
-and not published: a maintainer tests it, publishes it with
-`publish-chromium-engine.py` and then merges. A release run that finds no engine
+and not published. It waits in a draft release, `chromium-engine-candidate-<key>`,
+which no release workflow or install script reads, since they ask only for
+`chromium-engine-<key>`. A maintainer tests it, publishes it with
+`publish-chromium-engine.py`, which removes the candidate, and then merges. A release run that finds no engine
 for its commit builds one on the Mac, so publish before merging. App release jobs
 consume only the artifact whose engine key matches their own source. No signing
 job reads a mutable local build directory.
@@ -355,13 +432,30 @@ experimental feed and its `-webkit` twin, which offers the same installer.
 Keep `CHROMIUM_UPSTREAM_ENABLED=false` during initial setup; manual updates can
 still build a candidate for review. The six-hour schedule runs from `chromium.yml`
 on the default branch, checks the integration branch named in `fork.json`, and
-reports the newest release with its release-note summary. Turning the variable on
-lets it build a new fix on the pinned milestone and open a draft PR with the plan,
-the release notes and how long each step took. While a session or another engine
-build holds the workspace lock or runs Ninja, a run leaves a notice and the next
-check tries again. A release gets one PR, and a closed PR stays closed; while one
-is open, the schedule waits for it. A new milestone is only reported, because its
-patches and requests need a review.
+reports the newest release with its release-note summary. With the variable on:
+
+- **A full stable release**, a fix or a new milestone, is planned on the build
+  Mac first. When every patch applies, the Mac builds it and opens a draft PR
+  with the plan, the release notes and how long each step took. When the plan
+  stops on Crest's patches, the Mac builds nothing and opens a draft that
+  carries the patches as the plan rebased them and lists what a session must
+  resolve. A milestone whose fresh source doesn't fit beside the pinned one
+  removes the pinned source first, once its engine is published; otherwise the
+  run stops and says how much space it needs.
+- **An early stable release** of a newer milestone is planned once, and a draft
+  lists the patches a session must rebase and the requests to review, or says
+  every patch applies. Nothing is built for it. The milestone's update closes it.
+- **Each draft** is assigned to `CHROMIUM_UPDATE_REVIEWER`, who is asked to
+  review it. When Google's notes say a release fixes a vulnerability exploited in
+  the wild, the draft's title and label say so, it mentions the reviewer, and the
+  run fails so that Actions emails about it.
+
+While a session or another engine build holds the workspace lock or runs Ninja,
+a build leaves a notice and the next check tries again; planning changes no
+source and runs anyway. A release gets one PR, and a closed PR stays closed;
+while one is open, including a pull request a session opened for the release,
+the schedule waits for it. Until Google publishes a release's source archive,
+a few hours after the release, the run notes it and the next check plans it.
 
 Nothing the schedule builds is published or merged without a maintainer. Turn
 `CHROMIUM_UPSTREAM_ENABLED=false` to stop scheduled builds, or

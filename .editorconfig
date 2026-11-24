@@ -23,6 +23,9 @@ dotnet_separate_import_directive_groups = true
 dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
 dotnet_style_readonly_field = true:warning
 dotnet_diagnostic.IDE0055.severity = warning
+# Unused private members and private members written but never read.
+dotnet_diagnostic.IDE0051.severity = warning
+dotnet_diagnostic.IDE0052.severity = warning
 
 [*.md]
 trim_trailing_whitespace = false

@@ -20,15 +20,18 @@ public sealed partial record SetupImportReview {
     /// come in new once the workspace is full starts left out. A first
     /// launch's disposable Spaces are no destination, so everything comes in
     /// new in their place. `passwords` counts the saved passwords that belong
-    /// with each Space, `extensions` lists the extensions each Space offers,
+    /// with each Space and `insecurePasswords` those of them for sites without
+    /// a secure scheme, `extensions` lists the extensions each Space offers,
     /// all of them left on, and `leftOut` is what the read could not bring. A
     /// Space that comes in new wears `look`.
     internal static SetupImportReview Started(ImportSource source, IReadOnlyList<SpaceState> spaces,
-        IReadOnlyDictionary<Guid, int> passwords, IReadOnlyList<ImportSpaceExtensions> extensions, IReadOnlyList<ImportLeftOut> leftOut,
+        IReadOnlyDictionary<Guid, int> passwords, IReadOnlyDictionary<Guid, int> insecurePasswords,
+        IReadOnlyList<ImportSpaceExtensions> extensions, IReadOnlyList<ImportLeftOut> leftOut,
         SessionState session, SetupLook look) {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(spaces);
         ArgumentNullException.ThrowIfNull(passwords);
+        ArgumentNullException.ThrowIfNull(insecurePasswords);
         ArgumentNullException.ThrowIfNull(extensions);
         ArgumentNullException.ThrowIfNull(leftOut);
         ArgumentNullException.ThrowIfNull(session);
@@ -46,7 +49,7 @@ public sealed partial record SetupImportReview {
             bool included = match is not null || created < room;
             if (included && match is null) created++;
             reviews.Add(SetupReviewSpace.Started(space, match, included, passwords.GetValueOrDefault(space.Id),
-                offers.GetValueOrDefault(space.Id) ?? [], look));
+                insecurePasswords.GetValueOrDefault(space.Id), offers.GetValueOrDefault(space.Id) ?? [], look));
         }
         return new SetupImportReview(source, reviews, [], spaces.FirstOrDefault()?.Id, leftOut, room).Analyzed(session);
     }
@@ -128,21 +131,6 @@ public sealed partial record SetupImportReview {
         return Editing(sourceId, session, space => space with { Customization = kept });
     }
 
-    /// `review` with each Space that comes in new wearing `look` in place of
-    /// `previous`: one the person left as it came takes `look` made from the
-    /// Space's own, and one they changed keeps its colors and crest in the new
-    /// mode. A Space that joins an existing Space keeps that Space's look.
-    internal SetupImportReview Restyled(SetupLook previous, SetupLook look) {
-        ArgumentNullException.ThrowIfNull(previous);
-        ArgumentNullException.ThrowIfNull(look);
-        return this with {
-            Spaces = [.. Spaces.Select(space => space.DestinationId is not null ? space
-                : space.Customization == previous.Applying(space.Source.Customization)
-                    ? space with { Customization = look.Applying(space.Source.Customization) }
-                    : space with { Customization = look.Applying(space.Customization) })]
-        };
-    }
-
     /// `review` looking at `sourceId`, when it holds it.
     internal SetupImportReview Showing(Guid sourceId) =>
         Spaces.Any(space => space.Source.Id == sourceId) ? this with { ShownSpaceId = sourceId } : this;
@@ -217,7 +205,7 @@ public sealed partial record SetupImportReview {
     internal SetupImportReview Analyzed(SessionState session) {
         ArgumentNullException.ThrowIfNull(session);
         var byId = session.ImportDestinations.ToDictionary(space => space.Id);
-        var pinned = byId.ToDictionary(entry => entry.Key, entry => entry.Value.Tabs.Count(tab => tab.Placement == TabPlacement.Pinned));
+        var pinned = byId.ToDictionary(entry => entry.Key, entry => entry.Value.Tabs.Count(tab => tab.IsPinned));
         Dictionary<Guid, int> created = [];
         List<Guid> overflow = [];
         Guid? GroupOf(Guid? spaceId) => spaceId is { } id && byId.ContainsKey(id) ? session.GroupOf(id)?.Primary.Id ?? id : null;

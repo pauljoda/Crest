@@ -5,7 +5,7 @@ import OSLog
 extension CrestCore {
     // MARK: - Static Variables
 
-    private static let pagesLogger = Logger(subsystem: "com.pauldavis.crest", category: "Pages")
+    private static let pagesLogger = DiagnosticLog.pages.logger
 
     // MARK: - Actions - Site engines
 

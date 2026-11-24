@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "extension-icon-control-click-menu",
+      "category": "fixed",
+      "message": "Control-clicking an extension’s icon while its popup is open now opens the icon’s menu, as a right-click does, instead of only closing the popup."
+    }
+  ]
+}

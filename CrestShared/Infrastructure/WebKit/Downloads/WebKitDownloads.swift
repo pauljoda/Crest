@@ -13,6 +13,11 @@ import WebKit
 /// person's retry, which replays its request under the same name.
 @MainActor
 final class WebKitDownloads: NSObject {
+    // MARK: - Static Variables
+
+    /// The least time between two progress reports of one download.
+    private static let progressInterval: DispatchQueue.SchedulerTimeType.Stride = .milliseconds(100)
+
     // MARK: - Types
 
     /// One download, from the page handing it over until the core clears it.
@@ -101,7 +106,7 @@ final class WebKitDownloads: NSObject {
             replay: request?.replayableDownloadRequest,
             sourceURL: request?.url, origin: Self.origin(of: download, in: page.webView),
             spaceID: binding.core?.state.pages[page.id]?.spaceID,
-            isUserInitiated: download.isUserInitiated || isUserInitiated,
+            isUserInitiated: Self.isUserInitiated(download) || isUserInitiated,
             filename: request?.url?.lastPathComponent.nilIfEmpty ?? "download")
         transfers[transfer.engineID] = transfer
         register(download, for: transfer)
@@ -126,7 +131,7 @@ final class WebKitDownloads: NSObject {
         )
         .receive(on: DispatchQueue.main)
         .removeDuplicates { $0 == $1 }
-        .throttle(for: .milliseconds(100), scheduler: DispatchQueue.main, latest: true)
+        .throttle(for: Self.progressInterval, scheduler: DispatchQueue.main, latest: true)
         .sink { [weak self, weak transfer] completed, total, isPaused in
             MainActor.assumeIsolated {
                 guard let self, let transfer, transfer.download === download, transfer.destination != nil else {
@@ -359,9 +364,21 @@ final class WebKitDownloads: NSObject {
     /// web view's URL is already the file's, after any redirect to its CDN.
     private static func origin(of download: WKDownload, in webView: WKWebView) -> SiteOrigin? {
         if let origin = webView.backForwardList.currentItem.flatMap({ SiteOrigin(url: $0.url) }) { return origin }
-        let frameOrigin = SiteOrigin(download.originatingFrame.securityOrigin)
-        if !frameOrigin.host.isEmpty { return frameOrigin }
+        if #available(macOS 15.2, *) {
+            let frameOrigin = SiteOrigin(download.originatingFrame.securityOrigin)
+            if !frameOrigin.host.isEmpty { return frameOrigin }
+        }
         return download.originalRequest?.url.flatMap(SiteOrigin.init(url:))
+    }
+
+    /// Whether WebKit knows the person started `download`. Before macOS 15.2
+    /// WebKit doesn't say, and only the caller's own knowledge counts.
+    private static func isUserInitiated(_ download: WKDownload) -> Bool {
+        if #available(macOS 15.2, *) {
+            download.isUserInitiated
+        } else {
+            false
+        }
     }
 
     /// Crest's own folder for files still downloading.

@@ -23,8 +23,8 @@ struct BrowserBlockingSitesSettingsSection: View {
             ? sites : sites.filter { $0.origin.displayName.localizedStandardContains(query) }
         Section {
             if isSearchable {
-                BrowserCredentialSearchField(
-                    title: "Search Sites", text: $query, accessibilityIdentifier: "ad-blocking-site-search")
+                CrestSearchField("Search Sites", text: $query)
+                    .accessibilityIdentifier("ad-blocking-site-search")
             }
             CrestFormRows(matches, id: \.origin) { site in
                 row(site)

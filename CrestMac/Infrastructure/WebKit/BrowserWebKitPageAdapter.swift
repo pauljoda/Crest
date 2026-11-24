@@ -162,6 +162,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
         if ownsUserContentController {
             BrowserLinkHoverContentBridge.install(in: controller)
             BrowserLinkDragContentBridge.install(in: controller)
+            BrowserFirstPaintContentBridge.install(in: controller)
             linkContextMessageProxy = BrowserLinkContextContentBridge.install(in: controller) { [weak page] message in
                 page?.receiveLinkContextMessage(message)
             }
@@ -213,6 +214,8 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
         webView.navigationDelegate = nil
         webView.uiDelegate = nil
         webView.menuHost = nil
+        // WebKit's page closes too, once the core has kept its history.
+        webKit.retire()
         observations.removeAll()
         page.removeGeolocationRequests()
         defer { geolocationCoordinator = nil }

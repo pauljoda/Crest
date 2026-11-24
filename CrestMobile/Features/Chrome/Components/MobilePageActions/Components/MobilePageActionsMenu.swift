@@ -1,18 +1,38 @@
 import SwiftUI
 
+/// The control that opens Site Controls for the page the window shows: a
+/// sheet on iPhone and in a narrow iPad window, a popover in a wide one. A
+/// permission request opens them on its own, where it waits, and once it is
+/// answered they close again unless the person opened them; closing them over
+/// a waiting request dismisses it. The control wears a dot while a pop-up
+/// waits on the person, and the new downloads badge.
 struct MobilePageActionsMenu: View {
+    /// The dot that says a pop-up was blocked, at the glyph's top trailing
+    /// corner.
+    private static let noticeDotSize: CGFloat = 7
+    private static let noticeDotOffset = CGSize(width: 3, height: -3)
+    /// Where the new downloads badge sits over the glyph's top trailing
+    /// corner.
+    private static let badgeOffset = CGSize(width: 9, height: -7)
+
     let browser: BrowserStore
-    let pages: any MobilePageActions
+    let pages: MobileSelectedPageActionPort
     let systemImage: String
     var downloadsAccess: MobileDownloadsMenuAccess? = nil
     var hideToolbar: (() -> Void)? = nil
-    var controlSize = CGSize(width: 44, height: 44)
+    var controlSize = CGSize(width: CrestLayout.minimumHitTarget, height: CrestLayout.minimumHitTarget)
     /// Whether the menu is a toolbar item, whose label the system draws so a
     /// side toolbar can stand it on end with the others.
     var isToolbarItem = false
 
     /// Where the menu's control sits in the window.
     @State private var frame: CGRect?
+    @State private var showsSiteControls = false
+    /// Whether a permission request opened Site Controls, rather than the
+    /// person.
+    @State private var opensForRequest = false
+    @Environment(\.mobileBrowserCommandContext) private var commands
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
         if isToolbarItem {
@@ -32,17 +52,20 @@ struct MobilePageActionsMenu: View {
     }
 
     private func menu(@ViewBuilder label: () -> some View) -> some View {
-        Menu {
-            MobilePageActionsContent(
-                browser: browser,
-                pages: pages,
-                downloadsAccess: downloadsAccess,
-                hideToolbar: hideToolbar,
-                source: frame
-            )
-            .crestMenuActionLabelStyle()
+        Button {
+            showsSiteControls = pages.activePage != nil
         } label: {
             label()
+        }
+        .disabled(pages.activePage == nil)
+        .crestPopover(isPresented: presentation, arrowEdge: .top) {
+            if let page = pages.activePage {
+                MobileSiteControlsContent(
+                    browser: browser, pages: pages, page: page, commands: commands, source: frame,
+                    hideToolbar: hideToolbar, downloadsAccess: downloadsAccess,
+                    usesSheet: horizontalSizeClass != .regular,
+                    dismiss: { presentation.wrappedValue = false })
+            }
         }
         .onGeometryChange(for: CGRect.self) { proxy in
             proxy.frame(in: .global)
@@ -51,28 +74,39 @@ struct MobilePageActionsMenu: View {
         }
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
-        .accessibilityIdentifier("page-actions-menu")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.pageActionsMenu)
         .pagePermissionHost(pages.activePage?.sitePermissionRequests)
-        .crestPopover(
-            item: Binding {
-                pages.activePage?.sitePermissionRequests.current
-            } set: { request in
-                if request == nil && pages.activePage?.sitePermissionRequests.current != nil {
-                    pages.activePage?.sitePermissionRequests.cancelAll()
-                }
+        .preference(key: MobileSiteControlsHoldsSidebarKey.self, value: showsSiteControls)
+        .onChange(of: pages.activePage?.sitePermissionRequests.current?.id, initial: true) { _, request in
+            if request != nil {
+                guard !showsSiteControls else { return }
+                opensForRequest = true
+                showsSiteControls = true
+            } else if opensForRequest {
+                opensForRequest = false
+                showsSiteControls = false
             }
-        ) { request in
-            if let controller = pages.activePage?.sitePermissionRequests {
-                BrowserPagePermissionPrompt(request: request, controller: controller)
-                    .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    /// Whether Site Controls show. Closing them over a waiting request
+    /// dismisses the request.
+    private var presentation: Binding<Bool> {
+        Binding {
+            showsSiteControls
+        } set: { isPresented in
+            if !isPresented, let requests = pages.activePage?.sitePermissionRequests, requests.current != nil {
+                requests.cancelAll()
             }
+            if !isPresented { opensForRequest = false }
+            showsSiteControls = isPresented
         }
     }
 
     private var chromeLabel: some View {
         ZStack(alignment: .topTrailing) {
             Image(systemName: systemImage)
-                .font(.system(size: 13, weight: .semibold))
+                .font(CrestTypography.compactControlGlyph)
                 .foregroundStyle(
                     pages.blockedPopupNotice == nil
                         ? Color.secondary
@@ -81,17 +115,17 @@ struct MobilePageActionsMenu: View {
             if pages.blockedPopupNotice != nil {
                 Circle()
                     .fill(CrestColor.warning)
-                    .frame(width: 7, height: 7)
-                    .offset(x: 3, y: -3)
+                    .frame(width: Self.noticeDotSize, height: Self.noticeDotSize)
+                    .offset(Self.noticeDotOffset)
                     .accessibilityHidden(true)
             }
             if let downloadsAccess, downloadsAccess.newItemCount > 0 {
                 BrowserUtilityNotificationBadge(
                     count: downloadsAccess.newItemCount,
-                    tint: .accentColor,
+                    tint: CrestBrandTheme.accent,
                     progress: downloadsAccess.activeProgress
                 )
-                .offset(x: 9, y: -7)
+                .offset(Self.badgeOffset)
             }
         }
         .frame(width: controlSize.width, height: controlSize.height)
@@ -122,18 +156,7 @@ struct MobileDownloadsMenuAccess {
     let activeProgress: Double?
     let open: @MainActor () -> Void
 
-    var rowTitle: String {
-        guard newItemCount > 0 else {
-            return String(localized: "Downloads")
-        }
-        return String(localized: "Downloads (\(newItemCount))")
-    }
-
     var unreadAccessibilityValue: String {
-        BrowserChromeAccessibility.countValue(
-            newItemCount,
-            singular: "new download",
-            plural: "new downloads"
-        )
+        String(localized: "\(newItemCount) new downloads")
     }
 }

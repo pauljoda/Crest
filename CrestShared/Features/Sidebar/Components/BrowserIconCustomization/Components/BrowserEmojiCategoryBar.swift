@@ -25,7 +25,7 @@ struct BrowserEmojiCategoryBar: View {
                         .buttonStyle(.plain)
                         .foregroundStyle(
                             category == option
-                                ? Color.accentColor : Color.secondary
+                                ? CrestBrandTheme.accent : Color.secondary
                         )
                         .background(
                             category == option ? CrestColor.hover : .clear,

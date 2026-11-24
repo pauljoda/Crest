@@ -26,21 +26,17 @@ struct MobileOnboardingPageActions: View {
                 }
                 .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.capsule)
-            .controlSize(.large)
+            .buttonStyle(.crestPrimary)
             .disabled(primaryDisabled)
             .accessibilityIdentifier(primaryIdentifier)
 
             if let secondaryTitle, let secondaryAction {
-                Button(secondaryTitle, action: secondaryAction)
-                    .buttonStyle(.plain)
-                    .font(.callout.weight(.semibold))
-                    .frame(
-                        minHeight:
-                            MobileOnboardingLayout.secondaryActionMinimumHeight
-                    )
-                    .crestAccessibilityIdentifier(secondaryIdentifier)
+                Button(action: secondaryAction) {
+                    Text(secondaryTitle)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.crestSecondary)
+                .crestAccessibilityIdentifier(secondaryIdentifier)
             }
         }
         .frame(maxWidth: MobileOnboardingLayout.pageActionsMaximumWidth)

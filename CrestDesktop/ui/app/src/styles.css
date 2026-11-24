@@ -4330,6 +4330,11 @@ embed.page-frame {
 /* The system colours an archive reason wears, as the sidebar's scheme reads them. */
 .browser-window.reads-dark,
 .space-page.reads-dark {
+  /* Crest's status tones (CrestStatusTone): info is the brand's accent. */
+  --status-success: rgb(var(--crest-success-light));
+  --status-warning: rgb(var(--crest-warning-light));
+  --status-danger: rgb(var(--crest-danger-light));
+  --status-info: rgb(var(--crest-accent-light));
   --system-red: rgb(255 59 48);
   --system-orange: rgb(255 149 0);
   --system-purple: rgb(175 82 222);
@@ -4343,6 +4348,10 @@ embed.page-frame {
 
 .browser-window.reads-light,
 .space-page.reads-light {
+  --status-success: rgb(var(--crest-success-dark));
+  --status-warning: rgb(var(--crest-warning-dark));
+  --status-danger: rgb(var(--crest-danger-dark));
+  --status-info: rgb(var(--crest-accent-dark));
   --system-red: rgb(255 69 58);
   --system-orange: rgb(255 159 10);
   --system-purple: rgb(191 90 242);

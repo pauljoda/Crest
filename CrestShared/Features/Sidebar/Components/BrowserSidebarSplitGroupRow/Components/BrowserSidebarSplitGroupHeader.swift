@@ -251,7 +251,7 @@ private struct BrowserSidebarSplitGroupIcon: View {
                     y: deckVerticalOffset(at: index)
                 )
                 .zIndex(Double(index))
-                .transition(.scale(scale: 0.82).combined(with: .opacity))
+                .transition(.scale(scale: CrestMotion.entranceScale).combined(with: .opacity))
                 .animation(deckAnimation, value: configuration.focusedMemberID)
                 .keyframeAnimator(
                     initialValue: CGFloat.zero,

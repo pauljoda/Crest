@@ -41,9 +41,7 @@ struct BrowserSearchProviderEditor: View {
                 }
             }
         }
-        #if os(macOS)
-            .frame(minWidth: 440, minHeight: 360)
-        #endif
+        .crestSheetSize(minWidth: 440, minHeight: 360)
         .onAppear { nameIsFocused = draft.isNew }
         .task(id: draft.choseColor ? nil : host) {
             await takeColorFromIcon()

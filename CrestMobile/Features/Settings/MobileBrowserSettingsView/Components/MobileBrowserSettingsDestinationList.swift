@@ -1,6 +1,11 @@
 import SwiftUI
 
 struct MobileBrowserSettingsDestinationList: View {
+    /// How wide the list's column may be beside a page on iPad.
+    private static let minimumColumnWidth: CGFloat = 220
+    private static let idealColumnWidth: CGFloat = 250
+    private static let maximumColumnWidth: CGFloat = 290
+
     @Binding var selection: BrowserSettingsDestination
     @Binding var searchText: String
     /// The read model whose engines say which destinations exist.
@@ -22,34 +27,32 @@ struct MobileBrowserSettingsDestinationList: View {
                     } label: {
                         MobileSettingsDestinationRow(destination: destination)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(.rect)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("settings-\(destination.name)")
-                    .listRowBackground(rowBackground(for: destination))
+                    // The design system's row surface marks the page that's
+                    // showing, and answers the pointer and a press.
+                    .buttonStyle(
+                        CrestFormRowButtonStyle(isSelected: selection == destination, cornerRadius: CrestRadius.control)
+                    )
+                    .accessibilityIdentifier(BrowserMobileAccessibilityID.settingsDestination(destination))
+                    .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .accessibilityAddTraits(selection == destination ? .isSelected : [])
                 }
             }
         }
         .listStyle(.sidebar)
-        .listRowSpacing(4)
-        .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 290)
+        .listRowSpacing(CrestSpacing.extraSmall)
+        .navigationSplitViewColumnWidth(
+            min: Self.minimumColumnWidth, ideal: Self.idealColumnWidth, max: Self.maximumColumnWidth
+        )
         .searchable(text: $searchText, prompt: "Search settings")
     }
 
     private var filteredDestinations: [BrowserSettingsDestination] {
-        MobileSettingsDestinationFilter.destinations(
+        BrowserSettingsDestination.visible(
             matching: searchText,
             locale: locale,
             in: state
         )
-    }
-
-    /// The system's own fill behind the row that's showing.
-    private func rowBackground(for destination: BrowserSettingsDestination) -> some View {
-        RoundedRectangle(cornerRadius: 12)
-            .fill(selection == destination ? Color(uiColor: .systemFill) : .clear)
-            .padding(.vertical, 2)
     }
 }

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "link-route-exact-site-name",
+      "category": "fixed",
+      "message": "A link route set to “Is Exactly” with just a site’s name, such as docs.google.com, now matches that site’s home page, and Links settings say that routes apply to links from other apps."
+    }
+  ]
+}

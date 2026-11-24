@@ -6,17 +6,10 @@ namespace CrestCore.Application;
 /// seconds between the epochs, so converting with the same arithmetic keeps
 /// every client's reading of a date bit for bit.
 internal readonly record struct SyncTime(double ReferenceSeconds) {
-    #region Static Variables
-
-    /// Seconds from 1970 to 2001.
-    private const double EpochDistance = 978_307_200;
-
-    #endregion
-
     #region Variables
 
     /// The moment in seconds since 1970, as the cloud spells it.
-    public double UnixSeconds => ReferenceSeconds + EpochDistance;
+    public double UnixSeconds => ReferenceSeconds + StoredSessionCodec.ReferenceEpochUnixSeconds;
 
     public DateTimeOffset Moment => StoredSessionCodec.Date(ReferenceSeconds);
 
@@ -27,7 +20,7 @@ internal readonly record struct SyncTime(double ReferenceSeconds) {
     /// The moment `seconds` after 1970 names. Subtracting the epochs is exact
     /// for every date after 2001, so a moment read from the cloud converts back
     /// to the same Unix seconds.
-    public static SyncTime FromUnixSeconds(double seconds) => new(seconds - EpochDistance);
+    public static SyncTime FromUnixSeconds(double seconds) => new(seconds - StoredSessionCodec.ReferenceEpochUnixSeconds);
 
     /// The moment rounded to whole milliseconds in Unix time, as the clients
     /// round the clocks of a split's fields.

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "isolate-unsigned-extension-imports",
+      "category": "fixed",
+      "message": "Keep permissions and private data separate when importing unsigned Firefox extensions"
+    },
+    {
+      "id": "manual-development-build-validation",
+      "category": "internal",
+      "message": "Run the Build Crest workflow only when manually requested"
+    }
+  ]
+}

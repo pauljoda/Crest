@@ -19,7 +19,6 @@ struct BrowserTabPreviewSurface: ViewModifier {
 
     // MARK: - Variables
 
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.browserTabPreviewCardWidth) private var width
 
     // MARK: - Actions - Presentation
@@ -32,9 +31,7 @@ struct BrowserTabPreviewSurface: ViewModifier {
             .environment(\.spaceChromeForeground, nil)
             .frame(width: width, alignment: .leading)
             .crestFloatingFlyoutStyle(in: .rect(cornerRadius: BrowserSidebarMetrics.layerCornerRadius() + Self.padding))
-            .shadow(
-                color: .black.opacity(reduceTransparency ? 0 : CrestOpacity.controlShadow),
-                radius: 14, y: 6)
+            .crestElevation(.panel)
     }
 }
 

@@ -1,0 +1,88 @@
+{
+  "release": {
+    "summary": "Crest 0.10.24 fixes local network and plain HTTP sites in Chromium Spaces, a crash when clearing tabs, and pages flashing while they load. It also makes big folders faster and lets Clear keep the tab you're on.",
+    "added": [
+      "Collapse All Folders closes every open folder in a Space at once, nested folders included, without closing any tabs. Find it in the Space's menu, in the sidebar's menu and the View menu on Mac, and in the command palette.",
+      "Choose separately what pinned tabs and saved tabs do after you close them, in Settings › Tabs. Saved tabs can go back to their saved URL while pinned tabs resume where you left off. Your current choice carries over to both."
+    ],
+    "changed": [
+      "Clear keeps the tab you're on and archives your other open tabs. On Mac, hold Option to turn it into Clear All. Clear All Tabs, Option-Shift-Command-K, is also in the Tabs menu, the command palette and the Space's ••• menu, which is where iPhone and iPad find it.",
+      "Large folders open about twice as fast, with the folders inside them filling in just after. A folder's preview on Mac appears without a pause, even when it holds hundreds of tabs.",
+      "Folders brought in from another browser arrive closed, nested ones included. Folders from a Crest backup keep how you left them.",
+      {
+        "text": "On Mac, with the address bar in the sidebar, pages in Split View no longer each carry their own bar: the sidebar's serves the page you're on. With the address bar on top, each page keeps its own.",
+        "platforms": ["mac"]
+      }
+    ],
+    "fixed": [
+      {
+        "text": "Chromium Spaces can open devices on your local network, such as routers, NAS drives and home servers, once you turn on Crest Helper under System Settings › Privacy & Security › Local Network. That setting is now Crest's own, not one shared with other apps. A page that can't reach a local address says how to allow it, instead of reporting a refused connection.",
+        "platforms": ["mac"]
+      },
+      {
+        "text": "In Chromium Spaces, an http:// address you type or open stays on HTTP, including when you reload it. Links on pages still try HTTPS first and fall back to HTTP when a site doesn't offer it.",
+        "platforms": ["mac"]
+      },
+      "When you type a site without http:// or https://, Crest tries HTTPS first and opens it over HTTP if HTTPS can't reach it. Local addresses, such as nas.lan:5000, open over HTTP right away, and an address typed with https:// never falls back.",
+      {
+        "text": "Files downloaded over plain HTTP in Chromium Spaces are no longer blocked outright: Crest asks whether to keep them.",
+        "platforms": ["mac"]
+      },
+      {
+        "text": "Pages in Chromium Spaces no longer flash blank or white while the next page loads after you follow a link.",
+        "platforms": ["mac"]
+      },
+      {
+        "text": "Crest no longer quits when you clear or close the last open pages of a Chromium Space with Chromium's Contextual Tasks flag turned on.",
+        "platforms": ["mac"]
+      },
+      {
+        "text": "On iPhone and iPad, tapping a folder opens or closes it instead of bringing up its preview. Holding a folder still shows the preview.",
+        "platforms": ["ios"]
+      },
+      "Folder icons wider than a folder, such as a computer or a group of people, show whole in the sidebar instead of cut off at their edge."
+    ],
+    "upgrading": [
+      {
+        "text": "The first time a Chromium Space reaches a device on your local network, macOS asks once about Crest Helper.",
+        "platforms": ["mac"]
+      },
+      "Mac still requires Apple silicon and macOS 26.1 or later. iPhone and iPad require iOS or iPadOS 26.1 or later."
+    ]
+  },
+  "entries": [
+    {
+      "id": "chromium-local-network-helper",
+      "category": "fixed",
+      "message": "Chromium Spaces can open devices on your local network, such as routers, NAS drives and home servers, once you turn on Crest Helper under System Settings › Privacy & Security › Local Network, now Crest's own setting rather than one shared with other apps. A page that can't reach a local address says how to allow it instead of reporting a refused connection.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-keeps-http-addresses",
+      "category": "fixed",
+      "message": "In Chromium Spaces, an http:// address you type or open now stays on HTTP, including when you reload it, instead of being switched to HTTPS. Links on pages still try HTTPS first and fall back to HTTP when a site doesn't offer it.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-keep-http-downloads",
+      "category": "fixed",
+      "message": "Files downloaded over plain HTTP in Chromium Spaces are no longer blocked outright: Crest asks whether to keep them, as it does for other risky downloads.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "typed-sites-fall-back-to-http",
+      "category": "fixed",
+      "message": "When you type a site without http:// or https://, Crest tries HTTPS first and opens it over HTTP if HTTPS can't reach it. Local addresses, such as nas.lan:5000 or a device name with a port, open over HTTP right away, and an address you type with https:// never falls back."
+    },
+    {
+      "id": "typed-site-fallback-per-load",
+      "category": "internal",
+      "message": "The HTTP fallback for a site typed without a scheme now belongs to the page and the load that typed it, so a later load in that page, a new document or another page's load never takes it."
+    },
+    {
+      "id": "palette-fallback-unknown-sites-only",
+      "category": "internal",
+      "message": "Only the palette's address row for a site typed without a scheme that the Space doesn't already know falls back to HTTP; a history, tab or known-site row opens its address as kept."
+    }
+  ]
+}

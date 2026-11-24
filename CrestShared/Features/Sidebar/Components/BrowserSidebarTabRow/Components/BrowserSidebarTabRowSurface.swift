@@ -94,7 +94,8 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
                 isEnabled: !interaction.isRenaming
                     && configuration.isAvailableForDisplay
                     && configuration.capabilities.supportsOrganization,
-                requiresSelectedSpace: true
+                requiresSelectedSpace: true,
+                isTabSelected: configuration.isSelected
             )
             .browserSidebarReorderZone(
                 .currentTab(configuration.tab.id),
@@ -199,7 +200,7 @@ private struct BrowserSidebarTabRowAppearance: ViewModifier {
     }
 
     private var accent: Color {
-        (BrowserDeviceAppearanceStore.shared.tabs.color ?? branding?.primaryColor ?? .indigo).color
+        (BrowserDeviceAppearanceStore.shared.tabs.color ?? branding?.primaryColor ?? SpaceBranding.fallbackColor).color
     }
 
     private var branding: SpaceBranding? {
@@ -208,26 +209,28 @@ private struct BrowserSidebarTabRowAppearance: ViewModifier {
     }
 }
 
-/// A selected row stands in the device's material with text in the scheme
-/// its material color gives it, as the address field and the pins do. Any
-/// other row keeps the Space's ink.
+/// A selected row reads as its selected tab style draws it: ink on Crest's
+/// white paper on every Space, or on the device's material, the label color
+/// in the scheme its material color gives it. Any other row keeps the
+/// Space's ink.
 ///
 /// Both states set the same modifiers, so selecting a row changes values
 /// rather than the row's structure.
 private struct BrowserSelectedTabRowAppearance: ViewModifier {
     let isSelected: Bool
 
-    @Environment(\.deviceColorScheme) private var deviceColorScheme
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.deviceColorScheme) private var deviceColorScheme
     @Environment(\.spaceChromeForeground) private var spaceForeground
 
     func body(content: Content) -> some View {
+        // Only the selected row reads the style, so changing it leaves the rest be.
+        let style = isSelected ? BrowserDeviceAppearanceStore.shared.tabs.selectedTabStyle : .standard
+        let materialScheme = CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme)
         content
-            .foregroundStyle(isSelected ? AnyShapeStyle(Color.primary) : AnyShapeStyle(.primary))
+            .foregroundStyle(isSelected ? AnyShapeStyle(style.foreground) : AnyShapeStyle(.primary))
             .environment(\.spaceChromeForeground, isSelected ? nil : spaceForeground)
-            .environment(
-                \.colorScheme,
-                isSelected ? CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme) : colorScheme)
+            .environment(\.colorScheme, isSelected ? style.contentScheme(onMaterial: materialScheme) : colorScheme)
     }
 }
 

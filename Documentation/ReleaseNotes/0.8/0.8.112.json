@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "downloads-drag-out-as-files",
+      "category": "new",
+      "message": "Finished downloads can be dragged out of the Downloads list and dropped into Finder or another app, like any file."
+    },
+    {
+      "id": "sidebar-lists-button-choice",
+      "category": "new",
+      "message": "Right-click the lists button at the bottom of the sidebar to choose whether it opens Archive, History or Downloads in the Space you are in."
+    }
+  ]
+}

@@ -12,15 +12,13 @@ namespace CrestCore.Contracts;
 public sealed record CredentialOrigin(string Scheme, string Host, int Port) {
     #region Variables
 
-    public const int MaximumHostLength = 1_024;
-
     /// The most saved origins one fill question may carry.
-    internal const int MaximumFillCandidates = 1_024;
+    public const int MaximumFillCandidates = 1_024;
 
     /// An IP address host must be spelled as a page's origin spells it: IPv6
     /// compressed, with no zone ID, brackets or escapes, and IPv4 in dotted
     /// decimal.
-    public bool IsValid => WebScheme.Named(Scheme) is not null && !string.IsNullOrEmpty(Host) && Host.Length <= MaximumHostLength
+    public bool IsValid => WebScheme.Named(Scheme) is not null && !string.IsNullOrEmpty(Host) && Host.Length <= SiteOrigin.MaximumHostLength
         && CanonicalHost(Host) == Host && Port is >= 1 and <= 65_535;
 
     public bool IsSecure => WebScheme.Named(Scheme)?.IsSecure == true;

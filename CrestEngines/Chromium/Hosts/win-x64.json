@@ -31,8 +31,8 @@
   "cipd": {
     "src/buildtools/win": {
       "package": "gn/gn/windows-amd64",
-      "version": "git_revision:0035961837fbcfe875d855744b3eda4fd2eefb43",
-      "sha256": "744df1d7654c5f54b279adca69dfb2cc617c53c40a055a6a6633f2dbd000b124"
+      "version": "git_revision:938087829fcbcc8fd87835ee301dd522c7637685",
+      "sha256": "819f01138f8c4530b71f9316c7d16dd9e1f8cc5d72aa08a6e19980f05c857879"
     },
     "src/third_party/cpython3/host": {
       "package": "infra/3pp/tools/cpython3/windows-amd64",

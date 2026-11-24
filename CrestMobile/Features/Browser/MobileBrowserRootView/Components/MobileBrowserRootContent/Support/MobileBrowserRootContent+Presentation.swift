@@ -104,6 +104,14 @@ extension MobileBrowserRootContent {
             browser: browser, pages: pages, spaceAccess: spaceAccess, dataDeleter: dataDeleter,
             state: model.settings.state
         )
+        // A website Settings opens replaces the sheet with its new tab.
+        .environment(
+            \.browserOpenWebsite,
+            BrowserOpenWebsiteAction { [model] url in
+                model.settings.dismissSheet()
+                model.openURL(url)
+            }
+        )
         .overlay(alignment: .top) {
             BrowserNoticeLayer(
                 notices: pages.notices,
@@ -201,6 +209,7 @@ extension MobileBrowserRootContent {
                 sidebarPresentation: navigation.regularSidebarPresentation
             ),
             togglePrivateBrowsing: togglePrivateBrowsing,
+            openInPrivateBrowsing: { url in openInPrivateBrowsing?(url) },
             openNewTab: beginNewTab,
             openLocation: openLocation,
             prepareForSelectionSynchronization: dismissAddressFocus,

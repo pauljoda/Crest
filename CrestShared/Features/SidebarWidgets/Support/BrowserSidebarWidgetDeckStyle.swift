@@ -2,17 +2,7 @@ import SwiftUI
 
 /// Shared card geometry, appearance, and drag thresholds.
 enum BrowserSidebarWidgetDeckStyle {
-    /// Selects system glass or the custom material treatment.
-    static let usesLiquidGlass = true
-
     static let cardStrokeWidth: CGFloat = 0.5
-    static let edgeHighlightTopOpacity = 0.22
-    static let edgeHighlightBottomOpacity = 0.05
-    static let contactShadowOpacity = 0.22
-    static let contactShadowRadius: CGFloat = 1
-    static let contactShadowOffset: CGFloat = 0.5
-    static let ambientShadowRadius: CGFloat = 8
-    static let ambientShadowOffset: CGFloat = 3
     static let underCardShadowScale = 0.45
 
     /// Visible slots: the front card plus the two cards it will flip to.
@@ -44,10 +34,8 @@ enum BrowserSidebarWidgetDeckStyle {
     static var quietControlHitTarget: CGFloat {
         max(quietControlDiameter, CrestLayout.minimumHitTarget)
     }
-    static let actionHeight: CGFloat = 28
     static let headerTileSize: CGFloat = 30
     static let badgeVerticalPadding: CGFloat = 1
-    static let stepperBadgeHorizontalPadding: CGFloat = 2
     static let indicatorDotDiameter: CGFloat = 5
     static let indicatorHitWidth: CGFloat = 24
     static let indicatorHitHeight: CGFloat = 24
@@ -66,18 +54,6 @@ enum BrowserSidebarWidgetDeckStyle {
     @MainActor
     static var cardShape: RoundedRectangle {
         RoundedRectangle(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(), style: .continuous)
-    }
-
-    /// A glass top-edge highlight that fades into the card's lower border.
-    static func edgeHighlight(scale: Double = 1) -> LinearGradient {
-        LinearGradient(
-            colors: [
-                Color.primary.opacity(edgeHighlightTopOpacity * scale),
-                Color.primary.opacity(edgeHighlightBottomOpacity * scale),
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
     }
 
     static var quietControlSymbolFont: Font {

@@ -29,13 +29,16 @@ class VersionContractTests(unittest.TestCase):
             "Config/Version.xcconfig",
             "CrestMac/Configuration/Crest-Info.plist",
             "CrestMobile/Configuration/CrestMobile-Info.plist",
-            "Documentation/ReleaseNotes.json",
             "project.yml",
         ):
             source = REPOSITORY_ROOT / relative_path
             destination = self.fixture_root / relative_path
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, destination)
+        shutil.copytree(
+            REPOSITORY_ROOT / "Documentation/ReleaseNotes",
+            self.fixture_root / "Documentation/ReleaseNotes",
+        )
 
         (self.fixture_root / "Crest.xcodeproj").mkdir()
         self.environment = os.environ | {
@@ -50,6 +53,13 @@ class VersionContractTests(unittest.TestCase):
         self.next_release_line = f"{major}.{minor + 1}.0"
 
         subprocess.run(["git", "init", "-q"], cwd=self.fixture_root, check=True)
+        # Committing every version's notes is enough loose objects for git to
+        # start detached maintenance, which would still be writing at cleanup.
+        subprocess.run(
+            ["git", "config", "maintenance.auto", "false"],
+            cwd=self.fixture_root,
+            check=True,
+        )
         subprocess.run(
             ["git", "config", "user.email", "crest-tests@example.com"],
             cwd=self.fixture_root,
@@ -169,7 +179,7 @@ class VersionContractTests(unittest.TestCase):
         result = self.run_check("--fix-commit")
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("stage at least one new release-note entry", result.stderr)
+        self.assertIn("add at least one new release-note entry", result.stderr)
 
     def test_fix_commit_check_rejects_a_new_release_line(self) -> None:
         self.write_version(self.next_release_line)

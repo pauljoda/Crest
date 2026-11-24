@@ -3,8 +3,7 @@ import Foundation
 extension BrowserHTTPAuthenticationProtectionSpace {
     init?(_ protectionSpace: URLProtectionSpace) {
         guard !protectionSpace.isProxy(),
-            let scheme = protectionSpace.protocol?.lowercased(),
-            scheme == "http" || scheme == "https"
+            let scheme = WebScheme.named(protectionSpace.protocol?.lowercased())
         else {
             return nil
         }
@@ -21,7 +20,7 @@ extension BrowserHTTPAuthenticationProtectionSpace {
 
         guard
             let origin = CredentialOrigin(
-                securityProtocol: scheme,
+                securityProtocol: scheme.name,
                 host: protectionSpace.host,
                 port: protectionSpace.port
             )

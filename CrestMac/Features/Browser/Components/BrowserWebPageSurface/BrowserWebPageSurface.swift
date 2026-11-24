@@ -28,6 +28,13 @@ struct BrowserWebPageSurface: View {
         return browser.core.state.agentSessions.first { $0.tabIDs.contains(tabID) }
     }
 
+    /// Whether the page shows rather than its loading screen: once it has
+    /// committed a document and painted, so a page opening in dark mode never
+    /// shows the engine's white background in between.
+    private var revealsWebContent: Bool {
+        page.committedNavigationCount > 0 && page.hasPaintedContent
+    }
+
     var body: some View {
         ZStack(alignment: .top) {
             BrowserPlatformWebView(
@@ -41,13 +48,15 @@ struct BrowserWebPageSurface: View {
                 (page.nativeView as? any BrowserNativePageSurfaceLifecycle)?.presentationGeometryDidChange()
             }
             .accessibilityLabel(page.live.title.isEmpty ? "Web page" : page.live.title)
-            .opacity(
-                BrowserPageSurfacePresentation.revealsWebContent(
-                    committedNavigationCount: page.committedNavigationCount
-                ) ? 1 : 0
+            .opacity(revealsWebContent ? 1 : 0)
+            // The page fades in over its loading screen; one already showing,
+            // as a tab switched back to is, stays put.
+            .animation(
+                revealsWebContent ? CrestMotion.contentReveal.unlessReducingMotion(reduceMotion) : nil,
+                value: revealsWebContent
             )
 
-            BrowserPageLoadingPresentation(page: page)
+            BrowserPageLoadingPresentation(page: page, revealsWebContent: revealsWebContent)
 
             if let hover = page.linkHover { BrowserLinkHoverPreview(hover: hover) }
 
@@ -93,13 +102,7 @@ struct BrowserWebPageSurface: View {
             .padding(BrowserWebPageSurfaceMetrics.overlayPadding)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
 
-            BrowserWebPageFailureOverlay(
-                page: page,
-                branding: browser.spaceModel(
-                    matching: BrowserSpaceRuntimeAssignment(spaceID: page.spaceID, profileID: page.profileID)
-                ).map(\.settings.look),
-                pagePresentation: pagePresentation
-            )
+            BrowserWebPageFailureOverlay(page: page, pagePresentation: pagePresentation)
 
             BrowserCredentialChrome(
                 presentation: BrowserCredentialChromePresentation.resolve(
@@ -138,17 +141,10 @@ struct BrowserWebPageSurface: View {
 
     /// The questions the find bar asks, bound to this surface's page.
     private var findPort: BrowserFindPort {
-        BrowserFindPort(
-            find: { query, direction in
-                page.find(query, direction: direction)
-            },
-            query: { page.findQuery },
-            matchState: { page.findMatchState },
-            matches: { page.findMatches },
-            focusRequest: { page.findFocusRequest },
-            focusesQueryField: { page.findFocusesQueryField },
-            dismiss: page.dismissFind
-        )
+        var port = BrowserFindPort(page: page)
+        port.matches = { page.findMatches }
+        port.focusesQueryField = { page.findFocusesQueryField }
+        return port
     }
 
     /// What a credential fill prompt asks of this surface's page.
@@ -158,29 +154,13 @@ struct BrowserWebPageSurface: View {
     /// pixels. The chrome is a sibling of the web view inside one box, so the
     /// zoom is the only thing between the two.
     private var credentialFillPort: BrowserCredentialFillPort {
-        BrowserCredentialFillPort(
-            spaceID: page.spaceID,
-            contentScale: page.renderedPageZoom,
-            siteIconData: page.faviconData,
-            fill: { credential, requestID in
-                try await page.fillCredential(credential, for: requestID)
-            },
-            fillGeneratedPassword: { password, requestID in
-                try await page.fillGeneratedPassword(password, for: requestID)
-            },
-            dismiss: page.dismissCredentialFillRequest
-        )
+        BrowserCredentialFillPort(page: page, contentScale: page.renderedPageZoom)
     }
 
     /// What the save prompt asks of this surface's page. This shell makes no
     /// offer to the system's Passwords app, so it binds none.
     private var credentialSavePort: BrowserCredentialSavePort {
-        BrowserCredentialSavePort(
-            spaceID: page.spaceID,
-            presentedCandidateID: { page.credentialSaveCandidate?.id },
-            dismiss: page.dismissCredentialSaveCandidate,
-            offerToSystemPasswords: nil
-        )
+        BrowserCredentialSavePort(page: page, offerToSystemPasswords: nil)
     }
 
     /// What this shell can do: a pointer rests over the chrome and nothing is
@@ -197,6 +177,8 @@ private struct BrowserPageLoadingPresentation: View {
     private static let initialLoadingStatusDelay: Duration = .milliseconds(400)
 
     let page: BrowserPage
+    /// Whether the page shows in front of this presentation yet.
+    let revealsWebContent: Bool
 
     /// Whether the first load has run long enough to say the page is opening.
     @State private var initialStatusIsDue = false
@@ -255,7 +237,9 @@ private struct BrowserPageLoadingPresentation: View {
         page.live.failure != nil || page.webContentFailureMessage != nil
     }
 
+    /// Whether the page is still opening: its first load runs, or its first
+    /// document committed but has not painted yet.
     private var showsInitialStatus: Bool {
-        isNavigating && page.committedNavigationCount == 0 && !hasFailure
+        !revealsWebContent && (isNavigating || page.committedNavigationCount > 0) && !hasFailure
     }
 }

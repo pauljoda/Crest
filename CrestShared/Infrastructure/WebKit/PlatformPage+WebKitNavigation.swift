@@ -33,14 +33,14 @@ extension BrowserPlatformPage {
             if origin.scheme.isEmpty, origin.host.isEmpty {
                 return true
             }
-            return origin.scheme == "file"
+            return UrlScheme.named(origin.scheme) == .file
         }
         let origin = navigationAction.sourceFrame.securityOrigin
         let scheme = origin.protocol.lowercased()
         if scheme.isEmpty, origin.host.isEmpty {
             return true
         }
-        return scheme == "file"
+        return UrlScheme.named(scheme) == .file
     }
 
     /// Lets the core judge the link `navigationAction` follows, once WebKit may

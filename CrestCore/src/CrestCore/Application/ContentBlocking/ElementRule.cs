@@ -18,6 +18,9 @@ internal sealed record ElementRule(string Host, string Selector) {
     /// The longest selector a rule takes from a page.
     public const int MaximumSelectorLength = 1024;
 
+    /// The most of a refused selector its rejection repeats back.
+    private const int RefusedSelectorEcho = 200;
+
     /// The rule that hides `selector` on the host of the page at `pageUrl`.
     /// Refused for a page that is not on the web, or for a selector that could
     /// be more than a hiding rule for that host: one with a control character
@@ -30,7 +33,7 @@ internal sealed record ElementRule(string Host, string Selector) {
             || trimmed.Any(character => char.IsControl(character) || character is '\u2028' or '\u2029')
             || trimmed.StartsWith("+js(", StringComparison.Ordinal) || trimmed.StartsWith('^')
             || trimmed.Contains("##") || trimmed.Contains("#@#") || trimmed.Contains("#?#") || trimmed.Contains("#$#"))
-            throw new Rejected(new ElementSelectorInvalid(selector?.Length > 200 ? selector[..200] : selector ?? ""));
+            throw new Rejected(new ElementSelectorInvalid(selector?.Length > RefusedSelectorEcho ? selector[..RefusedSelectorEcho] : selector ?? ""));
         return new(host, trimmed);
     }
 

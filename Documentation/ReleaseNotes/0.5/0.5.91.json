@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-09-follow-tabs-between-spaces",
+      "category": "improved",
+      "message": "Open tabs when following them into another Space, with a setting to keep browsing in the current Space instead"
+    }
+  ]
+}

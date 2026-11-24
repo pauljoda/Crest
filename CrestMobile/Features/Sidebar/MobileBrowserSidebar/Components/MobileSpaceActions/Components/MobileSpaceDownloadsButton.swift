@@ -22,14 +22,8 @@ struct MobileSpaceDownloadsButton: View {
             )
         )
         .accessibilityLabel("Downloads")
-        .accessibilityValue(
-            BrowserChromeAccessibility.countValue(
-                downloads.count,
-                singular: "download",
-                plural: "downloads"
-            )
-        )
-        .accessibilityIdentifier("downloads-button")
+        .accessibilityValue(String(localized: "\(downloads.count) downloads"))
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.downloadsButton)
     }
 
     private var symbol: String {

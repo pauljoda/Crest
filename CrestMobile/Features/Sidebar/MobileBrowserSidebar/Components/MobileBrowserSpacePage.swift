@@ -143,11 +143,14 @@ struct MobileBrowserSpacePage: View {
 
     private func restoreSavedLocation(_ tabID: UUID) {
         guard isCurrentAndUnlocked else { return }
-        MobileSavedLocationRestoreAction(
-            browser: browser,
-            pages: pages,
-            selectTab: selectTab,
-            spaceAccess: spaceAccess
+        BrowserSavedLocationRestoreAction(
+            browser: browser, pages: pages, spaceAccess: spaceAccess,
+            show: { [browser, pages, spaceAccess, selectTab] assignment in
+                selectTab(assignment.tabID)
+                return MobileSelectedPageActionPort(
+                    browser: browser, pages: pages, spaceAccess: spaceAccess, expectedAssignment: assignment
+                ).activePage
+            }
         ).perform(
             BrowserTabRuntimeAssignment(
                 tabID: tabID,

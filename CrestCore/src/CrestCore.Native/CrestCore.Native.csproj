@@ -4,11 +4,14 @@
     <NativeLib>Shared</NativeLib>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsAotCompatible>true</IsAotCompatible>
-    <!-- The apps' deployment target (project.yml), which the content filter is built for too. -->
-    <AppleMinOSVersion>26.1</AppleMinOSVersion>
     <CrestRuntimeFamily Condition="$(RuntimeIdentifier.StartsWith('osx-')) or $(RuntimeIdentifier.StartsWith('ios'))">apple</CrestRuntimeFamily>
     <CrestRuntimeFamily Condition="$(RuntimeIdentifier.StartsWith('win-'))">windows</CrestRuntimeFamily>
     <CrestRuntimeFamily Condition="$(RuntimeIdentifier.StartsWith('linux-'))">linux</CrestRuntimeFamily>
+  </PropertyGroup>
+  <!-- Each platform's deployment target (project.yml), which the content filter is built for too. -->
+  <PropertyGroup>
+    <AppleMinOSVersion Condition="$(RuntimeIdentifier.StartsWith('osx-'))">15.0</AppleMinOSVersion>
+    <AppleMinOSVersion Condition="$(RuntimeIdentifier.StartsWith('ios'))">26.1</AppleMinOSVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../CrestCore/CrestCore.csproj" />

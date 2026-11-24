@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "temporary-sidebar-interruptible-animation",
+      "category": "fixed",
+      "message": "The sidebar hides and shows more smoothly, the History, Archive and Downloads selector closes back to its button, and History, Archive or Downloads opened over a hidden sidebar stays open while you use the page."
+    }
+  ]
+}

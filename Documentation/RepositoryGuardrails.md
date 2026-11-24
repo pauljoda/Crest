@@ -36,27 +36,55 @@ Changing release lines uses `Scripts/set-version.sh --release X.Y.Z` and remains
 an explicit release-and-tag decision. Neither path changes
 `CURRENT_PROJECT_VERSION`; Xcode Cloud owns distributed build numbers.
 
-## Explicit release-note entries
+## Release notes
 
-`Documentation/ReleaseNotes.json` is the machine-readable source for GitHub and
-Sparkle release copy. Its `entries` object maps a stable lowercase kebab-case ID
-to exactly one category and message. `new`, `improved`, and `fixed` entries are
-public; `internal` records a commit that should not be announced. Messages state
-the user outcome directly and do not inherit commit wording.
+`Documentation/ReleaseNotes` is the source for the product site's release notes
+and for GitHub and Sparkle release copy. Each version Crest reaches has one
+file, `<major>.<minor>/<version>.json`, written by the commit that moves
+`MARKETING_VERSION` to it:
 
-The IDs, rather than commit hashes, survive rebases and history rewrites. Never
-reuse, rewrite, reorder, or delete an ID; append new entries so catalog order
-remains release order. The schema 2 `publicationBaselines` are immutable
-bootstrap cursors for the currently published stable, nightly, and development
-builds. Successful publications keep the live per-channel cursors in the
-workflow-owned `updates` branch and advance only the selected channel in the
-same commit as its signed appcast. Every product or architecture commit adds at
-least one new entry. `Scripts/check-version.sh --fix-commit` validates the staged
-catalog and rejects a patch bump without a new entry. Validate the working
-catalog directly with:
+```json
+{
+  "entries": [
+    { "id": "sidebar-long-folder-scroll", "category": "fixed", "message": "…", "platforms": ["mac"] }
+  ]
+}
+```
+
+`new`, `improved`, and `fixed` entries are public; `internal` records a change
+that should not be announced. Messages state the user outcome directly and do
+not inherit commit wording. `platforms` lists `mac` or `ios` for a change that
+reaches only that platform; leave it out for a change that reaches both. IDs
+are unique across every version and survive rebases and history rewrites. Never
+reuse, change, move, or delete an entry; release order is version order, then
+the order within a file.
+
+A version published as Stable carries its curated write-up as `release`: a
+`summary` and lists of `added`, `changed`, `fixed`, `security`, `removed`, and
+`upgrading` items. An item is text, or `{ "text": …, "platforms": [...] }`. The
+write-up may be written or edited after the version lands. A Stable release
+publishes it on GitHub and in Sparkle; other releases list the entries after
+their channel's cursor. Successful publications keep the per-channel cursors in
+the workflow-owned `updates` branch and advance only the selected channel in
+the same commit as its signed appcast.
+
+Every product or architecture commit adds at least one new entry.
+`Scripts/check-version.sh --fix-commit` rejects a patch bump unless the staged
+version's file holds new entries and no newer file exists. Validate the working
+notes directly with:
 
 ```sh
 python3 Scripts/release_note_catalog.py
+```
+
+`Scripts/export-release-history.py` turns the notes, the release tags and the
+version history into one JSON file. The product site,
+[crest-browser/crestbrowser.com](https://github.com/crest-browser/crestbrowser.com),
+renders its `/releases/` pages from that file each time it deploys; its README
+shows how to preview them.
+
+```sh
+python3 Scripts/export-release-history.py --output build/release-history.json
 ```
 
 ## Architecture and Xcode 27 compatibility
@@ -69,9 +97,11 @@ Scripts/check-architecture.py
 
 The check enforces these high-confidence contracts:
 
-- Domain imports Foundation only; Application imports Foundation, Observation, and Dispatch only.
+- Domain imports Foundation only; Application imports Foundation, Observation, Dispatch, and Synchronization only.
 - SwiftUI presentation stays out of shared Infrastructure.
-- AppKit, CoreServices, and SecurityInterface stay under `CrestMac`; UIKit stays under `CrestMobile`.
+- AppKit, CoreServices, and SecurityInterface stay under `CrestMac` or the Chromium engine's Apple shell; UIKit stays under `CrestMobile`.
+- WebKit is imported only by the WebKit adapters (`Infrastructure/WebKit`, the Mac's `Infrastructure/Pages`), the app compositions and `CrestEngines`, and only `CrestEngines` tests `CREST_CHROMIUM_HOST`.
+- The check also scans `CrestAgents` and the Chromium engine's Apple shell.
 - Production code does not introduce `ObservableObject`, `@Published`, or `AnyView`.
 - Conservative checks cover the documented Xcode 27 `@State` initialization and composition hazards, nested `TupleView` constraints, empty MapKit builders, and modified shape styles passed to non-builder `background` or `overlay` forms.
 
@@ -139,7 +169,7 @@ Swift tests or direct app validation.
 
 The supported guards follow the same dependency direction as production code. Framework-neutral default-browser and passkey values and policies stay in Domain, their observable workflow controllers stay in Application, and AuthenticationServices, AppKit, UIKit, and Security bridges stay in shared or platform Infrastructure. Launch flags are parsed by `BrowserLaunchEnvironment`, evaluated by the Application launch policy, and read from the process only by the Infrastructure adapter; BrowserStore composition consumes that typed value.
 
-Structural assertions check current owners and reject superseded paths. Keep those checks recursive where they protect a layer or framework boundary, and match declarations or signatures flexibly enough to allow formatting and typed parameters without accepting a different contract. The Python tooling itself must remain compatible with the Python 3.9 runtime bundled with Xcode.
+Structural assertions check current owners and reject superseded paths. Keep those checks recursive where they protect a layer or framework boundary, and match declarations or signatures flexibly enough to allow formatting and typed parameters without accepting a different contract. The scripts a build runs itself, `build-apple-core.py` from Xcode and `fetch-content-filter.py` with `content_filter.py` from MSBuild, must stay compatible with the Python 3.9 runtime bundled with Xcode. The rest of the tooling and its tests need Python 3.11 or newer.
 
 ## Periphery evidence audit
 
@@ -150,4 +180,4 @@ brew install periphery
 Scripts/audit-periphery.sh
 ```
 
-The script scans both app schemes across Debug and Release using one task-scoped Derived Data directory, then removes that directory. It retains Objective-C-accessible declarations and Codable properties up front. Its remaining findings are evidence only. Before deleting anything, prove references and target membership, run the affected builds and tests, and account for dynamic WebKit, AppKit, delegate, serialization, and preview entry points.
+The script scans the WebKit app, the Chromium product and the iOS app across Debug and Release; Periphery builds into its own cache, which you remove when the audit is done. It retains Objective-C-accessible declarations and Codable properties up front. Its remaining findings are evidence only. Before deleting anything, prove references and target membership, run the affected builds and tests, and account for dynamic WebKit, AppKit, delegate, serialization, and preview entry points.

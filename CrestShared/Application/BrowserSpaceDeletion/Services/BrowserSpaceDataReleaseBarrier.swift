@@ -4,6 +4,9 @@ import Foundation
 @MainActor
 enum BrowserSpaceDataReleaseBarrier {
     static let retainedViewReleaseTimeout: Duration = .seconds(2)
+    /// How often the barrier looks again at the views it waits on: about a
+    /// frame.
+    private static let releaseCheckInterval: Duration = .milliseconds(16)
 
     static func waitForRetainedViews(
         _ probes: [BrowserSpaceDataReleaseProbe] = []
@@ -24,7 +27,7 @@ enum BrowserSpaceDataReleaseBarrier {
             probes.contains(where: { !$0.isReleased })
         {
             await Task.yield()
-            try? await Task.sleep(for: .milliseconds(16))
+            try? await Task.sleep(for: releaseCheckInterval)
         }
     }
 }

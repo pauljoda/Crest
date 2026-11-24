@@ -17,38 +17,18 @@ struct BrowserUtilitySearchToolbar: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            HStack(spacing: 7) {
-                Image(systemName: "magnifyingglass")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-
-                TextField(surface.searchPrompt, text: $searchText)
-                    .textFieldStyle(.plain)
-                    .focused($isSearchFocused)
-                    .onChange(of: focusRequest) { focusSearchIfRequested() }
-                    .onAppear {
-                        isMounted = true
-                        focusSearchIfRequested()
-                    }
-                    .onDisappear { isMounted = false }
-
-                if !searchText.isEmpty {
-                    Button("Clear", systemImage: "xmark.circle.fill") {
-                        searchText = ""
-                    }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.tertiary)
-                }
+            // As tall as the address field it stands in for.
+            CrestSearchField(
+                text: $searchText, isFocused: $isSearchFocused, height: BrowserChromeLayout.addressHeight
+            ) {
+                TextField(String(localized: surface.searchPrompt), text: $searchText)
             }
-            .padding(.horizontal, 9)
-            .frame(height: BrowserChromeLayout.addressHeight)
-            .background {
-                // The address field's own shape, which this stands in for.
-                CrestSurfaceLayer(
-                    shape: .rect(cornerRadius: BrowserSidebarMetrics.layerCornerRadius(), style: .continuous))
+            .onChange(of: focusRequest) { focusSearchIfRequested() }
+            .onAppear {
+                isMounted = true
+                focusSearchIfRequested()
             }
+            .onDisappear { isMounted = false }
             .matchedGeometryEffect(
                 id: morph,
                 in: morphNamespace,

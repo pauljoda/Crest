@@ -26,7 +26,7 @@ internal sealed record KeptSetupDraft(IReadOnlyList<SetupDraftSpace> Spaces, boo
     private const string BrandingKey = "branding";
     private const string PrimaryKey = "primary";
 
-    private static readonly JsonDocumentOptions Options = new() { MaxDepth = 32 };
+    private static readonly JsonDocumentOptions Options = JsonDepth.Draft.Options;
 
     #endregion
 

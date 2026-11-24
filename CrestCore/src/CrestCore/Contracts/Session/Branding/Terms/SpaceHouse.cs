@@ -176,6 +176,58 @@ public sealed class SpaceHouse {
 
     #endregion
 
+    #region Actions - Starting
+
+    /// <summary>`branding` starting over from the house as a template, a full
+    /// set: its colors and the gradients they run on into, its texture and
+    /// sidebar, and its arms as the Space's icon, keeping the Space's own
+    /// strengths, folder and text choices. A look that started from a scheme
+    /// wore the scheme's strength, fade and text rather than the person's, so
+    /// it takes the house's own instead. The icon wears the house's Accent, so
+    /// any color an icon kept of its own goes.</summary>
+    public SpaceBranding Applying(SpaceBranding branding) {
+        ArgumentNullException.ThrowIfNull(branding);
+        var kept = SpaceScheme.Named(branding.Crest.StartingPresetId) is null ? branding
+            : branding with {
+                BannerStrength = Look.BannerStrength,
+                ReadabilityFade = Look.ReadabilityFade,
+                TextColorMode = Look.TextColorMode
+            };
+        return SpaceBranding.Normalized(kept with {
+            Colors = Look.Colors,
+            ColorGradients = Look.ColorGradients,
+            TextureStrength = Look.TextureStrength,
+            ThemeMode = Look.ThemeMode,
+            BannerPattern = Look.BannerPattern,
+            GradientAngle = Look.GradientAngle,
+            GradientKind = Look.GradientKind,
+            SymbolColor = Look.SymbolColor,
+            SymbolGradient = Look.SymbolGradient,
+            IconStyle = SpaceIconStyle.LayeredCrest,
+            Crest = Look.Crest with { StartingPresetId = Name },
+            HasCustomAppearance = false
+        });
+    }
+
+    /// <summary>`branding` wearing the house's arms as the Space's icon and
+    /// nothing else of the house: its colors, sidebar and every other choice
+    /// stay the person's, and the arms take the Space's colors. The crest
+    /// records the house it started from, unless the look started from a
+    /// scheme, whose record it keeps. A look that doesn't wear the house's
+    /// own colors is one the person made.</summary>
+    public SpaceBranding WearingCrest(SpaceBranding branding) {
+        ArgumentNullException.ThrowIfNull(branding);
+        bool wearsHouseColors = branding.Colors == Look.Colors && Equals(branding.ColorGradients, Look.ColorGradients);
+        string? startingPoint = SpaceScheme.Named(branding.Crest.StartingPresetId) is null ? Name : branding.Crest.StartingPresetId;
+        return SpaceBranding.Normalized(branding with {
+            IconStyle = SpaceIconStyle.LayeredCrest,
+            Crest = Look.Crest with { StartingPresetId = startingPoint },
+            HasCustomAppearance = wearsHouseColors ? branding.HasCustomAppearance : true
+        });
+    }
+
+    #endregion
+
     #region Actions - Looks
 
     /// A house's look: a plain sidebar in its `background` that keeps controls

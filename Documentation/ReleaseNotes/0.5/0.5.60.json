@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-04-extension-frame-message-relay",
+      "category": "fixed",
+      "message": "Deliver messages from websites embedded in an extension’s side panel back to that extension, as Chrome does"
+    }
+  ]
+}

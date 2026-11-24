@@ -9,10 +9,10 @@ struct MobileArchiveContent: View {
 
     var body: some View {
         NavigationStack {
-            MobileArchiveList(
-                space: space,
-                favicons: favicons,
-                restoreArchivedTab: restoreAndDismiss
+            MobileUtilityList(
+                surface: .archive, space: space,
+                actions: BrowserUtilityListActions(restoreArchivedTab: { tabID, _ in restoreAndDismiss(tabID) }),
+                favicons: favicons
             )
             .navigationTitle("\(space?.settings.name ?? "Space") Archive")
             .toolbar {

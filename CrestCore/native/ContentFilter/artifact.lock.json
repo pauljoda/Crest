@@ -1,13 +1,13 @@
 {
-  "key": "9e007d2d33a8f7cb42cebf3e6c1d686fb4ebb0d222174adef2dec1597cc28806",
+  "key": "ac9a3dbdf6417c05c271c5e3683f29ab53027a357b4fa4ff3193ce644badb954",
   "archives": {
     "windows": {
-      "archive": "Crest-Content-Filter-9e007d2d33a8f7cb-windows.zip",
-      "sha256": "e573d6df41ef9f6ea5f3d1cc9a6a621dce2b05a771cafc38998f39df48c4fb65",
+      "archive": "Crest-Content-Filter-ac9a3dbdf6417c05-windows.zip",
+      "sha256": "50ac48b65e1b7f9178b875538358e986306a1e5252b8348620734c7db1c04b86",
       "files": {
         "include/crest_content_filter.h": "3441a762b17722dce9684ca1b4846ed55db5ff0a1be592bcc9d64820b9aaf63b",
-        "win-arm64/crest_content_filter.lib": "1fdad62ac6783046779404571026b1269c14f31ea28e3d5bf66e3c04ec81c1c6",
-        "win-x64/crest_content_filter.lib": "741e157755f7487255e39d2844538d9d4d54d21414c9e126fbadb1397693b494"
+        "win-arm64/crest_content_filter.lib": "8b510b9d8df5da51237a4c2455f8413db1c85ffcbfffd1c30a356bcf31f1e8b1",
+        "win-x64/crest_content_filter.lib": "b1dcb8d44e446069dce799986267176f0b3741df238e4355a4ed3bffbd8d1232"
       }
     }
   }

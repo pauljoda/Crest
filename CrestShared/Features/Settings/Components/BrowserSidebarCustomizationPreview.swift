@@ -8,6 +8,10 @@ import SwiftUI
 /// nothing else — the sidebar here is for looking at, so it declines to be
 /// rearranged or organized.
 struct BrowserSidebarCustomizationPreview: View {
+    /// The corner of the sidebar the preview stands as, when it draws its
+    /// own background.
+    private static let cornerRadius: CGFloat = 14
+
     var space: BrowserSpaceAppearance? = nil
     var showsPins = true
     var showsCurrentTabs = true
@@ -30,7 +34,7 @@ struct BrowserSidebarCustomizationPreview: View {
     var body: some View {
         let context = sample.listContext(capabilities: capabilities)
         let branding = context.map(\.space.settings.look) ?? sample.fallbackBranding
-        VStack(spacing: 8) {
+        VStack(spacing: CrestSpacing.small) {
             if let context {
                 if showsPins {
                     let space = context.space
@@ -40,7 +44,7 @@ struct BrowserSidebarCustomizationPreview: View {
                         select: { sample.browser.selectTab($0.tabID) }, context: context,
                         siteThemeAccent: sample.siteThemeAccent, capabilities: capabilities
                     )
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, CrestSpacing.small)
                 }
                 BrowserSavedTabsDropSection(context: context)
                 if showsCurrentTabs {
@@ -48,10 +52,10 @@ struct BrowserSidebarCustomizationPreview: View {
                 }
             }
         }
-        .padding(.vertical, 12)
+        .padding(.vertical, CrestSpacing.medium)
         .frame(maxWidth: BrowserChromeLayout.sidebarMaximumWidth)
         .background { background(for: branding) }
-        .clipShape(.rect(cornerRadius: showsBackground ? 14 : 0))
+        .clipShape(.rect(cornerRadius: showsBackground ? Self.cornerRadius : 0))
         .environment(\.colorScheme, branding.colorScheme(over: colorScheme))
         .environment(\.sidebarSpacePresentation, context.map { presentation(of: $0) })
         .environment(\.browserInteractionCapabilities, capabilities)
@@ -129,7 +133,7 @@ private final class BrowserAppearancePreviewState {
         siteAccents = Dictionary(uniqueKeysWithValues: zip(pins.map(\.id), pinSources.map(\.2)))
         browser = BrowserStore(
             seed: SessionState.Seed(spaces: [space]), showing: space.id, tabs: [space.id: notes.id],
-            browsingMode: .privateBrowsing)
+            workspaceKind: .private)
         sidebarInteraction = BrowserSidebarInteractionState.connected(to: browser)
     }
 

@@ -249,25 +249,6 @@ final class BrowserStoredSessionHarness {
 
     // MARK: - Actions - Faults
 
-    /// Makes the file refuse every write to `part`, as a full disk or a failing
-    /// device refuses one in the middle of a transaction.
-    func refuseWrites(to part: String) throws {
-        try withConnection(writable: true) { connection in
-            for operation in ["INSERT", "UPDATE"] {
-                try Self.execute(
-                    "CREATE TRIGGER refuse_\(operation) BEFORE \(operation) ON checkpoint WHEN NEW.part = '\(part)' "
-                        + "BEGIN SELECT RAISE(ABORT, 'refused'); END", in: connection)
-            }
-        }
-    }
-
-    func acceptWrites() throws {
-        try withConnection(writable: true) { connection in
-            try Self.execute("DROP TRIGGER refuse_INSERT", in: connection)
-            try Self.execute("DROP TRIGGER refuse_UPDATE", in: connection)
-        }
-    }
-
     // MARK: - Actions - SQLite
 
     private func withConnection<T>(writable: Bool = false, _ body: (OpaquePointer) throws -> T) throws -> T {

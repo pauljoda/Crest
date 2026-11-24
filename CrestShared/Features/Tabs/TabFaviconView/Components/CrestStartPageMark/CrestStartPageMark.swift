@@ -56,7 +56,7 @@ struct CrestStartPageMark: View {
                         .offset(y: layer.drop * unit)
                 }
                 tile.strokeBorder(
-                    .white.opacity(CrestStartPageMarkMetrics.borderOpacity), lineWidth: 1 / displayScale)
+                    .white.opacity(CrestOpacity.border), lineWidth: 1 / displayScale)
             }
             .frame(width: side, height: side)
             .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
@@ -81,7 +81,7 @@ struct CrestStartPageMark: View {
             CrestMarkBannerShape()
                 .fill(layer.color)
                 .shadow(
-                    color: CrestStartPageMarkMetrics.shadow.opacity(layer.shadowOpacity),
+                    color: CrestBrandPalette.markShadow.opacity(layer.shadowOpacity),
                     radius: layer.shadowRadius * unit, y: layer.shadowOffset * unit
                 )
         }

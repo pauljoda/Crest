@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "about-whats-new-newest-notes",
+      "category": "fixed",
+      "message": "What's New in Settings › About lists the newest changes in your version of Crest, and only the ones that reach your device."
+    },
+    {
+      "id": "update-notes-link-release-page",
+      "category": "improved",
+      "message": "Update notes leave out changes that only reach iPhone and iPad, and link to the release's page on crestbrowser.com.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "release-notes-per-version-files",
+      "category": "internal",
+      "message": "Release notes live in one file per version, and the product site builds a page for every Mac, App Store and TestFlight release from them and the release tags."
+    }
+  ]
+}

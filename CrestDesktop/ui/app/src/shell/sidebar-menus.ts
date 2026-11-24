@@ -19,6 +19,7 @@ import {
   type FolderState,
   FolderTabs,
   type Intent,
+  type SessionIntent,
   JoinSplit,
   KeepPageLoaded,
   KeepTabsLoaded,
@@ -98,7 +99,7 @@ export function send(session: Session, intent: Intent): Promise<boolean> {
 }
 
 /** Whether the core would take `intent` now. */
-async function allows(session: Session, intent: Intent): Promise<boolean> {
+async function allows(session: Session, intent: SessionIntent): Promise<boolean> {
   try {
     return (await session.core.query(CanSend({ intent }))).refusal === null;
   } catch {
@@ -458,7 +459,7 @@ export function batchIntents(session: Session, spaceId: string, selection: TabSe
  * Performs a batch action and selects what it leaves selected, as the Mac's
  * BrowserTabBatchActions does; a refusal tells the person why in a notice.
  */
-export async function performBatch(context: SidebarContext, selected: SelectedTabs, intent: Intent,
+export async function performBatch(context: SidebarContext, selected: SelectedTabs, intent: SessionIntent,
   reselection: Reselection): Promise<boolean> {
   try {
     const changes = await context.session.core.send(intent);
@@ -475,7 +476,7 @@ export async function performBatch(context: SidebarContext, selected: SelectedTa
 }
 
 /** Why the core would refuse `intent` now, in its own words, or null when it would take it. */
-async function refusalOf(session: Session, intent: Intent): Promise<string | null> {
+async function refusalOf(session: Session, intent: SessionIntent): Promise<string | null> {
   try {
     const refusal = (await session.core.query(CanSend({ intent }))).refusal;
     return refusal ? messageOfRejection(refusal) ?? "Crest couldn’t do that." : null;
@@ -564,7 +565,7 @@ export async function batchMenu(context: SidebarContext, selected: SelectedTabs)
   const canGroup = allowed.slice(names.length, names.length + groupFiles.length);
   const canFolder = allowed.slice(names.length + groupFiles.length, names.length + groupFiles.length + folderFiles.length);
   const canSpace = allowed.slice(names.length + groupFiles.length + folderFiles.length);
-  const act = (intent: Intent, reselection: Reselection = "items") => () =>
+  const act = (intent: SessionIntent, reselection: Reselection = "items") => () =>
     void performBatch(context, selected, intent, reselection);
   // A new group's name starts editing once the selection is in it.
   const newGroup = async () => {

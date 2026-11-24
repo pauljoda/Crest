@@ -372,6 +372,23 @@ final class BrowserMacWindows {
             closed: { [weak self] controller in self?.privateWindowClosed(controller) })
     }
 
+    /// Opens `url` in a new tab of private browsing, whose window opens or
+    /// comes forward.
+    func openInPrivateWindow(_ url: URL) {
+        openPrivateWindow()
+        guard application.privateBrowser.openNewTab(url: url) != nil else { return }
+        application.privatePages.select()
+        application.privatePages.load(url)
+    }
+
+    /// Opens Settings at `destination` for `space`, in the browser window
+    /// `windowID`.
+    func openSettings(
+        _ destination: BrowserSettingsDestination, for space: BrowserSpaceRuntimeAssignment, in windowID: UUID
+    ) {
+        application.openSettings(destination, for: space, in: windowID)
+    }
+
     /// Closing the private window ends private browsing: its Quick Windows
     /// go with it, and the engine lets go of its profiles.
     private func privateWindowClosed(_ controller: BrowserMacWindowController) {
@@ -566,8 +583,8 @@ final class BrowserMacWindows {
                     cloudSync: application.cloudSync, progress: application.onboardingProgress,
                     spaceAccess: application.spaceAccess, extensionInstaller: engineHost.importedExtensionInstaller,
                     closeWindow: { [weak window] in window?.close() },
-                    openBrowser: { [weak self, weak window] in
-                        self?.handOff(from: window, after: source?.id)
+                    openBrowser: { [weak self, weak window] handingOver in
+                        self?.handOff(from: window, after: source?.id, handingOver: handingOver)
                     })
             },
             closed: { [weak self] controller in self?.forget(controller) })
@@ -575,13 +592,13 @@ final class BrowserMacWindows {
 
     /// Setup finished and hands over to Crest: the window it was opened from
     /// comes forward, or the launch it held back opens, or else a new browser
-    /// window. A window that opens takes over `setup`'s frame, where setup
-    /// grew its preview into it, on the tab setup left it on rather than the
-    /// startup choice: the guide. Crest comes in behind setup and draws
-    /// there first; once the guide is on screen in it, setup fades away over
-    /// it and closes, so the preview becomes the window without a flash or a
-    /// page arriving late.
-    private func handOff(from setup: NSWindow?, after sourceWindowID: UUID?) {
+    /// window. A window that opens takes over `setup`'s frame, on the tab
+    /// setup left it on rather than the startup choice: the guide. Crest
+    /// comes in behind setup and draws there first; once the guide is on
+    /// screen in it, `handingOver` moves setup's preview into the window's
+    /// place as setup fades away over it and closes, so the preview becomes
+    /// the window without a flash or a page arriving late.
+    private func handOff(from setup: NSWindow?, after sourceWindowID: UUID?, handingOver: @escaping () -> Void) {
         let guides = BrowserGettingStartedView.presentations
         let place: ((BrowserMacWindow) -> Void)? = setup.map { setup in { $0.setFrame(setup.frame, display: false) } }
         if let sourceWindowID,
@@ -593,7 +610,10 @@ final class BrowserMacWindows {
         } else {
             open(.normal(sourceWindowID: nil), activation: .background, placing: place)
         }
-        guard let setup else { return }
+        guard let setup else {
+            handingOver()
+            return
+        }
         // Behind setup whichever window is key, so Crest draws out of sight.
         frontmostBrowserWindow()?.order(.below, relativeTo: setup.windowNumber)
         Task { @MainActor [weak self] in
@@ -603,6 +623,7 @@ final class BrowserMacWindows {
                 try? await Task.sleep(for: BrowserMacWindowsMetrics.handOffPoll)
             }
             try? await Task.sleep(for: BrowserMacWindowsMetrics.handOffDraw)
+            handingOver()
             await NSAnimationContext.runAnimationGroup { context in
                 context.duration = BrowserMacWindowsMetrics.handOffFade
                 setup.animator().alphaValue = 0
@@ -617,22 +638,6 @@ final class BrowserMacWindows {
         NSApp.orderedWindows.first { window in
             window.isVisible && controllers.contains { $0.kind.hasWindowModel && $0.window === window }
         }
-    }
-
-    // MARK: - Actions - Update details
-
-    /// The release notes for the update the sidebar card presents. One window,
-    /// brought forward when asked again, and never restored at launch.
-    func openSoftwareUpdateDetails() {
-        guard !bringForwardOpenWindow(of: .updateDetails) else { return }
-        show(
-            .updateDetails,
-            content: { window in
-                BrowserSoftwareUpdateDetailsView(
-                    model: application.softwareUpdates.model, closeWindow: { [weak window] in window?.close() }
-                ).tint(CrestBrandTheme.accent)
-            },
-            closed: { [weak self] controller in self?.forget(controller) })
     }
 
     // MARK: - Actions - Presenting
@@ -671,5 +676,6 @@ enum BrowserMacWindowsMetrics {
     static let handOffGuideWait = Duration.milliseconds(1500)
     static let handOffPoll = Duration.milliseconds(30)
     static let handOffDraw = Duration.milliseconds(80)
-    static let handOffFade: TimeInterval = 0.22
+    /// Setup fading into Crest as its preview moves into the window's place.
+    static let handOffFade = CrestMotion.onboardingHandOverTransition
 }

@@ -26,7 +26,7 @@ internal sealed class ProtectedMediaService {
     #region Constructors
 
     private ProtectedMediaService(params string[] hosts) =>
-        origins = [.. hosts.Select(host => new SiteOrigin("https", host, -1))];
+        origins = [.. hosts.Select(host => new SiteOrigin(WebScheme.Https.Name, host, -1))];
 
     #endregion
 

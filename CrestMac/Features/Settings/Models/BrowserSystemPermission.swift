@@ -3,8 +3,8 @@ import SwiftUI
 import UserNotifications
 
 /// A macOS privacy permission the General pane checks and requests for Crest.
-/// Each permission carries its row's text, glyph and tint, where System
-/// Settings shows it, and how the system API that owns it is read and asked.
+/// Each permission carries its row's title, where System Settings shows it,
+/// and how the system API that owns it is read and asked.
 struct BrowserSystemPermission: Hashable, Identifiable, Sendable {
     // MARK: - Types
 
@@ -16,43 +16,38 @@ struct BrowserSystemPermission: Hashable, Identifiable, Sendable {
 
     static let camera = BrowserSystemPermission(
         name: "camera", title: "Camera",
-        explanation: "Use your camera on websites for video calls and other features.", symbol: "camera.fill",
-        tint: .green, settingsPane: "com.apple.preference.security?Privacy_Camera",
+        settingsPane: "com.apple.preference.security?Privacy_Camera",
         status: { service, _ in await service.captureStatus(.video) },
         request: { _, _ in _ = await AVCaptureDevice.requestAccess(for: .video) })
     static let microphone = BrowserSystemPermission(
         name: "microphone", title: "Microphone",
-        explanation: "Use your microphone on websites for calls and recording.", symbol: "mic.fill", tint: .orange,
         settingsPane: "com.apple.preference.security?Privacy_Microphone",
         status: { service, _ in await service.captureStatus(.audio) },
         request: { _, _ in _ = await AVCaptureDevice.requestAccess(for: .audio) })
     static let location = BrowserSystemPermission(
         name: "location", title: "Location",
-        explanation: "Share your location with websites you allow.", symbol: "location.fill", tint: .blue,
         settingsPane: "com.apple.preference.security?Privacy_LocationServices",
         status: { service, _ in await service.locationStatus() },
         request: { service, _ in try await service.requestLocation() })
     static let notifications = BrowserSystemPermission(
         name: "notifications", title: "Notifications",
-        explanation: "Show notifications from websites you allow.", symbol: "bell.badge.fill", tint: .red,
         settingsPane:
-            "com.apple.Notifications-Settings.extension?id=\(Bundle.main.bundleIdentifier ?? "com.pauldavis.crest")",
+            "com.apple.Notifications-Settings.extension?id=\(Bundle.main.bundleIdentifier ?? ProductIdentity.bundleIdentifier)",
         status: { service, _ in await service.notificationStatus() },
         request: { _, _ in
             _ = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
         })
     static let passkeys = BrowserSystemPermission(
         name: "passkeys", title: "Passkeys",
-        explanation: "Sign in to websites using passkeys saved with your system providers.",
-        symbol: "person.badge.key.fill", tint: .purple, settingsPane: "com.apple.preference.security",
+        settingsPane: "com.apple.preference.security",
         status: { service, _ in await service.passkeyStatus() },
         request: { service, _ in
             service.passkeyAccess.refreshStatus()
             await service.passkeyAccess.requestAccess()
         })
     static let files = BrowserSystemPermission(
-        name: "files", title: "Files & Folders", explanation: "Save downloads and open files you select.",
-        symbol: "folder.fill", tint: .blue, settingsPane: "com.apple.preference.security?Privacy_FilesAndFolders",
+        name: "files", title: "Files & Folders",
+        settingsPane: "com.apple.preference.security?Privacy_FilesAndFolders",
         checksSpaceFolder: true,
         status: { service, spaceID in service.folderAccess.status(spaceID: spaceID) },
         request: { service, spaceID in
@@ -69,9 +64,6 @@ struct BrowserSystemPermission: Hashable, Identifiable, Sendable {
     let name: String
 
     let title: LocalizedStringResource
-    let explanation: LocalizedStringResource
-    let symbol: String
-    let tint: Color
 
     /// Where System Settings shows the permission, after its URL scheme.
     let settingsPane: String
@@ -97,15 +89,11 @@ struct BrowserSystemPermission: Hashable, Identifiable, Sendable {
     // MARK: - Initializers
 
     private init(
-        name: String, title: LocalizedStringResource, explanation: LocalizedStringResource,
-        symbol: String, tint: Color, settingsPane: String, checksSpaceFolder: Bool = false,
+        name: String, title: LocalizedStringResource, settingsPane: String, checksSpaceFolder: Bool = false,
         status: @escaping StatusReader, request: @escaping AccessRequest
     ) {
         self.name = name
         self.title = title
-        self.explanation = explanation
-        self.symbol = symbol
-        self.tint = tint
         self.settingsPane = settingsPane
         self.checksSpaceFolder = checksSpaceFolder
         self.status = status

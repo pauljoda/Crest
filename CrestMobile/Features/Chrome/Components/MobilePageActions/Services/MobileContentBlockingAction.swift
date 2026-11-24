@@ -20,14 +20,14 @@ struct MobileContentBlockingAction {
 
     init(
         browser: BrowserStore,
-        pages: any MobilePageActions
+        pages: MobileSelectedPageActionPort
     ) {
         self.browser = browser
         pageAssignment = { pages.pageAssignment }
         reconcile = { await pages.reconcileContentBlocking() }
         reload = { pages.reload() }
         siteSwitch = SiteContentBlockingSwitch(
-            core: browser.core, spaceID: browser.shownSpace?.id, url: pages.activePage?.webView.url)
+            core: browser.core, spaceID: browser.shownSpace?.id, url: pages.activePage?.live.documentURL)
     }
 
     // MARK: - Actions - Switching

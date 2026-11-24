@@ -15,6 +15,11 @@ final class BrowserMacWindow: NSWindow {
     private var frameBeforeZoom: NSRect?
     private(set) var wasZoomedBeforeFullScreen = false
 
+    /// The identity the shell opened the window under, which its identifier
+    /// spells, or nil for a window of a kind with a fixed identifier, such as
+    /// setup.
+    var windowID: UUID? { identifier.flatMap { UUID(uuidString: $0.rawValue) } }
+
     /// The frame the window returns to after zoom or fullscreen. A normal
     /// window answers its current frame, including any extension-driven move.
     var restoredFrame: NSRect {

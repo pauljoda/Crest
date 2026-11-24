@@ -63,7 +63,7 @@ struct CrestColorWheel: View {
         return Circle()
             .fill(color.color)
             .overlay { Circle().strokeBorder(.white, lineWidth: isChosen ? 4 : 3) }
-            .shadow(color: .black.opacity(lifted ? 0.45 : 0.35), radius: lifted ? 8 : 4, y: lifted ? 4 : 1)
+            .crestElevation(lifted ? .heldHandle : .handle)
             .frame(width: diameter, height: diameter)
             .scaleEffect(lifted ? CrestColorWheelMetrics.liftedScale : 1)
             .animation(CrestMotion.selection.unlessReducingMotion(reduceMotion), value: isChosen)

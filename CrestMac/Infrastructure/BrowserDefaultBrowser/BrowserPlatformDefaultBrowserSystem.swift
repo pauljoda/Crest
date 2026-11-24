@@ -32,14 +32,9 @@ enum BrowserPlatformDefaultBrowserSystem {
 
     static func requestDefault() async throws {
         let applicationURL = Bundle.main.bundleURL
-        try await NSWorkspace.shared.setDefaultApplication(
-            at: applicationURL,
-            toOpenURLsWithScheme: "http"
-        )
-        try await NSWorkspace.shared.setDefaultApplication(
-            at: applicationURL,
-            toOpenURLsWithScheme: "https"
-        )
+        for scheme in WebScheme.all {
+            try await NSWorkspace.shared.setDefaultApplication(at: applicationURL, toOpenURLsWithScheme: scheme.name)
+        }
     }
 
     /// macOS has no answer of its own to add, so an error shows its own

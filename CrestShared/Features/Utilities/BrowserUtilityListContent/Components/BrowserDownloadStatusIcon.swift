@@ -11,13 +11,13 @@ struct BrowserDownloadStatusIcon: View {
                 Image(systemName: BrowserDownloadFileKind(filename: item.filename).symbol)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                Circle().stroke(.secondary.opacity(0.25), lineWidth: 2)
+                Circle().stroke(.secondary.opacity(CrestOpacity.progressTrack), lineWidth: 2)
                 Circle()
                     .trim(from: 0, to: max(item.progress, 0.02))
                     .stroke(.tint, style: StrokeStyle(lineWidth: 2, lineCap: .round))
                     .rotationEffect(.degrees(-90))
             }
-            .padding(2)
+            .padding(CrestSpacing.extraExtraSmall)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Download Progress")
             .accessibilityValue(
@@ -105,6 +105,9 @@ struct BrowserDownloadFeedbackLayer: View {
 }
 
 private struct BrowserDownloadFeedbackIcon: View {
+    /// The corner of the tile the download flies on, a quarter of its side.
+    private static let tileCornerRadius: CGFloat = 9
+
     let filename: String
     let source: CGPoint
     let destination: CGPoint
@@ -140,8 +143,8 @@ private struct BrowserDownloadFeedbackIcon: View {
         }
         .foregroundStyle(.primary)
         .frame(width: 36, height: 36)
-        .background { CrestSurfaceLayer(shape: .rect(cornerRadius: 9)) }
-        .shadow(color: .black.opacity(0.16), radius: 5, y: 2)
+        .background { CrestSurfaceLayer(shape: .rect(cornerRadius: Self.tileCornerRadius)) }
+        .crestElevation(.lifted)
     }
 
     private var position: CGPoint {

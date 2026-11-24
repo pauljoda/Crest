@@ -1,0 +1,2527 @@
+{
+  "entries": [
+    {
+      "id": "native-control-plane-webkit-checkpoint",
+      "category": "internal",
+      "message": "Connect the original native browser UI to the portable .NET core and retire WebKit extension support."
+    },
+    {
+      "id": "core-session-ownership-and-checkpoints",
+      "category": "internal",
+      "message": "Move native browser session ownership, atomic workspace edits, and save snapshots into the portable core."
+    },
+    {
+      "id": "native-ui-direct-core-commands",
+      "category": "internal",
+      "message": "Run native tab and folder commands directly against the core-owned browser session."
+    },
+    {
+      "id": "native-chromium-ui-and-optimized-engine",
+      "category": "internal",
+      "message": "Run Chromium in the original native Crest UI with the portable core and release engine optimizations."
+    },
+    {
+      "id": "native-chromium-extensions-and-page-controls",
+      "category": "internal",
+      "message": "Restore native extension controls, permission review, and Space installation for Chromium, and connect private browsing, popups, Find, zoom, and site permissions."
+    },
+    {
+      "id": "core-space-commands-sync-rules-crest-branding",
+      "category": "internal",
+      "message": "Move Space and folder changes, sync conflicts, and stable ordering into the portable core, and restore Crest icon customization in the Chromium host."
+    },
+    {
+      "id": "portable-sync-journal-transactions",
+      "category": "internal",
+      "message": "Move sync journal staging, deletion evidence, merges, and upload acknowledgements into immutable portable core snapshots."
+    },
+    {
+      "id": "chromium-native-extension-popovers-and-crest-addresses",
+      "category": "improved",
+      "message": "Extension popups stay anchored to their toolbar buttons, with balanced toolbar spacing and Crest addresses for internal browser pages."
+    },
+    {
+      "id": "portable-sync-projection-and-materialization",
+      "category": "internal",
+      "message": "Move shared-record projection and incoming session materialization into the portable core while preserving local pages, profile isolation, and delayed folder deliveries."
+    },
+    {
+      "id": "portable-session-repair-and-sync-preparation",
+      "category": "internal",
+      "message": "Prepare incoming sessions and sync journals together in the portable core, including identity repair, retention, and recovery of native tab assets."
+    },
+    {
+      "id": "transactional-core-session-sync-storage",
+      "category": "internal",
+      "message": "Commit incoming browser sessions and sync journals together, preserve the accepted session when storage fails, and migrate core-backed builds to transactional local storage."
+    },
+    {
+      "id": "core-owned-sync-publication",
+      "category": "internal",
+      "message": "Make the portable session own sync publication and revision ordering, reject stale background snapshots, and publish incoming session and journal changes together."
+    },
+    {
+      "id": "isolated-cross-engine-cloud-sync",
+      "category": "internal",
+      "message": "Enable provisioned desktop and mobile review profiles to share an isolated CloudKit zone, adopt existing cloud Spaces on first launch, and avoid false sync edits from UUID casing or timestamp encoding."
+    },
+    {
+      "id": "preserve-additive-sync-payload-fields",
+      "category": "internal",
+      "message": "Preserve additive CloudKit payload fields through native transport, core-owned edits and journal restart while honoring cleared settings and deleted items."
+    },
+    {
+      "id": "space-menu-icon-proportions",
+      "category": "fixed",
+      "message": "Keep Space crests from stretching in settings menus and pickers."
+    },
+    {
+      "id": "native-engine-navigation-port",
+      "category": "improved",
+      "message": "Use Chromium's page history in the native Back and Forward menus and honor reloads that bypass the cache.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "native-engine-page-ownership",
+      "category": "improved",
+      "message": "Capture Chromium page content and preserve active media when managing idle tabs, without creating an unused WebKit page.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "crest-native-chromium-commands",
+      "category": "improved",
+      "message": "Use Crest menus and customized shortcuts with Chromium, including Blank Windows and Quick Windows.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-page-close-confirmation",
+      "category": "fixed",
+      "message": "Keep Chromium tabs and windows open when a page asks you to stay, preserving unsaved work when closing is canceled.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-native-downloads",
+      "category": "improved",
+      "message": "Track Chromium downloads in Crest, cancel transfers, and save files using each Space’s download folder preferences.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-history-and-site-icons",
+      "category": "improved",
+      "message": "Restore Chromium Back and Forward history after restarting Crest and show site icons in tabs.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-space-profile-cleanup",
+      "category": "fixed",
+      "message": "Delete Chromium website and extension data with its Space, while keeping other Spaces and downloaded files.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "resumable-space-data-cleanup",
+      "category": "fixed",
+      "message": "Resume interrupted Space deletion after restarting Crest and keep pending cleanup unavailable for browsing."
+    },
+    {
+      "id": "cross-device-space-data-cleanup",
+      "category": "fixed",
+      "message": "Clean up local website and extension data when a Space is deleted on another device, and retry interrupted cleanup safely."
+    },
+    {
+      "id": "shared-core-import-and-setup",
+      "category": "improved",
+      "message": "Keep imported browsing data and setup changes consistent across windows and save them together with sync state."
+    },
+    {
+      "id": "setup-preview-window-inset",
+      "category": "fixed",
+      "message": "Keep the setup sidebar preview comfortably inset from the window edge."
+    },
+    {
+      "id": "shared-core-tab-transfers",
+      "category": "improved",
+      "message": "Move tabs between Spaces and temporary windows while preserving their identity and saving changes consistently with sync."
+    },
+    {
+      "id": "shared-core-normal-app-composition",
+      "category": "internal",
+      "message": "Build the normal Mac and mobile apps with the portable browser core and keep review isolation independent of engine and state ownership."
+    },
+    {
+      "id": "core-popup-and-split-compatibility",
+      "category": "fixed",
+      "message": "Keep blank popup pages connected to their opener and preserve split groups when filing selected tabs together."
+    },
+    {
+      "id": "native-engine-service-registration",
+      "category": "internal",
+      "message": "Register native engine capabilities with the portable core and route document output and inspector actions through the page adapter."
+    },
+    {
+      "id": "chromium-native-document-output",
+      "category": "new",
+      "message": "Export PDFs, save offline web archives, capture full pages, and print Chromium pages through Crest’s native controls.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "core-owned-temporary-window-profiles",
+      "category": "improved",
+      "message": "Keep Blank Windows and detached tabs in step with their Space settings while preserving their separate browsing history."
+    },
+    {
+      "id": "shared-core-transient-completion",
+      "category": "improved",
+      "message": "Open Quick Window and Peek pages as tabs consistently across devices, preserving Space isolation and preventing duplicate archive entries."
+    },
+    {
+      "id": "chromium-native-link-peek",
+      "category": "improved",
+      "message": "Use page context menus and pull links into Peek while browsing with Chromium.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "shared-core-saved-link-navigation",
+      "category": "improved",
+      "message": "Keep saved and pinned pages open when following off-site links in Chromium, using the same Peek rules as WebKit.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-native-modified-links",
+      "category": "improved",
+      "message": "Use your preferred Peek shortcut and open links in foreground or background tabs while browsing with Chromium.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "retire-control-plane-prototype-ui",
+      "category": "internal",
+      "message": "Remove the obsolete control-plane test UI and Apple message wrappers so every app target uses Crest's original native interface."
+    },
+    {
+      "id": "shared-core-space-unlocking",
+      "category": "internal",
+      "message": "Move temporary Space unlock grants and authentication completion rules into the shared core while preserving native device authentication."
+    },
+    {
+      "id": "preserve-archive-sync-round-trip",
+      "category": "fixed",
+      "message": "Keep archived tabs stable when syncing to a new device."
+    },
+    {
+      "id": "recover-unreadable-core-session",
+      "category": "fixed",
+      "message": "Recover an unreadable browsing session from a saved checkpoint while preserving the original files."
+    },
+    {
+      "id": "shared-core-history-and-retention-commands",
+      "category": "internal",
+      "message": "Move history, archive restoration, retention and split identity edits into commands against the shared core's owned records."
+    },
+    {
+      "id": "stable-tab-edit-sync-timestamps",
+      "category": "fixed",
+      "message": "Prevent tab renames and moves from creating extra changes when received on another device."
+    },
+    {
+      "id": "owned-core-tab-and-split-commands",
+      "category": "internal",
+      "message": "Move tab copying, placement, durable close and split operations into commands against the shared core's owned state."
+    },
+    {
+      "id": "shared-core-multi-selection-commands",
+      "category": "improved",
+      "message": "Apply selected-tab and folder changes together, and preserve the full selection when an unsaved-page close is canceled."
+    },
+    {
+      "id": "stable-mobile-window-runtime",
+      "category": "fixed",
+      "message": "Fix an iPhone startup freeze that prevented browsing and iCloud sync.",
+      "platforms": ["ios"]
+    },
+    {
+      "id": "retire-message-kernel-runtime",
+      "category": "internal",
+      "message": "Retire the unused message-based browser kernel runtime; the native session authority is the single implementation of browser rules."
+    },
+    {
+      "id": "chromium-extension-action-menu",
+      "category": "new",
+      "message": "Right-click an extension button to open its settings, enable or disable it, manage it, view it on the Chrome Web Store, or remove it from the current Space."
+    },
+    {
+      "id": "chromium-open-link-in-split-view",
+      "category": "new",
+      "message": "Open Link in Split View is available from the page context menu in Chromium-powered windows.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-devtools-panel-selection",
+      "category": "improved",
+      "message": "Developer commands open the requested Console or Elements panel and toggle it closed on repeat in Chromium-powered windows.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-setup-window-sizing",
+      "category": "fixed",
+      "message": "The setup window opens at its intended size so the preview no longer sits against the window edge."
+    },
+    {
+      "id": "shared-core-page-lifecycle-policy",
+      "category": "internal",
+      "message": "Move memory-pressure release planning, tab dismissal and renderer recovery decisions into the shared core; native adapters keep page creation, media veto, unload and disposal."
+    },
+    {
+      "id": "open-local-files",
+      "category": "new",
+      "message": "Open local HTML, PDF, text, image and saved page archive files from File > Open File, by typing a path in the address bar, or by opening them from Finder."
+    },
+    {
+      "id": "chromium-selection-translation",
+      "category": "improved",
+      "message": "Translate selected text in Chromium-powered windows using on-device translation; whole-page translation and Reader remain WebKit features.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-content-blocking-mapping",
+      "category": "improved",
+      "message": "Content blocking controls appear only where the browsing engine supports them; Chromium-powered windows rely on extensions such as uBlock Origin Lite.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-host-external-links-and-reopen",
+      "category": "new",
+      "message": "Chromium-powered Crest opens links and documents sent from other apps, reopens a window from the Dock, and restores its open windows at launch.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-host-product-packaging",
+      "category": "internal",
+      "message": "Add a non-review Chromium host composition and a product packaging mode that carries Crest identity, URL and document types, and Sparkle update settings."
+    },
+    {
+      "id": "chromium-extension-windows-and-side-panels",
+      "category": "new",
+      "message": "Windows created by extensions open as Crest windows in the matching Space, and extensions with a side panel can open it beside the current page from their toolbar menu."
+    },
+    {
+      "id": "native-core-tab-content-and-access",
+      "category": "internal",
+      "message": "Organize native core tab content and enforce Space access during session commands."
+    },
+    {
+      "id": "native-core-startup-recovery",
+      "category": "internal",
+      "message": "Preserve installed session data when the native core first takes ownership."
+    },
+    {
+      "id": "chromium-side-panel-command-routing",
+      "category": "internal",
+      "message": "Route extension side panel requests to the owning Chromium window."
+    },
+    {
+      "id": "native-core-consistent-csharp-formatting",
+      "category": "internal",
+      "message": "Use a consistent C# brace style across the native core."
+    },
+    {
+      "id": "native-core-source-organization",
+      "category": "internal",
+      "message": "Organize the native core by browser responsibility and clarify its session model."
+    },
+    {
+      "id": "native-core-member-regions",
+      "category": "internal",
+      "message": "Group native core state and behavior into consistent source sections."
+    },
+    {
+      "id": "native-core-shared-semantic-codes",
+      "category": "internal",
+      "message": "Use shared semantic codes across native core policies and protocol adapters."
+    },
+    {
+      "id": "native-core-shared-error-codes",
+      "category": "internal",
+      "message": "Keep native core error codes consistent across policies and native status mapping."
+    },
+    {
+      "id": "upgrade-unreadable-session-recovery",
+      "category": "fixed",
+      "message": "Upgrading with a damaged saved session no longer gets stuck on the recovery screen; Crest starts and restores your Spaces from iCloud instead."
+    },
+    {
+      "id": "installed-session-upgrade-coverage",
+      "category": "internal",
+      "message": "Cover the installed-session upgrade end to end: every record, profile identity, sync journal state and favicon survives the one-time move into the transactional store."
+    },
+    {
+      "id": "chromium-side-panel-routing",
+      "category": "improved",
+      "message": "Extension side panels open from the extension icon and from the extension itself, and close when the extension disables or unloads them."
+    },
+    {
+      "id": "chromium-extension-shortcuts",
+      "category": "new",
+      "message": "Extension keyboard shortcuts work in Chromium-powered windows, with a Keyboard Shortcuts link in Extensions settings for engine-managed bindings.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-link-menu-actions-run",
+      "category": "fixed",
+      "message": "Open Link in Peek and Open Link in Split View from the Chromium page context menu now open the link instead of doing nothing.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-devtools-close-command",
+      "category": "fixed",
+      "message": "Repeating a developer panel command in Chromium-powered windows closes Developer Tools as intended.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-docked-devtools",
+      "category": "improved",
+      "message": "Developer Tools open inside the page in Chromium-powered windows, docked to the side or bottom you choose, instead of in a separate window.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "extension-shortcut-popup-anchor",
+      "category": "fixed",
+      "message": "Extension popups opened by keyboard shortcut appear at the extension button rather than the pointer."
+    },
+    {
+      "id": "locked-space-extension-window-rejects",
+      "category": "fixed",
+      "message": "Extensions asking to open a window in a locked Space get a clear refusal instead of waiting forever."
+    },
+    {
+      "id": "web-store-add-to-crest",
+      "category": "new",
+      "message": "Chrome Web Store listings show Add to Crest, install straight into the Space you choose, and show Added to Crest with a remove option once installed."
+    },
+    {
+      "id": "web-store-page-fits-card",
+      "category": "fixed",
+      "message": "Chrome Web Store pages fit the page card instead of running past its edge, and the install review appears under the toolbar rather than off screen."
+    },
+    {
+      "id": "locked-space-no-network-favicons",
+      "category": "fixed",
+      "message": "Locked Spaces no longer fetch site icons or list history, archive and downloads until they are unlocked."
+    },
+    {
+      "id": "locked-space-external-links-no-prompt",
+      "category": "fixed",
+      "message": "Links sent from other apps never trigger an unlock prompt for a locked Space; they open in a Quick Window for an unlocked Space instead."
+    },
+    {
+      "id": "engine-capabilities-truthful",
+      "category": "improved",
+      "message": "Site controls, settings and menus follow what the current browsing engine actually supports, including selection translation, extensions and popup blocking."
+    },
+    {
+      "id": "sidebar-mouse-navigation-all-engines",
+      "category": "fixed",
+      "message": "Mouse back and forward buttons over the sidebar navigate the page in Chromium-powered windows too.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "updater-ignores-older-updates",
+      "category": "fixed",
+      "message": "Crest no longer offers to install an update older than the running version."
+    },
+    {
+      "id": "remove-dead-webkit-only-code",
+      "category": "internal",
+      "message": "Remove unreachable pre-core sync coordinator, unused presentation types and dead engine branches."
+    },
+    {
+      "id": "locked-space-gate-value-edits",
+      "category": "fixed",
+      "message": "Locked Spaces reject every kind of edit until unlocked, and a device that has not unlocked a Space can no longer lower its protection through sync."
+    },
+    {
+      "id": "shared-core-tab-appearance-rules",
+      "category": "internal",
+      "message": "Move tab icon precedence, automatic favicon identity, saved-location and folder-creation rules into the shared core."
+    },
+    {
+      "id": "chromium-product-own-engine-directory",
+      "category": "fixed",
+      "message": "Chromium-powered Crest keeps its engine data in its own Crest folder, never shows the Chromium profile picker, and no longer asks for your keychain password at launch.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-product-browser-gates",
+      "category": "fixed",
+      "message": "iCloud Passwords helper discovery, extension updates and private windows work when Crest is launched normally from the Finder or Dock."
+    },
+    {
+      "id": "chromium-passkeys-system-sheet",
+      "category": "new",
+      "message": "Passkeys in Chromium-powered windows use the macOS passkey sheet with Touch ID and iCloud Keychain first, with phone and security key options as fallbacks.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "pinned-extensions-follow-space",
+      "category": "improved",
+      "message": "Pinned extensions belong to the Space and stay in the toolbar with working popups even before a page is open."
+    },
+    {
+      "id": "extension-missing-files-hidden",
+      "category": "fixed",
+      "message": "An extension whose files are missing no longer shows a broken popup; its button is hidden until it is reinstalled."
+    },
+    {
+      "id": "engine-profile-adoption-registry",
+      "category": "internal",
+      "message": "Adopted engine profiles keep their registry entries and preference validators so a safe-storage key change cannot reset them."
+    },
+    {
+      "id": "extension-popup-no-haze",
+      "category": "fixed",
+      "message": "Extension popups render exactly as the extension draws them, with no translucent haze over the content."
+    },
+    {
+      "id": "pinned-extensions-on-cold-start",
+      "category": "fixed",
+      "message": "Pinned extensions appear in the toolbar on the first Start Page after launch, before any page is opened."
+    },
+    {
+      "id": "engine-abstraction-completion-plan",
+      "category": "internal",
+      "message": "Document the engine abstraction completion plan: remaining page-port gaps, security and credential hooks, capability hygiene, WebKit symmetry and core extraction aggregates."
+    },
+    {
+      "id": "native-core-guid-identities-and-typed-operations",
+      "category": "internal",
+      "message": "Simplify native core identities and use typed operations throughout session, sync and policy handling."
+    },
+    {
+      "id": "native-core-typed-session-record-codecs",
+      "category": "internal",
+      "message": "Keep native session command and tab serialization in reusable typed models."
+    },
+    {
+      "id": "copy-link-without-crashing",
+      "category": "fixed",
+      "message": "Copying a link from a page's context menu no longer quits Crest; a short confirmation appears instead."
+    },
+    {
+      "id": "app-sign-in-in-quick-window",
+      "category": "fixed",
+      "message": "Signing in to an app through your browser now opens the sign-in page in a Quick Window and returns you to the app when you finish."
+    },
+    {
+      "id": "page-crash-keeps-browser-running",
+      "category": "fixed",
+      "message": "When a page's content process crashes, only that page is affected; Crest keeps running."
+    },
+    {
+      "id": "remove-pre-core-session-branches",
+      "category": "internal",
+      "message": "Remove the session code paths that predate the native core now that every target is core-backed."
+    },
+    {
+      "id": "chromium-password-autofill",
+      "category": "new",
+      "message": "Password autofill, save and update prompts, and suggested strong passwords now work in the desktop browser."
+    },
+    {
+      "id": "notices-replace-alerts",
+      "category": "improved",
+      "message": "Confirmations such as a copied link, and actions that couldn't finish, now appear briefly at the top of the window instead of in a dialog."
+    },
+    {
+      "id": "unreachable-pages-explain-why",
+      "category": "fixed",
+      "message": "A page that can't be reached now says why instead of showing its loading status forever."
+    },
+    {
+      "id": "sign-ins-survive-quitting",
+      "category": "fixed",
+      "message": "Quitting Crest during an app sign-in no longer holds up later sign-ins."
+    },
+    {
+      "id": "content-bridge-world-admitted",
+      "category": "internal",
+      "message": "Admit Crest's content-bridge isolated world in the engine's script-execution bounds check."
+    },
+    {
+      "id": "failed-page-view-survives-engine-retry",
+      "category": "fixed",
+      "message": "The explanation for an unreachable page now stays on screen instead of disappearing into a blank page a moment later."
+    },
+    {
+      "id": "engine-capabilities-gate-ui",
+      "category": "improved",
+      "message": "Commands, menus and settings for features the current engine doesn't offer, such as Reader or feature flags on the desktop browser, no longer appear."
+    },
+    {
+      "id": "device-choosers-no-crash",
+      "category": "fixed",
+      "message": "Sites that ask to connect to a USB, HID or serial device no longer quit Crest."
+    },
+    {
+      "id": "context-menu-only-working-items",
+      "category": "fixed",
+      "message": "Page menus no longer offer items that couldn't work here, such as QR codes, reading mode and a search with no search engine."
+    },
+    {
+      "id": "translate-selection-desktop",
+      "category": "fixed",
+      "message": "Translating selected text works in the desktop browser, and foreign-language pages no longer show a translation notice on their own."
+    },
+    {
+      "id": "blocked-popups-desktop",
+      "category": "new",
+      "message": "In the desktop browser, Site Controls now shows when a site's pop-up was blocked and can allow pop-ups for that site, opening the one it tried."
+    },
+    {
+      "id": "engine-info-bars-in-page",
+      "category": "fixed",
+      "message": "Messages that need an answer, such as the prompt to stop sharing a tab or an extension debugging the browser, now appear at the top of the page."
+    },
+    {
+      "id": "quick-window-size-on-wide-displays",
+      "category": "fixed",
+      "message": "Quick Windows open at a comfortable size on wide displays and when the main window shows the Start Page."
+    },
+    {
+      "id": "link-hover-desktop",
+      "category": "new",
+      "message": "Hovering a link in the desktop browser shows where it goes at the bottom of the page."
+    },
+    {
+      "id": "quick-window-activity-desktop",
+      "category": "fixed",
+      "message": "Quick Windows in the desktop browser stay open while you type or click in them."
+    },
+    {
+      "id": "space-default-zoom-desktop",
+      "category": "fixed",
+      "message": "A Space's default page zoom now applies to new pages in the desktop browser."
+    },
+    {
+      "id": "security-indicator-desktop",
+      "category": "fixed",
+      "message": "The desktop browser's lock now reflects the engine's own security verdict, and View Certificate shows the site's certificate."
+    },
+    {
+      "id": "certificate-errors-desktop",
+      "category": "fixed",
+      "message": "Sites with certificate problems show the engine's warning page, with its option to proceed, instead of a dead-end error."
+    },
+    {
+      "id": "experimental-update-channel",
+      "category": "new",
+      "message": "Builds from the experimental branch update through their own Experimental channel, shown in Settings only on those builds."
+    },
+    {
+      "id": "webkit-before-unload",
+      "category": "improved",
+      "message": "On the WebKit browser, a page with unsaved changes asks before its tab closes."
+    },
+    {
+      "id": "webkit-peek-keeps-referrer",
+      "category": "improved",
+      "message": "Peek opened from a modified link on the WebKit browser keeps the link's referrer."
+    },
+    {
+      "id": "webkit-pip-residency",
+      "category": "internal",
+      "message": "Report WebKit picture-in-picture state to page residency so a page in picture-in-picture is never unloaded."
+    },
+    {
+      "id": "experimental-chromium-release",
+      "category": "internal",
+      "message": "Publish experimental releases with the Chromium build as the default download and a WebKit build as an alternate, each on its own update feed, from a prebuilt engine published per engine revision."
+    },
+    {
+      "id": "now-playing-desktop",
+      "category": "new",
+      "message": "Now Playing in the desktop browser shows what a tab is playing and can play, pause, skip and mute it."
+    },
+    {
+      "id": "selection-search-desktop",
+      "category": "new",
+      "message": "Right-click selected text in the desktop browser to search for it with your Space's search engine."
+    },
+    {
+      "id": "site-permissions-desktop",
+      "category": "improved",
+      "message": "In the desktop browser, camera, microphone, location and notification requests use Crest's own prompt, are remembered per Space, and can be reviewed and revoked in Site Controls and Privacy."
+    },
+    {
+      "id": "core-downloads-aggregate",
+      "category": "internal",
+      "message": "Move the download ledger, progress estimation, automatic-download throttle and download risk rules into the portable core so both engines and platforms share them."
+    },
+    {
+      "id": "theme-accents-desktop",
+      "category": "improved",
+      "message": "Tab icons in the desktop browser take on a site's theme colour, and refreshing a site's icon works there too."
+    },
+    {
+      "id": "viewport-fit-desktop",
+      "category": "improved",
+      "message": "Split cards and Peek in the desktop browser zoom pages with a fixed minimum width to fit, as they do on WebKit."
+    },
+    {
+      "id": "clear-site-data-desktop",
+      "category": "fixed",
+      "message": "Clear Site Data and Reload works in the desktop browser."
+    },
+    {
+      "id": "side-panel-quick-window-notice",
+      "category": "improved",
+      "message": "An extension side panel requested from a Quick Window now explains that side panels open in the main window."
+    },
+    {
+      "id": "extension-side-panel-api-open",
+      "category": "fixed",
+      "message": "Extensions that open their side panel themselves, such as ChatGPT, now open it on the first click in the desktop browser."
+    },
+    {
+      "id": "core-credentials-aggregate",
+      "category": "internal",
+      "message": "Move credential capture, fill, save-plan and recency rules and passkey policies into the portable core, keeping passwords out of it."
+    },
+    {
+      "id": "core-search-aggregate",
+      "category": "internal",
+      "message": "Move the search engine catalog, search URL construction, custom search engine edits and automatic translation rules into the portable core."
+    },
+    {
+      "id": "companion-apps-connect",
+      "category": "fixed",
+      "message": "Extensions that work with a companion app, such as ChatGPT, 1Password and Claude, now connect to it in the desktop browser even when the app was only set up for Chrome."
+    },
+    {
+      "id": "core-site-permissions",
+      "category": "internal",
+      "message": "Move site permission decisions, external link and scheme consent, blocked popup notices and sign-in challenge rules into the portable core."
+    },
+    {
+      "id": "core-link-routing",
+      "category": "internal",
+      "message": "Move link routing, Quick Window retargeting, page presentation, content-blocking rule selection, branding ranges and borrowed-workspace command routing into the portable core."
+    },
+    {
+      "id": "core-window-state",
+      "category": "internal",
+      "message": "Move window selection repair, split layout capture, tear-off eligibility, manual setup plans, onboarding completion and workspace import review into the portable core."
+    },
+    {
+      "id": "core-shortcuts-launch-media",
+      "category": "internal",
+      "message": "Move keyboard shortcut defaults and conflicts, numbered tab and Space selection, launch isolation and startup behavior, tab insertion and media session arbitration into the portable core."
+    },
+    {
+      "id": "core-app-preferences",
+      "category": "internal",
+      "message": "Keep startup, translation, spell checking, automatic Picture in Picture, pinned-tab close, saved-tab favicon and Split View focus preferences in the portable core, importing existing settings once."
+    },
+    {
+      "id": "engine-neutral-page",
+      "category": "internal",
+      "message": "Split the shared page model from the WebKit adapter and give the Chromium composition a host-commands port instead of direct store edits."
+    },
+    {
+      "id": "typed-engine-capabilities",
+      "category": "internal",
+      "message": "Declare engine capabilities, statuses and implementations as typed values instead of raw strings, keeping the core descriptor unchanged."
+    },
+    {
+      "id": "shared-native-page-menus",
+      "category": "improved",
+      "message": "Crest's link and Space actions appear first in native page menus while browser and extension actions stay available."
+    },
+    {
+      "id": "shared-page-dialogs-auth",
+      "category": "improved",
+      "message": "Page dialogs and website sign-in prompts work across both desktop browser engines."
+    },
+    {
+      "id": "chromium-feature-flags-settings",
+      "category": "new",
+      "message": "Chromium feature flags open inside Crest Settings.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-automatic-video-pip",
+      "category": "improved",
+      "message": "Playing Chromium videos can enter Picture in Picture when switching tabs, with a window that settles into a screen corner.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "core-session-command-cleanup",
+      "category": "internal",
+      "message": "Route remaining tab, icon, page and retention changes through the core and remove the obsolete core-backed build switch."
+    },
+    {
+      "id": "committed-page-session-updates",
+      "category": "fixed",
+      "message": "Keep unfinished page loads from changing saved tabs or history while preserving completed page titles and icons."
+    },
+    {
+      "id": "engine-owned-site-permissions",
+      "category": "fixed",
+      "message": "Permission changes made in Settings or Site Controls now reach open pages without reloading them."
+    },
+    {
+      "id": "page-security-and-find-counts",
+      "category": "improved",
+      "message": "Site Controls now tell certificate errors, mixed content and dangerous sites apart, and Find in Page shows how many matches a page has where the engine can count them."
+    },
+    {
+      "id": "core-data-only-selection",
+      "category": "internal",
+      "message": "Keep the viewed Space and tab as window state, remove the Swift session editing surface and its copies of core rules, and route launch cleanup and retention through core commands."
+    },
+    {
+      "id": "core-typed-policy-requests",
+      "category": "internal",
+      "message": "Decode every core policy request into typed records and keep all rule codes, section names and mode values in their central definitions."
+    },
+    {
+      "id": "mobile-completed-page-titles",
+      "category": "fixed",
+      "message": "Background tabs on iPhone keep the page's real title instead of its site name.",
+      "platforms": ["ios"]
+    },
+    {
+      "id": "swift-typed-core-boundary",
+      "category": "internal",
+      "message": "Send every core command, policy question and sync operation through typed operation names and Codable models instead of raw strings and dictionaries."
+    },
+    {
+      "id": "import-opens-first-tab",
+      "category": "fixed",
+      "message": "Importing bookmarks or a Crest archive into a new Space opens that Space on its first tab again."
+    },
+    {
+      "id": "compact-sidebar-hover-sync",
+      "category": "fixed",
+      "message": "In compact mode the sidebar opens and closes reliably on hover again."
+    },
+    {
+      "id": "tab-tear-off-new-window",
+      "category": "fixed",
+      "message": "Dragging a tab out of a window opens it in a new window again."
+    },
+    {
+      "id": "update-whats-new-window",
+      "category": "fixed",
+      "message": "What's New on the sidebar's update card opens the full release notes again."
+    },
+    {
+      "id": "store-first-presentation-state",
+      "category": "internal",
+      "message": "Store window presentation, find, peek and Space lock state before announcing a change, so a render SwiftUI performs during the announcement never keeps a stale value."
+    },
+    {
+      "id": "typed-core-contract-generator",
+      "category": "internal",
+      "message": "Download intents, changes and rejections are typed C# records, and a generator derives the core codec, Swift models and C header from them."
+    },
+    {
+      "id": "downloads-typed-core-contract",
+      "category": "internal",
+      "message": "Downloads run through the typed core contract, with one core per process and one download center per browsing mode across windows."
+    },
+    {
+      "id": "download-progress-risk-queries",
+      "category": "internal",
+      "message": "Download progress and risk are typed core queries instead of JSON policy operations."
+    },
+    {
+      "id": "core-typed-tab-records",
+      "category": "internal",
+      "message": "The core holds tabs, folders, splits, archive and history as typed records instead of JSON trees, with the stored format unchanged."
+    },
+    {
+      "id": "core-typed-session-records",
+      "category": "internal",
+      "message": "The core holds Space settings and the session as typed records, and workspace import edits them directly."
+    },
+    {
+      "id": "credential-typed-queries",
+      "category": "internal",
+      "message": "Credential and passkey decisions are typed core queries, and each app shares one passkey access controller."
+    },
+    {
+      "id": "search-content-blocking-typed-queries",
+      "category": "internal",
+      "message": "Custom search engine admission and Balanced content-blocking rules are typed core queries."
+    },
+    {
+      "id": "link-routing-typed-queries",
+      "category": "internal",
+      "message": "External link routing and Quick Window site keys are typed core queries."
+    },
+    {
+      "id": "generator-fixed-sets",
+      "category": "internal",
+      "message": "The contract generator emits self-describing fixed sets from their C# instances."
+    },
+    {
+      "id": "download-sets-self-describing",
+      "category": "internal",
+      "message": "Download phases, risk reasons and text fields are self-describing sets whose instances carry their own rules."
+    },
+    {
+      "id": "download-presentation-on-instances",
+      "category": "internal",
+      "message": "Download phases, risk reasons and row actions carry their own titles and symbols, and a finished download is found by searching Completed."
+    },
+    {
+      "id": "core-owned-session-file",
+      "category": "internal",
+      "message": "The core opens and saves the session file itself, with the same format and the saves that must reach disk before they return."
+    },
+    {
+      "id": "swift-stops-saving-session",
+      "category": "internal",
+      "message": "Swift no longer saves the session; the core writes it and reports each save, and quitting waits for the last one."
+    },
+    {
+      "id": "checkpoint-exports-removed",
+      "category": "internal",
+      "message": "The checkpoint and reservation entry points are removed from the core's C interface."
+    },
+    {
+      "id": "device-platform-set",
+      "category": "internal",
+      "message": "The device platform is one self-describing set that carries its page-release limits."
+    },
+    {
+      "id": "shortcut-commands-set",
+      "category": "internal",
+      "message": "Shortcut commands are one set shared by the core and Swift, carrying their sections, default keys, titles and symbols."
+    },
+    {
+      "id": "settings-navigation-permission-sets",
+      "category": "internal",
+      "message": "Settings destinations, sidebar navigation controls and system permissions describe themselves."
+    },
+    {
+      "id": "engine-capability-sets",
+      "category": "internal",
+      "message": "Engine capabilities, statuses and adapter roles are typed sets instead of strings."
+    },
+    {
+      "id": "core-legacy-migration-restore",
+      "category": "internal",
+      "message": "The core carries an installed release's session into its file on first launch and restores the recovery checkpoint itself."
+    },
+    {
+      "id": "site-permission-sets",
+      "category": "internal",
+      "message": "Site permissions and permission decisions are self-describing sets shared by the core and Swift."
+    },
+    {
+      "id": "link-sets-self-describing",
+      "category": "internal",
+      "message": "Link route matches, external link destinations and the Peek key describe themselves."
+    },
+    {
+      "id": "search-provider-set",
+      "category": "internal",
+      "message": "Search providers are one set of built-in and custom engines."
+    },
+    {
+      "id": "credential-prompt-presentation",
+      "category": "internal",
+      "message": "Credential prompts and passkey status carry their own text and symbols."
+    },
+    {
+      "id": "pressure-keys-targets-sets",
+      "category": "internal",
+      "message": "Memory pressure levels, shortcut special keys and numbered selection targets share one shape."
+    },
+    {
+      "id": "core-device-window-store",
+      "category": "internal",
+      "message": "The core keeps each window's shown Space, tabs and split columns in a device store that is saved locally and never synced."
+    },
+    {
+      "id": "core-decides-window-selection",
+      "category": "internal",
+      "message": "Commands name their window, the core decides what every window shows, and switching tabs and Spaces is faster."
+    },
+    {
+      "id": "tab-placement-set",
+      "category": "internal",
+      "message": "Tab placements are one set that ranks and describes its sections."
+    },
+    {
+      "id": "archive-reason-set",
+      "category": "internal",
+      "message": "Archive reasons are spelled once, on the reasons themselves."
+    },
+    {
+      "id": "tab-icon-mode-set",
+      "category": "internal",
+      "message": "Tab icon modes decide their own inference, favicon use and symbols."
+    },
+    {
+      "id": "browser-preference-set",
+      "category": "internal",
+      "message": "Each app preference records its own value in the core."
+    },
+    {
+      "id": "retention-choice-sets",
+      "category": "internal",
+      "message": "Tab cleanup, data retention and Quick Window archive choices carry their own lifetimes and titles."
+    },
+    {
+      "id": "content-blocking-policy-set",
+      "category": "internal",
+      "message": "Content-blocking policies carry their own rules and titles."
+    },
+    {
+      "id": "utility-filter-surfaces",
+      "category": "internal",
+      "message": "Utility list filters and surfaces are built from what they show."
+    },
+    {
+      "id": "policy-answer-sets",
+      "category": "internal",
+      "message": "Link, scheme, download and popup decisions and search-engine flaws describe themselves."
+    },
+    {
+      "id": "catalog-complete",
+      "category": "internal",
+      "message": "Every user-facing string the apps extract is in the localization catalog."
+    },
+    {
+      "id": "core-engine-registry-pages",
+      "category": "internal",
+      "message": "The core keeps a registry of engines and knows which page each tab and window hosts."
+    },
+    {
+      "id": "pages-through-core",
+      "category": "internal",
+      "message": "Every page is opened, moved and released through the core, which refuses pages for locked or deleting Spaces."
+    },
+    {
+      "id": "engine-names-catalog",
+      "category": "internal",
+      "message": "The engine names are in the localization catalog."
+    },
+    {
+      "id": "space-settings-apart",
+      "category": "internal",
+      "message": "A Space's settings sit apart from its records in the core, with translation rules and color palettes as records."
+    },
+    {
+      "id": "session-change-feed",
+      "category": "internal",
+      "message": "The core publishes the session as typed changes, commands no longer carry a revision, and switching tabs is faster."
+    },
+    {
+      "id": "crest-normalization-core",
+      "category": "internal",
+      "message": "The core keeps a crest's figure and composition the way every device draws them, so Space branding stays steady across sync."
+    },
+    {
+      "id": "core-sync-staging",
+      "category": "internal",
+      "message": "The core stages sync itself, with each edit's deletion reason and urgency, and saves changes that sync together before returning."
+    },
+    {
+      "id": "per-record-deletion-reasons",
+      "category": "internal",
+      "message": "Each synced deletion carries the reason of the edit that removed it, so a deleted folder followed by a quick edit still syncs as deleted."
+    },
+    {
+      "id": "observable-read-model",
+      "category": "internal",
+      "message": "Each workspace, window, Space, tab and folder has its own observable model that updates only when a value changes, and favicons have one store."
+    },
+    {
+      "id": "history-archive-intents",
+      "category": "internal",
+      "message": "Clearing and removing history, restoring archived tabs and sweeping old records are typed core intents, and the core keeps its own clock."
+    },
+    {
+      "id": "folder-split-intents",
+      "category": "internal",
+      "message": "Every folder and split-view command is a typed core intent, and a reversed history range is refused instead of doing nothing."
+    },
+    {
+      "id": "single-page-app-history",
+      "category": "improved",
+      "message": "Pages that change address without reloading, such as a new video or a repository page, now appear in history, and the tab keeps its current address when reopened."
+    },
+    {
+      "id": "tab-value-intents",
+      "category": "internal",
+      "message": "Renaming a tab, choosing its icon, its saved address and keeping it loaded are typed core intents, and the core publishes each tab's resolved icon, title and saved-address state."
+    },
+    {
+      "id": "isolated-review-website-data",
+      "category": "internal",
+      "message": "A named isolated review opens its own website data stores, derived from its isolation ID, so a review of a copied session never reads, clears or removes the installed app's cookies and site data."
+    },
+    {
+      "id": "restored-windows-keep-their-own-content",
+      "category": "fixed",
+      "message": "When macOS reopens Crest's windows after you quit, each window comes back on its own Space and tab instead of mirroring the first window.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "quit-saves-last-edits",
+      "category": "fixed",
+      "message": "A change made right before quitting Crest, or right before it goes to the background on iPhone and iPad, is now always saved and queued for sync.",
+      "platforms": ["ios"]
+    },
+    {
+      "id": "quit-saves-window-space",
+      "category": "fixed",
+      "message": "Switching a window to another Space or resizing a split right before quitting Crest is now always remembered when the window reopens."
+    },
+    {
+      "id": "tab-lifecycle-intents",
+      "category": "internal",
+      "message": "Opening, closing, copying and moving tabs and keeping Quick Window and Peek pages are typed core intents, and the core decides whether a closed tab archives or goes back."
+    },
+    {
+      "id": "assistive-app-selectable-text-crash",
+      "category": "fixed",
+      "message": "Crest no longer crashes when VoiceOver or another assistive app reads an error page, the About pane or a revealed password."
+    },
+    {
+      "id": "space-intents",
+      "category": "internal",
+      "message": "Creating, naming, branding, ordering and deleting Spaces are typed core intents, and the core makes each new Space itself."
+    },
+    {
+      "id": "space-access-intents",
+      "category": "internal",
+      "message": "Locking and unlocking Spaces are typed core intents, and a late unlock result can no longer complete a newer request."
+    },
+    {
+      "id": "app-preference-intents",
+      "category": "internal",
+      "message": "App preferences, translation rules and launch planning go through typed core intents and queries."
+    },
+    {
+      "id": "search-engine-intents",
+      "category": "internal",
+      "message": "Adding, editing, choosing and removing search engines are typed core intents, and the chosen engine is stored as a typed value."
+    },
+    {
+      "id": "static-variables-slice",
+      "category": "internal",
+      "message": "Types made in the Spaces, access, preference and search work keep their static members in their own section."
+    },
+    {
+      "id": "page-live-state",
+      "category": "internal",
+      "message": "Each page's address, title, loading, history, security and failure live in the core, which also resolves what the person types before a page loads it."
+    },
+    {
+      "id": "saved-address-return-query",
+      "category": "internal",
+      "message": "The core answers whether a pinned tab can return to its saved address."
+    },
+    {
+      "id": "page-copies-from-core",
+      "category": "internal",
+      "message": "Copies of a tab, and Quick Window or Peek pages that are kept or archived, start from what the core says the page shows."
+    },
+    {
+      "id": "forward-after-script-page",
+      "category": "fixed",
+      "message": "Forward works again after going back from a page that a site's script opened on its own."
+    },
+    {
+      "id": "ios-close-policy-test-preferences",
+      "category": "internal",
+      "message": "The iOS saved-tab close test sends its close preference to the test's own core, as the Mac test does."
+    },
+    {
+      "id": "tab-batch-intents",
+      "category": "internal",
+      "message": "Closing, deleting, copying, filing, splitting, keeping loaded and moving several selected tabs are typed core intents, saved before they return."
+    },
+    {
+      "id": "tab-move-intents",
+      "category": "internal",
+      "message": "Moving a tab to another Space or window is a typed core intent, and a move between workspaces changes both or neither."
+    },
+    {
+      "id": "workspace-intents",
+      "category": "internal",
+      "message": "Opening, borrowing and closing workspaces are typed core intents: the core gives each workspace its identity, keeps a temporary window's Space in step with its owner and closes it once the owner stops lending it."
+    },
+    {
+      "id": "closed-blank-window-stays-closed",
+      "category": "internal",
+      "message": "A closed Blank Window no longer leaves a hidden workspace behind while its window is torn down."
+    },
+    {
+      "id": "generator-narrowed-unions",
+      "category": "internal",
+      "message": "The contract generator lets a field hold only the intents that derive from one base, so a query can take exactly the intents it answers for."
+    },
+    {
+      "id": "typed-workspace-import",
+      "category": "internal",
+      "message": "Importing a file, a reviewed browser import or a manual setup runs as typed core intents, and the review screens ask the core what the choices mean."
+    },
+    {
+      "id": "session-intents-commit-in-lock",
+      "category": "internal",
+      "message": "Session intents commit under the lock that computed them, and refusals without words of their own read as a plain failure."
+    },
+    {
+      "id": "abi-invalid-session",
+      "category": "internal",
+      "message": "The C ABI program checks a refused seed against the renamed InvalidSession rejection."
+    },
+    {
+      "id": "import-skips-unchanged-locked-spaces",
+      "category": "improved",
+      "message": "Importing no longer stops at a locked Space the import leaves unchanged."
+    },
+    {
+      "id": "manual-setup-preview-memo",
+      "category": "internal",
+      "message": "The manual setup previews ask the core again only when the plan or the session changes."
+    },
+    {
+      "id": "sync-journal-off-launch",
+      "category": "improved",
+      "message": "Crest opens faster with a large sync history."
+    },
+    {
+      "id": "sync-pauses-on-unreadable-journal",
+      "category": "internal",
+      "message": "Sync pauses and reports an error when this build cannot read the device's sync journal, instead of reading it as empty."
+    },
+    {
+      "id": "sync-records-fit-client-limits",
+      "category": "fixed",
+      "message": "iCloud Sync keeps working when a page has a very long title or address."
+    },
+    {
+      "id": "tests-seed-sessions-through-intents",
+      "category": "internal",
+      "message": "Tests set up their sessions by seeding a store or sending intents, without the debug session setter."
+    },
+    {
+      "id": "typed-cloud-sync-intents",
+      "category": "internal",
+      "message": "The core takes cloud sync records through typed intents and refuses a record it cannot take with a named flaw."
+    },
+    {
+      "id": "cloud-sync-through-core-intents",
+      "category": "internal",
+      "message": "Cloud sync merges, replacements and overwrites run through the core's typed sync intents."
+    },
+    {
+      "id": "page-reports-without-deferral",
+      "category": "internal",
+      "message": "Page reports apply directly now that only intents reserve the session."
+    },
+    {
+      "id": "merge-keeps-deletion-reason",
+      "category": "fixed",
+      "message": "A folder or history entry you delete just before iCloud Sync brings in changes stays deleted."
+    },
+    {
+      "id": "sync-transport-typed-queries",
+      "category": "internal",
+      "message": "The cloud transport reads and acknowledges sync uploads through typed core queries, and cloud merges compute off the app's lock."
+    },
+    {
+      "id": "session-changes-follow-batches",
+      "category": "internal",
+      "message": "Store windows follow every batch of the core's changes that touched their session."
+    },
+    {
+      "id": "space-cleanup-on-cloud-records",
+      "category": "internal",
+      "message": "Only arriving cloud records restart an unfinished Space cleanup."
+    },
+    {
+      "id": "sync-merges-off-main-thread",
+      "category": "improved",
+      "message": "Changes from your other devices arrive through iCloud Sync without pausing Crest's windows."
+    },
+    {
+      "id": "overwrite-keeps-deletion-reason",
+      "category": "fixed",
+      "message": "A folder you delete just before choosing this device's copy over iCloud's stays deleted on your other devices."
+    },
+    {
+      "id": "sync-journal-contracts-in-core",
+      "category": "internal",
+      "message": "The sync journal's contract tests run against the core."
+    },
+    {
+      "id": "sync-payload-codec-in-core",
+      "category": "internal",
+      "message": "The core reads and writes synced records' payloads."
+    },
+    {
+      "id": "sync-cloudkit-bytes-in-core",
+      "category": "internal",
+      "message": "The sync transport hands CloudKit the core's own payload bytes."
+    },
+    {
+      "id": "seed-repair-in-core",
+      "category": "internal",
+      "message": "The core repairs a seeded workspace itself."
+    },
+    {
+      "id": "sync-json-paths-retired",
+      "category": "internal",
+      "message": "The core owns the sync journal alone; the Swift sync domain and the JSON sync entry points are gone."
+    },
+    {
+      "id": "sync-json-numbers",
+      "category": "internal",
+      "message": "Synced records read their numbers the same however their JSON was built."
+    },
+    {
+      "id": "site-permissions-device-store",
+      "category": "internal",
+      "message": "Site permission choices live in the core's device store, carried once from the saved defaults."
+    },
+    {
+      "id": "shortcuts-device-store",
+      "category": "internal",
+      "message": "Keyboard shortcut choices live in the core's device store, carried once from the saved defaults."
+    },
+    {
+      "id": "space-permission-reset-revokes",
+      "category": "internal",
+      "message": "Resetting a Space's site permissions always tells its pages to withdraw what they were given."
+    },
+    {
+      "id": "id-names-plain-uuids",
+      "category": "internal",
+      "message": "Tab, Space, folder, split and window identities are plain UUIDs in Swift, and everything Crest stores keeps the identity spelling earlier builds read."
+    },
+    {
+      "id": "command-palette-address-morph",
+      "category": "improved",
+      "message": "The command palette now opens out of the address field and closes back into it."
+    },
+    {
+      "id": "site-origin-one-type",
+      "category": "internal",
+      "message": "Site permissions name a site with the core's origin type everywhere, normalized the same way however the app learns of the site."
+    },
+    {
+      "id": "read-model-store-first",
+      "category": "internal",
+      "message": "The core's read model stores each change before it tells views about it, so a view that draws during the change shows the new value."
+    },
+    {
+      "id": "read-model-snapshot-and-view-lint",
+      "category": "internal",
+      "message": "Tests can read a window's session straight from the core's read model, and views may not read a read-model object's whole record."
+    },
+    {
+      "id": "read-model-sidebar-spike",
+      "category": "internal",
+      "message": "A tab's new favicon redraws only that tab's row, and a debug-only sidebar harness measures what each kind of change redraws."
+    },
+    {
+      "id": "core-sidebar-outline",
+      "category": "internal",
+      "message": "The core decides what each Space's sidebar lists and publishes only the lists an edit changes, so a new title or address changes no list."
+    },
+    {
+      "id": "read-model-per-tab-slots",
+      "category": "internal",
+      "message": "Showing another tab tells only the two rows it concerns, and opening or closing a tab tells only the views that looked that tab up."
+    },
+    {
+      "id": "read-model-sidebar-spike-on-core-outline",
+      "category": "internal",
+      "message": "The debug-only sidebar harness draws the core's published sidebar lists and shown-tab slots, and its checks hold the tighter redraw limits they allow."
+    },
+    {
+      "id": "space-selector-matching-corners",
+      "category": "improved",
+      "message": "The Space selector's outline and its selection now share the same corners."
+    },
+    {
+      "id": "session-checks-only-what-an-edit-changed",
+      "category": "improved",
+      "message": "Editing tabs does less work in large sessions."
+    },
+    {
+      "id": "navigation-publishes-only-changed-rows",
+      "category": "improved",
+      "message": "Navigating in a Space with many tabs or a long history does less work."
+    },
+    {
+      "id": "space-look-and-accent-from-core",
+      "category": "internal",
+      "message": "The core resolves the branding each Space wears and describes each accent's tint, legacy palette and house look, and generated records carry the core's constants and named values."
+    },
+    {
+      "id": "tab-order-follows-sidebar",
+      "category": "improved",
+      "message": "Next and previous tab, and ⌘1–⌘9, now follow the order you see in the sidebar."
+    },
+    {
+      "id": "sidebar-drops-and-selection-queries-in-core",
+      "category": "internal",
+      "message": "The core answers where a sidebar drag may drop, what a sidebar selection holds and which tab Split With Next Tab adds, and decides in one place which edit each drop commits."
+    },
+    {
+      "id": "sidebar-draws-from-core-read-model",
+      "category": "internal",
+      "message": "The sidebar's sections, folders, splits and pinned tabs draw from the core's published sidebar lists, each row redraws only for its own tab, and every list is lazy."
+    },
+    {
+      "id": "engine-contract-cpp-codec",
+      "category": "internal",
+      "message": "The engine contract has a generated C++ codec that engines outside Swift can use."
+    },
+    {
+      "id": "chromium-cpp-binding-reports",
+      "category": "internal",
+      "message": "Chromium reports each page's navigations, state and icon to the core from its own C++ binding."
+    },
+    {
+      "id": "quick-window-promotion-title",
+      "category": "fixed",
+      "message": "A Quick Window page you keep as a tab keeps the page's title instead of its site's name."
+    },
+    {
+      "id": "sidebar-drags-ask-the-core",
+      "category": "improved",
+      "message": "Dragging in the sidebar now says why a spot won't take what you're holding, a whole split can join the tabs on show or drop into a collapsed folder, and selections stay selectable in long lists."
+    },
+    {
+      "id": "engine-direct-page-path",
+      "category": "internal",
+      "message": "The platform asks an engine binding for page view work through typed requests and presentations."
+    },
+    {
+      "id": "chromium-view-work-cpp",
+      "category": "internal",
+      "message": "Chromium answers a page's history, zoom, find, capture and export requests from its own C++ binding."
+    },
+    {
+      "id": "sidebar-refusals-as-notices",
+      "category": "improved",
+      "message": "When the sidebar can't take a drop, it tells you in the window's notice instead of an alert you have to dismiss."
+    },
+    {
+      "id": "sidebar-moved-tabs-drag-again",
+      "category": "fixed",
+      "message": "Tabs moved together in the sidebar can be dragged again right away."
+    },
+    {
+      "id": "2026-09-25-chromium-release-entry-export",
+      "category": "fixed",
+      "message": "Fix the Chromium build crashing on launch when built for release",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "2026-09-25-chromium-binding-presentation",
+      "category": "internal",
+      "message": "Chromium presents each page's view, inspector and page events from its own C++ binding"
+    },
+    {
+      "id": "2026-09-25-chromium-binding-extensions",
+      "category": "internal",
+      "message": "Chromium lists and changes a profile's extensions from its own C++ binding"
+    },
+    {
+      "id": "2026-09-25-chromium-host-install-stamp",
+      "category": "internal",
+      "message": "Installing the Chromium host sources stamps them with the install time, so an engine build never links a stale object"
+    },
+    {
+      "id": "2026-09-25-debugger-passes-core-signal",
+      "category": "internal",
+      "message": "Debugging a Crest app from Xcode no longer stops on the core runtime's own garbage-collection signal, which froze the app"
+    },
+    {
+      "id": "2026-09-25-palette-ranked-in-core",
+      "category": "improved",
+      "message": "Typing in the command palette stays quick in Spaces with large histories, and address completion now suggests pages from your whole history"
+    },
+    {
+      "id": "2026-09-25-chromium-binding-site-services",
+      "category": "internal",
+      "message": "Chromium answers a page's site services and presents its prompts from its own C++ binding"
+    },
+    {
+      "id": "2026-09-25-chromium-binding-profiles",
+      "category": "internal",
+      "message": "Chromium keeps Crest's engine profiles in its own C++ binding"
+    },
+    {
+      "id": "2026-09-25-chromium-binding-offered-downloads",
+      "category": "internal",
+      "message": "Chromium presents pages it offers and its downloads from its own C++ binding"
+    },
+    {
+      "id": "2026-09-25-review-harness-commands",
+      "category": "internal",
+      "message": "Debug review builds take commands from a test harness"
+    },
+    {
+      "id": "2026-09-25-chromium-shell-forwarders",
+      "category": "internal",
+      "message": "The Chromium shell keeps forwarding page loads, staged navigations and the private profile"
+    },
+    {
+      "id": "2026-09-25-chromium-typed-ui-protocol",
+      "category": "internal",
+      "message": "Chromium asks Crest's interface through a typed protocol instead of finding it by name"
+    },
+    {
+      "id": "2026-09-25-chromium-windows-join-crest-window",
+      "category": "improved",
+      "message": "Windows Chromium opens for a page now open in the Crest window you're using",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "2026-09-25-chromium-typed-mac-shell",
+      "category": "internal",
+      "message": "The Chromium host's Objective-C port is a typed Mac shell"
+    },
+    {
+      "id": "2026-09-26-window-commands-in-core",
+      "category": "improved",
+      "message": "Menu and keyboard commands turn on and off by what each window shows, the same way on Mac and iPad, and a link opened from another app lands in the Start Page you have open"
+    },
+    {
+      "id": "2026-09-26-chromium-crashed-pages-recover",
+      "category": "fixed",
+      "message": "Chromium pages that crash now reload on their own instead of staying broken",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "2026-09-26-page-prompts-through-core",
+      "category": "internal",
+      "message": "Page dialogs, sign-in and permission requests go through the core, which answers remembered site choices without asking"
+    },
+    {
+      "id": "2026-09-26-prompt-sheets-close-when-settled",
+      "category": "improved",
+      "message": "A page's dialog or permission request closes by itself when the page no longer needs an answer"
+    },
+    {
+      "id": "2026-09-26-engine-downloads-in-core",
+      "category": "internal",
+      "message": "Chromium's downloads are recorded by the core, which asks where to save and whether to keep a warned file"
+    },
+    {
+      "id": "2026-09-26-download-failure-reasons",
+      "category": "improved",
+      "message": "A download that fails now says why, such as a network problem, a full disk or a blocked file"
+    },
+    {
+      "id": "2026-09-26-close-preparation-core",
+      "category": "internal",
+      "message": "The core prepares closing pages, windows and the app, asking each page whether it may leave"
+    },
+    {
+      "id": "2026-09-26-lift-checks-drops-lazily",
+      "category": "improved",
+      "message": "Picking up tabs, folders or a selection to drag in the sidebar starts faster in Spaces with many tabs and folders"
+    },
+    {
+      "id": "2026-09-26-external-links-skip-locked-spaces",
+      "category": "fixed",
+      "message": "A link opened from another app no longer asks to unlock a locked Space from a Quick Window or on iPhone and iPad; it opens in a Quick Window on an unlocked Space instead",
+      "platforms": ["ios"]
+    },
+    {
+      "id": "2026-09-26-link-preferences-in-core",
+      "category": "internal",
+      "message": "The core keeps this device's link preferences, applies every change to them and routes links from other apps"
+    },
+    {
+      "id": "2026-09-26-quick-window-lifetime-applies-now",
+      "category": "fixed",
+      "message": "Changing how long an inactive Quick Window stays open now applies to Quick Windows that are already open"
+    },
+    {
+      "id": "2026-09-26-link-clicks-decided-in-core",
+      "category": "internal",
+      "message": "The core decides what a clicked link does, whether a window a page opens comes to the front and how Quick Windows keep their pages"
+    },
+    {
+      "id": "2026-09-26-drop-into-gone-folder-refused",
+      "category": "fixed",
+      "message": "A tab dropped on a folder that was just deleted in another Space now stays where it was instead of landing outside any folder"
+    },
+    {
+      "id": "2026-09-26-core-page-residency",
+      "category": "internal",
+      "message": "Under memory pressure the core unloads the pages off screen longest, never ones playing media, and restores them where they were"
+    },
+    {
+      "id": "2026-09-26-ios-download-clear-test",
+      "category": "internal",
+      "message": "The iOS download-clearing test ends its download before clearing it, as the download center now requires"
+    },
+    {
+      "id": "2026-09-26-engine-abi-open-page-transient",
+      "category": "internal",
+      "message": "The engine ABI check sends OpenPage with its new transient presentation field"
+    },
+    {
+      "id": "2026-09-26-site-rules-typed-queries",
+      "category": "internal",
+      "message": "Link, scheme, sign-in, media, location, notification, popup and automatic-download rules are answered by typed core queries"
+    },
+    {
+      "id": "2026-09-26-spaces-read-model",
+      "category": "internal",
+      "message": "The Space switcher, Space pickers, Space pages, and the archive, history and downloads lists draw Spaces from the core's read model, and a Space's lock is the core's rule"
+    },
+    {
+      "id": "2026-09-26-settings-read-model",
+      "category": "internal",
+      "message": "Settings panes read Spaces and their settings from the core's read model and write edits through the core"
+    },
+    {
+      "id": "2026-09-26-close-quit-through-core",
+      "category": "improved",
+      "message": "Closing tabs and windows or quitting asks pages that want to confirm leaving, and quitting with downloads in progress asks first, in both engines"
+    },
+    {
+      "id": "2026-09-26-page-pool-bookkeeping-cleanup",
+      "category": "internal",
+      "message": "The page pool drops bookkeeping the core's residency made unused, and the core keeps a page another window shows loaded"
+    },
+    {
+      "id": "2026-09-26-webkit-binding-builds-pages",
+      "category": "internal",
+      "message": "WebKit's engine binding builds each page, with thin Mac and iOS layers, instead of the page pool and store"
+    },
+    {
+      "id": "2026-09-26-cloud-sync-codec-swift62",
+      "category": "fixed",
+      "message": "The iOS app builds again with Xcode 26",
+      "platforms": ["ios"]
+    },
+    {
+      "id": "2026-09-26-launch-stage-drain",
+      "category": "internal",
+      "message": "Storage tests wait for the launch's sync stage instead of stopping at the journal's first announcement"
+    },
+    {
+      "id": "2026-09-26-webkit-crashes-through-core",
+      "category": "improved",
+      "message": "A WebKit page whose content crashes now recovers the same way as Chromium: at once if you're looking at it, or when you next open it",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "2026-09-26-redirect-test-no-real-load",
+      "category": "internal",
+      "message": "The WebKit redirect test reports its navigation without a real load that could overtake it"
+    },
+    {
+      "id": "2026-09-26-capacity-limits-query",
+      "category": "internal",
+      "message": "The core's capacity limits are answered by a typed query instead of a JSON policy operation"
+    },
+    {
+      "id": "2026-09-26-cloud-transport-state-in-core",
+      "category": "internal",
+      "message": "iCloud sync keeps its progress on this device in Crest's own store, carried over once from the file earlier versions used"
+    },
+    {
+      "id": "2026-09-26-webkit-dialogs-through-core",
+      "category": "internal",
+      "message": "WebKit pages' alert, confirm and prompt dialogs and the leave-page question go through the core, like Chromium's"
+    },
+    {
+      "id": "2026-09-26-webkit-sign-in-through-core",
+      "category": "internal",
+      "message": "WebKit pages' sign-in requests go through the core, offering a saved sign-in first"
+    },
+    {
+      "id": "2026-09-26-capture-permission-rules",
+      "category": "fixed",
+      "message": "A camera and microphone request now follows your choice for each device, and blocking a site while it asks refuses the request"
+    },
+    {
+      "id": "2026-09-26-cloud-sync-decisions-in-core",
+      "category": "internal",
+      "message": "Crest decides each step of iCloud sync in its core: starting, pausing for an account change, applying your choice and retrying"
+    },
+    {
+      "id": "2026-09-26-webkit-location-notifications-through-core",
+      "category": "internal",
+      "message": "WebKit pages' location and notification requests go through the core, and a page that stops waiting withdraws its question"
+    },
+    {
+      "id": "2026-09-26-system-consent-before-saving",
+      "category": "fixed",
+      "message": "Allowing location or notifications for a site is only remembered once macOS or iOS also allows it"
+    },
+    {
+      "id": "2026-09-26-shared-download-prompts",
+      "category": "internal",
+      "message": "Download location and keep-this-file questions are answered in one place for every engine"
+    },
+    {
+      "id": "2026-09-26-window-rules-read-model",
+      "category": "internal",
+      "message": "Browser windows check their Spaces, tabs and folders against the core's published state instead of a copy of the session"
+    },
+    {
+      "id": "2026-09-26-system-consent-all-permissions",
+      "category": "fixed",
+      "message": "Allowing camera, microphone, location or notifications for a site is only remembered once macOS or iOS also allows it, in both engines"
+    },
+    {
+      "id": "2026-09-26-transient-pages-read-model",
+      "category": "internal",
+      "message": "Quick Windows and Peeks read the Space they browse and the Spaces they offer from the core's published state"
+    },
+    {
+      "id": "2026-09-26-app-scenes-read-model",
+      "category": "internal",
+      "message": "Browser windows check a Space against the core's published state before showing its settings or opening a handed-off link"
+    },
+    {
+      "id": "2026-09-26-core-judges-downloads",
+      "category": "improved",
+      "message": "Crest now checks a download before it's saved, in both engines, and shows its reasons, the site and the Space when it asks; a download blocked by a site's setting can be retried"
+    },
+    {
+      "id": "2026-09-26-import-export-in-core",
+      "category": "improved",
+      "message": "Importing from other browsers and Crest browser-data files, and exporting, now run in Crest's shared core on Mac and iPhone"
+    },
+    {
+      "id": "2026-09-26-manual-setup-in-core",
+      "category": "internal",
+      "message": "The manual setup is held by Crest's shared core, and an unfinished setup on iPhone and iPad waits for the next launch"
+    },
+    {
+      "id": "2026-09-26-setup-flow-in-core",
+      "category": "fixed",
+      "message": "Setup's Back button returns to the right step"
+    },
+    {
+      "id": "2026-09-26-practice-workspace-in-core",
+      "category": "internal",
+      "message": "The Getting Started practice starts from Crest's shared core"
+    },
+    {
+      "id": "2026-09-26-typed-session-seeds",
+      "category": "internal",
+      "message": "Crest hands its core typed sessions for new and test workspaces, and the core describes the first-launch session itself"
+    },
+    {
+      "id": "2026-09-26-seeded-fixtures",
+      "category": "internal",
+      "message": "Preview, showcase and test sessions are built as typed seeds the core opens"
+    },
+    {
+      "id": "2026-09-26-password-files-in-core",
+      "category": "internal",
+      "message": "Password file import and export run in Crest's shared core, which keeps none of the passwords it reads or writes"
+    },
+    {
+      "id": "2026-09-26-native-core-test-target",
+      "category": "internal",
+      "message": "The native core's test target builds with the support files its tests use"
+    },
+    {
+      "id": "2026-09-26-review-build-tests-stay-unnamed",
+      "category": "internal",
+      "message": "Test runs hosted by review builds no longer open the review app's own session and stores"
+    },
+    {
+      "id": "2026-09-26-webkit-downloads-through-core",
+      "category": "internal",
+      "message": "WebKit's downloads run as the engine's own through the core, which asks where to save, whether to keep a risky file, and whether a site may download automatically"
+    },
+    {
+      "id": "2026-09-26-seeded-sidebar-tests",
+      "category": "internal",
+      "message": "Sidebar, split and window tests open typed seed sessions in the core"
+    },
+    {
+      "id": "2026-09-26-engine-capabilities-follow-page-engine",
+      "category": "internal",
+      "message": "Menus, the launcher and settings offer a feature when an engine Crest runs supports it, and the page's own engine decides whether it is available"
+    },
+    {
+      "id": "2026-09-26-site-engine-choices",
+      "category": "internal",
+      "message": "Crest can remember which engine each site's pages open on, per device, and keeps private windows' choices in memory only"
+    },
+    {
+      "id": "2026-09-26-offer-default-and-live-engines",
+      "category": "internal",
+      "message": "Features appear in menus and settings only for the default engine or an engine a page is open on"
+    },
+    {
+      "id": "2026-09-26-sidebar-lift-speed",
+      "category": "improved",
+      "message": "Picking up tabs, folders and multi-selections in the sidebar responds faster, especially with many tabs"
+    },
+    {
+      "id": "2026-09-26-space-deletion-erases-every-engine",
+      "category": "improved",
+      "message": "Deleting a Space erases its website data in every browser engine Crest runs, including one that never opened a page for it"
+    },
+    {
+      "id": "2026-09-26-engine-page-direct-path",
+      "category": "internal",
+      "message": "Every engine answers a page's captures, exports, inspector, certificate and site decisions through one direct path"
+    },
+    {
+      "id": "2026-09-26-shared-page-host",
+      "category": "internal",
+      "message": "One page host keeps each window's pages on Mac, iPhone and iPad, and the core decides which pages memory pressure unloads on every device"
+    },
+    {
+      "id": "2026-09-26-pages-move-engines-in-place",
+      "category": "internal",
+      "message": "A page can move to another engine while keeping its tab, window and card"
+    },
+    {
+      "id": "2026-09-26-rehost-pages-through-core",
+      "category": "internal",
+      "message": "Pages can move to another engine through the core, keeping their tab and window"
+    },
+    {
+      "id": "choose-site-engine",
+      "category": "improved",
+      "message": "On Mac, Site Controls can open a site in WebKit or Chromium; the page moves there and the site keeps opening in that engine",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "protected-video-fallback",
+      "category": "new",
+      "message": "When a page's protected video needs a player Crest's Chromium doesn't have, the page moves to WebKit to play it, with an option to move it back",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "2026-09-26-chromium-reports-missing-drm",
+      "category": "internal",
+      "message": "Chromium reports a missing Widevine or PlayReady to the core"
+    },
+    {
+      "id": "2026-09-26-architecture-docs-current",
+      "category": "internal",
+      "message": "The architecture documents describe the core, its contract and its engines as they are now"
+    },
+    {
+      "id": "core-json-policy-boundary-removed",
+      "category": "internal",
+      "message": "The core's last JSON policy entry point is gone; iPhone and iPad hand memory pressure to the core like the Mac."
+    },
+    {
+      "id": "core-engine-link-questions",
+      "category": "internal",
+      "message": "The core decides where Chromium's links and self-opened pages go; context-menu rows are typed."
+    },
+    {
+      "id": "chromium-quick-window-popups",
+      "category": "fixed",
+      "message": "In the Chromium build, a pop-up opened from a Quick Window or Peek now opens in that window instead of disappearing.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "2026-09-26-abi-check-unused-tag",
+      "category": "internal",
+      "message": "The native ABI check sends a union tag far past every intent, so new intents never make it a real one"
+    },
+    {
+      "id": "ios-residency-left-to-system",
+      "category": "internal",
+      "message": "On iPhone and iPad, the system reclaims pages beyond the core's budget, as it does for Safari, and a reclaimed page reloads when shown."
+    },
+    {
+      "id": "credentials-read-spaces-from-read-model",
+      "category": "internal",
+      "message": "Passwords and their prompts read Spaces from the core's read model"
+    },
+    {
+      "id": "previews-draw-detached-read-model",
+      "category": "internal",
+      "message": "Previews, setup drafts and import reviews draw Spaces the core resolves"
+    },
+    {
+      "id": "staged-lift-expiry-manual-clock",
+      "category": "internal",
+      "message": "Sidebar reorder expiry tests run on a clock the test moves"
+    },
+    {
+      "id": "tab-rules-off-session-copy",
+      "category": "internal",
+      "message": "Tab title and icon rules and native tabs read from the read model"
+    },
+    {
+      "id": "extension-store-space-identities",
+      "category": "internal",
+      "message": "Extensions and site controls name Spaces from the read model"
+    },
+    {
+      "id": "delete-unused-swift-declarations",
+      "category": "internal",
+      "message": "Unused Swift declarations removed after the core migration"
+    },
+    {
+      "id": "remove-unused-catalog-strings",
+      "category": "internal",
+      "message": "Unused localized strings removed from the catalog"
+    },
+    {
+      "id": "delete-unread-policy-flags-dead-core-rules",
+      "category": "internal",
+      "message": "Unread policy flags and unused core rules removed"
+    },
+    {
+      "id": "chromium-menu-reads-offered-commands",
+      "category": "internal",
+      "message": "The Chromium menu bar shows the commands the open pages' engines offer"
+    },
+    {
+      "id": "chromium-private-window-borrowed-profile",
+      "category": "internal",
+      "message": "Chromium private windows borrow only an unlocked Space's settings and extensions"
+    },
+    {
+      "id": "page-hosts-read-read-model",
+      "category": "internal",
+      "message": "Page hosts and engine glue read Spaces and tabs from the read model"
+    },
+    {
+      "id": "shared-page-owner",
+      "category": "internal",
+      "message": "iPhone, iPad and Mac page owners share one implementation of their common page work"
+    },
+    {
+      "id": "chromium-private-window-starts-fresh",
+      "category": "internal",
+      "message": "Chromium private windows start fresh each time, share nothing with any Space and run no extensions"
+    },
+    {
+      "id": "chromium-engine-keeps-its-browsers",
+      "category": "internal",
+      "message": "The Chromium engine keeps track of its own browser windows and tabs, and the Mac app only hosts their windows"
+    },
+    {
+      "id": "session-copy-deleted",
+      "category": "internal",
+      "message": "Swift keeps the browsing session only in the core's read model; its separate copy is gone"
+    },
+    {
+      "id": "folder-symbol-stays-unset-across-sync",
+      "category": "internal",
+      "message": "A folder without its own symbol keeps none when it syncs to another device"
+    },
+    {
+      "id": "settings-bind-core-preferences",
+      "category": "internal",
+      "message": "The Settings panes and page actions edit the core's own browsing, password and app preferences, with no Swift copy to convert them"
+    },
+    {
+      "id": "settings-bind-core-branding",
+      "category": "internal",
+      "message": "Space looks are drawn and edited as the core's own branding records, and the core works out each look's rendering vocabulary when it keeps it"
+    },
+    {
+      "id": "webkit-binding-keeps-stores-and-rules",
+      "category": "internal",
+      "message": "WebKit keeps each profile's website data and its pages' content rules itself, and private browsing drops its in-memory data when it ends"
+    },
+    {
+      "id": "webkit-hands-core-restore-state-and-media",
+      "category": "internal",
+      "message": "WebKit hands the core the history of a page it unloads and reports each page's media as it changes, so memory pressure never asks pages first"
+    },
+    {
+      "id": "page-host-follows-put-away-and-webkit-links-ask-core",
+      "category": "internal",
+      "message": "Closing a saved or pinned tab lets the page host put its page away after the core records it, and WebKit asks the core how each followed link opens and stages Peek links through it"
+    },
+    {
+      "id": "settings-engine-pages-open-through-core",
+      "category": "internal",
+      "message": "Chromium's feature flags page in Settings opens through the core like every other page, windows follow the session from the read model, and extension controls read their Space from it"
+    },
+    {
+      "id": "synced-look-strength-once",
+      "category": "internal",
+      "message": "A synced Space look keeps its banner strength; only a look from before the current rendering vocabulary is converted, once"
+    },
+    {
+      "id": "native-views-and-preference-choices-describe-themselves",
+      "category": "internal",
+      "message": "Settings and Getting Started tabs take their title and symbol from the core, and startup and saved-tab close choices carry their own titles"
+    },
+    {
+      "id": "contract-records-share-concept-files",
+      "category": "internal",
+      "message": "Contract records that only carry data share one file per concept, grouped in regions by message family and subject, instead of one file each"
+    },
+    {
+      "id": "core-domain-data-types-grouped",
+      "category": "internal",
+      "message": "The core's plain data types now sit beside the code that uses them instead of in files of their own."
+    },
+    {
+      "id": "swift-data-types-grouped",
+      "category": "internal",
+      "message": "The apps' plain data types now sit beside the code that uses them or in one file per concept."
+    },
+    {
+      "id": "identities-named-by-uuid",
+      "category": "internal",
+      "message": "Space, tab, folder, window, split and credential identities are plain UUIDs named by their role, with no aliases or wrapper types."
+    },
+    {
+      "id": "swift-sources-follow-formatter",
+      "category": "internal",
+      "message": "Swift sources, including the Chromium app's, follow the project's formatting rules throughout."
+    },
+    {
+      "id": "extensions-live-with-their-owners",
+      "category": "internal",
+      "message": "Extensions now live in files named for the type they extend, so each type's behaviour is found in one place."
+    },
+    {
+      "id": "platform-seams-stay-in-platform-layers",
+      "category": "internal",
+      "message": "Shared browser code no longer depends on AppKit, UIKit or the logging framework directly; each platform supplies its own pieces, with no change in behaviour."
+    },
+    {
+      "id": "generated-password-records-redact-themselves",
+      "category": "internal",
+      "message": "Records that carry passwords to and from the core now describe themselves without naming any secret, generated from the core's contracts."
+    },
+    {
+      "id": "generated-message-handlers",
+      "category": "internal",
+      "message": "The contract generator now gives each family of core messages a handler interface in the core and a handling protocol in the apps, so a new message without a handler fails to build."
+    },
+    {
+      "id": "core-receivers-use-message-handlers",
+      "category": "internal",
+      "message": "Each part of the core now handles its messages through the generated handler interfaces instead of hand-written type switches, with no change in behaviour."
+    },
+    {
+      "id": "app-receivers-use-message-handlers",
+      "category": "internal",
+      "message": "The apps' read model, engine bindings, pages and prompt followers now handle the core's changes, commands, requests and presentations through generated handling protocols, with no change in behaviour."
+    },
+    {
+      "id": "message-handling-documented",
+      "category": "internal",
+      "message": "The architecture notes now describe how each receiver handles the core's messages through the generated handlers."
+    },
+    {
+      "id": "chromium-commands-dispatch-by-type",
+      "category": "internal",
+      "message": "Chromium's engine handles each command the core sends through its own handler, so a new command can't be silently ignored."
+    },
+    {
+      "id": "generated-message-handlers-withdrawn",
+      "category": "internal",
+      "message": "The core and the apps route their messages with the hand-written dispatch they used before the generated handlers, while each message family moves toward carrying its own behavior; nothing changes in behavior."
+    },
+    {
+      "id": "core-builds-as-one-assembly",
+      "category": "internal",
+      "message": "The portable core now builds as one assembly, with its contracts, domain and application kept as folders and namespaces of it; nothing changes in behavior."
+    },
+    {
+      "id": "page-messages-carry-their-behavior",
+      "category": "internal",
+      "message": "Each page intent and page event in the core now carries its own logic, so a new one that lacks it fails to build; nothing changes in behavior."
+    },
+    {
+      "id": "session-intents-carry-their-edits",
+      "category": "internal",
+      "message": "Each session intent in the core now carries its own edit, so a new one that lacks it fails to build; nothing changes in behavior."
+    },
+    {
+      "id": "intents-route-themselves",
+      "category": "internal",
+      "message": "Every intent now routes itself to the part of the core that owns it, and device, window, setup and workspace intents carry their own logic, so a new one that lacks either fails to build; nothing changes in behavior."
+    },
+    {
+      "id": "area-messages-carry-their-logic",
+      "category": "internal",
+      "message": "Downloads, prompts, close preparations, data deletion, Space access and cloud sync intents, and the prompt and download events engines report, now carry their own logic, so a new one that lacks it fails to build; nothing changes in behavior."
+    },
+    {
+      "id": "queries-answer-themselves",
+      "category": "internal",
+      "message": "Every question the core answers, and the one an engine asks while it waits, now carries its own answer, so a new one that lacks it fails to build; nothing changes in behavior."
+    },
+    {
+      "id": "swift-messages-carry-their-logic",
+      "category": "internal",
+      "message": "In the apps, each change the core publishes, each command WebKit runs, each request its pages answer and each presentation Chromium shows now carries its own logic, so a new one that lacks it fails to build; nothing changes in behavior."
+    },
+    {
+      "id": "sync-removals-and-extension-commands",
+      "category": "internal",
+      "message": "Each session change now names the synced records it removes, and the extension menu and settings ask the store with typed commands instead of words; nothing changes in behavior."
+    },
+    {
+      "id": "sync-record-names-from-their-kind",
+      "category": "internal",
+      "message": "Every synced record's name is spelled by its record kind in one place."
+    },
+    {
+      "id": "dock-menu-spaces-and-window-commands",
+      "category": "new",
+      "message": "The Dock menu shows your Spaces and Crest's own window commands: New Window, New Quick Window and New Private Window."
+    },
+    {
+      "id": "space-icons-in-menus-every-time",
+      "category": "fixed",
+      "message": "Menus that list your Spaces show each Space's crest or symbol every time they open, including the link menu's Open Link in Another Space."
+    },
+    {
+      "id": "fullscreen-video-leaves-cleanly",
+      "category": "fixed",
+      "message": "Watching a video full screen no longer leaves a black screen that Esc and the window's buttons can't leave. The full-screen notice fades after a few seconds, and leaving full screen from the window's green button or the Window menu puts the page back in its place."
+    },
+    {
+      "id": "window-chrome-acts-as-title-bar",
+      "category": "fixed",
+      "message": "Dragging the sidebar background, the top of the window or the space around a page moves the window again, and double-clicking them does what System Settings says a title bar double-click does, while text near the top of a page can still be selected."
+    },
+    {
+      "id": "chromium-window-size-remembered",
+      "category": "fixed",
+      "message": "In the Chromium build, a new window opens at the size of the window you're using instead of its smallest size, and a window you close and reopen keeps saving its size.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "sidebar-drop-into-open-lands-from-drop",
+      "category": "fixed",
+      "message": "A tab dragged into Open tabs now settles from where you drop it, instead of jumping back to where you picked it up first."
+    },
+    {
+      "id": "downloads-fly-to-the-box-on-every-engine",
+      "category": "fixed",
+      "message": "Starting a download in a Chromium window now shows the file flying from the pointer into the downloads box, which bounces as it lands, as it already did with WebKit.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "extension-side-panel-follows-its-tab",
+      "category": "fixed",
+      "message": "An extension's side panel now follows the tab you're on. A panel an extension opened for one tab, such as Claude's, closes when you switch to another tab and comes back when you return, so it no longer answers about a tab you've left. A panel an extension shows for every tab stays open as you switch."
+    },
+    {
+      "id": "page-menu-rows-no-longer-quit",
+      "category": "fixed",
+      "message": "Choosing Open Link in Peek, Open Link in Split View, another Space or Search from a page's right-click menu works again instead of quitting Crest."
+    },
+    {
+      "id": "open-page-in-other-engine",
+      "category": "fixed",
+      "message": "In the Chromium build, the Page menu has Open Page in WebKit, so you can move a page to WebKit even before any page has opened there.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-new-window-links-open-peek",
+      "category": "fixed",
+      "message": "In the Chromium build, a link that would open a new tab from a pinned or saved tab and leaves that tab's site opens in Peek, as it does in the WebKit build.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "context-menu-row-test-keeps-its-page-view",
+      "category": "internal",
+      "message": "The context-menu row test keeps its page view alive, as the window does."
+    },
+    {
+      "id": "start-page-search-offers-commands",
+      "category": "improved",
+      "message": "The Start Page's search now offers Crest's commands, like New Quick Window, when what you type matches one."
+    },
+    {
+      "id": "chromium-website-notifications-appear",
+      "category": "fixed",
+      "message": "In the Chromium build, notifications from sites you allow now appear as banners and in Notification Center, as they do in the WebKit build, and clicking one brings you to its tab. Private windows still show none.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "now-playing-skips-notification-sounds-on-chromium",
+      "category": "fixed",
+      "message": "In the Chromium build, notification sounds and other short sounds a site plays no longer show the sidebar's Now Playing card or take over the Mac's Now Playing; only media you can play and pause does, as in the WebKit build.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-build-names-itself-crest-to-macos",
+      "category": "improved",
+      "message": "In the Chromium build, camera, microphone, location, Bluetooth and passkey prompts name Crest instead of Chromium, and Crest no longer includes a helper app that could appear as “Chromium” in Notifications settings.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "picture-in-picture-returns-to-its-tab",
+      "category": "fixed",
+      "message": "The back-to-tab button in a Picture in Picture video now brings Crest forward on the video's own tab, switching window or Space if needed, in both the Chromium and WebKit builds. When you go back to that tab yourself, the video leaves Picture in Picture and returns to its place on the page, whether it floated automatically or you floated it.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "webkit-tabs-show-engine-badge",
+      "category": "improved",
+      "message": "In the Chromium build, tabs running in WebKit now show a small WebKit badge on their icon, so you can see at a glance which pages use WebKit.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "page-top-keeps-its-drags",
+      "category": "fixed",
+      "message": "Dragging at the very top of a page, like selecting text or using YouTube's search box, no longer moves the window. The sidebar, the strip above the page and the space around it, and the top of a Quick Window, still move the window and do what your title bar double-click setting says."
+    },
+    {
+      "id": "opened-pages-keep-their-openers-engine",
+      "category": "fixed",
+      "message": "A sign-in window, a new tab or a Peek that a page opens now stays on that page's engine, so signing in with Google from a page moved to WebKit opens one sign-in page that finishes the sign-in, instead of several Chromium tabs.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "popup-windows-open-in-quick-windows",
+      "category": "improved",
+      "message": "Sign-in and other popup windows a page opens now appear in a Quick Window in the same Space, stay connected to the page that opened them, and close themselves when the sign-in finishes. Choose Open in to keep one as a tab."
+    },
+    {
+      "id": "locking-a-space-closes-its-picture-in-picture",
+      "category": "fixed",
+      "message": "Locking a protected Space, including when Crest goes to the background, now always closes that Space's Picture in Picture video."
+    },
+    {
+      "id": "webkit-badge-draws-stacked-tile",
+      "category": "improved",
+      "message": "The WebKit badge on tab icons is clearer: it now shows a small blue-and-orange tile, which also appears beside WebKit in Site Controls' Opens in menu."
+    },
+    {
+      "id": "window-moves-natively-and-page-top-stays-still",
+      "category": "fixed",
+      "message": "Window › Move & Resize, the Globe-Control tiling shortcuts and the green button's tiling options work for Crest windows again, while dragging at the very top of a page still selects text instead of moving the window. Double-clicking empty sidebar space opens a new tab again, without also acting as a title bar double-click."
+    },
+    {
+      "id": "blank-popups-and-quick-window-popups-open-again",
+      "category": "fixed",
+      "message": "A page that opens an empty window first and fills it in afterwards, as some sign-in buttons do, gets its window again instead of nothing. A link or script that opens a new window from a Quick Window or Peek loads in that window again, with Back and Forward, and a form posted that way keeps what it sent."
+    },
+    {
+      "id": "sign-in-popups-show-after-reopening-a-window",
+      "category": "fixed",
+      "message": "Continue with Google and other sign-in popups open their Quick Window again in a window you closed and opened again, instead of doing nothing."
+    },
+    {
+      "id": "diagnostic-log-keeps-no-addresses",
+      "category": "internal",
+      "message": "Crest's diagnostic log names a refused request by its rule alone, so it never keeps a site or an address, and the logging left over from earlier investigations is gone."
+    },
+    {
+      "id": "app-dead-code-after-restructure",
+      "category": "internal",
+      "message": "The apps drop code the restructure left without callers: an unused download lookup, web-content load and reader toggle, a never-built device-validation trust path, two unused palette values, and two store logos nothing shows."
+    },
+    {
+      "id": "app-tests-trimmed-to-contracts",
+      "category": "internal",
+      "message": "The app test suites drop tests that repeat a rule the core's own tests cover, re-test shared page code on iPhone, or check copy, and the test helpers nothing calls."
+    },
+    {
+      "id": "docs-describe-the-finished-design",
+      "category": "internal",
+      "message": "The architecture and contributor documents describe the finished design, including popups in Quick Windows, the opener-engine rule, Picture in Picture, the title-bar guard and web notifications, instead of the restructure's plans and status."
+    },
+    {
+      "id": "third-party-notices-name-chromium-and-dotnet",
+      "category": "internal",
+      "message": "The third-party notices now include the bundled Chromium engine and .NET runtime, and the license audit checks them."
+    },
+    {
+      "id": "closed-window-stays-out-of-its-reopened-window",
+      "category": "fixed",
+      "message": "A window you close while a Quick Window over it stays open no longer answers for the window that opens again in its place, so tabs and pop-ups a page opens show in the window you are using."
+    },
+    {
+      "id": "core-and-engine-dead-code-removed",
+      "category": "internal",
+      "message": "Declarations nothing calls any more are gone from the core and the Chromium extension views."
+    },
+    {
+      "id": "core-test-leftovers-removed",
+      "category": "internal",
+      "message": "The core's tests drop helpers left from the retired JSON protocol and a search test another one already covers."
+    },
+    {
+      "id": "core-contract-docs-describe-typed-queries",
+      "category": "internal",
+      "message": "The contract README and the core's comments describe the typed queries and intents that replaced the JSON policy operations."
+    },
+    {
+      "id": "fixture-server-trust-query-removed",
+      "category": "internal",
+      "message": "The core's fixture certificate trust query and the Chromium page's unused main-frame script call are gone, since nothing asks for them any more."
+    },
+    {
+      "id": "managed-chromium-fork-and-upstream-release-pipeline",
+      "category": "internal",
+      "message": "Chromium builds use a managed workspace and a CI workflow with reviewed upstream updates and opt-in stable publication."
+    },
+    {
+      "id": "experimental-release-builds-missing-chromium-engine",
+      "category": "internal",
+      "message": "Experimental releases build missing Chromium engines on the registered Mac and package one verified source revision. Automatic upstream publication is limited to experimental."
+    },
+    {
+      "id": "core-reports-arrive-whole",
+      "category": "fixed",
+      "message": "A page closed while it is still loading no longer leaves its old details behind, and updates from iCloud or a page always arrive in one piece."
+    },
+    {
+      "id": "core-published-lists-read-only",
+      "category": "internal",
+      "message": "The session, sidebar and change lists the core accepts or publishes are read-only, so nothing that holds one can change the core's state behind its back."
+    },
+    {
+      "id": "folder-tree-indexed-lookups",
+      "category": "improved",
+      "message": "Organizing tabs in a Space with many nested folders stays quick, because each folder edit looks folders up directly instead of searching them."
+    },
+    {
+      "id": "extension-background-window-keeps-focus",
+      "category": "fixed",
+      "message": "A window an extension opens in the background no longer takes keyboard focus from the window you are typing in."
+    },
+    {
+      "id": "closing-windows-asks-leaving-pages",
+      "category": "fixed",
+      "message": "Closing the private window, a window you tore a tab into, or a Quick Window now lets a page with unsaved work ask before it goes. Closing a regular window no longer asks, since its tabs stay open."
+    },
+    {
+      "id": "engine-hosted-page-typed",
+      "category": "internal",
+      "message": "Shared page code names what an engine built for a page as its own type, and the WebKit pieces it carried now live with the WebKit engine."
+    },
+    {
+      "id": "chromium-first-run-setup",
+      "category": "new",
+      "message": "The Chromium build now opens first-run setup on a Mac where Crest hasn't been set up yet, as the WebKit build does, and opens your windows once setup finishes.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "quit-waits-for-space-deletion",
+      "category": "improved",
+      "message": "Quitting while a Space is being deleted now tells you Crest will quit once the Space is gone, and then quits by itself, instead of quitting midway or ignoring the request."
+    },
+    {
+      "id": "external-opens-follow-link-settings",
+      "category": "improved",
+      "message": "Links and documents from other apps open in your frontmost Crest window, and with no window open they follow your link settings instead of always opening a Quick Window. The Chromium build reopens its windows in the order you left them, with only the front one taking focus.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "one-mac-shell-for-both-engines",
+      "category": "internal",
+      "message": "Both Mac builds share one AppKit shell for their windows, menu bar, launch, reopen, outside opens and quit, and the Chromium build now runs on it; its windows tell their content when they are minimized or hidden."
+    },
+    {
+      "id": "dock-icon-download-progress",
+      "category": "improved",
+      "message": "Crest's Dock icon shows how many downloads are in progress and how far along they are, and keeps the app icon you picked while it does."
+    },
+    {
+      "id": "webkit-build-on-shared-mac-shell",
+      "category": "improved",
+      "message": "The WebKit build now runs on the same Mac app shell as the Chromium build, so both reopen the windows you left open in the order you left them, and both put links from other apps where your link settings say even with no window open. The first launch after this update reopens your most recently used window at its default size.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "edit-menu-text-tools-in-both-builds",
+      "category": "improved",
+      "message": "The Chromium build's Edit menu now has Find, Spelling and Grammar, Substitutions, Transformations and Speech, Translate Page appears in the Page menu whenever a page can be translated, and Command-W closes Crest Setup and What's New in Crest there too.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "extension-closed-tabs-close-once",
+      "category": "fixed",
+      "message": "A tab or window an extension closes now closes in Crest instead of leaving a blank tab behind, and a site can close only a tab or window that another page opened."
+    },
+    {
+      "id": "dock-keeps-picked-icon-during-downloads",
+      "category": "fixed",
+      "message": "The Dock keeps the app icon you picked while downloads run."
+    },
+    {
+      "id": "extension-windows-close-themselves",
+      "category": "fixed",
+      "message": "Windows and tabs an extension opens, such as a password manager's pop-out, can close themselves again when they're done."
+    },
+    {
+      "id": "iphone-new-tab-search-shows-page",
+      "category": "fixed",
+      "message": "A search from a new tab on iPhone shows its page right away instead of a blank screen.",
+      "platforms": ["ios"]
+    },
+    {
+      "id": "setup-no-longer-waits-on-icloud",
+      "category": "fixed",
+      "message": "Setup no longer waits forever when iCloud doesn't answer: after a few seconds you can set up without it, and sync tries iCloud again on its own."
+    },
+    {
+      "id": "core-lays-out-command-menus",
+      "category": "internal",
+      "message": "The core lays out the menu bar's command menus and the launcher's command list, which the Mac shell builds from, so every command keeps a menu item and a shortcut."
+    },
+    {
+      "id": "quick-window-closes-with-its-page",
+      "category": "fixed",
+      "message": "A Quick Window whose page closes itself, such as a sign-in window once you're signed in, now closes even while it's asking whether you want to leave the page."
+    },
+    {
+      "id": "sign-in-popup-test-waits-for-its-page",
+      "category": "internal",
+      "message": "The sign-in popup test waits for the consent page to finish loading before it clicks."
+    },
+    {
+      "id": "fullscreen-video-no-longer-black",
+      "category": "fixed",
+      "message": "Videos you play full screen, such as on YouTube, show again instead of a black screen."
+    },
+    {
+      "id": "fullscreen-standard-title-bar",
+      "category": "fixed",
+      "message": "In full screen, the title bar that slides down with the menu bar looks like the standard one instead of a blank block over the page."
+    },
+    {
+      "id": "pages-get-first-say-over-shortcuts",
+      "category": "fixed",
+      "message": "Pages get first say over shortcuts such as ⌘F, as in other browsers, so a document editor like Google Docs opens its own Find. ⌘T, ⌘W and ⌘N always stay Crest's."
+    },
+    {
+      "id": "now-playing-artwork-on-chromium",
+      "category": "fixed",
+      "message": "Now Playing shows the track's artwork again for pages that run in Chromium, including artwork from sites you're signed in to, sized to fit music and video.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-runner-builds-inside-its-workspace",
+      "category": "internal",
+      "message": "The Chromium engine builder accepts the checkout its own Actions runner makes inside the build workspace."
+    },
+    {
+      "id": "mouse-back-forward-once-per-click",
+      "category": "fixed",
+      "message": "A mouse's Back and Forward buttons move one page per click on pages that run in Chromium, instead of two.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "mouse-back-forward-one-page-every-click",
+      "category": "fixed",
+      "message": "A mouse's Back and Forward buttons move one page per click, every time, including on pages that run in Chromium.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "swipe-back-forward-on-chromium-pages",
+      "category": "fixed",
+      "message": "Swiping back and forward works on pages that run in Chromium, including a mouse's Back and Forward actions set up in Logitech Options+ and three-finger swipes between pages.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "pointer-hides-over-fullscreen-video",
+      "category": "fixed",
+      "message": "The pointer hides over a video playing full screen in a window that was already full screen, and pages that change the pointer no longer wait for the mouse to move."
+    },
+    {
+      "id": "fullscreen-title-bar-leaves-no-bar",
+      "category": "fixed",
+      "message": "In full screen, the title bar that slides down with the menu bar goes away with it instead of leaving a white or black bar across the top of the window or video."
+    },
+    {
+      "id": "fullscreen-video-in-fullscreen-window",
+      "category": "fixed",
+      "message": "With Crest already in full screen, a full-screen video covers the whole screen, and Esc brings the sidebar back while Crest stays in full screen."
+    },
+    {
+      "id": "screen-sharing-site-setting",
+      "category": "new",
+      "message": "Site settings have a Screen Sharing choice, so you can block a site from asking to share your screen; macOS still asks what to share every time.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-screen-sharing-system-picker",
+      "category": "fixed",
+      "message": "Screen sharing on pages that run in Chromium uses the macOS sharing picker and needs no Screen Recording permission, and Crest no longer asks for that permission over and over.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "media-pages-stay-loaded",
+      "category": "fixed",
+      "message": "A tab that plays sound or video, has a video in Picture in Picture, even paused, or uses your camera or microphone stays open and loaded however long you are away from it."
+    },
+    {
+      "id": "page-presentation-diagnostics",
+      "category": "internal",
+      "message": "Crest's Pages log records which pages each window shows, when Chromium is told to show or hide one, Picture in Picture, memory pressure and a page's first input after it returns."
+    },
+    {
+      "id": "space-return-shows-pages",
+      "category": "fixed",
+      "message": "Pages in a Space you leave rest like background tabs, and coming back shows them, split views included, the way switching to their tab does, without taking focus from the address field or the command palette."
+    },
+    {
+      "id": "chromium-media-pages-never-frozen",
+      "category": "fixed",
+      "message": "Chromium never freezes a background tab that plays sound or video, has a video in Picture in Picture, even paused, or uses your camera, microphone or screen.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "engine-default-and-website-rules",
+      "category": "new",
+      "message": "Choose your default browsing engine and add, edit or remove website engine rules in Settings. Chromium is recommended, while WebKit offers native handling and FairPlay video.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "chromium-loads-when-needed",
+      "category": "improved",
+      "message": "WebKit sessions leave Chromium unloaded until you open a Chromium website or extension. Once loaded, it stays ready until you quit Crest.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "dual-engine-default-desktop-download",
+      "category": "improved",
+      "message": "The default Mac download includes Chromium and WebKit, with a separate WebKit build available. Each build keeps its own update channel.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "session-snapshots-own-nested-values",
+      "category": "internal",
+      "message": "Published session snapshots own their nested collections, including record copies, so callers cannot mutate accepted browsing state."
+    },
+    {
+      "id": "chromium-extension-window-geometry",
+      "category": "fixed",
+      "message": "Extensions can move, resize and restore Crest windows using their normal window controls."
+    },
+    {
+      "id": "cloud-convergence-typed-session",
+      "category": "internal",
+      "message": "Cloud convergence materializes and repairs typed sessions while keeping local credentials, page assets and pending profile deletion work on the receiving device."
+    },
+    {
+      "id": "experimental-updates-continue-on-development",
+      "category": "improved",
+      "message": "The final experimental update moves your update preference to Development so future Crest updates continue there."
+    },
+    {
+      "id": "engine-settings-localization-catalog",
+      "category": "internal",
+      "message": "Refresh generated localization metadata for engine settings while preserving existing translations."
+    }
+  ]
+}

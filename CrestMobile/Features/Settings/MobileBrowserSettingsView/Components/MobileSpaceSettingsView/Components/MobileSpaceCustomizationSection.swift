@@ -7,20 +7,20 @@ struct MobileSpaceCustomizationSection: View {
     var body: some View {
         Section("Appearance") {
             Button(action: editAppearance) {
-                HStack(spacing: 16) {
+                HStack(spacing: CrestSpacing.large) {
                     BrowserSpaceIdentityIcon(space: space, size: 44)
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: CrestSpacing.extraSmall) {
                         Text(space.settings.name).font(.headline)
                         Text("Name, crest, colors, and background").font(.subheadline).foregroundStyle(.secondary)
                     }
-                    Spacer(minLength: 4)
+                    Spacer(minLength: CrestSpacing.extraSmall)
                     Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
                 }
-                .padding(.vertical, 8)
+                .padding(.vertical, CrestSpacing.small)
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            .accessibilityIdentifier("mobile-space-customize")
+            .accessibilityIdentifier(BrowserMobileAccessibilityID.spaceCustomize)
         }
     }
 

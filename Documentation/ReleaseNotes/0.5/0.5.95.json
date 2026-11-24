@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-09-sidebar-close-upward-jump",
+      "category": "fixed",
+      "message": "Prevent remaining tabs from briefly jumping upward when closing tabs in the Mac sidebar"
+    }
+  ]
+}

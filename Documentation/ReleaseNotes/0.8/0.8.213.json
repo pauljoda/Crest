@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "start-page-tap-puts-keyboard-away",
+      "category": "fixed",
+      "message": "On iPhone and iPad, tapping the Start Page outside its search field puts the keyboard away.",
+      "platforms": ["ios"]
+    }
+  ]
+}

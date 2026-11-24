@@ -338,10 +338,7 @@ extension BrowserNativePageSurfaceLifecycle {
 final class BrowserWebHostView: NSView {
     // MARK: - Static Variables
 
-    private static let lifecycleSignposter = OSSignposter(
-        subsystem: "com.pauldavis.crest",
-        category: "BrowserSurfaceLifecycle"
-    )
+    private static let lifecycleSignposter = DiagnosticLog.surfaceLifecycle.signposter
     /// Every host that claimed a page view and has not let it go.
     private static let claimants = NSHashTable<BrowserWebHostView>.weakObjects()
     /// The number of claims made so far, which orders them.

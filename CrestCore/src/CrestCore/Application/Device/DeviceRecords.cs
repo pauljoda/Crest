@@ -21,8 +21,9 @@ internal sealed record TabGroupRecord(Guid Id, Guid SpaceId, EngineKind Engine, 
 /// unfinished manual setup it keeps for the next launch, whether this device
 /// has completed setup, what it has adopted from an installed release, the
 /// tab groups whose folders follow them, the site searches, what each
-/// persistent Space's palette remembers, the agent preferences, and whether a
-/// launch is reopening its windows' pages.
+/// persistent Space's palette remembers, the agent preferences, whether a
+/// launch is reopening its windows' pages, the release launched last, and the
+/// actions on top of Site Controls.
 internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOnlyList<Guid> Reopening,
     IReadOnlyList<SitePermissionRecord> SitePermissions, IReadOnlyList<SiteEngineChoice> SiteEngines, ShortcutOverrides Shortcuts,
     LinkPreferences Links, KeptSetupDraft? SetupDraft, bool SetupCompleted, IReadOnlySet<DeviceAdoption> Adopted,
@@ -49,6 +50,10 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
     /// settle or the person agrees to quit.
     public bool ReopeningPages { get; init; }
 
+    /// The release this device launched last, or null before a release that
+    /// keeps it launched here.
+    public string? LaunchedRelease { get; init; }
+
     /// The level ad blocking blocks at, or null before one was chosen or first
     /// answered.
     public ContentBlockingLevel? ContentBlockingLevel { get; init; }
@@ -66,6 +71,20 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
     /// The person's own filters.
     public string CustomFilters { get; init; } = "";
 
+    /// How this device shows pages.
+    public PagePreferences Pages { get; init; } = PagePreferences.Default;
+
+    /// Where each Space's downloads go, for the Spaces that do not keep the
+    /// device's Downloads folder.
+    public IReadOnlyList<SpaceDownloadPreferences> Downloads { get; init; } = [];
+
+    /// Whether this device syncs with iCloud.
+    public bool SyncsWithICloud { get; init; } = true;
+
+    /// The four actions the person keeps on top of Site Controls, or none
+    /// while they keep the defaults.
+    public IReadOnlyList<SiteControlAction> SiteControlTopActions { get; init; } = [];
+
     #endregion
 
     #region Actions - Adoption
@@ -77,28 +96,7 @@ internal sealed record DeviceRecords(IReadOnlyList<SavedWindow> Windows, IReadOn
 
     #region Actions - Equality
 
-    public bool Equals(DeviceRecords? other) => other is not null
-        && Windows.SequenceEqual(other.Windows)
-        && Reopening.SequenceEqual(other.Reopening)
-        && SitePermissions.SequenceEqual(other.SitePermissions)
-        && SiteEngines.SequenceEqual(other.SiteEngines)
-        && DefaultEngine == other.DefaultEngine
-        && Shortcuts.SameAs(other.Shortcuts)
-        && Links.Equals(other.Links)
-        && KeptSetupDraft.Same(SetupDraft, other.SetupDraft)
-        && SetupCompleted == other.SetupCompleted
-        && Adopted.SetEquals(other.Adopted)
-        && TabGroups.SequenceEqual(other.TabGroups)
-        && Equals(SearchCatalog, other.SearchCatalog)
-        && PaletteMemories.Count == other.PaletteMemories.Count
-        && PaletteMemories.All(entry => other.PaletteMemories.TryGetValue(entry.Key, out var memory) && ReferenceEquals(memory, entry.Value))
-        && Agents.Equals(other.Agents)
-        && ReopeningPages == other.ReopeningPages
-        && ContentBlockingLevel == other.ContentBlockingLevel
-        && FilterListChoices.Count == other.FilterListChoices.Count
-        && FilterListChoices.All(entry => other.FilterListChoices.TryGetValue(entry.Key, out bool isOn) && isOn == entry.Value)
-        && BlockingSites.SequenceEqual(other.BlockingSites)
-        && CustomFilterLists.SequenceEqual(other.CustomFilterLists) && CustomFilters == other.CustomFilters;
+    public bool Equals(DeviceRecords? other) => other is not null && DevicePart.All.All(part => part.Same(this, other));
 
     public override int GetHashCode() => HashCode.Combine(Windows.Count, SitePermissions.Count, Adopted.Count);
 

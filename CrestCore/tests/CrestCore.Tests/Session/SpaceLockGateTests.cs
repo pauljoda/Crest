@@ -5,6 +5,8 @@ using CrestCore.Application;
 using CrestCore.Contracts;
 using CrestCore.Domain;
 
+using CrestCore.Tests.Session;
+
 using Xunit;
 
 namespace CrestCore.Tests;
@@ -192,7 +194,7 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("deviceOwnerAuthentication", Policy(local, remote, null));
 
         static string? Policy(JsonNode local, JsonNode remote, SpaceAccessAuthority? access)
-            => NativeSyncMaterializer.Materialize(local.DeepClone().AsObject(), SyncProjectionPreferences(),
+            => StoredSessionMaintenance.Materialize(local.DeepClone().AsObject(), SyncProjectionPreferences(),
                 SpaceRecords(remote), 800000010.0, access)["spaces"]![0]!["accessPolicy"]?.GetValue<string>();
     }
 

@@ -42,6 +42,7 @@ struct BrowserSpaceSwitcherCommonListsButton: View {
                     EmptyView()
                 }
                 .pickerStyle(.inline)
+                .crestMenuActionLabelStyle()
             }
             .symbolEffect(
                 .bounce,

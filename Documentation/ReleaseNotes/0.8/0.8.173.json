@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-with-open-folders-stops-freezing",
+      "category": "fixed",
+      "message": "Crest no longer stops responding while the sidebar lays out open folders, such as when you scroll past them."
+    }
+  ]
+}

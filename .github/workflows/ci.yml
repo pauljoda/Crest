@@ -2,6 +2,7 @@ name: Build Crest
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
   workflow_dispatch:
@@ -11,6 +12,11 @@ on:
         description: Exact source revision to validate before publication
         required: true
         type: string
+      skip_apple_builds:
+        description: Run only the checks; the release's signing job builds the Mac product itself
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -149,9 +155,12 @@ jobs:
     name: Changed areas
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
-      mac: ${{ steps.areas.outputs.mac }}
-      ios: ${{ steps.areas.outputs.ios }}
+      mac: ${{ steps.apple.outputs.build == 'true' && steps.areas.outputs.mac || 'false' }}
+      ios: ${{ steps.apple.outputs.build == 'true' && steps.areas.outputs.ios || 'false' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -166,6 +175,31 @@ jobs:
           SOURCE_SHA: ${{ inputs.source_sha }}
           BEFORE_SHA: ${{ github.event.before }}
         run: python3 Scripts/ci-changed-areas.py >> "$GITHUB_OUTPUT"
+
+      # The Apple builds are the expensive part, so they run once per change.
+      # A draft pull request waits until it is ready for review. A push to main
+      # from a merged pull request was built on its branch, and the release
+      # builds the merge commit again. The release's own validation skips them
+      # because its signing job builds the Mac product. A direct push to main
+      # has no other check, so it builds.
+      - name: Decide whether this run builds the Apple apps
+        id: apple
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+          SKIP: ${{ inputs.skip_apple_builds }}
+        run: |
+          build=true
+          if [[ "$SKIP" == true || ( "$EVENT_NAME" == pull_request && "$DRAFT" == true ) ]]; then
+            build=false
+          elif [[ "$EVENT_NAME" == push ]]; then
+            merged=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
+              --jq '[.[] | select(.merged_at != null)] | length' || echo 0)
+            if [[ "$merged" -gt 0 ]]; then build=false; fi
+          fi
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+          echo "Apple builds: $build" >&2
 
   # The three app builds run side by side on separate runners.
   chromium-host:
@@ -182,17 +216,7 @@ jobs:
 
       - uses: ./.github/actions/prepare-apple-build
 
-      - name: Check Swift formatting
-        run: |
-          python3 - <<'PYTHON'
-          import subprocess
-          paths = subprocess.check_output(["git", "ls-files", "-z", "*.swift"]).decode().split("\0")
-          paths = [path for path in paths if path and "/Generated/" not in path]
-          subprocess.run(["xcrun", "swift-format", "lint", "--strict", "--configuration", ".swift-format", *paths], check=True)
-          PYTHON
-
-      - name: Test script contracts with macOS tools
-        run: python3 -m unittest discover -s Scripts/Tests
+      - uses: ./.github/actions/check-sources
 
       - name: Build Chromium product host
         run: |
@@ -234,15 +258,21 @@ jobs:
 
       - uses: ./.github/actions/prepare-apple-build
 
-      - name: Build macOS
+      # One Release build compiles the app and CrestTests without launching the
+      # hosted suite, which stays a manual run. CREST_TEST_FIXTURES compiles in
+      # the fixtures the tests use; only this command passes it, so shipped
+      # builds never carry them.
+      - name: Build macOS and its tests
         run: |
-          xcodebuild build \
+          xcodebuild build-for-testing \
             -project Crest.xcodeproj \
             -scheme Crest \
             -configuration Release \
-            -destination 'generic/platform=macOS' \
+            -destination 'platform=macOS,arch=arm64' \
             -derivedDataPath "$RUNNER_TEMP/crest-build-derived-data" \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_TESTABILITY=YES \
+            'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) CREST_TEST_FIXTURES'
 
       - name: Remove generated build data
         if: always()
@@ -265,36 +295,29 @@ jobs:
       # The Chromium host job lints Swift and tests the script contracts with
       # macOS tools whenever it runs; an iOS-only change skips that job, so
       # this one does both instead.
-      - name: Check Swift formatting
+      - uses: ./.github/actions/check-sources
         if: needs.changes.outputs.mac != 'true'
-        run: |
-          python3 - <<'PYTHON'
-          import subprocess
-          paths = subprocess.check_output(["git", "ls-files", "-z", "*.swift"]).decode().split("\0")
-          paths = [path for path in paths if path and "/Generated/" not in path]
-          subprocess.run(["xcrun", "swift-format", "lint", "--strict", "--configuration", ".swift-format", *paths], check=True)
-          PYTHON
 
-      - name: Test script contracts with macOS tools
-        if: needs.changes.outputs.mac != 'true'
-        run: python3 -m unittest discover -s Scripts/Tests
-
-      - name: Build iOS
+      # One Release build compiles the app and CrestMobileTests without running
+      # them, with the test fixtures compiled in as in the macOS job.
+      - name: Build iOS and its tests
         run: |
-          xcodebuild build \
+          xcodebuild build-for-testing \
             -project Crest.xcodeproj \
             -scheme CrestMobile \
             -configuration Release \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/crest-build-derived-data" \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            ENABLE_TESTABILITY=YES \
+            'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) CREST_TEST_FIXTURES'
 
       - name: Remove generated build data
         if: always()
         run: find "$RUNNER_TEMP/crest-build-derived-data" -depth -delete 2>/dev/null || true
 
-  website:
-    name: Website and Help Center
+  help-center:
+    name: Help Center
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

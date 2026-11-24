@@ -26,7 +26,7 @@ struct BrowserSpaceAccessView: View {
         ScrollView {
             accessContent
                 .frame(maxWidth: BrowserSpaceAccessLayout.maximumContentWidth)
-                .padding(24)
+                .padding(CrestSpacing.extraExtraLarge)
                 .frame(maxWidth: .infinity)
         }
         .defaultScrollAnchor(.top, for: .initialOffset)
@@ -42,8 +42,8 @@ struct BrowserSpaceAccessView: View {
     }
 
     private var accessContent: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 16) {
+        VStack(spacing: CrestSpacing.extraExtraLarge) {
+            VStack(spacing: CrestSpacing.large) {
                 BrowserSpaceSymbolArtwork(
                     identity: space,
                     size: BrowserSpaceAccessLayout.iconSize,
@@ -52,7 +52,7 @@ struct BrowserSpaceAccessView: View {
 
                 VStack(spacing: 6) {
                     Text(space.name)
-                        .font(.title.weight(.semibold))
+                        .font(CrestTypography.display(BrowserSpaceAccessLayout.nameSize, relativeTo: .title))
                         .multilineTextAlignment(.center)
                         .accessibilityAddTraits(.isHeader)
 
@@ -68,7 +68,7 @@ struct BrowserSpaceAccessView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            VStack(spacing: 12) {
+            VStack(spacing: CrestSpacing.medium) {
                 Button {
                     Task { await accessController.unlock(space) }
                 } label: {
@@ -76,8 +76,7 @@ struct BrowserSpaceAccessView: View {
                         isAuthenticating: accessController.isAuthenticating(space)
                     )
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .buttonStyle(.crestPrimary)
                 .frame(
                     maxWidth: dynamicTypeSize.isAccessibilitySize
                         ? .infinity : BrowserSpaceAccessLayout.maximumActionWidth
@@ -120,7 +119,7 @@ struct BrowserSpaceAccessView: View {
                         Label("Switch Space", systemImage: "square.grid.2x2")
                     }
                     .crestMenuActionLabelStyle()
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.crestSecondary)
                     .accessibilityIdentifier("switch-private-space")
                 }
             }
@@ -133,10 +132,12 @@ struct BrowserSpaceAccessView: View {
             if presentation == .contentOverlay, !reduceTransparency {
                 CrestSurfaceLayer(shape: Rectangle())
             } else {
-                Rectangle().fill(.background)
+                Rectangle().fill(CrestBrandTheme.canvas)
             }
             BrowserSpaceBannerBackground(branding: space.branding)
-                .opacity(reduceTransparency ? 0.04 : 0.1)
+                .opacity(
+                    reduceTransparency
+                        ? BrowserSpaceAccessLayout.opaqueBackgroundOpacity : BrowserSpaceAccessLayout.backgroundOpacity)
         }
         .ignoresSafeArea()
     }

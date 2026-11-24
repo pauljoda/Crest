@@ -6,7 +6,7 @@ enum BrowserWebPageSurfaceMetrics {
     static let infoBarHorizontalPadding: CGFloat = 14
     static let infoBarVerticalPadding: CGFloat = 10
     static let infoBarMaximumWidth: CGFloat = 640
-    static let infoBarCornerRadius: CGFloat = 16
+    static let infoBarCornerRadius = CrestRadius.card
     static let initialLoadingSpacing = CrestSpacing.small
     static let regionCaptureZIndex: Double = 20
     static let sharePickerZIndex: Double = 25
@@ -16,8 +16,6 @@ enum BrowserWebPageSurfaceMetrics {
     static let sharePickerPadding: CGFloat = 14
     static let sharePickerSpacing = CrestSpacing.medium
     static let sharePickerStrokeWidth: CGFloat = 0.5
-    static let sharePickerShadowRadius: CGFloat = 14
-    static let sharePickerShadowOffset: CGFloat = 6
     static let sharePickerHeaderSpacing: CGFloat = 10
     static let sharePickerHeaderIconSize: CGFloat = 24
     static let sharePickerCloseControlSize: CGFloat = 28
@@ -39,14 +37,13 @@ enum BrowserWebPageSurfaceMetrics {
     static let feedbackZIndex: Double = 30
     static let feedbackHorizontalPadding: CGFloat = 14
     static let feedbackHeight: CGFloat = 38
-    static let feedbackShadowOpacity = 0.18
-    static let feedbackShadowRadius: CGFloat = 14
-    static let feedbackShadowY: CGFloat = 6
     static let feedbackTopPadding = CrestSpacing.medium
     /// The agent's pointer: its arrow, the tag beside it, the ripple of a
     /// press, how it glides between points and how long it stays once the
     /// agent pauses.
     static let agentPointerSize: CGFloat = 20
+    /// The soft edge that keeps the arrow readable over any page.
+    static let agentPointerShadowRadius: CGFloat = 1
     static let agentPointerTagOffset = CGSize(width: 16, height: 18)
     static let agentPointerTagHorizontalPadding: CGFloat = 8
     static let agentPointerTagVerticalPadding: CGFloat = 3

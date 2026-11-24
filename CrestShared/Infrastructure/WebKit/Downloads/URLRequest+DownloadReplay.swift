@@ -7,7 +7,7 @@ extension URLRequest {
     /// cannot be replayed: anything but HTTP or HTTPS, or a streamed body.
     var replayableDownloadRequest: URLRequest? {
         guard let url,
-            ["http", "https"].contains(url.scheme?.lowercased()),
+            url.webScheme != nil,
             httpBodyStream == nil
         else { return nil }
 

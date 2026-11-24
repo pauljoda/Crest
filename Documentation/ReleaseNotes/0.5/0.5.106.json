@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-11-private-favicon-loading",
+      "category": "fixed",
+      "message": "Keep page addresses and sign-in cookies private when discovering site icons, and stop oversized icon downloads early"
+    }
+  ]
+}

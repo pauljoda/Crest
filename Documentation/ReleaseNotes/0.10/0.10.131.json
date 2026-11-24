@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "mac-chrome-controls-design-system",
+      "category": "improved",
+      "message": "The developer toolbar's buttons, the extension side panel's close button and the engine choices in Settings highlight under the pointer like Crest's other controls, and disclosure arrows in site settings and Privacy point the right way in right-to-left languages.",
+      "platforms": ["mac"]
+    }
+  ]
+}

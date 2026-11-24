@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "2026-09-08-space-swipe-travel-boundaries",
+      "category": "fixed",
+      "message": "Stop long Space swipes at their destination without sliding past and returning"
+    }
+  ]
+}

@@ -8,15 +8,16 @@ struct BrowserOnboardingWindow: View {
     /// Closes the window setup shows in.
     private let closeWindow: () -> Void
     /// Hands setup over to Crest once it finished: the window setup was
-    /// opened from, or the launch it held back, comes in behind setup, which
-    /// then fades away over it and closes.
-    private let openBrowser: () -> Void
+    /// opened from, or the launch it held back, comes in behind setup and
+    /// draws there; then setup runs the closure it was given, and fades away
+    /// over it and closes.
+    private let openBrowser: (_ handingOver: @escaping () -> Void) -> Void
 
     @State private var flow: BrowserOnboardingFlow
     /// How long the welcome has waited on iCloud's check.
     @State private var cloudWait = BrowserOnboardingCloudWait()
-    /// Whether setup finished and its preview is growing into the window
-    /// Crest opens in its place.
+    /// Whether setup finished and its preview is moving into the place of
+    /// the window Crest opened behind it.
     @State private var isTakingOver = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -28,7 +29,7 @@ struct BrowserOnboardingWindow: View {
         spaceAccess: BrowserSpaceAccessController,
         extensionInstaller: (any BrowserImportedExtensionInstalling)?,
         closeWindow: @escaping () -> Void,
-        openBrowser: @escaping () -> Void
+        openBrowser: @escaping (_ handingOver: @escaping () -> Void) -> Void
     ) {
         self.init(
             request: request,
@@ -47,7 +48,7 @@ struct BrowserOnboardingWindow: View {
         spaceAccess: BrowserSpaceAccessController,
         flow: BrowserOnboardingFlow,
         closeWindow: @escaping () -> Void,
-        openBrowser: @escaping () -> Void
+        openBrowser: @escaping (_ handingOver: @escaping () -> Void) -> Void
     ) {
         self.request = request
         self.cloudSync = cloudSync
@@ -84,32 +85,31 @@ struct BrowserOnboardingWindow: View {
         flow.completeSetup(progress: progress, spaceAccess: spaceAccess, onCompleted: takeOver)
     }
 
-    /// Grows the preview over the steps until it fills the window, then hands
-    /// over to Crest, which opens in the window's place as setup fades away.
+    /// Hands over to Crest, which opens its window behind setup and draws
+    /// there first. Then the preview moves into that window's place as the
+    /// steps slide away and setup fades into it. Nothing in setup lays out
+    /// again on the way, so the hand-over keeps the screen's pace.
     private func takeOver() {
-        guard !reduceMotion else {
-            isTakingOver = true
-            openBrowser()
-            return
-        }
-        withAnimation(CrestMotion.onboardingStep) { isTakingOver = true }
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(CrestMotion.onboardingStepTransition))
-            openBrowser()
+        openBrowser {
+            withAnimation(CrestMotion.onboardingHandOver.unlessReducingMotion(reduceMotion)) {
+                isTakingOver = true
+            }
         }
     }
 }
 
-#Preview("Onboarding Window") {
-    let fixture = BrowserOnboardingWindowPreviewFixture()
-    BrowserOnboardingWindow(
-        request: fixture.request,
-        cloudSync: fixture.cloudSync,
-        progress: fixture.progress,
-        spaceAccess: fixture.spaceAccess,
-        flow: fixture.flow,
-        closeWindow: {},
-        openBrowser: {}
-    )
-    .frame(width: 980, height: 660)
-}
+#if DEBUG
+    #Preview("Onboarding Window") {
+        let fixture = BrowserOnboardingWindowPreviewFixture()
+        BrowserOnboardingWindow(
+            request: fixture.request,
+            cloudSync: fixture.cloudSync,
+            progress: fixture.progress,
+            spaceAccess: fixture.spaceAccess,
+            flow: fixture.flow,
+            closeWindow: {},
+            openBrowser: { _ in }
+        )
+        .frame(width: 980, height: 660)
+    }
+#endif

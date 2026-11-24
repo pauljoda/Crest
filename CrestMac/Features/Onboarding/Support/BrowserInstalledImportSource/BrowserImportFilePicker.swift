@@ -8,10 +8,10 @@ enum BrowserImportFilePicker {
     ) {
         let panel = NSOpenPanel()
         let dataDirectory = application.defaultDataDirectory
-        panel.title = "Allow Crest to Read \(application.title)"
+        panel.title = String(localized: "Allow Crest to Read \(application.title)")
         panel.message =
             "Crest has located \(application.title)'s data folder. Click Allow Access to build your review—there is nothing to find or choose."
-        panel.prompt = "Allow Access"
+        panel.prompt = String(localized: "Allow Access")
         panel.directoryURL = dataDirectory
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = true

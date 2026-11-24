@@ -38,7 +38,7 @@ struct MobileOnboardingSyncFeaturePage: View {
                         height: MobileOnboardingLayout.syncSymbolFrame
                     )
                     .background(
-                        Color(uiColor: .secondarySystemBackground),
+                        BrowserSetupPaper.raisedFill,
                         in: .circle
                     )
                     .accessibilityHidden(true)

@@ -1,26 +1,24 @@
 import SwiftUI
 
+/// A glyph button of the phone's floating toolbar, on Liquid Glass.
 struct MobileCompactIconButton: View {
+    // MARK: - Variables
+
     let title: String
     let systemImage: String
     var enabled = true
+    /// Whether the button stands on glass of its own, rather than on the
+    /// glass of the group it sits in.
+    var wearsGlass = true
     let action: () -> Void
+
+    // MARK: - Actions - Drawing
 
     var body: some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .frame(
-                    width: CrestLayout.minimumHitTarget,
-                    height: CrestLayout.minimumHitTarget
-                )
-                .contentShape(.circle)
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(
-            enabled
-                ? Color.primary
-                : Color.secondary.opacity(CrestOpacity.controlDisabledForeground)
-        )
+        .buttonStyle(CrestGlassButtonStyle(wearsGlass: wearsGlass))
         .disabled(!enabled)
         .accessibilityLabel(title)
     }

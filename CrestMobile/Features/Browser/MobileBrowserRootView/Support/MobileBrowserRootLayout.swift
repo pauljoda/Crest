@@ -2,7 +2,7 @@ import CoreGraphics
 
 /// Feature-specific chrome geometry; cross-feature hit targets come from `CrestLayout`.
 enum MobileBrowserChromeLayout {
-    static let compactToolbarSpacing: CGFloat = 8
+    static let compactToolbarSpacing = CrestSpacing.small
     static let compactToolbarHorizontalPadding: CGFloat = 10
     static let compactToolbarVerticalPadding: CGFloat = 6
     static let compactToolbarSymbolSize: CGFloat = 16
@@ -23,14 +23,14 @@ enum MobileBrowserChromeLayout {
     /// shared `BrowserFindBarMetrics` touch profile.
     static let regularFindMaximumWidth: CGFloat = 440
     static let compactFindHorizontalPadding: CGFloat = 10
-    static let regularFindHorizontalPadding: CGFloat = 12
-    static let regularFindTopPadding: CGFloat = 12
+    static let regularFindHorizontalPadding = CrestSpacing.medium
+    static let regularFindTopPadding = CrestSpacing.medium
     static let compactFindToolbarGap: CGFloat = 14
-    static let findFallbackBottomPadding: CGFloat = 12
+    static let findFallbackBottomPadding = CrestSpacing.medium
 
     static let historyDividerHeight: CGFloat = 18
     static let historyDividerOpacity = 0.24
-    static let historyCapsuleHorizontalPadding: CGFloat = 2
+    static let historyCapsuleHorizontalPadding = CrestSpacing.extraExtraSmall
 }
 
 /// Geometry and timing owned by the mobile browser composition shell.
@@ -46,7 +46,7 @@ enum MobileBrowserRootLayout {
     /// top edge, so a rounded corner as large as iPhone Duo's clears it.
     static let displayCornerClearance: CGFloat = 40
 
-    static let compactOverlayTopPadding: CGFloat = 12
+    static let compactOverlayTopPadding = CrestSpacing.medium
     static let regularOverlayTopPadding: CGFloat = 18
 
     static let paletteLayer: Double = 10
@@ -61,24 +61,11 @@ enum MobileBrowserRootPreferences {
     /// Keep the existing key so current installs retain their preferred width.
     /// The value now applies to every expanded iOS layout, not only iPad.
     static let adaptiveSidebarWidthKey = "crest.sidebar.width.ipad"
-
-    /// Whether a narrow window may float its sidebar over the page instead of
-    /// keeping the full-screen tab viewer. Off unless the person allows it.
-    static let allowsFloatingSidebarKey = "crest.sidebar.allows-floating"
-
-    @MainActor
-    static var allowsFloatingSidebar: Bool {
-        BrowserChromeAppearancePreference.defaults.bool(forKey: allowsFloatingSidebarKey)
-    }
 }
 
 enum MobileCompactDomainChipLayout {
     static let visibleHeight: CGFloat = 36
     static let minimumHitTarget = CrestLayout.minimumHitTarget
     static let horizontalPadding: CGFloat = 14
-    static let outerHorizontalPadding: CGFloat = 12
-}
-
-enum MobileCompactTabViewerLayout {
-    static let showsTopAddressBar = false
+    static let outerHorizontalPadding = CrestSpacing.medium
 }

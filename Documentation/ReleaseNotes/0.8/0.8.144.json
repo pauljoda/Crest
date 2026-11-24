@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "extension-popups-stay-open-for-system-prompts",
+      "category": "fixed",
+      "message": "Extension popups, such as a password manager's, now stay open while macOS asks for Touch ID or another app is in front, so unlocking with Touch ID completes.",
+      "platforms": ["mac"]
+    }
+  ]
+}

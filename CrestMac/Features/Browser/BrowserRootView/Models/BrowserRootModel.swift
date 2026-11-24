@@ -156,6 +156,11 @@ extension BrowserRootModel {
             browser.presentStartPageForLaunch()
             address = ""
         }
+        // After an update, the first window opens the release's notes, in
+        // the launch's Start Page when it shows one.
+        if let releasePage = await BrowserReleasePage.dueAtLaunch(in: browser) {
+            browser.openExternalURL(releasePage.url)
+        }
         // Crest's own pages load no web content, so a window opening on one,
         // such as Getting Started after setup, shows it without waiting for
         // the rule lists to compile.
@@ -666,24 +671,24 @@ extension BrowserRootModel {
         shortcuts: BrowserShortcutStore?,
         settings: BrowserSpaceSettingsPresentationState? = nil
     ) -> BrowserCommandPaletteCommandRegistry {
-        BrowserCommandActions(
-            browser: browser,
-            pages: pages,
-            chrome: chrome,
-            windows: windows,
-            spaceAccess: spaceAccess,
-            targetWindowID: windowID,
-            layoutDirection: layoutDirection,
-        )
-        .paletteRegistry(shortcuts: shortcuts) { [weak self] name in self?.openPaletteSettings(name, in: settings) }
+        commandActions(windows: windows, layoutDirection: layoutDirection)
+            .paletteRegistry(shortcuts: shortcuts) { [weak self] destination in
+                self?.openPaletteSettings(destination, in: settings)
+            }
     }
 
-    /// Opens Settings at the page the settings call `name`, which `settings`
-    /// presents.
-    func openPaletteSettings(_ name: String, in settings: BrowserSpaceSettingsPresentationState?) {
-        guard let destination = BrowserSettingsDestination.all.first(where: { $0.name == name }),
-            let space = browser.shownSpace
-        else { return }
+    /// The commands this window runs, by the same routes as the menu bar.
+    func commandActions(windows: BrowserMacWindows?, layoutDirection: LayoutDirection) -> BrowserCommandActions {
+        BrowserCommandActions(
+            browser: browser, pages: pages, chrome: chrome, windows: windows, spaceAccess: spaceAccess,
+            targetWindowID: windowID, layoutDirection: layoutDirection)
+    }
+
+    /// Opens Settings at `destination`, which `settings` presents.
+    func openPaletteSettings(
+        _ destination: BrowserSettingsDestination, in settings: BrowserSpaceSettingsPresentationState?
+    ) {
+        guard let space = browser.shownSpace else { return }
         settings?.present(destination, assignment: BrowserSpaceRuntimeAssignment(space: space))
         browser.openSettings()
         pages.select()

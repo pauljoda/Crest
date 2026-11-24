@@ -4,7 +4,7 @@ import WebKit
 /// One document's notification permission request on the page, answered the
 /// way the core's action for the site's decision says.
 @MainActor
-struct BrowserHostedNotificationPermissionResolution: BrowserHostedNotificationRequestResponder {
+struct BrowserHostedNotificationPermissionResolution {
     // MARK: - Variables
 
     let page: BrowserPage

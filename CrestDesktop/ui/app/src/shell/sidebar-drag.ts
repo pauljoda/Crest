@@ -6,7 +6,7 @@ import {
   DropOnSpace,
   type DropTargetList,
   DropTargets,
-  type Intent,
+  type SessionIntent,
   messageOfRejection,
   type SelectedTabs,
   SelectionPreview,
@@ -139,7 +139,7 @@ export function useSidebarLift(session: Session, spaceId: string, selectionFollo
 
   useEffect(() => end, [end, spaceId]);
 
-  const intentFor = useCallback((aim: DropAim, selection: TabSelection): Intent => {
+  const intentFor = useCallback((aim: DropAim, selection: TabSelection): SessionIntent => {
     const { workspaceId, windowId } = session;
     switch (aim.kind) {
       case "list":

@@ -5,64 +5,10 @@ protocol BrowserWebKitFeatureFlagPersisting: AnyObject {
     func save(_ overrides: [String: BrowserWebKitFeatureFlagOverride])
 }
 
-protocol BrowserInactiveSchedulingPolicyPersisting: AnyObject {
-    func load() -> BrowserInactiveSchedulingPolicy
-    func save(_ policy: BrowserInactiveSchedulingPolicy)
-}
-
-final class UserDefaultsBrowserInactiveSchedulingPolicyPersistence:
-    BrowserInactiveSchedulingPolicyPersisting
-{
-    static let currentKey = "crest.webkit-inactive-scheduling-policy.v1"
-
-    private let defaults: UserDefaults
-    private let key: String
-
-    init(defaults: UserDefaults = .standard, key: String = currentKey) {
-        self.defaults = defaults
-        self.key = key
-    }
-
-    func load() -> BrowserInactiveSchedulingPolicy {
-        guard
-            let rawValue = defaults.string(forKey: key),
-            let policy = BrowserInactiveSchedulingPolicy(rawValue: rawValue)
-        else {
-            return .suspend
-        }
-        return policy
-    }
-
-    func save(_ policy: BrowserInactiveSchedulingPolicy) {
-        defaults.set(policy.rawValue, forKey: key)
-    }
-}
-
-final class InMemoryBrowserInactiveSchedulingPolicyPersistence:
-    BrowserInactiveSchedulingPolicyPersisting
-{
-    private(set) var policy: BrowserInactiveSchedulingPolicy
-
-    init(policy: BrowserInactiveSchedulingPolicy = .suspend) {
-        self.policy = policy
-    }
-
-    func load() -> BrowserInactiveSchedulingPolicy {
-        policy
-    }
-
-    func save(_ policy: BrowserInactiveSchedulingPolicy) {
-        self.policy = policy
-    }
-}
-
 final class UserDefaultsBrowserWebKitFeatureFlagPersistence:
     BrowserWebKitFeatureFlagPersisting
 {
     static let currentKey = "crest.webkit-feature-flag-overrides.v1"
-    // This preference has its own storage revision so a default-policy change
-    // can invalidate its saved choice without resetting unrelated WebKit flags.
-    static let pageRenderingStorageKey = "PreferPageRenderingUpdatesNear60FPSEnabled.v2"
 
     private let defaults: UserDefaults
     private let key: String
@@ -79,28 +25,26 @@ final class UserDefaultsBrowserWebKitFeatureFlagPersistence:
         guard let storedValues = defaults.dictionary(forKey: key) else {
             return [:]
         }
+        // The 60 frames a second flag, in any slot, is the page preference
+        // the core keeps; the device store carried it once.
         return storedValues.reduce(into: [:]) { result, entry in
-            let pageRenderingKey = BrowserWebKitFeatureFlagStore.preferPageRenderingUpdatesNear60FPSKey
-            // The rendering preference is read only from its versioned slot.
-            guard entry.key != pageRenderingKey else { return }
-            guard let rawValue = entry.value as? String,
+            guard !entry.key.hasPrefix(BrowserWebKitFeatureFlagStore.preferPageRenderingUpdatesNear60FPSKey),
+                let rawValue = entry.value as? String,
                 let override = BrowserWebKitFeatureFlagOverride(rawValue: rawValue)
             else { return }
-            let featureKey = entry.key == Self.pageRenderingStorageKey ? pageRenderingKey : entry.key
-            result[featureKey] = override
+            result[entry.key] = override
         }
     }
 
+    /// Saves `overrides`, keeping the frame-rate slot an earlier release
+    /// wrote, so that release still finds it.
     func save(_ overrides: [String: BrowserWebKitFeatureFlagOverride]) {
-        guard !overrides.isEmpty else {
+        let slot = BrowserLegacyDeviceDefaults.frameRateSlot
+        var storedValues: [String: Any] = overrides.mapValues(\.rawValue)
+        storedValues[slot] = defaults.dictionary(forKey: key)?[slot]
+        guard !storedValues.isEmpty else {
             defaults.removeObject(forKey: key)
             return
-        }
-        let storedValues = overrides.reduce(into: [String: String]()) { result, entry in
-            let storageKey =
-                entry.key == BrowserWebKitFeatureFlagStore.preferPageRenderingUpdatesNear60FPSKey
-                ? Self.pageRenderingStorageKey : entry.key
-            result[storageKey] = entry.value.rawValue
         }
         defaults.set(storedValues, forKey: key)
     }

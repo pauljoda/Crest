@@ -11,7 +11,7 @@ public sealed record TogglePin(Guid WorkspaceId, Guid SpaceId, Guid TabId) : Ses
     /// Moves a pinned tab to the open tabs and any other tab to the pinned
     /// tabs, each at the end of its section.
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
-        var pinned = workspace.Editable(turn.Basis, SpaceId).Tabs.FirstOrDefault(tab => tab.Id == TabId)?.Placement == TabPlacement.Pinned;
+        var pinned = workspace.Editable(turn.Basis, SpaceId).Tabs.FirstOrDefault(tab => tab.Id == TabId)?.IsPinned == true;
         return new MoveTab(WorkspaceId, SpaceId, TabId,
             pinned ? TabPlacement.Current : TabPlacement.Pinned, FolderId: null, BeforeTabId: null, LeavesSplit: false)
             .Edit(workspace, turn);

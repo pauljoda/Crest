@@ -3,6 +3,8 @@ using System.Text.Json.Nodes;
 using CrestCore.Application;
 using CrestCore.Contracts;
 
+using CrestCore.Tests.Session;
+
 using Xunit;
 
 namespace CrestCore.Tests;
@@ -112,7 +114,7 @@ public sealed partial class BrowserContractsTests {
             journal.Pending.Order(StringComparer.Ordinal));
         Assert.All(journal.Values(SyncRecordKind.Space).Concat(journal.Values(SyncRecordKind.Tab)),
             value => Assert.Matches("^[0-9a-f]{16}$", value["orderToken"]!.GetValue<string>()));
-        var repaired = NativeSessionMaintenance.Repair(Canonical(session), At(1_000_000), ids: new TestIds())["session"]!;
+        var repaired = StoredSessionMaintenance.Repair(Canonical(session), At(1_000_000), ids: new TestIds())["session"]!;
         Assert.Equal(StoredSessionCodec.DecodeSession(repaired), StoredSessionCodec.DecodeSession(journal.Materialize(session)));
     }
 

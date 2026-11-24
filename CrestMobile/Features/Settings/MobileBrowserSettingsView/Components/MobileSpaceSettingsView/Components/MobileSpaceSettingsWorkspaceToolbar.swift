@@ -3,6 +3,10 @@ import SwiftUI
 /// The tab workspace keeps Space selection and Appearance / Details visible
 /// while the shared crest editor scrolls below it.
 struct MobileSpaceSettingsWorkspaceToolbar: View {
+    /// The Appearance / Details picker's width where the toolbar has room
+    /// for everything on one line.
+    private static let sectionPickerWidth: CGFloat = 220
+
     let browser: BrowserStore
     @Binding var selectedSpaceID: UUID?
     @Binding var section: BrowserSpaceEditorSection
@@ -12,16 +16,16 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 16) {
+            HStack(spacing: CrestSpacing.large) {
                 identity
                 spacePicker
                 Spacer(minLength: 0)
-                sectionPicker.frame(width: 220)
+                sectionPicker.frame(width: Self.sectionPickerWidth)
                 spaceOrderControls
                 spaceActions
                 addSpaceButton
             }
-            VStack(spacing: 12) {
+            VStack(spacing: CrestSpacing.medium) {
                 HStack {
                     identity
                     Spacer(minLength: CrestSpacing.small)
@@ -36,14 +40,14 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
                 }
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-        .background(BrowserSettingsCanvas.card)
-        .accessibilityIdentifier("space-settings-toolbar")
+        .padding(.horizontal, CrestSpacing.extraLarge)
+        .padding(.vertical, CrestSpacing.medium)
+        .background(CrestBrandTheme.flyout)
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.spaceSettingsToolbar)
     }
 
     private var identity: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: CrestSpacing.small) {
             CrestIconTile(
                 systemImage: BrowserSettingsDestination.spaces.symbol,
                 color: BrowserSettingsDestination.spaces.color,
@@ -72,7 +76,7 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
                 .labelsHidden()
             }
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: CrestSpacing.extraSmall) {
                 if let space = selectedSpaceID.flatMap({ browser.spaceModel($0) }) {
                     BrowserSpaceIdentityLabel(space: space)
                 }
@@ -86,7 +90,7 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
         .layoutPriority(1)
         .accessibilityLabel("Space")
         .accessibilityValue(selectedSpaceID.flatMap { browser.spaceModel($0)?.settings.name } ?? "")
-        .accessibilityIdentifier("space-settings-picker")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.spaceSettingsPicker)
     }
 
     private var sectionPicker: some View {
@@ -96,7 +100,7 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
             }
         }
         .pickerStyle(.segmented)
-        .accessibilityIdentifier("space-settings-section-picker")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.spaceSettingsSectionPicker)
     }
 
     /// What can be done to the selected Space's group: a new Sub-Space,
@@ -116,14 +120,10 @@ struct MobileSpaceSettingsWorkspaceToolbar: View {
         } label: {
             Label("Space Actions", systemImage: "ellipsis")
                 .labelStyle(.iconOnly)
-                .foregroundStyle(.primary)
-                .frame(width: CrestLayout.minimumHitTarget, height: CrestLayout.minimumHitTarget)
-                .contentShape(.rect)
         }
-        .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .capsule)
+        .buttonStyle(.crestIcon())
         .disabled(selectedSpaceID == nil)
-        .accessibilityIdentifier("space-settings-actions")
+        .accessibilityIdentifier(BrowserMobileAccessibilityID.spaceSettingsActions)
     }
 
     private var addSpaceButton: some View {

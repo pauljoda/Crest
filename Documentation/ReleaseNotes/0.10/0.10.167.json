@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "default-browser-status-core-tone",
+      "category": "internal",
+      "message": "The default browser status carries the core's status tone, and the update phase no longer keeps a tone nothing draws."
+    }
+  ]
+}

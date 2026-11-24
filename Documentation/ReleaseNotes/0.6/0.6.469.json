@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "command-palette-animation-setting",
+      "category": "new",
+      "message": "You can turn off the animation from the address field into the command palette in Look and Feel, so the palette opens right away."
+    }
+  ]
+}

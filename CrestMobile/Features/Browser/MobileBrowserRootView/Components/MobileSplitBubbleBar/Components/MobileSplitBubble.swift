@@ -37,11 +37,8 @@ struct MobileSplitBubble: View {
         Button(action: show) {
             TabStateFaviconView(tab: card, favicons: favicons, profileID: profileID, size: Self.iconSize)
                 .opacity(iconOpacity)
-                .frame(width: Self.diameter, height: Self.diameter)
-                .contentShape(.circle)
         }
-        .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .circle)
+        .buttonStyle(CrestGlassButtonStyle(diameter: Self.diameter))
         .scaleEffect(scale)
         .allowsHitTesting(isNearest && distance >= 1)
         .accessibilityLabel(card.shownTitle)

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "app-mirrors-and-single-seams-folded",
+      "category": "internal",
+      "message": "Swift copies of the core's direction, playback, inspector and workspace sets are gone, along with protocols that had one conformer and files that held a single small type."
+    }
+  ]
+}
