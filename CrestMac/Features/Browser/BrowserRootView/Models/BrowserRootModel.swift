@@ -211,9 +211,16 @@ extension BrowserRootModel {
     /// Shows the address the page of the tab the window shows reads in the
     /// core, or its tab's, in the address field, unless the person is editing
     /// it, the Space is locked or no page shows that tab; another window's or
-    /// Space's page never replaces what the field holds.
+    /// Space's page never replaces what the field holds. While a Peek is open
+    /// over the tab, the field shows the Peek's address instead, once it has
+    /// one.
     func synchronizePageMetadata() {
         guard !isAddressEditing, !selectedSpaceIsLocked, let page = selectedPage else { return }
+        if let peekPage = pages.peekPage {
+            guard let url = peekPage.live.displayURL else { return }
+            address = url.absoluteString
+            return
+        }
         address = (page.live.displayURL ?? browser.shownTab?.address)?.absoluteString ?? ""
     }
 

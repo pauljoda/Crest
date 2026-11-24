@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "address-field-follows-open-peek",
+      "category": "improved",
+      "message": "While a Peek is open, the address field shows the Peek's address, and its lock, Copy URL button and Site Controls are for the Peek's page. When the Peek closes or becomes a tab, the field shows the tab's address again. Thanks to Jared Volpe (@plainspace).",
+      "platforms": ["mac"]
+    }
+  ]
+}
