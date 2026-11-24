@@ -76,11 +76,15 @@ enum BrowserCredentialPromptDestinationPresentation: Equatable, Sendable {
 struct BrowserCredentialPromptDismissAction: Hashable, Sendable {
     // MARK: - Variables
 
-    static let notNow = BrowserCredentialPromptDismissAction(name: "notNow", title: "Not Now")
-    static let done = BrowserCredentialPromptDismissAction(name: "done", title: "Done")
+    static let notNow = BrowserCredentialPromptDismissAction(name: "notNow", title: "Not Now", holdsCandidate: true)
+    static let done = BrowserCredentialPromptDismissAction(name: "done", title: "Done", holdsCandidate: false)
 
     let name: String
     let title: LocalizedStringResource
+    /// Whether answering with it keeps the candidate for the address field's
+    /// key, so the person can still save it: Not Now does, Done after a save
+    /// doesn't.
+    let holdsCandidate: Bool
 
     // MARK: - Actions - Identity
 

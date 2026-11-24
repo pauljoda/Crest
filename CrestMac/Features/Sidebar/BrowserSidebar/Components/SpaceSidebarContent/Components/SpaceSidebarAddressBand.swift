@@ -44,6 +44,9 @@ struct SpaceSidebarAddressBand: View {
             }
         } trailingAccessory: {
             if let siteControl {
+                if let page = displayedPage, page.credentialHeldSaveCandidate != nil {
+                    BrowserAddressSavePasswordButton(page: page)
+                }
                 if let copyURLPage {
                     BrowserAddressCopyURLButton(page: copyURLPage)
                 }

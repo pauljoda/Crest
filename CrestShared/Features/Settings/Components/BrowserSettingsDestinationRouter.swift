@@ -29,6 +29,9 @@ struct BrowserSettingsDestinationRouter: View {
     /// What a shell that keeps the password manager elsewhere does when the pane
     /// is asked for it.
     var managePasswords: (() -> Void)? = nil
+    /// Opens the import from another browser on this device, where the shell
+    /// offers one.
+    var importFromAnotherBrowser: (() -> Void)? = nil
     /// Absent where the shell has no rebindable command table.
     var shortcuts: BrowserShortcutStore? = nil
     var requestedSpaceID: UUID? = nil
@@ -103,12 +106,15 @@ struct BrowserSettingsDestinationRouter: View {
         case .extensions:
             BrowserEngineExtensionSettingsPane(browser: browser, spaceAccess: spaceAccess)
         case .passwords:
-            BrowserPasswordSettingsPane(
+            BrowserAutofillSettingsPane(
                 browser: browser,
                 spaceAccess: spaceAccess,
                 layout: passwordLayout,
                 searchText: passwordSearchText,
-                manage: managePasswords
+                manage: managePasswords,
+                requestedSpaceID: requestedSpaceID,
+                requestRevision: requestRevision,
+                importFromAnotherBrowser: importFromAnotherBrowser
             )
         case .featureFlags:
             BrowserEngineRegistration.featureFlagsPane(space: featureFlagsSpace, browser: browser)

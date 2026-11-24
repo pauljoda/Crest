@@ -10,7 +10,6 @@ struct BrowserSpaceSettingsTab: Hashable, Identifiable, Sendable {
         case appearance
         case browsing
         case privacy
-        case passwords
         case extensions
     }
 
@@ -28,16 +27,13 @@ struct BrowserSpaceSettingsTab: Hashable, Identifiable, Sendable {
         searchTerms:
             "privacy lock Touch ID password private history retention archive downloads records content blocking ads trackers site permissions camera microphone location notifications"
     )
-    static let passwords = BrowserSpaceSettingsTab(
-        kind: .passwords, name: "passwords", title: "Passwords",
-        searchTerms: "passwords credentials autofill iCloud Keychain import export", destination: .passwords)
     static let extensions = BrowserSpaceSettingsTab(
         kind: .extensions, name: "extensions", title: "Extensions",
         searchTerms: "extensions add-ons Chrome Web Store install remove", destination: .extensions,
         requiredCapability: .extensions)
 
     /// Every page, in tab-bar order.
-    static let all: [BrowserSpaceSettingsTab] = [appearance, browsing, privacy, passwords, extensions]
+    static let all: [BrowserSpaceSettingsTab] = [appearance, browsing, privacy, extensions]
 
     // MARK: - Variables
 

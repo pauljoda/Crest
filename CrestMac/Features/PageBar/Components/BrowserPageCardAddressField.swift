@@ -49,6 +49,9 @@ struct BrowserPageCardAddressField: View {
                 submit: {}
             )
             HStack(spacing: Self.metrics.accessorySpacing) {
+                if let page, page.credentialHeldSaveCandidate != nil {
+                    BrowserAddressSavePasswordButton(page: page)
+                }
                 if let copyURLPage {
                     BrowserAddressCopyURLButton(page: copyURLPage)
                 }

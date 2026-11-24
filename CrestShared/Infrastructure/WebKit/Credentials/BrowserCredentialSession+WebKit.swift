@@ -30,6 +30,18 @@ extension BrowserCredentialSession {
         try await fillGeneratedPassword(password, for: requestID, evaluate: Self.evaluator(in: webView))
     }
 
+    func fillValues(_ values: [BrowserAutofillValue], for requestID: UUID, in webView: WKWebView) async throws {
+        try await fillValues(values, for: requestID, evaluate: Self.evaluator(in: webView))
+    }
+
+    func currentUsername(for requestID: UUID, in webView: WKWebView) async -> String? {
+        await currentUsername(for: requestID, evaluate: Self.evaluator(in: webView))
+    }
+
+    func holdKeys(_ hold: Bool, for requestID: UUID, in webView: WKWebView) async {
+        await holdKeys(hold, for: requestID, evaluate: Self.evaluator(in: webView))
+    }
+
     static func evaluator(in webView: WKWebView) -> Evaluate {
         { [weak webView] body, arguments, frame in
             guard let webView, let frameInfo = frame.handle as? WKFrameInfo else {

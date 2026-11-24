@@ -17,4 +17,7 @@ public sealed record CredentialRowRejection(int RowNumber, CredentialRowFlaw Fla
 /// with `Caution`.
 public sealed record CredentialRowWarning(int RowNumber, CredentialRowCaution Caution);
 
+/// How many rows of a password file `Flaw` leaves out.
+public sealed record CredentialRowFlawCount(CredentialRowFlaw Flaw, int Count);
+
 #endregion

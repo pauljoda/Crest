@@ -14,15 +14,23 @@ public enum CredentialCaptureAction {
     DiscardPending
 }
 
-/// Where a fill request or save candidate takes its username from.
-public enum CredentialUsernameSource { None, Explicit, Hint }
+/// Where a fill request or save candidate takes its username from: the form's
+/// own field, the step before it, or the saved login whose password the
+/// form's current password field holds.
+public enum CredentialUsernameSource { None, Explicit, Hint, CurrentPassword }
 
-/// What one validated form message says, without its credential material. The
-/// platform keeps the username and password values; the core only learns
-/// whether they are present.
+/// What one validated form message says, without its credential material.
+/// `Fields` are the form's inputs as the page script read them, and
+/// `FocusedField` the index of the one a focus came from. `Submission` says
+/// how a submitted form was sent. `FilledUsername` is true when Crest just
+/// filled a username. `FieldRectInTopViewport` says the focused field's
+/// position was measured in the top page's viewport, as a frame the top page
+/// can reach measures it. The platform keeps every value; the core only learns
+/// whether each field has one and who entered it.
 public sealed record CredentialFormFacts(CredentialCaptureEvent Event, CredentialOrigin FrameOrigin,
-    CredentialOrigin TopLevelOrigin, bool IsMainFrame, bool HasFormId, bool HasUsername, bool HasPassword,
-    CredentialPasswordKind? PasswordKind, bool? HasVisiblePasswordField, bool HasFillTarget);
+    CredentialOrigin TopLevelOrigin, bool IsMainFrame, bool HasFormId, IReadOnlyList<FormField> Fields, int? FocusedField,
+    FormSubmission? Submission, bool FilledUsername, bool? HasVisiblePasswordField, bool HasFillTarget,
+    bool FieldRectInTopViewport);
 
 /// Whether a fill may go ahead.
 public sealed record CredentialFillDecision(bool IsAllowed);
@@ -50,6 +58,23 @@ public sealed record CredentialFills(IReadOnlyList<bool> Fills);
 /// Whether a Space's passwords serve a use, or why not, and the Spaces whose
 /// vaults hold them, the one that keeps new passwords first.
 public sealed record CredentialAccessAnswer(CredentialRefusal? Refusal, IReadOnlyList<Guid> Vaults);
+
+/// A saved password's identity and the origin it is saved for.
+public sealed record SavedCredentialOrigin(Guid Id, CredentialOrigin Origin);
+
+/// The saved passwords a `CredentialsToRespell` question named whose origins a
+/// page spells another way, in its order, each with the origin a page spells.
+public sealed record CredentialRespellings(IReadOnlyList<SavedCredentialOrigin> Respelled);
+
+/// What a `PasswordHealth` question found about one saved password: its
+/// concerns, in the order of `PasswordConcern.All`, none for a healthy one,
+/// and the other saved passwords that share its password, in the question's
+/// order, none for one that is not reused.
+public sealed record CredentialHealth(Guid Id, IReadOnlyList<PasswordConcern> Concerns, IReadOnlyList<Guid> SharedWith);
+
+/// The health of each saved password a `PasswordHealth` question named, in
+/// its order. It names no password.
+public sealed record PasswordHealthReport(IReadOnlyList<CredentialHealth> Credentials);
 
 #endregion
 

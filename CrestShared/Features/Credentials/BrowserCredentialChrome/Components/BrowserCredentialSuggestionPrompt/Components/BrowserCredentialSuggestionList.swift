@@ -1,11 +1,13 @@
 import SwiftUI
 
-/// The saved accounts the prompt offers.
+/// The saved accounts the popup offers.
 ///
 /// A pointer shell lets the list grow its panel; a touch shell keeps it inside a
 /// band it scrolls, because the prompt is pushing the page down while it is up.
 struct BrowserCredentialSuggestionList: View {
     let suggestions: [CredentialDescriptor]
+    let selectedID: UUID?
+    let context: BrowserCredentialSuggestionContext
     let metrics: BrowserCredentialPromptMetrics
     let fill: (CredentialDescriptor) -> Void
 
@@ -31,6 +33,8 @@ struct BrowserCredentialSuggestionList: View {
         ForEach(suggestions) { suggestion in
             BrowserCredentialSuggestionRow(
                 suggestion: suggestion,
+                isSelected: suggestion.id == selectedID,
+                context: context,
                 metrics: metrics,
                 fill: { fill(suggestion) }
             )

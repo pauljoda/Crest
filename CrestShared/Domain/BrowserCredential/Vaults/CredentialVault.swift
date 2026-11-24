@@ -2,11 +2,12 @@ import Foundation
 
 // MARK: - Types
 
-/// A Space's saved passwords as settings lists them, and how many more no
-/// longer read back.
+/// A Space's saved passwords as settings lists them, how many more no longer
+/// read back, and what each login keeps beside its password.
 struct CredentialInventory: Sendable {
     let descriptors: [CredentialDescriptor]
     let unreadableCount: Int
+    var extras: [UUID: BrowserCredentialExtrasSummary] = [:]
 }
 
 protocol CredentialVault: Sendable {
@@ -36,6 +37,14 @@ protocol CredentialVault: Sendable {
     func deleteAll(in spaceID: UUID) async throws
     /// Removes the items `unreadableCredentialCount(in:)` counts.
     func deleteUnreadableCredentials(in spaceID: UUID) async throws
+
+    /// The notes and code the login `id` keeps beside its password, or nil
+    /// when it keeps none.
+    func extras(id: UUID, in spaceID: UUID) async throws -> BrowserCredentialExtras?
+    /// Keeps `extras` beside the password of the login `descriptor`
+    /// describes, which must be saved; empty extras remove what it kept.
+    func saveExtras(_ extras: BrowserCredentialExtras, for descriptor: CredentialDescriptor, in spaceID: UUID)
+        async throws
 }
 
 extension CredentialVault {

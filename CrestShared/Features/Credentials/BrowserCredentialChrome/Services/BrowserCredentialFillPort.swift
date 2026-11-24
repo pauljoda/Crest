@@ -42,8 +42,29 @@ struct BrowserCredentialFillPort {
     /// field.
     let fillGeneratedPassword: (String, UUID) async throws -> Void
 
+    /// Puts the values the core planned for a code, an address or a card
+    /// into the fields it named.
+    var fillValues: ([BrowserAutofillValue], UUID) async throws -> Void = { _, _ in }
+
+    /// The login the page last filled, whose code a code step offers first.
+    var lastFilledCredentialID: UUID? = nil
+
+    /// What the form's username field holds now, so a password Crest makes is
+    /// saved under the account it is for.
+    let formUsername: (UUID) async -> String?
+
     /// Closes the prompt without filling anything.
     let dismiss: () -> Void
+
+    /// The latest key the page held back for the prompt on show.
+    let keyPress: BrowserCredentialKeyPress?
+
+    /// Sends the request's field's arrow, Return and Escape keys to the
+    /// prompt while it shows, or gives them back to the page.
+    let holdKeys: (Bool, UUID) -> Void
+
+    /// Opens Settings at the Space's passwords, where the shell can.
+    var openPasswords: (() -> Void)? = nil
 }
 
 extension BrowserCredentialFillPort {
@@ -51,7 +72,7 @@ extension BrowserCredentialFillPort {
 
     /// What a credential fill prompt asks of `page`, whose page content the
     /// shell draws at `contentScale`.
-    init(page: BrowserPlatformPage, contentScale: CGFloat) {
+    init(page: BrowserPlatformPage, contentScale: CGFloat, openPasswords: (() -> Void)? = nil) {
         self.init(
             spaceID: page.spaceID,
             contentScale: contentScale,
@@ -60,6 +81,14 @@ extension BrowserCredentialFillPort {
             fillGeneratedPassword: { password, requestID in
                 try await page.fillGeneratedPassword(password, for: requestID)
             },
-            dismiss: page.dismissCredentialFillRequest)
+            fillValues: { values, requestID in try await page.fillAutofillValues(values, for: requestID) },
+            lastFilledCredentialID: page.lastFilledCredentialID,
+            formUsername: { requestID in await page.credentialFormUsername(for: requestID) },
+            dismiss: page.dismissCredentialFillRequest,
+            keyPress: page.credentialKeyPress,
+            holdKeys: { hold, requestID in
+                Task { @MainActor in await page.holdCredentialKeys(hold, for: requestID) }
+            },
+            openPasswords: openPasswords)
     }
 }

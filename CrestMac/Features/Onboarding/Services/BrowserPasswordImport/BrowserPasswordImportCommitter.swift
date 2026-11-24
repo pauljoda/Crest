@@ -53,7 +53,7 @@ enum BrowserPasswordImportCommitter {
             do {
                 let existing = try await browser.credentialInventory(in: spaceID)
                 let plan = try browser.core.query(
-                    PasswordImportPreview(credentials: credentials, existing: existing.map(ExistingCredential.init)))
+                    PasswordImportPreview(credentials: credentials, existing: existing.map { ExistingCredential($0) }))
                 let review = BrowserCredentialImportReview(
                     plan: plan,
                     existingCredentials: existing,

@@ -2,6 +2,7 @@ import Foundation
 
 actor InMemoryCredentialVault: CredentialVault {
     private var credentialsBySpace: [UUID: [UUID: BrowserCredential]] = [:]
+    private var extrasBySpace: [UUID: [UUID: BrowserCredentialExtras]] = [:]
 
     func descriptors(in spaceID: UUID) -> [CredentialDescriptor] {
         sortedDescriptors(
@@ -16,11 +17,17 @@ actor InMemoryCredentialVault: CredentialVault {
         sortedDescriptors(
             credentialsBySpace[spaceID, default: [:]].values
                 .filter {
-                    $0.descriptor.origin == origin
+                    $0.descriptor.origins.contains(origin)
                         && $0.descriptor.scope == .webForm
                 }
                 .map(\.descriptor)
         )
+    }
+
+    func inventory(in spaceID: UUID) -> CredentialInventory {
+        CredentialInventory(
+            descriptors: descriptors(in: spaceID), unreadableCount: 0,
+            extras: extrasBySpace[spaceID, default: [:]].mapValues(\.summary))
     }
 
     func descriptors(
@@ -66,6 +73,7 @@ actor InMemoryCredentialVault: CredentialVault {
         credentialsBySpace[spaceID] = Dictionary(
             uniqueKeysWithValues: credentials.map { ($0.descriptor.id, $0) }
         )
+        extrasBySpace[spaceID] = extrasBySpace[spaceID]?.filter { credentialsBySpace[spaceID]?[$0.key] != nil }
     }
 
     func setSynchronizable(_ isSynchronizable: Bool, in spaceID: UUID) {
@@ -78,6 +86,7 @@ actor InMemoryCredentialVault: CredentialVault {
 
     func delete(id: UUID, in spaceID: UUID) {
         credentialsBySpace[spaceID]?[id] = nil
+        extrasBySpace[spaceID]?[id] = nil
         if credentialsBySpace[spaceID]?.isEmpty == true {
             credentialsBySpace[spaceID] = nil
         }
@@ -85,9 +94,21 @@ actor InMemoryCredentialVault: CredentialVault {
 
     func deleteAll(in spaceID: UUID) {
         credentialsBySpace[spaceID] = nil
+        extrasBySpace[spaceID] = nil
     }
 
     func deleteUnreadableCredentials(in spaceID: UUID) {}
+
+    func extras(id: UUID, in spaceID: UUID) -> BrowserCredentialExtras? {
+        extrasBySpace[spaceID]?[id]
+    }
+
+    func saveExtras(_ extras: BrowserCredentialExtras, for descriptor: CredentialDescriptor, in spaceID: UUID) throws {
+        guard credentialsBySpace[spaceID]?[descriptor.id] != nil else {
+            throw CredentialVaultError.missingCredential
+        }
+        extrasBySpace[spaceID, default: [:]][descriptor.id] = extras.isEmpty ? nil : extras
+    }
 
     private func sortedDescriptors(_ descriptors: [CredentialDescriptor]) -> [CredentialDescriptor] {
         descriptors.sorted {

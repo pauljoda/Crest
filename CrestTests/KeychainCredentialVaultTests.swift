@@ -185,6 +185,39 @@ final class KeychainCredentialVaultTests: XCTestCase {
         XCTAssertEqual(String(data: remainingItems[0].secret, encoding: .utf8), "changed")
     }
 
+    /// What a login keeps beside its password lives in a companion item: the
+    /// login's own item stays as older builds read it, the list says whether
+    /// it keeps notes and a code, and the companion goes with its login, even
+    /// one an older build deleted.
+    func testNotesAndCodesLiveBesideTheLoginAndGoWithIt() async throws {
+        let spaceID = UUID()
+        let store = InMemoryCredentialKeychainStore()
+        let vault = KeychainCredentialVault(store: store, servicePrefix: "test.crest")
+        let login = descriptor(id: UUID(), spaceID: spaceID, username: "person")
+        let other = descriptor(id: UUID(), spaceID: spaceID, username: "other")
+        let extras = BrowserCredentialExtras(
+            notes: "In the safe.", codeLink: "otpauth://totp/Example?secret=JBSWY3DPEHPK3PXP")
+        for saved in [login, other] {
+            try await vault.save(BrowserCredential(descriptor: saved, password: "secret"), in: spaceID)
+            try await vault.saveExtras(extras, for: saved, in: spaceID)
+        }
+        let service = CredentialKeychainNamespace.service(for: spaceID, prefix: "test.crest")
+        let extrasService = CredentialKeychainNamespace.extrasService(for: spaceID, prefix: "test.crest")
+
+        let inventory = try await vault.inventory(in: spaceID)
+        XCTAssertEqual(inventory.extras[login.id], BrowserCredentialExtrasSummary(hasNotes: true, hasCode: true))
+        let loginItem = try await store.item(account: login.id.uuidString.lowercased(), in: service)
+        XCTAssertEqual(loginItem.map { String(decoding: $0.secret, as: UTF8.self) }, "secret")
+        let read = try await vault.extras(id: login.id, in: spaceID)
+        XCTAssertEqual(read, extras)
+
+        try await vault.delete(id: login.id, in: spaceID)
+        try await store.delete(account: other.id.uuidString.lowercased(), in: service)
+        _ = try await vault.inventory(in: spaceID)
+        let companions = try await store.items(in: extrasService)
+        XCTAssertTrue(companions.isEmpty)
+    }
+
     private func descriptor(
         id: UUID,
         spaceID: UUID,

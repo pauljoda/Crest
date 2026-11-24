@@ -8,9 +8,33 @@ struct BrowserSettingsSpaceDataRequest: Equatable {
     let canRevealSpaceData: Bool
 }
 
+/// The order Settings lists a Space's saved passwords in.
+struct BrowserPasswordSortOrder: Hashable, Identifiable, Sendable {
+    static let name = BrowserPasswordSortOrder(id: "name", title: "Name") { $0.precedesInSettings($1) }
+    static let site = BrowserPasswordSortOrder(id: "site", title: "Website") {
+        $0.origin.host.localizedStandardCompare($1.origin.host) == .orderedAscending
+    }
+    static let lastUsed = BrowserPasswordSortOrder(id: "lastUsed", title: "Last Used") {
+        ($0.lastUsedAt ?? .distantPast) > ($1.lastUsedAt ?? .distantPast)
+    }
+    static let changed = BrowserPasswordSortOrder(id: "changed", title: "Last Changed") {
+        ($0.passwordChangedAt ?? $0.updatedAt) > ($1.passwordChangedAt ?? $1.updatedAt)
+    }
+    static let all = [name, site, lastUsed, changed]
+
+    let id: String
+    let title: LocalizedStringResource
+    let precedes: @Sendable (CredentialDescriptor, CredentialDescriptor) -> Bool
+
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
 /// Shared Space password preferences and manager, configured by each platform's layout.
-struct BrowserPasswordSettingsPane: View {
-    private static let disabledDescription = "Saved passwords stay here until you delete them."
+/// `header` heads the pane where Autofill shows it, with its Space picker and
+/// the choice of what to show.
+struct BrowserPasswordSettingsPane<Header: View>: View {
+    private static var disabledDescription: String { "Saved passwords stay here until you delete them." }
 
     let browser: BrowserStore
     let spaceAccess: BrowserSpaceAccessController
@@ -21,6 +45,11 @@ struct BrowserPasswordSettingsPane: View {
     var manage: (() -> Void)?
     /// The one Space whose passwords the pane shows, or nil to pick one.
     let fixedSpaceID: UUID?
+    /// What heads the pane, where Autofill puts its own picker there.
+    let header: Header
+    /// Opens the import of passwords from another browser on this device,
+    /// where the shell offers it.
+    var importFromAnotherBrowser: (() -> Void)? = nil
 
     @State private var credentials: BrowserCredentialSpaceStore
     @State private var pickedSpaceID: UUID?
@@ -37,6 +66,12 @@ struct BrowserPasswordSettingsPane: View {
     @State private var selectedCredentialIDs: Set<UUID> = []
     @State private var confirmsSelectionDeletion = false
     @State private var confirmsUnreadableRemoval = false
+    @State private var sortOrder = BrowserPasswordSortOrder.name
+    /// The concern the list shows only the logins with, or nil for all.
+    @State private var concernFilter: PasswordConcern?
+    /// Whether the list shows only the logins that make one-time codes.
+    @State private var showsOnlyCodes = false
+    @State private var exportsSelection = false
 
     init(
         browser: BrowserStore,
@@ -44,7 +79,8 @@ struct BrowserPasswordSettingsPane: View {
         layout: BrowserPasswordSettingsLayout,
         searchText: Binding<String> = .constant(""),
         manage: (() -> Void)? = nil,
-        fixedSpaceID: UUID? = nil
+        fixedSpaceID: UUID? = nil,
+        @ViewBuilder header: () -> Header
     ) {
         self.browser = browser
         self.spaceAccess = spaceAccess
@@ -52,6 +88,7 @@ struct BrowserPasswordSettingsPane: View {
         _searchText = searchText
         self.manage = manage
         self.fixedSpaceID = fixedSpaceID
+        self.header = header()
         _credentials = State(
             initialValue: BrowserCredentialSpaceStore(browser: browser)
         )
@@ -101,7 +138,7 @@ struct BrowserPasswordSettingsPane: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text(
-                "The CSV file will contain readable usernames and passwords from only the selected Space. Anyone with the file can read them. Crest will authenticate you before opening the \(layout.exportDestinationName)."
+                "The CSV file will contain readable usernames, passwords and notes from only the selected Space. Anyone with the file can read them. Crest will authenticate you before opening the \(layout.exportDestinationName)."
             )
         }
         .confirmationDialog(
@@ -132,9 +169,19 @@ struct BrowserPasswordSettingsPane: View {
             BrowserCredentialDetailView(
                 browser: browser,
                 spaceAccess: spaceAccess,
-                request: request
+                request: request,
+                changePasswordOnWebsite: { origin in
+                    openChangePasswordPage(for: origin, in: request.spaceAssignment.spaceID)
+                },
+                delete: {
+                    credentialDetailRequest = nil
+                    credentials.delete(request.descriptor, reloading: selectedSpaceID, accessController: spaceAccess)
+                }
             )
             .id(request.id)
+            .onDisappear {
+                Task { await credentials.load(in: selectedSpaceID, accessController: spaceAccess) }
+            }
         }
         .sheet(item: $credentials.importReview) { review in
             BrowserCredentialImportReviewView(
@@ -168,11 +215,8 @@ struct BrowserPasswordSettingsPane: View {
 
     @ViewBuilder
     private var settingsSections: some View {
+        header
         if fixedSpaceID == nil {
-            Section("System passkeys") {
-                BrowserPasskeyAccessView()
-            }
-
             Section {
                 CrestSpaceMenuPicker(
                     "Space",
@@ -207,18 +251,6 @@ struct BrowserPasswordSettingsPane: View {
                             }
                         }
 
-                        if layout.showsExportAction {
-                            Button("Export Passwords…") {
-                                confirmsPlaintextExport = true
-                            }
-                            .disabled(
-                                credentials.descriptors.isEmpty
-                                    || credentials.isPreparingExport
-                            )
-                            .accessibilityIdentifier(
-                                "export-space-passwords"
-                            )
-                        }
                     }
                     .disabled(!space.settings.credentialPreferences.isEnabled)
                 } header: {
@@ -233,11 +265,11 @@ struct BrowserPasswordSettingsPane: View {
 
                 if layout.showsSavedPasswords {
                     Section {
-                        if !credentials.descriptors.isEmpty || !searchText.isEmpty {
-                            CrestSearchField("Search saved passwords", text: $searchText)
-                                .accessibilityIdentifier("saved-password-search")
+                        listBar(space: space)
+                        healthChips
+                        if isSelectingCredentials {
+                            selectionActions
                         }
-                        passwordManagerActions
                         savedPasswords
                         if credentials.unreadableCount > 0 {
                             unreadablePasswords
@@ -248,6 +280,14 @@ struct BrowserPasswordSettingsPane: View {
                         if !credentials.descriptors.isEmpty {
                             Text(passwordCountLabel).crestFormFootnote()
                         }
+                    }
+
+                    neverSavedSites(in: space)
+                }
+
+                if fixedSpaceID == nil || Header.self != EmptyView.self {
+                    Section("System passkeys") {
+                        BrowserPasskeyAccessView()
                     }
                 }
 
@@ -268,58 +308,180 @@ struct BrowserPasswordSettingsPane: View {
         }
     }
 
+    /// The list's search field, its order, and everything else it does,
+    /// in the ⋯ menu.
+    private func listBar(space: SpaceModel) -> some View {
+        HStack(spacing: CrestSpacing.small) {
+            CrestSearchField("Search saved passwords", text: $searchText)
+                .accessibilityIdentifier("saved-password-search")
+            Menu {
+                Picker("Sort By", selection: $sortOrder) {
+                    ForEach(BrowserPasswordSortOrder.all) { order in
+                        Text(order.title).tag(order)
+                    }
+                }
+                .pickerStyle(.inline)
+            } label: {
+                Image(systemName: "arrow.up.arrow.down")
+            }
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Sort By")
+            .accessibilityLabel("Sort By")
+            Menu {
+                Group {
+                    if layout.supportsCredentialFileImport {
+                        Button("Import Passwords…", systemImage: "square.and.arrow.down") {
+                            isChoosingImportFile = true
+                        }
+                        .disabled(
+                            !space.settings.credentialPreferences.isEnabled
+                                || credentials.isPreparingImport
+                                || credentials.isCommittingImport
+                        )
+                        .accessibilityIdentifier("import-space-passwords")
+                    }
+                    if layout.showsExportAction {
+                        Button("Export Passwords…", systemImage: "square.and.arrow.up") {
+                            exportsSelection = false
+                            confirmsPlaintextExport = true
+                        }
+                        .disabled(credentials.descriptors.isEmpty || credentials.isPreparingExport)
+                        .accessibilityIdentifier("export-space-passwords")
+                    }
+                    if let importFromAnotherBrowser {
+                        Button(
+                            "Import from Another Browser…", systemImage: "arrow.down.app",
+                            action: importFromAnotherBrowser)
+                    }
+                    Divider()
+                    Button(
+                        isSelectingCredentials ? "Done Selecting" : "Select",
+                        systemImage: "checkmark.circle"
+                    ) {
+                        isSelectingCredentials.toggle()
+                        if !isSelectingCredentials { selectedCredentialIDs.removeAll() }
+                    }
+                    .disabled(credentials.descriptors.isEmpty || credentials.isDeletingSelection)
+                }
+                .crestMenuActionLabelStyle()
+            } label: {
+                Image(systemName: "ellipsis.circle")
+            }
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("More")
+            .accessibilityLabel("More")
+            .accessibilityIdentifier("saved-password-actions")
+        }
+    }
+
+    /// How many logins have each concern, each a filter for the list.
     @ViewBuilder
-    private var passwordManagerActions: some View {
-        if layout.supportsCredentialFileImport, let space {
-            ViewThatFits {
-                HStack {
-                    importButton(space: space)
-                    Spacer()
-                    selectionButton
-                }
-                VStack(alignment: .leading) {
-                    importButton(space: space)
-                    selectionButton
-                }
-            }
-
-            if isSelectingCredentials {
-                HStack {
-                    Button("Select All") {
-                        selectedCredentialIDs = Set(filteredDescriptors.map(\.id))
+    private var healthChips: some View {
+        let counts = credentials.concernCounts
+        let codes = credentials.extras.values.count(where: \.hasCode)
+        if !counts.isEmpty || codes > 0 {
+            HStack(spacing: CrestSpacing.small) {
+                if codes > 0 {
+                    Button {
+                        showsOnlyCodes.toggle()
+                    } label: {
+                        Label("\(codes) with codes", systemImage: "clock.badge.checkmark")
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, CrestSpacing.small)
+                            .padding(.vertical, CrestSpacing.extraSmall)
                     }
-                    .disabled(filteredDescriptors.isEmpty)
-
-                    Button("Delete Selected", role: .destructive) {
-                        confirmsSelectionDeletion = true
-                    }
-                    .disabled(
-                        selectedCredentialIDs.isEmpty
-                            || credentials.isDeletingSelection
+                    .buttonStyle(.plain)
+                    .foregroundStyle(showsOnlyCodes ? CrestBrandTheme.accentText : .secondary)
+                    .crestHoverSurface(
+                        isSelected: showsOnlyCodes, cornerRadius: CrestRadius.compact, showsRestingSurface: true
                     )
+                    .accessibilityAddTraits(showsOnlyCodes ? .isSelected : [])
+                    .accessibilityIdentifier("password-filter-codes")
                 }
+                ForEach(counts, id: \.concern) { entry in
+                    Button {
+                        concernFilter = concernFilter == entry.concern ? nil : entry.concern
+                    } label: {
+                        Label {
+                            Text("\(entry.count) \(Text(entry.concern.title))")
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                        }
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, CrestSpacing.small)
+                        .padding(.vertical, CrestSpacing.extraSmall)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(concernFilter == entry.concern ? CrestBrandTheme.accentText : CrestColor.warning)
+                    .crestHoverSurface(
+                        isSelected: concernFilter == entry.concern, cornerRadius: CrestRadius.compact,
+                        showsRestingSurface: true
+                    )
+                    .accessibilityAddTraits(concernFilter == entry.concern ? .isSelected : [])
+                    .accessibilityIdentifier("password-health-\(entry.concern.name)")
+                }
+                Spacer()
             }
         }
     }
 
-    private func importButton(space: SpaceModel) -> some View {
-        Button("Import Passwords…") {
-            isChoosingImportFile = true
+    /// What the person can do with the passwords they selected.
+    private var selectionActions: some View {
+        HStack {
+            Button("Select All") {
+                selectedCredentialIDs = Set(filteredDescriptors.map(\.id))
+            }
+            .disabled(filteredDescriptors.isEmpty)
+            Spacer()
+            Menu("Move to Space") {
+                Group {
+                    ForEach(otherSpaces) { space in
+                        Button {
+                            moveSelectedCredentials(to: space.id)
+                        } label: {
+                            BrowserSpaceIdentityLabel(identity: space.identity)
+                        }
+                    }
+                }
+                .crestMenuActionLabelStyle()
+            }
+            .fixedSize()
+            .disabled(selectedCredentialIDs.isEmpty || otherSpaces.isEmpty || credentials.isDeletingSelection)
+            if layout.showsExportAction {
+                Button("Export…") {
+                    exportsSelection = true
+                    confirmsPlaintextExport = true
+                }
+                .disabled(selectedCredentialIDs.isEmpty || credentials.isPreparingExport)
+            }
+            Button("Delete", role: .destructive) {
+                confirmsSelectionDeletion = true
+            }
+            .disabled(selectedCredentialIDs.isEmpty || credentials.isDeletingSelection)
         }
-        .disabled(
-            !space.settings.credentialPreferences.isEnabled
-                || credentials.isPreparingImport
-                || credentials.isCommittingImport
-        )
-        .accessibilityIdentifier("import-space-passwords")
     }
 
-    private var selectionButton: some View {
-        Button(isSelectingCredentials ? "Done" : "Select") {
-            isSelectingCredentials.toggle()
-            if !isSelectingCredentials { selectedCredentialIDs.removeAll() }
+    /// The sites the Space never offers to save a password for, each with a
+    /// way to let it offer again.
+    @ViewBuilder
+    private func neverSavedSites(in space: SpaceModel) -> some View {
+        let sites = space.settings.credentialPreferences.neverSavedSites
+        if !sites.isEmpty {
+            Section("Never saved") {
+                ForEach(sites, id: \.self) { site in
+                    HStack {
+                        Text(site.description)
+                        Spacer()
+                        Button("Remove") {
+                            browser.allowSavingCredentials(for: site, in: space.id)
+                        }
+                        .accessibilityIdentifier("allow-saving-\(site.host)")
+                    }
+                }
+            }
         }
-        .disabled(credentials.descriptors.isEmpty || credentials.isDeletingSelection)
     }
 
     @ViewBuilder
@@ -367,6 +529,8 @@ struct BrowserPasswordSettingsPane: View {
                 BrowserPasswordDescriptorRow(
                     descriptor: descriptor,
                     space: space?.identity,
+                    extras: credentials.extras[descriptor.id],
+                    concerns: credentials.health[descriptor.id]?.concerns ?? [],
                     isDeleting: credentials.isDeleting(descriptor),
                     isSelectionActive: isSelectingCredentials,
                     isSelected: selectedCredentialIDs.contains(descriptor.id),
@@ -374,7 +538,9 @@ struct BrowserPasswordSettingsPane: View {
                         guard let space,
                             let request = BrowserCredentialDetailRequest(
                                 descriptor: descriptor,
-                                space: space
+                                space: space,
+                                extras: credentials.extras[descriptor.id],
+                                concerns: credentials.health[descriptor.id]?.concerns ?? []
                             )
                         else { return }
                         credentialDetailRequest = request
@@ -411,6 +577,16 @@ struct BrowserPasswordSettingsPane: View {
 
     private var filteredDescriptors: [CredentialDescriptor] {
         credentials.descriptors(matching: searchText)
+            .filter { descriptor in
+                concernFilter.map { credentials.health[descriptor.id]?.concerns.contains($0) == true } ?? true
+            }
+            .filter { !showsOnlyCodes || credentials.extras[$0.id]?.hasCode == true }
+            .sorted(by: sortOrder.precedes)
+    }
+
+    /// The Spaces a selection can move to: every other one this window may open.
+    private var otherSpaces: [SpaceModel] {
+        browser.spaceModels.filter { $0.id != selectedSpaceID && !spaceAccess.isLocked($0) }
     }
 
     private var canRevealSelectedSpaceData: Bool {
@@ -457,9 +633,11 @@ struct BrowserPasswordSettingsPane: View {
 
     private func prepareExport() {
         guard let selectedSpaceID, canRevealSelectedSpaceData else { return }
+        let only = exportsSelection ? selectedCredentialIDs : nil
         Task { @MainActor in
             isExporting = await credentials.prepareExport(
                 in: selectedSpaceID,
+                only: only,
                 accessController: spaceAccess
             ) {
                 self.selectedSpaceID == selectedSpaceID
@@ -503,6 +681,25 @@ struct BrowserPasswordSettingsPane: View {
         }
     }
 
+    /// Opens the site's own page for changing a password, the address sites
+    /// agree on for it, in a new tab of the Space.
+    private func openChangePasswordPage(for origin: CredentialOrigin, in spaceID: UUID) {
+        guard let url = URL(string: "\(origin.description)/.well-known/change-password") else { return }
+        credentialDetailRequest = nil
+        _ = browser.openNewTab(url: url, in: spaceID)
+    }
+
+    private func moveSelectedCredentials(to destination: UUID) {
+        guard let selectedSpaceID else { return }
+        let ids = selectedCredentialIDs
+        Task { @MainActor in
+            if await credentials.move(ids, from: selectedSpaceID, to: destination, accessController: spaceAccess) {
+                selectedCredentialIDs.removeAll()
+                isSelectingCredentials = false
+            }
+        }
+    }
+
     private func deleteSelectedCredentials() {
         guard let selectedSpaceID else { return }
         let ids = selectedCredentialIDs
@@ -520,5 +717,30 @@ struct BrowserPasswordSettingsPane: View {
                 isSelectingCredentials = false
             }
         }
+    }
+}
+
+extension BrowserPasswordSettingsPane where Header == EmptyView {
+    init(
+        browser: BrowserStore,
+        spaceAccess: BrowserSpaceAccessController,
+        layout: BrowserPasswordSettingsLayout,
+        searchText: Binding<String> = .constant(""),
+        manage: (() -> Void)? = nil,
+        fixedSpaceID: UUID? = nil
+    ) {
+        self.init(
+            browser: browser, spaceAccess: spaceAccess, layout: layout, searchText: searchText, manage: manage,
+            fixedSpaceID: fixedSpaceID
+        ) { EmptyView() }
+    }
+}
+
+extension BrowserPasswordSettingsPane {
+    /// The pane with Import from Another Browser in its ⋯ menu, opening `action`.
+    func importingFromAnotherBrowser(_ action: (() -> Void)?) -> Self {
+        var pane = self
+        pane.importFromAnotherBrowser = action
+        return pane
     }
 }

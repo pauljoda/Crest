@@ -5,6 +5,8 @@ import SwiftUI
 struct BrowserCredentialSuggestionState: View {
     let isLoading: Bool
     let suggestions: [CredentialDescriptor]
+    let selectedID: UUID?
+    let context: BrowserCredentialSuggestionContext
     let metrics: BrowserCredentialPromptMetrics
     let fill: (CredentialDescriptor) -> Void
 
@@ -19,33 +21,42 @@ struct BrowserCredentialSuggestionState: View {
         } else {
             BrowserCredentialSuggestionList(
                 suggestions: suggestions,
+                selectedID: selectedID,
+                context: context,
                 metrics: metrics,
                 fill: fill
             )
         }
     }
 
-    /// A panel with nothing to offer says so and stops; a band says the whole
+    /// A panel with nothing to offer says so in a row shaped like the logins
+    /// it would list, naming the Space and the site; a band says the whole
     /// sentence, because it has already taken the room to say it in.
     @ViewBuilder
     private var empty: some View {
         switch metrics.suggestionEmptyStatePresentation {
         case .compact:
-            Label {
-                Text("No passwords saved for this site")
-            } icon: {
-                Image(systemName: "key.slash")
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .labelStyle(
-                BrowserCredentialCompactLabelStyle(
-                    spacing: BrowserCredentialPromptMetrics
-                        .suggestionEmptySpacing,
-                    symbolSize: BrowserCredentialPromptMetrics
-                        .suggestionEmptySymbolSize
+            HStack(spacing: BrowserCredentialPromptMetrics.suggestionRowSpacing) {
+                BrowserCredentialPromptIdentity(
+                    kind: .suggestions,
+                    iconData: context.iconData,
+                    showsSiteIcon: context.iconData != nil,
+                    tint: CrestBrandTheme.accent
                 )
-            )
+                VStack(alignment: .leading, spacing: BrowserCredentialPromptMetrics.suggestionRowTextSpacing) {
+                    Text("No passwords saved")
+                        .font(.callout.weight(.semibold))
+                    Text(verbatim: context.source)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+            .padding(.horizontal, metrics.suggestionRowHighlightBleed)
+            .padding(.vertical, metrics.suggestionRowVerticalPadding)
+            .frame(maxWidth: .infinity, minHeight: metrics.suggestionRowMinimumHeight, alignment: .leading)
+            .accessibilityElement(children: .combine)
         case .sentence:
             Text("No Crest passwords are saved for this site in this Space.")
                 .font(.caption)
@@ -58,28 +69,18 @@ struct BrowserCredentialSuggestionState: View {
     }
 }
 
-/// A glyph and a remark on one line, the glyph sized to the remark rather than
-/// to the row a `Label` would otherwise reserve for it.
-private struct BrowserCredentialCompactLabelStyle: LabelStyle {
-    let spacing: CGFloat
-    let symbolSize: CGFloat
-
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: spacing) {
-            configuration.icon
-                .font(.system(size: symbolSize))
-            configuration.title
-        }
-    }
-}
-
 #if DEBUG
     #Preview("Loading, empty, and available") {
+        let context = BrowserCredentialSuggestionContext(
+            iconData: nil, source: "Work · example.test", fillsUsernameOnly: false)
         VStack(spacing: 20) {
-            BrowserCredentialSuggestionState(isLoading: true, suggestions: [], metrics: .pointer, fill: { _ in })
-            BrowserCredentialSuggestionState(isLoading: false, suggestions: [], metrics: .pointer, fill: { _ in })
             BrowserCredentialSuggestionState(
-                isLoading: false, suggestions: [BrowserCredentialDetailPreviewFixture.descriptor], metrics: .pointer,
+                isLoading: true, suggestions: [], selectedID: nil, context: context, metrics: .pointer, fill: { _ in })
+            BrowserCredentialSuggestionState(
+                isLoading: false, suggestions: [], selectedID: nil, context: context, metrics: .pointer, fill: { _ in })
+            BrowserCredentialSuggestionState(
+                isLoading: false, suggestions: [BrowserCredentialDetailPreviewFixture.descriptor],
+                selectedID: BrowserCredentialDetailPreviewFixture.descriptor.id, context: context, metrics: .pointer,
                 fill: { _ in })
         }.padding().frame(width: 380)
     }

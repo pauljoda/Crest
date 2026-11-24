@@ -30,8 +30,15 @@ struct BrowserCredentialSavePort {
     /// replace the candidate while the vault is still writing the first.
     let presentedCandidateID: () -> UUID?
 
-    /// Puts the candidate away, whether it was saved, declined, or already held.
+    /// Puts the candidate away, whether it was saved or already held.
     let dismiss: () -> Void
+
+    /// Not Now: puts the candidate away, keeping it for the address field's
+    /// key while the page stays on its site.
+    let decline: () -> Void
+
+    /// Puts away the address or card a sent form proposed to keep.
+    var dismissAutofill: () -> Void = {}
 
     /// Offers the saved password to the system's Passwords app, under the title
     /// the prompt names it by. `nil` where the shell cannot make that offer.
@@ -51,6 +58,8 @@ extension BrowserCredentialSavePort {
             spaceID: page.spaceID,
             presentedCandidateID: { page.credentialSaveCandidate?.id },
             dismiss: page.dismissCredentialSaveCandidate,
+            decline: page.declineCredentialSaveCandidate,
+            dismissAutofill: page.dismissAutofillSaveCandidate,
             offerToSystemPasswords: offerToSystemPasswords)
     }
 }

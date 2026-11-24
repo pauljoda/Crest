@@ -28,6 +28,7 @@ struct BrowserSettingsDestinationPage: View {
                     pages.contentBlockingErrorDescription,
                 setupActions: setupActions,
                 passwordLayout: .macOSPage,
+                importFromAnotherBrowser: { presentSetup(.importBrowser) },
                 shortcuts: shortcuts,
                 requestedSpaceID: requestedSpaceID,
                 requestRevision: acceptsExternalRoute ? spaceSettingsPresentation.revision : 0,

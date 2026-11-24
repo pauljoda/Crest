@@ -42,12 +42,26 @@ extension BrowserStore {
         }
         var descriptors: [CredentialDescriptor] = []
         var unreadableCount = 0
+        var extras: [UUID: BrowserCredentialExtrasSummary] = [:]
         for vault in credentialSpaceIDs(of: spaceID) {
             let inventory = try await credentialVault.inventory(in: vault)
             descriptors += inventory.descriptors
             unreadableCount += inventory.unreadableCount
+            extras.merge(inventory.extras) { kept, _ in kept }
         }
-        return CredentialInventory(descriptors: descriptors, unreadableCount: unreadableCount)
+        return CredentialInventory(descriptors: descriptors, unreadableCount: unreadableCount, extras: extras)
+    }
+
+    /// The notes and code the login `id` keeps, from whichever vault of the
+    /// Space's group keeps it, or nil when it keeps none.
+    func credentialExtras(id: UUID, in spaceID: UUID) async throws -> BrowserCredentialExtras? {
+        guard spaceModel(spaceID) != nil else {
+            throw CredentialVaultError.missingSpace
+        }
+        for vault in credentialSpaceIDs(of: spaceID) {
+            if let extras = try await credentialVault.extras(id: id, in: vault) { return extras }
+        }
+        return nil
     }
 
     func credentialSuggestions(
@@ -170,11 +184,14 @@ extension BrowserStore {
 // MARK: - Generated passwords and system Passwords
 
 extension BrowserStore {
-    /// How to compose a generated password. The password itself is drawn
-    /// natively, so it never enters the core.
-    func strongPasswordRecipe() throws -> StrongPasswordRecipe {
+    /// How to compose a generated password in `style` that meets
+    /// `requirements`, the limits of the field it is for. The password itself
+    /// is drawn natively, so it never enters the core.
+    func strongPasswordRecipe(
+        for requirements: PasswordRequirements = .none, style: PasswordStyle = .grouped
+    ) throws -> StrongPasswordRecipe {
         do {
-            return try core.query(StrongPassword(length: nil))
+            return try core.query(StrongPassword(requirements: requirements, style: style))
         } catch {
             throw BrowserStrongPasswordGenerationError.unavailable
         }
@@ -200,6 +217,32 @@ extension BrowserStore {
 // MARK: - Preferences
 
 extension BrowserStore {
+    /// Stops the Space offering to save passwords for `site`. Saving one on
+    /// purpose, and filling, still work there.
+    func neverSaveCredentials(for site: CredentialOrigin, in spaceID: UUID) {
+        guard var preferences = spaceModel(spaceID)?.settings.credentialPreferences,
+            !preferences.neverSavedSites.contains(site)
+        else { return }
+        preferences.neverSavedSites.append(site)
+        updateCredentialPreferences(preferences, in: spaceID)
+    }
+
+    /// Lets the Space offer to save passwords for `site` again.
+    func allowSavingCredentials(for site: CredentialOrigin, in spaceID: UUID) {
+        guard var preferences = spaceModel(spaceID)?.settings.credentialPreferences,
+            preferences.neverSavedSites.contains(site)
+        else { return }
+        preferences.neverSavedSites.removeAll { $0 == site }
+        updateCredentialPreferences(preferences, in: spaceID)
+    }
+
+    /// Whether the Space offers to save a password a page at `origin` sent:
+    /// not in a private window, with its manager off, on a page without
+    /// HTTPS, or on a site the person asked never to save for.
+    func offersToSaveCredentials(for origin: CredentialOrigin, in spaceID: UUID) -> Bool {
+        (try? credentialAccess(.offerSave, in: spaceID, origin: origin))?.refusal == nil
+    }
+
     func updateCredentialPreferences(
         _ preferences: CredentialPreferences,
         in spaceID: UUID
@@ -236,7 +279,8 @@ extension BrowserStore {
         }
         let preferences = CredentialPreferences(
             isEnabled: current.isEnabled, syncsCrestPasswordsWithICloud: isSynchronizable,
-            alsoOffersSaveToSystemPasswords: current.alsoOffersSaveToSystemPasswords)
+            alsoOffersSaveToSystemPasswords: current.alsoOffersSaveToSystemPasswords,
+            neverSavedSites: current.neverSavedSites)
         // The native credential operation completed for this profile. Persist
         // its corresponding policy through the same session authority.
         let sent = SetCredentialPreferences(workspaceID: family.workspaceID, spaceID: spaceID, preferences: preferences)
@@ -265,11 +309,23 @@ extension BrowserStore {
             try await credentialVault.descriptors(matching: candidate.origin, in: $0)
         }
         try validateCredentialSaveCandidate(candidate, in: spaceID, now: now)
+        // A password change found its saved login by the current password,
+        // and updates that one even when others share its username.
         let descriptor: CredentialDescriptor?
-        do {
-            descriptor = try core.credentialSaveMatch(username: candidate.username, in: descriptors)
-        } catch {
-            throw CredentialVaultError.saveDecisionUnavailable
+        if let accountID = candidate.accountID {
+            guard let account = descriptors.first(where: { $0.id == accountID }) else {
+                throw CredentialVaultError.saveDecisionUnavailable
+            }
+            descriptor = account
+        } else if candidate.username.isEmpty {
+            // A password made before the form names its account matches none.
+            descriptor = nil
+        } else {
+            do {
+                descriptor = try core.credentialSaveMatch(username: candidate.username, in: descriptors)
+            } catch {
+                throw CredentialVaultError.saveDecisionUnavailable
+            }
         }
         var storedPasswordMatches: Bool?
         if let descriptor {
@@ -294,6 +350,27 @@ extension BrowserStore {
         case (.alreadyStored, let descriptor?): return BrowserCredentialAlreadyStoredPlan(existing: descriptor)
         default: throw CredentialVaultError.saveDecisionUnavailable
         }
+    }
+
+    /// The saved login, among those the Space keeps for the candidate's site,
+    /// whose password is the candidate's current password: the most recent
+    /// when several are. Nil when none is, or the candidate has no current
+    /// password. The passwords are compared here; the core only chooses among
+    /// the logins that match.
+    func accountHoldingCurrentPassword(
+        of candidate: BrowserCredentialSaveCandidate,
+        in spaceID: UUID
+    ) async throws -> CredentialDescriptor? {
+        guard let currentPassword = candidate.currentPassword else { return nil }
+        let descriptors = try await groupDescriptors(of: spaceID) {
+            try await credentialVault.descriptors(matching: candidate.origin, in: $0)
+        }
+        var holding: [CredentialDescriptor] = []
+        for descriptor in descriptors {
+            let credential = try await credentialVault.credential(id: descriptor.id, in: descriptor.spaceID)
+            if credential?.password == currentPassword { holding.append(descriptor) }
+        }
+        return try core.mostRecentCredential(holding)
     }
 
     func commitCredentialSave(
@@ -383,12 +460,13 @@ extension BrowserStore {
         let vaultID = try credentialVaultID(of: spaceID, keeping: existing)
         let descriptor: CredentialDescriptor
         if var existing {
-            guard existing.origin == origin else {
+            guard existing.origins.contains(origin) else {
                 throw CredentialVaultError.invalidOrigin
             }
             existing.username = username
             existing.displayName = displayName?.nilIfEmpty ?? existing.displayName
             existing.updatedAt = now
+            existing.passwordChangedAt = now
             existing.isSynchronizable = resolvedSynchronization
             descriptor = existing
         } else {
@@ -473,6 +551,102 @@ extension BrowserStore {
         for vault in credentialSpaceIDs(of: spaceID) {
             guard try await credentialVault.descriptors(in: vault).contains(where: { $0.id == id }) else { continue }
             try await credentialVault.delete(id: id, in: vault)
+        }
+    }
+
+    /// Rewrites, in place, each login of the Space's group whose site an
+    /// earlier build stored in a spelling no page has, such as `127.1`, in
+    /// the one pages use, so it fills again. Returns whether any changed.
+    @discardableResult
+    func respellCredentials(in spaceID: UUID) async throws -> Bool {
+        let descriptors = try await savedCredentialDescriptors(in: spaceID)
+        let saved = descriptors.map { SavedCredentialOrigin(id: $0.id, origin: $0.origin) }
+        guard !saved.isEmpty, let respellings = try? core.query(CredentialsToRespell(saved: saved)).respelled,
+            !respellings.isEmpty
+        else { return false }
+        for respelling in respellings {
+            guard let credential = try await credential(id: respelling.id, in: spaceID) else { continue }
+            let old = credential.descriptor
+            let descriptor = CredentialDescriptor(
+                id: old.id, spaceID: old.spaceID, origin: respelling.origin, scope: old.scope, username: old.username,
+                displayName: old.displayName, createdAt: old.createdAt, updatedAt: old.updatedAt,
+                lastUsedAt: old.lastUsedAt, isSynchronizable: old.isSynchronizable, sites: old.sites,
+                passwordChangedAt: old.passwordChangedAt)
+            try await credentialVault.save(
+                BrowserCredential(descriptor: descriptor, password: credential.password), in: old.spaceID)
+        }
+        return true
+    }
+
+    /// Keeps `extras` beside the password of the login `id`, in whichever
+    /// vault of the Space's group keeps it.
+    func saveCredentialExtras(_ extras: BrowserCredentialExtras, forCredential id: UUID, in spaceID: UUID) async throws
+    {
+        guard let saved = try await credential(id: id, in: spaceID) else {
+            throw CredentialVaultError.missingCredential
+        }
+        try await credentialVault.saveExtras(extras, for: saved.descriptor, in: saved.descriptor.spaceID)
+    }
+
+    /// Saves what the person changed about the login `id` in Settings: its
+    /// title, username, sites, and, where given, its password and the notes
+    /// and code it keeps beside it. A password that changed is stamped with
+    /// when it did. Returns the login as saved.
+    @discardableResult
+    func editCredential(
+        id: UUID,
+        in spaceID: UUID,
+        edit: BrowserCredentialEdit,
+        now: Date = Date()
+    ) async throws -> CredentialDescriptor {
+        guard spaceModel(spaceID) != nil else {
+            throw CredentialVaultError.missingSpace
+        }
+        guard let saved = try await credential(id: id, in: spaceID) else {
+            throw CredentialVaultError.missingCredential
+        }
+        var descriptor = saved.descriptor
+        let vaultID = descriptor.spaceID
+        descriptor.displayName = edit.title.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        descriptor.username = edit.username.trimmingCharacters(in: .whitespacesAndNewlines)
+        var sites: [CredentialOrigin] = []
+        for site in edit.sites where site != descriptor.origin && !sites.contains(site) {
+            sites.append(site)
+        }
+        descriptor.sites = Array(sites.prefix(CredentialDescriptor.maximumSites))
+        let password = edit.password ?? saved.password
+        if password != saved.password { descriptor.passwordChangedAt = now }
+        descriptor.updatedAt = now
+        try await credentialVault.save(BrowserCredential(descriptor: descriptor, password: password), in: vaultID)
+        if let extras = edit.extras {
+            try await credentialVault.saveExtras(extras, for: descriptor, in: vaultID)
+        }
+        return descriptor
+    }
+
+    /// Moves the logins `ids` of the Space `spaceID` into the Space
+    /// `destination`, each with its notes and code, under the destination's
+    /// iCloud choice. Each is written there before it leaves here, so a stop
+    /// partway leaves a copy, never a loss.
+    func moveCredentials(_ ids: [UUID], from spaceID: UUID, to destination: UUID) async throws {
+        guard spaceModel(spaceID) != nil, let target = spaceModel(destination) else {
+            throw CredentialVaultError.missingSpace
+        }
+        if let refusal = try credentialAccess(.save, in: destination).refusal {
+            throw CredentialVaultError(refusal)
+        }
+        let targetVault = try credentialVaultID(of: destination, keeping: nil)
+        let synchronizes = target.settings.credentialPreferences.syncsCrestPasswordsWithICloud
+        for id in ids {
+            guard let saved = try await credential(id: id, in: spaceID) else { continue }
+            let sourceVault = saved.descriptor.spaceID
+            guard sourceVault != targetVault else { continue }
+            let extras = try await credentialVault.extras(id: id, in: sourceVault)
+            var moved = saved.moved(to: targetVault)
+            moved.descriptor.isSynchronizable = synchronizes
+            try await credentialVault.save(moved, in: targetVault)
+            if let extras { try await credentialVault.saveExtras(extras, for: moved.descriptor, in: targetVault) }
+            try await credentialVault.delete(id: id, in: sourceVault)
         }
     }
 

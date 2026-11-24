@@ -4,9 +4,10 @@ import SwiftUI
 ///
 /// Two arrangements, and the profile picks between them. A band shell keeps the
 /// prompt in the place it reserved for chrome and lets the page move under it.
-/// A pointer shell puts a fill prompt under the field that asked for it, the
-/// way every other password manager on the platform does, and follows the field
-/// as the page scrolls beneath it.
+/// A pointer shell puts a fill prompt under the field that asked for it and
+/// follows the field as the page scrolls beneath it, and puts a prompt with no
+/// field, such as an offer to save, in the top trailing corner where notices
+/// stand.
 ///
 /// The prompt is handed its profile rather than reading it, because the width
 /// of an anchored panel is the field's rather than the shell's, and that has to
@@ -26,6 +27,15 @@ struct BrowserCredentialChromePlacement<Content: View>: View {
     var body: some View {
         if let field, metrics.anchorsFillPromptToField {
             anchored(to: field)
+        } else if metrics.surfaceStyle == .panel {
+            // A panel with no field to point at, such as an offer to save,
+            // stands where notices do: the top trailing corner, sliding down
+            // into place as they do.
+            content(metrics)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .padding(.top, BrowserRootMetrics.noticeInset)
+                .padding(.trailing, BrowserRootMetrics.noticeInset)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         } else {
             content(metrics)
                 .transition(.move(edge: .top).combined(with: .opacity))
@@ -52,8 +62,11 @@ struct BrowserCredentialChromePlacement<Content: View>: View {
             // in on its way to the field.
             .opacity(isMeasured ? 1 : 0)
             .transition(
-                .scale(scale: 0.97, anchor: placement.isAboveField ? .bottom : .top)
-                    .combined(with: .opacity)
+                .scale(
+                    scale: CrestMotion.entranceScale,
+                    anchor: placement.isAboveField ? .bottomLeading : .topLeading
+                )
+                .combined(with: .opacity)
             )
             .offset(x: placement.origin.x, y: placement.origin.y)
             .frame(

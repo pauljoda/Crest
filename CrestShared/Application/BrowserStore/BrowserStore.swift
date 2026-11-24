@@ -34,6 +34,16 @@ final class BrowserStore {
     /// The process's core, which every window of every browsing mode shares.
     @ObservationIgnored let core: CrestCore
     @ObservationIgnored let credentialVault: any CredentialVault
+
+    /// Where this window's addresses and payment cards live: beside the
+    /// Keychain passwords, in memory where the passwords are, and nowhere in
+    /// a private window.
+    @ObservationIgnored private(set) lazy var autofillVault: BrowserAutofillVault = {
+        if let keychain = credentialVault as? KeychainCredentialVault {
+            return BrowserAutofillVault(store: SecurityCredentialKeychainStore(), servicePrefix: keychain.servicePrefix)
+        }
+        return credentialVault is PrivateBrowsingCredentialVault ? .unavailable : .inMemory
+    }()
     @ObservationIgnored var credentialSaveOperations: [BrowserCredentialSaveKey: BrowserCredentialSaveOperation] = [:]
     @ObservationIgnored let linkPreferences: BrowserLinkPreferenceStore
     @ObservationIgnored var pendingMovedTabActivation: BrowserTabRuntimeAssignment?

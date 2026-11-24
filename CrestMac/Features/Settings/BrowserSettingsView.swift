@@ -65,6 +65,7 @@ struct BrowserSettingsView: View {
         .environment(\.browserSettingsOpenSpace, openSpaceAction)
         // Every Mac browser window draws tab previews beside its sidebar.
         .environment(\.browserTabPreviewHosting, .hover)
+        .environment(\.browserCodeScanning, codeScanning)
         .onChange(of: scenePhase) { previousPhase, phase in
             lockPrivateSettings(previousPhase, phase)
         }
@@ -116,6 +117,23 @@ struct BrowserSettingsView: View {
                 )
             }
         }
+    }
+
+    /// Set Up Code looks for its QR code on a page of the login's site open
+    /// in the Space.
+    private var codeScanning: BrowserCodeScanning {
+        BrowserCodeScanning(scanPage: { [pages] spaceID, origin in
+            guard
+                let page = pages.livePages.first(where: { page in
+                    page.spaceID == spaceID && page.live.documentURL.flatMap(CredentialOrigin.init(url:)) == origin
+                })
+            else { return nil }
+            return await withCheckedContinuation { continuation in
+                page.captureViewport(width: 1_600) { image in
+                    continuation.resume(returning: image?.cgImage(forProposedRect: nil, context: nil, hints: nil))
+                }
+            }
+        })
     }
 
     // MARK: - Spaces

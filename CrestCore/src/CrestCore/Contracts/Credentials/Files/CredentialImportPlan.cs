@@ -23,6 +23,13 @@ public sealed record CredentialImportPlan(CredentialFileFormat Format, IReadOnly
     [Resolved]
     public int ValidRowCount => Groups.Sum(group => group.Candidates.Count + group.CollapsedDuplicateRowCount);
 
+    /// How many rows each flaw leaves out, for each flaw that leaves one out,
+    /// in the order of `CredentialRowFlaw.All`.
+    [Resolved]
+    public IReadOnlyList<CredentialRowFlawCount> RejectionCounts => [.. CredentialRowFlaw.All
+        .Select(flaw => new CredentialRowFlawCount(flaw, Rejections.Count(rejection => rejection.Flaw == flaw)))
+        .Where(count => count.Count > 0)];
+
     #endregion
 
     #region Actions - Planning

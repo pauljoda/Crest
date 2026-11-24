@@ -3,16 +3,19 @@ using System.Text;
 
 using CrestCore.Application;
 using CrestCore.Contracts;
+using CrestCore.Domain;
 
 using Xunit;
 
 namespace CrestCore.Tests;
 
-/// The core keeps no password: no record that holds one is reachable from a
-/// change, an intent, the session it stores, the device store or the sync
-/// journal, and none names a secret in its text form.
+/// The core keeps no password, address or card: no record that holds one is
+/// reachable from a change, an intent, the session it stores, the device
+/// store or the sync journal, and none names a secret in its text form.
 public sealed class SecretContainmentTests {
     private const string Secret = "correct-horse-battery-staple";
+
+    private const string CardDigits = "4242424242424242";
 
     private static readonly Assembly Core = typeof(CrestApp).Assembly;
 
@@ -43,25 +46,58 @@ public sealed class SecretContainmentTests {
     [Fact]
     public void NoRecordThatHoldsAPasswordNamesItInItsText() {
         var origin = new CredentialOrigin("https", "accounts.example", 443);
-        var candidate = new CredentialImportCandidate(2, Secret, Secret, Secret, CredentialImportEffect.Adds);
+        var candidate = new CredentialImportCandidate(2, Secret, Secret, Secret, Secret, Secret, CredentialImportEffect.Adds);
         var group = new CredentialImportGroup(origin, Secret, [candidate], 0, null, 2);
+        var setup = new OneTimeCodeSetup(Secret, "Example", Secret, OneTimeCodeAlgorithm.Sha1, 6, 30, OneTimeCodeStyle.Numeric);
+        var entry = new OneTimeCodeEntry(0, Secret);
+        var checkedCredential = new CheckedCredential(Guid.NewGuid(), origin, Secret, Secret);
+        var address = new AddressRecord(Guid.NewGuid(), Secret, Secret, Secret, Secret, Secret, [Secret], Secret, Secret, Secret, Secret,
+            Secret, Secret);
+        var card = new CardRecord(Guid.NewGuid(), Secret, Secret, CardDigits, 8, 2029, Secret, null);
+        var section = new AutofillSection(AutofillSectionKind.Card, [new(0, AutofillFieldRole.CardNumber, false)]);
         object[] records = [
-            new ImportedCredential(2, Secret, origin, Secret, Secret),
-            new ExistingCredential(Guid.NewGuid(), origin, Secret, true, 1, null, Secret),
+            new ImportedCredential(2, Secret, origin, Secret, Secret, Secret, Secret),
+            new ExistingCredential(Guid.NewGuid(), origin, Secret, true, 1, null, Secret, Secret, Secret),
             candidate,
             group,
             new CredentialImportPlan(CredentialFileFormat.Browser, [group], [], []),
             new CredentialImportPreview(Encoding.UTF8.GetBytes(Secret), []),
-            new PasswordImportPreview([new(2, null, origin, Secret, Secret)], []),
-            new ExportedCredential(Guid.NewGuid(), origin, Secret, Secret, Secret, Secret),
-            new CredentialExport([new(Guid.NewGuid(), origin, Secret, null, Secret, "")], "Work", "Space"),
+            new PasswordImportPreview([new(2, null, origin, Secret, Secret, Secret, Secret)], []),
+            new ExportedCredential(Guid.NewGuid(), origin, Secret, Secret, Secret, Secret, Secret),
+            new CredentialExport([new(Guid.NewGuid(), origin, Secret, null, Secret, "", null)], "Work", "Space"),
             new CredentialExportFile("Crest Passwords - Work.csv", Encoding.UTF8.GetBytes(Secret)),
-            CredentialFile.Read(Encoding.UTF8.GetBytes($"url,username,password\nhttps://accounts.example,{Secret},{Secret}"))
+            CredentialFile.Read(Encoding.UTF8.GetBytes($"url,username,password\nhttps://accounts.example,{Secret},{Secret}")),
+            setup,
+            new ParsedCodeSetup(setup, null),
+            new ParseCodeSetup(Secret),
+            new WriteCodeSetup(setup),
+            new CodeSetupLink(Secret),
+            new OneTimeCode(setup, 59),
+            new OneTimeCodeReading(Secret, 30, 60),
+            entry,
+            new OneTimeCodeFill([entry]),
+            new SpreadOneTimeCode(new([0]), Secret),
+            checkedCredential,
+            new PasswordHealth([checkedCredential]),
+            address,
+            card,
+            new AutofillValue(0, Secret),
+            new AutofillPlan([new(0, CardDigits)]),
+            new AutofillProposal(address, card),
+            new CardDetails(CardDigits),
+            new AddressFill([], 0, address),
+            new CardFill([], 0, card),
+            new AutofillCapture([], [new(0, CardDigits)]),
+            CardNumber.Read(CardDigits)!,
+            new AutofillFilling(section, [], address, card),
+            new AutofillDraft(section)
         ];
         Assert.Equal(SecretTypes.ToHashSet(), records.Select(record => record.GetType()).ToHashSet());
         foreach (var record in records) {
-            Assert.DoesNotContain(Secret, record.ToString(), StringComparison.Ordinal);
-            Assert.DoesNotContain(Secret, $"{record}", StringComparison.Ordinal);
+            foreach (string secret in new[] { Secret, CardDigits }) {
+                Assert.DoesNotContain(secret, record.ToString(), StringComparison.Ordinal);
+                Assert.DoesNotContain(secret, $"{record}", StringComparison.Ordinal);
+            }
         }
     }
 

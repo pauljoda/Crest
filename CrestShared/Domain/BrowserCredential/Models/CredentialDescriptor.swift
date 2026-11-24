@@ -1,6 +1,18 @@
 import Foundation
 
+/// What a saved login says about itself, without its password: where it signs
+/// in, as whom, and when it was saved, changed and used. `sites` are the other
+/// sites the person added to the login, beside the one it was saved for, and
+/// `passwordChangedAt` is when its password last changed. Both are keys older
+/// builds ignore.
 struct CredentialDescriptor: Codable, Equatable, Identifiable, Sendable {
+    // MARK: - Static Variables
+
+    /// The most sites one login names beside the one it was saved for.
+    static let maximumSites = 24
+
+    // MARK: - Variables
+
     let id: UUID
     let spaceID: UUID
     let origin: CredentialOrigin
@@ -11,6 +23,14 @@ struct CredentialDescriptor: Codable, Equatable, Identifiable, Sendable {
     var updatedAt: Date
     var lastUsedAt: Date?
     var isSynchronizable: Bool
+    var sites: [CredentialOrigin]
+    var passwordChangedAt: Date?
+
+    /// Every site the login signs in to: the one it was saved for, then the
+    /// ones the person added.
+    var origins: [CredentialOrigin] { [origin] + sites.filter { $0 != origin } }
+
+    // MARK: - Initializers
 
     init(
         id: UUID = UUID(),
@@ -22,7 +42,9 @@ struct CredentialDescriptor: Codable, Equatable, Identifiable, Sendable {
         createdAt: Date = Date(),
         updatedAt: Date? = nil,
         lastUsedAt: Date? = nil,
-        isSynchronizable: Bool = false
+        isSynchronizable: Bool = false,
+        sites: [CredentialOrigin] = [],
+        passwordChangedAt: Date? = nil
     ) {
         self.id = id
         self.spaceID = spaceID
@@ -34,6 +56,8 @@ struct CredentialDescriptor: Codable, Equatable, Identifiable, Sendable {
         self.updatedAt = updatedAt ?? createdAt
         self.lastUsedAt = lastUsedAt
         self.isSynchronizable = isSynchronizable
+        self.sites = sites
+        self.passwordChangedAt = passwordChangedAt
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -47,6 +71,8 @@ struct CredentialDescriptor: Codable, Equatable, Identifiable, Sendable {
         case updatedAt
         case lastUsedAt
         case isSynchronizable
+        case sites
+        case passwordChangedAt
     }
 
     init(from decoder: Decoder) throws {
@@ -63,6 +89,11 @@ struct CredentialDescriptor: Codable, Equatable, Identifiable, Sendable {
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)
         lastUsedAt = try container.decodeIfPresent(Date.self, forKey: .lastUsedAt)
         isSynchronizable = try container.decode(Bool.self, forKey: .isSynchronizable)
+        // A site that no longer decodes is dropped rather than losing the login.
+        sites =
+            ((try? container.decodeIfPresent([FailableCredentialOrigin].self, forKey: .sites)) ?? [])
+            .compactMap(\.origin).prefix(Self.maximumSites).map(\.self)
+        passwordChangedAt = try container.decodeIfPresent(Date.self, forKey: .passwordChangedAt)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -80,5 +111,18 @@ struct CredentialDescriptor: Codable, Equatable, Identifiable, Sendable {
         try container.encode(updatedAt, forKey: .updatedAt)
         try container.encodeIfPresent(lastUsedAt, forKey: .lastUsedAt)
         try container.encode(isSynchronizable, forKey: .isSynchronizable)
+        if !sites.isEmpty { try container.encode(sites, forKey: .sites) }
+        try container.encodeIfPresent(passwordChangedAt, forKey: .passwordChangedAt)
+    }
+}
+
+// MARK: - Types
+
+/// One stored site, or nil when it no longer decodes.
+private struct FailableCredentialOrigin: Decodable {
+    let origin: CredentialOrigin?
+
+    init(from decoder: Decoder) throws {
+        origin = try? CredentialOrigin(from: decoder)
     }
 }

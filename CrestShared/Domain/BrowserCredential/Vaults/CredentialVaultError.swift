@@ -9,6 +9,8 @@ enum CredentialVaultError: Error, Equatable, Sendable {
     case staleSaveCandidate
     case spaceMismatch(expected: UUID, actual: UUID)
     case malformedStoredCredential
+    /// The login a change names is no longer saved.
+    case missingCredential
     case atomicReplacementRestoreFailed
     case preferenceUpdateFailed
     /// The portable core could not answer a save decision. Nothing is saved.

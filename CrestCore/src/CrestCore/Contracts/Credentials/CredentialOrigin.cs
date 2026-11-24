@@ -3,6 +3,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
+using CrestCore.Domain;
+
 namespace CrestCore.Contracts;
 
 /// The canonical HTTP(S) origin a credential belongs to. The platform
@@ -10,10 +12,16 @@ namespace CrestCore.Contracts;
 /// equality is exact member equality. The credential rules refuse an origin
 /// that is not `IsValid`.
 public sealed record CredentialOrigin(string Scheme, string Host, int Port) {
-    #region Variables
+    #region Static Variables
 
     /// The most saved origins one fill question may carry.
     public const int MaximumFillCandidates = 1_024;
+
+    private static readonly IdnMapping Idna = new() { AllowUnassigned = true, UseStd3AsciiRules = false };
+
+    #endregion
+
+    #region Variables
 
     /// An IP address host must be spelled as a page's origin spells it: IPv6
     /// compressed, with no zone ID, brackets or escapes, and IPv4 in dotted
@@ -21,7 +29,10 @@ public sealed record CredentialOrigin(string Scheme, string Host, int Port) {
     public bool IsValid => WebScheme.Named(Scheme) is not null && !string.IsNullOrEmpty(Host) && Host.Length <= SiteOrigin.MaximumHostLength
         && CanonicalHost(Host) == Host && Port is >= 1 and <= 65_535;
 
-    public bool IsSecure => WebScheme.Named(Scheme)?.IsSecure == true;
+    /// Whether the page is a secure context: served over a secure scheme, or
+    /// from this device itself, as `localhost` and loopback addresses are, so
+    /// passwords work while developing a site locally.
+    public bool IsSecure => new SiteOrigin(Scheme, Host, Port).IsSecureContext;
 
     /// The origin as an address spells it: its scheme and host, an IPv6 host
     /// in brackets, and its port only where it is not the scheme's default.
@@ -29,6 +40,32 @@ public sealed record CredentialOrigin(string Scheme, string Host, int Port) {
         get {
             string host = Host.Contains(':', StringComparison.Ordinal) ? $"[{Host}]" : Host;
             return WebScheme.Named(Scheme)?.DefaultPort == Port ? $"{Scheme}://{host}" : $"{Scheme}://{host}:{Port}";
+        }
+    }
+
+    /// The origin as a page spells it where its host is spelled another way,
+    /// as imports before they spelled IP addresses as pages do kept `127.1` or
+    /// a long IPv6 address; null where it already is, or where no page can
+    /// have its host.
+    internal CredentialOrigin? Respelled =>
+        CanonicalHost(Host.ToLowerInvariant()) is { } host && host != Host && (this with { Host = host }) is { IsValid: true } respelled
+            ? respelled
+            : null;
+
+    /// The name a person knows the site by: the label before its public
+    /// suffix, in Unicode, so `example` for `accounts.example.co.uk`, or a
+    /// one-label host itself. Null for an IP address.
+    internal string? SiteName {
+        get {
+            string[] labels = Labels(Host);
+            if (Host.Contains(':', StringComparison.Ordinal) || EndsInNumber(labels)) return null;
+            int suffix = labels.Length > 2 && SiteDomain.IsPublicSuffix($"{labels[^2]}.{labels[^1]}") ? 2 : Math.Min(labels.Length - 1, 1);
+            string label = labels[^(suffix + 1)];
+            try {
+                return label.StartsWith("xn--", StringComparison.OrdinalIgnoreCase) ? Idna.GetUnicode(label) : label;
+            } catch (ArgumentException) {
+                return label;
+            }
         }
     }
 
@@ -80,12 +117,22 @@ public sealed record CredentialOrigin(string Scheme, string Host, int Port) {
                 ? IPv6Spelling(address.GetAddressBytes())
                 : null;
         }
+        string[] labels = Labels(host);
+        return EndsInNumber(labels) ? IPv4Spelling(labels) : host;
+    }
+
+    /// The labels of `host`, without the empty one a final dot leaves.
+    private static string[] Labels(string host) {
         string[] labels = host.Split('.');
-        if (labels.Length > 1 && labels[^1].Length == 0) labels = labels[..^1];
+        return labels.Length > 1 && labels[^1].Length == 0 ? labels[..^1] : labels;
+    }
+
+    /// Whether the last of `labels` is a number, decimal or hexadecimal after
+    /// `0x`, so the URL standard reads the host as an IPv4 address.
+    private static bool EndsInNumber(string[] labels) {
         string last = labels[^1];
-        bool endsInNumber = last.Length > 0 && last.All(char.IsAsciiDigit)
+        return last.Length > 0 && last.All(char.IsAsciiDigit)
             || last.StartsWith("0x", StringComparison.OrdinalIgnoreCase) && last[2..].All(char.IsAsciiHexDigit);
-        return endsInNumber ? IPv4Spelling(labels) : host;
     }
 
     /// Whether the IPv4 address an IPv6 address may end in is spelled as the

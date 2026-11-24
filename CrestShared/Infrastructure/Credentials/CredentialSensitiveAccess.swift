@@ -58,9 +58,15 @@ final class BrowserCredentialSensitiveAccess {
         return credential
     }
 
-    /// Authenticates, reads every password the Space keeps, and has the core
-    /// write the Space's password file from them.
-    func exportCredentials(in spaceID: UUID) async throws -> CredentialExportFile {
+    /// Asks the device owner to authenticate for `reason`.
+    func authenticate(reason: String) async throws -> Bool {
+        try await authenticator.authenticate(reason: reason)
+    }
+
+    /// Authenticates, reads every password the Space keeps, or only `ids`
+    /// where given, with their notes and codes, and has the core write the
+    /// Space's password file from them.
+    func exportCredentials(in spaceID: UUID, only ids: Set<UUID>? = nil) async throws -> CredentialExportFile {
         guard let space = browser.spaceModel(spaceID) else {
             throw CredentialVaultError.missingSpace
         }
@@ -71,6 +77,7 @@ final class BrowserCredentialSensitiveAccess {
         }
 
         let descriptors = try await browser.savedCredentialDescriptors(in: spaceID)
+            .filter { ids?.contains($0.id) ?? true }
         var credentials: [ExportedCredential] = []
         credentials.reserveCapacity(descriptors.count)
         for descriptor in descriptors {
@@ -83,7 +90,9 @@ final class BrowserCredentialSensitiveAccess {
             else {
                 throw BrowserCredentialSensitiveAccessError.malformedCredentialInventory
             }
-            credentials.append(ExportedCredential(credential))
+            credentials.append(
+                ExportedCredential(
+                    credential, extras: try await browser.credentialExtras(id: descriptor.id, in: spaceID)))
         }
         return try browser.core.query(
             CredentialExport(credentials: credentials, spaceName: spaceName, fallbackName: String(localized: "Space")))

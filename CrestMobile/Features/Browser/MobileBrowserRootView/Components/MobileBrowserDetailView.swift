@@ -91,18 +91,16 @@ struct MobileBrowserDetailView: View {
             }
         }
         .background(safeAreaProbe)
+        // A compact window runs the credential band across the top of the
+        // page; a wide one floats the panel over the page, under the field.
         .safeAreaInset(edge: .top, spacing: 0) {
-            if let page {
-                BrowserCredentialChrome(
-                    presentation: BrowserCredentialChromePresentation.resolve(
-                        saveCandidate: page.credentialSaveCandidate,
-                        fillRequest: page.credentialFillRequest
-                    ),
-                    fillPort: credentialFillPort(for: page),
-                    savePort: credentialSavePort(for: page),
-                    browser: browser,
-                    capabilities: capabilities
-                )
+            if let page, isCompact {
+                credentialChrome(for: page)
+            }
+        }
+        .overlay(alignment: .topLeading) {
+            if let page, !isCompact {
+                credentialChrome(for: page)
             }
         }
         .overlay(alignment: .bottom) {
@@ -383,6 +381,34 @@ struct MobileBrowserDetailView: View {
     /// The four questions the find bar asks, bound to the page it is over.
     private func findPort(for page: MobileBrowserPage) -> BrowserFindPort {
         BrowserFindPort(page: page)
+    }
+
+    /// The credential prompt the page is presenting.
+    private func credentialChrome(for page: MobileBrowserPage) -> some View {
+        BrowserCredentialChrome(
+            presentation: BrowserCredentialChromePresentation.resolve(
+                saveCandidate: page.credentialSaveCandidate,
+                fillRequest: shownFillRequest(of: page),
+                autofillSaveCandidate: page.autofillSaveCandidate
+            ),
+            fillPort: credentialFillPort(for: page),
+            savePort: credentialSavePort(for: page),
+            browser: browser,
+            capabilities: capabilities,
+            hasRoomBesideField: !isCompact
+        )
+        .task(id: page.corePage.id) {
+            page.installCredentialStrip(browser: browser)
+        }
+    }
+
+    /// The fill request the band at the top shows: on a phone, which offers
+    /// in the strip above the keyboard, only the one the strip opened in full.
+    private func shownFillRequest(of page: MobileBrowserPage) -> BrowserCredentialFillRequest? {
+        guard let request = page.credentialFillRequest, page.usesCredentialStrip else {
+            return page.credentialFillRequest
+        }
+        return request.id == page.credentialOfferRequestID ? request : nil
     }
 
     /// The four things a credential fill prompt asks, bound to the page it is

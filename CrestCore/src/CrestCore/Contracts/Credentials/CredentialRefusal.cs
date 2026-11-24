@@ -11,8 +11,10 @@ public sealed class CredentialRefusal {
     public static readonly CredentialRefusal ManagerOff = new(name: "managerOff");
     /// The page has no HTTPS.
     public static readonly CredentialRefusal InsecureOrigin = new(name: "insecureOrigin");
+    /// The person asked the Space never to offer to save for the site.
+    public static readonly CredentialRefusal NeverSaved = new(name: "neverSaved");
 
-    public static IReadOnlyList<CredentialRefusal> All { get; } = [PrivateBrowsing, ManagerOff, InsecureOrigin];
+    public static IReadOnlyList<CredentialRefusal> All { get; } = [PrivateBrowsing, ManagerOff, InsecureOrigin, NeverSaved];
 
     #endregion
 

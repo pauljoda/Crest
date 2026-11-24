@@ -7,12 +7,21 @@ final class BrowserCredentialSuggestionModel {
 
     private(set) var phase = BrowserCredentialSuggestionPhase.idle
 
+    /// The row the arrow keys have moved to, which Return fills: the first,
+    /// the remembered username's when there is one, until the person moves.
+    private(set) var selectedIndex = 0
+
     @ObservationIgnored private var activeOperationID: UUID?
     @ObservationIgnored private var activeTask: Task<[CredentialDescriptor], any Error>?
 
     var suggestions: [CredentialDescriptor] {
         guard case .suggestions(let suggestions) = phase else { return [] }
         return suggestions
+    }
+
+    /// The login Return fills.
+    var selectedSuggestion: CredentialDescriptor? {
+        suggestions.indices.contains(selectedIndex) ? suggestions[selectedIndex] : nil
     }
 
     var isLoading: Bool {
@@ -60,6 +69,12 @@ final class BrowserCredentialSuggestionModel {
         phase = .idle
     }
 
+    /// Moves the selection `step` rows, stopping at either end.
+    func moveSelection(by step: Int) {
+        guard !suggestions.isEmpty else { return }
+        selectedIndex = min(max(selectedIndex + step, 0), suggestions.count - 1)
+    }
+
     private func cancelActiveOperation() {
         activeOperationID = nil
         activeTask?.cancel()
@@ -78,6 +93,7 @@ final class BrowserCredentialSuggestionModel {
         }
 
         finishOperation(operationID)
+        selectedIndex = 0
         guard !suggestions.isEmpty else {
             phase = .empty
             return

@@ -140,6 +140,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var isCredentialAccessEnabled: Bool { credentialSession.isEnabled }
     var credentialFillRequest: BrowserCredentialFillRequest? { credentialState.fillRequest }
     var credentialSaveCandidate: BrowserCredentialSaveCandidate? { credentialState.saveCandidate }
+    var credentialHeldSaveCandidate: BrowserCredentialSaveCandidate? { credentialState.heldSaveCandidate }
+    var autofillSaveCandidate: BrowserAutofillSaveCandidate? { credentialState.autofillSaveCandidate }
+
+    func dismissAutofillSaveCandidate() {
+        credentialState.dismissAutofillSaveCandidate()
+    }
+    var credentialKeyPress: BrowserCredentialKeyPress? { credentialState.keyPress }
     /// The pool that owns this page. Weak because the pool owns the page.
     @ObservationIgnored weak var host: BrowserPagePool?
     @ObservationIgnored var windowRouting: BrowserPageWindowRouting?
@@ -879,14 +886,41 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         credentialState.dismissSaveCandidate()
     }
 
+    /// Not Now: the offer goes, and the key in the address field keeps it.
+    func declineCredentialSaveCandidate() {
+        credentialState.holdSaveCandidate()
+    }
+
+    func reofferCredentialSaveCandidate() {
+        credentialState.reofferHeldSaveCandidate()
+    }
+
     func fillCredential(_ credential: BrowserCredential, for requestID: UUID) async throws {
         guard let evaluate = credentialEvaluator else { throw CredentialVaultError.credentialManagerDisabled }
         try await credentialSession.fill(credential, for: requestID, evaluate: evaluate)
     }
 
+    func fillAutofillValues(_ values: [BrowserAutofillValue], for requestID: UUID) async throws {
+        guard let evaluate = credentialEvaluator else { throw CredentialVaultError.credentialManagerDisabled }
+        try await credentialSession.fillValues(values, for: requestID, evaluate: evaluate)
+    }
+
+    /// The login the page last filled, whose code a code step offers first.
+    var lastFilledCredentialID: UUID? { credentialState.lastFilledCredentialID }
+
     func fillGeneratedPassword(_ password: String, for requestID: UUID) async throws {
         guard let evaluate = credentialEvaluator else { throw CredentialVaultError.credentialManagerDisabled }
         try await credentialSession.fillGeneratedPassword(password, for: requestID, evaluate: evaluate)
+    }
+
+    func credentialFormUsername(for requestID: UUID) async -> String? {
+        guard let evaluate = credentialEvaluator else { return nil }
+        return await credentialSession.currentUsername(for: requestID, evaluate: evaluate)
+    }
+
+    func holdCredentialKeys(_ hold: Bool, for requestID: UUID) async {
+        guard let evaluate = credentialEvaluator else { return }
+        await credentialSession.holdKeys(hold, for: requestID, evaluate: evaluate)
     }
 
     /// Fills go back through the channel the credential bridge came in on.

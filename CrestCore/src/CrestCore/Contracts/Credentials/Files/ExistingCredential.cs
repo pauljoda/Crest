@@ -1,11 +1,12 @@
 namespace CrestCore.Contracts;
 
-/// A password the Space already keeps, which an import is compared against.
-/// Only a web form's password stands for an account a file imports. Dates are
-/// in seconds since 1970.
+/// A password the Space already keeps, which an import is compared against,
+/// with the note kept beside it and the `otpauth://` link its one-time codes
+/// come from, each null when it has none. Only a web form's password stands
+/// for an account a file imports. Dates are in seconds since 1970.
 [HoldsSecrets]
 public sealed record ExistingCredential(Guid Id, CredentialOrigin Origin, string Username, bool IsWebForm, double UpdatedAt,
-    double? LastUsedAt, string Password) {
+    double? LastUsedAt, string Password, string? Note, string? OneTimeCodeLink) {
     #region Variables
 
     /// The password's recency, without its account or secret.
@@ -39,7 +40,8 @@ public sealed record ExistingCredential(Guid Id, CredentialOrigin Origin, string
 
     /// The members that name no secret.
     private bool PrintMembers(System.Text.StringBuilder builder) {
-        builder.Append($"Id = {Id}, Origin = {Origin}, Username = <redacted>, IsWebForm = {IsWebForm}, Password = <redacted>");
+        builder.Append($"Id = {Id}, Origin = {Origin}, Username = <redacted>, IsWebForm = {IsWebForm}, Password = <redacted>, ")
+            .Append("Note = <redacted>, OneTimeCodeLink = <redacted>");
         return true;
     }
 

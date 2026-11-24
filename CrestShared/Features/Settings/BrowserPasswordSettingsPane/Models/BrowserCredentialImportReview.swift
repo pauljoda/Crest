@@ -81,8 +81,34 @@ struct BrowserCredentialImportSummary: Equatable, Sendable, Identifiable {
     }
 }
 
+/// The notes and code link a file row brought for a login; nil keeps what
+/// the login already keeps.
+struct BrowserCredentialImportDetails: Sendable, CustomStringConvertible {
+    let note: String?
+    let codeLink: String?
+
+    init(_ candidate: CredentialImportCandidate) {
+        note = candidate.note?.nilIfEmpty
+        codeLink = candidate.oneTimeCodeLink?.nilIfEmpty
+    }
+
+    var isEmpty: Bool { note == nil && codeLink == nil }
+
+    /// What the login keeps once the row's details join `saved`.
+    func merged(into saved: BrowserCredentialExtras?) -> BrowserCredentialExtras {
+        BrowserCredentialExtras(
+            notes: note.map { String($0.prefix(BrowserCredentialExtras.maximumNotesLength)) } ?? saved?.notes ?? "",
+            codeLink: codeLink ?? saved?.codeLink)
+    }
+
+    var description: String { "BrowserCredentialImportDetails(<redacted>)" }
+}
+
 struct BrowserCredentialImportResolution: Sendable {
     let credentials: [BrowserCredential]
+    /// The notes and code links the file brought for each login it changed,
+    /// which go beside their passwords once the passwords are written.
+    let details: [UUID: BrowserCredentialImportDetails]
     let summary: BrowserCredentialImportSummary
 }
 
@@ -194,6 +220,7 @@ struct BrowserCredentialImportReview:
     /// with how many rows that accepts, skips, warns about and rejects.
     func resolvedInventory(now: Date = .now) throws -> BrowserCredentialImportResolution {
         var resolved = existingCredentials
+        var details: [UUID: BrowserCredentialImportDetails] = [:]
         var acceptedCount = 0
         for group in plan.groups {
             guard case .imported(let rowNumber) = selection(for: group),
@@ -209,24 +236,25 @@ struct BrowserCredentialImportReview:
                 descriptor.displayName = candidate.displayName ?? descriptor.displayName
                 descriptor.updatedAt = now
                 resolved[index] = BrowserCredential(descriptor: descriptor, password: candidate.password)
+                details[existingID] = BrowserCredentialImportDetails(candidate)
             } else {
+                let descriptor = CredentialDescriptor(
+                    spaceID: destination.spaceID,
+                    origin: group.origin,
+                    username: candidate.username,
+                    displayName: candidate.displayName,
+                    createdAt: now,
+                    isSynchronizable: synchronizesWithICloud
+                )
+                details[descriptor.id] = BrowserCredentialImportDetails(candidate)
                 resolved.append(
-                    BrowserCredential(
-                        descriptor: CredentialDescriptor(
-                            spaceID: destination.spaceID,
-                            origin: group.origin,
-                            username: candidate.username,
-                            displayName: candidate.displayName,
-                            createdAt: now,
-                            isSynchronizable: synchronizesWithICloud
-                        ),
-                        password: candidate.password
-                    ))
+                    BrowserCredential(descriptor: descriptor, password: candidate.password))
             }
             acceptedCount += 1
         }
         return BrowserCredentialImportResolution(
             credentials: resolved,
+            details: details.filter { !$0.value.isEmpty },
             summary: BrowserCredentialImportSummary(
                 acceptedCount: acceptedCount,
                 skippedCount: plan.validRowCount - acceptedCount,
