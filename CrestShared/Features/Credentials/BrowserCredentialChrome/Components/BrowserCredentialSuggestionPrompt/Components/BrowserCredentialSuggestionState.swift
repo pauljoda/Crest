@@ -5,6 +5,8 @@ import SwiftUI
 struct BrowserCredentialSuggestionState: View {
     let isLoading: Bool
     let suggestions: [CredentialDescriptor]
+    let selectedID: UUID?
+    let context: BrowserCredentialSuggestionContext
     let metrics: BrowserCredentialPromptMetrics
     let fill: (CredentialDescriptor) -> Void
 
@@ -19,6 +21,8 @@ struct BrowserCredentialSuggestionState: View {
         } else {
             BrowserCredentialSuggestionList(
                 suggestions: suggestions,
+                selectedID: selectedID,
+                context: context,
                 metrics: metrics,
                 fill: fill
             )
@@ -75,11 +79,16 @@ private struct BrowserCredentialCompactLabelStyle: LabelStyle {
 
 #if DEBUG
     #Preview("Loading, empty, and available") {
+        let context = BrowserCredentialSuggestionContext(
+            iconData: nil, source: "Work · example.test", fillsUsernameOnly: false)
         VStack(spacing: 20) {
-            BrowserCredentialSuggestionState(isLoading: true, suggestions: [], metrics: .pointer, fill: { _ in })
-            BrowserCredentialSuggestionState(isLoading: false, suggestions: [], metrics: .pointer, fill: { _ in })
             BrowserCredentialSuggestionState(
-                isLoading: false, suggestions: [BrowserCredentialDetailPreviewFixture.descriptor], metrics: .pointer,
+                isLoading: true, suggestions: [], selectedID: nil, context: context, metrics: .pointer, fill: { _ in })
+            BrowserCredentialSuggestionState(
+                isLoading: false, suggestions: [], selectedID: nil, context: context, metrics: .pointer, fill: { _ in })
+            BrowserCredentialSuggestionState(
+                isLoading: false, suggestions: [BrowserCredentialDetailPreviewFixture.descriptor],
+                selectedID: BrowserCredentialDetailPreviewFixture.descriptor.id, context: context, metrics: .pointer,
                 fill: { _ in })
         }.padding().frame(width: 380)
     }

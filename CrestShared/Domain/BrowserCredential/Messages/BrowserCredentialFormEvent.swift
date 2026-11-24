@@ -34,6 +34,7 @@ struct BrowserCredentialFormEvent: Hashable, Sendable, Decodable {
                 && !message.containsValues
                 && !message.containsSubmission
                 && !message.containsFocusedField
+                && !message.containsKey
         })
 
     /// The focused field moved under the prompt already on show — the page
@@ -53,6 +54,20 @@ struct BrowserCredentialFormEvent: Hashable, Sendable, Decodable {
                 && !message.containsSubmission
         })
 
+    /// A key the page held back while Crest's popup was open for the form. It
+    /// carries the key and nothing else, so it can only move or answer the
+    /// popup already on show.
+    static let key = BrowserCredentialFormEvent(
+        name: "key", captureEvent: nil,
+        accepts: { message in
+            message.formID != nil
+                && message.isTrustedUserEvent
+                && message.key != nil
+                && !message.containsFields
+                && !message.containsValues
+                && !message.containsSubmission
+        })
+
     /// A sent form: trusted, with its fields, how it was sent, and the values
     /// that belong to its fields.
     private static let sent: @Sendable (BrowserCredentialFormFields) -> Bool = { message in
@@ -65,7 +80,7 @@ struct BrowserCredentialFormEvent: Hashable, Sendable, Decodable {
             && message.values?.isEmpty == false
     }
 
-    static let all: [BrowserCredentialFormEvent] = [username, focus, submit, documentState, fieldGeometry]
+    static let all: [BrowserCredentialFormEvent] = [username, focus, submit, documentState, fieldGeometry, key]
 
     // MARK: - Variables
 

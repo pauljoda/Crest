@@ -127,6 +127,18 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
     /// reachable target; a panel has the room to say which account is which.
     let suggestionRowShowsAccountDetail: Bool
 
+    /// Whether the fill popup opens with a header naming the Space and site.
+    /// A band says so up front; a panel under the field says it on each row.
+    let showsSuggestionHeader: Bool
+
+    /// Whether the popup shows the keys that move and take its selection,
+    /// which only a shell with a keyboard at hand has.
+    let showsKeyHints: Bool
+
+    /// Whether the save prompt's button names the Space. A card shows the
+    /// Space beside its buttons instead.
+    let saveActionNamesSpace: Bool
+
     /// The frame the header's close control claims. A finger needs the full
     /// target; a pointer needs a control the size of the rest of the chrome,
     /// and a 44pt one only pushes the title row apart.
@@ -177,10 +189,13 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
         suggestionRowHighlightCornerRadius: CrestRadius.compact,
         suggestionRowHighlightBleed: 6,
         suggestionRowShowsAccountDetail: true,
+        showsSuggestionHeader: false,
+        showsKeyHints: true,
+        saveActionNamesSpace: false,
         closeControlSize: CrestLayout.pointerHitTarget,
         actionMinimumWidth: 44,
         actionMaximumWidth: nil,
-        savePromptWidth: .bounded(560),
+        savePromptWidth: .bounded(400),
         saveActionPlacement: .besideTitle,
         saveBusyIndicatorSize: nil,
         destinationPresentation: .separateSyncStatus,
@@ -205,6 +220,9 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
         suggestionRowHighlightCornerRadius: nil,
         suggestionRowHighlightBleed: 0,
         suggestionRowShowsAccountDetail: false,
+        showsSuggestionHeader: true,
+        showsKeyHints: false,
+        saveActionNamesSpace: true,
         closeControlSize: CrestLayout.touchHitTarget,
         actionMinimumWidth: nil,
         actionMaximumWidth: .infinity,
@@ -215,15 +233,48 @@ struct BrowserCredentialPromptMetrics: Equatable, Sendable {
         saveCrossOriginSubject: .currentCredential
     )
 
+    /// A touch shell with room beside the field, as an iPad has: the pointer
+    /// shell's panel under the field, with touch-sized rows.
+    static let touchPanel = BrowserCredentialPromptMetrics(
+        surfaceStyle: .panel,
+        horizontalPadding: CrestSpacing.medium,
+        verticalPadding: CrestSpacing.medium,
+        fillPromptWidth: .fixed(360),
+        anchorsFillPromptToField: true,
+        anchoredFillPromptMinimumWidth: 300,
+        chromeInset: CrestSpacing.medium,
+        suggestionListMaximumHeight: nil,
+        suggestionRowVerticalPadding: 2,
+        suggestionRowMinimumHeight: CrestLayout.touchHitTarget,
+        suggestionStateMinimumHeight: CrestLayout.touchHitTarget,
+        suggestionEmptyStatePresentation: .compact,
+        suggestionRowHighlightCornerRadius: CrestRadius.compact,
+        suggestionRowHighlightBleed: 6,
+        suggestionRowShowsAccountDetail: true,
+        showsSuggestionHeader: false,
+        showsKeyHints: false,
+        saveActionNamesSpace: false,
+        closeControlSize: CrestLayout.touchHitTarget,
+        actionMinimumWidth: 44,
+        actionMaximumWidth: nil,
+        savePromptWidth: .bounded(400),
+        saveActionPlacement: .besideTitle,
+        saveBusyIndicatorSize: nil,
+        destinationPresentation: .separateSyncStatus,
+        saveCrossOriginSubject: .definiteCredential
+    )
+
     /// The profile a shell draws its credential prompts with.
     ///
     /// Touch decides it for the same reason it decides the find bar's: a prompt
     /// is a column of hit targets before it is a panel, so its sizing follows
-    /// the least precise input the shell accepts.
+    /// the least precise input the shell accepts. A touch shell with room
+    /// beside the field still points the panel at it.
     static func resolve(
-        _ capabilities: BrowserInteractionCapabilities
+        _ capabilities: BrowserInteractionCapabilities, hasRoomBesideField: Bool = false
     ) -> BrowserCredentialPromptMetrics {
-        capabilities.supportsTouch ? .touch : .pointer
+        guard capabilities.supportsTouch else { return .pointer }
+        return hasRoomBesideField ? .touchPanel : .touch
     }
 
     /// This profile with its fill prompts narrowed to an anchored width.

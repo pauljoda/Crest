@@ -70,9 +70,9 @@ public sealed class CredentialCaptureEvent {
     }
 
     /// A focus offers the site's saved logins from a username or current
-    /// password field, and a new password from a new password field. A
-    /// username field offers logins only on a form that signs in, and only
-    /// when some are saved; any other field closes the prompt.
+    /// password field, only when some are saved, and a new password from a
+    /// new password field. A username field offers logins only on a form that
+    /// signs in; any other field closes the prompt.
     private static CredentialCaptureDecision Focused(CredentialFormFacts facts, bool accepted, CredentialUsernameHint? hint,
         CredentialPendingCandidate? pending, double now) {
         var form = SignInForm.Understand(facts.Fields);
@@ -82,7 +82,8 @@ public sealed class CredentialCaptureEvent {
         if (!accepted || !facts.HasFormId || !facts.HasFillTarget) return CredentialCaptureDecision.For(CredentialCaptureAction.Ignore);
         var source = UsernameSource(form, facts, hint, now);
         return CredentialCaptureDecision.For(CredentialCaptureAction.OfferFill, source, source == CredentialUsernameSource.None,
-            facts.FrameOrigin != facts.TopLevelOrigin, facts.IsMainFrame, form, role.OfferedKind, role.NeedsLoginForm);
+            facts.FrameOrigin != facts.TopLevelOrigin, facts.IsMainFrame || facts.FieldRectInTopViewport, form, role.OfferedKind,
+            role.QuietWithoutLogins);
     }
 
     /// A form sent by its submit, Return or a control that sends it. A step

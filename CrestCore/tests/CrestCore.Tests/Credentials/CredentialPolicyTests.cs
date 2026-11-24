@@ -21,7 +21,7 @@ public sealed class CredentialPolicyTests {
 
     private static CredentialFormFacts Facts(CredentialCaptureEvent kind, IReadOnlyList<FormField>? fields = null, int? focused = null,
         FormSubmission? sent = null, CredentialOrigin? frame = null, CredentialOrigin? top = null, bool? visible = null) =>
-        new(kind, frame ?? Login, top ?? Login, true, true, fields ?? [Username, Password], focused, sent, false, visible, true);
+        new(kind, frame ?? Login, top ?? Login, true, true, fields ?? [Username, Password], focused, sent, false, visible, true, true);
 
     private static (int? Current, int? Kept) Read(IReadOnlyList<FormField> fields) {
         var form = SignInForm.Understand(fields);
@@ -178,40 +178,49 @@ public sealed class CredentialPolicyTests {
 
     [Fact]
     public void GeneratedPasswordsFollowTheSitesRules() {
-        var grouped = PasswordRequirements.None.Recipe();
+        var grouped = PasswordRequirements.None.Recipe(PasswordStyle.Grouped);
         Assert.Equal((3, 6, "-", 20), (grouped.Segments, grouped.SegmentLength, grouped.Separator, grouped.Length));
         Assert.All(grouped.Groups.Concat(grouped.Required), group => Assert.True(group.Length > 0 && group.IndexOfAny(['l', 'I', 'O', '0', '1']) < 0));
         // Rules the grouped style can't meet get random characters from what the site allows.
-        var digits = new PasswordRequirements(null, null, "required: digit; maxlength: 8; max-consecutive: 2").Recipe();
+        var digits = new PasswordRequirements(null, null, "required: digit; maxlength: 8; max-consecutive: 2").Recipe(PasswordStyle.Grouped);
         Assert.Equal((1, 8, "", 2), (digits.Segments, digits.Length, digits.Separator, digits.MaxConsecutive));
         Assert.Equal(["23456789"], digits.Groups);
-        var symbols = new PasswordRequirements(12, 16, "required: lower; required: upper; required: digit; required: [!#];").Recipe();
+        var symbols = new PasswordRequirements(12, 16, "required: lower; required: upper; required: digit; required: [!#];").Recipe(PasswordStyle.Grouped);
         Assert.Equal(16, symbols.Length);
         Assert.Contains("!#", symbols.Required);
         Assert.DoesNotContain(symbols.Groups, group => group.Contains('-'));
-        var allowed = new PasswordRequirements(8, 64, "required: upper; required: digit; allowed: lower, [-]; nonsense").Recipe();
+        var allowed = new PasswordRequirements(8, 64, "required: upper; required: digit; allowed: lower, [-]; nonsense").Recipe(PasswordStyle.Grouped);
         Assert.Equal((grouped.Segments, grouped.Separator, grouped.Length), (allowed.Segments, allowed.Separator, allowed.Length));
         Assert.Equal(new InvalidPasswordLength(StrongPasswordRecipe.ShortestLength, StrongPasswordRecipe.MaximumLength),
-            Refusal(() => new PasswordRequirements(null, 3, null).Recipe()));
+            Refusal(() => new PasswordRequirements(null, 3, null).Recipe(PasswordStyle.Grouped)));
+        // A random password with symbols is offered beside a grouped one, with what the site asked for.
+        Assert.True(grouped.HasRandomAlternative);
+        var random = PasswordRequirements.None.Recipe(PasswordStyle.Random);
+        Assert.Equal(("", 20, 4), (random.Separator, random.SegmentLength, random.Required.Count));
+        var signup = new PasswordRequirements(null, null,
+            "minlength: 12; maxlength: 16; required: lower; required: upper; required: digit; required: [-_!]; allowed: [-_!]")
+            .Recipe(PasswordStyle.Grouped);
+        Assert.Equal<(int?, int?, string?)>((12, 16, "!-_"), (signup.SiteMinLength, signup.SiteMaxLength, signup.SiteSymbols));
+        Assert.Null(PasswordRequirements.None.Recipe(PasswordStyle.Grouped).SiteSymbols);
         // A minimum past what Crest makes is refused, never lowered.
-        Assert.IsType<InvalidPasswordLength>(Refusal(() => new PasswordRequirements(129, 200, null).Recipe()));
+        Assert.IsType<InvalidPasswordLength>(Refusal(() => new PasswordRequirements(129, 200, null).Recipe(PasswordStyle.Grouped)));
         // Every required set is kept: one met by another's characters folds into it.
         var tight = new PasswordRequirements(null, null, "required: [ab]; required: [a]; required: [b]; required: [c]; required: [d]; maxlength: 4")
-            .Recipe();
+            .Recipe(PasswordStyle.Grouped);
         Assert.Equal(["a", "b", "c", "d"], tight.Required);
         // A repeat limit keeps the characters it needs, and a rule given twice holds to the stricter value.
         var alternating = new PasswordRequirements(null, null, "allowed: [al]; minlength: 4; maxlength: 4; max-consecutive: 2; max-consecutive: 1")
-            .Recipe();
+            .Recipe(PasswordStyle.Grouped);
         Assert.Equal(1, alternating.MaxConsecutive);
         Assert.Equal(["al"], alternating.Groups);
         // An empty set is ignored, and the rules after it still hold.
-        var afterEmpty = new PasswordRequirements(null, null, "allowed: []; required: digit; maxlength: 8").Recipe();
+        var afterEmpty = new PasswordRequirements(null, null, "allowed: []; required: digit; maxlength: 8").Recipe(PasswordStyle.Grouped);
         Assert.Equal(8, afterEmpty.Length);
         Assert.Equal(["23456789"], afterEmpty.Groups);
-        Assert.Contains("]", new PasswordRequirements(null, 16, "required: []]; required: lower").Recipe().Required);
+        Assert.Contains("]", new PasswordRequirements(null, 16, "required: []]; required: lower").Recipe(PasswordStyle.Grouped).Required);
         // Characters outside the named classes, and semicolons inside a set, are the page's own.
-        Assert.Contains("/", new PasswordRequirements(null, null, "required: lower; required: [/]").Recipe().Required);
-        Assert.Contains(new PasswordRequirements(null, 16, "required: [!;@]; required: lower").Recipe().Required,
+        Assert.Contains("/", new PasswordRequirements(null, null, "required: lower; required: [/]").Recipe(PasswordStyle.Grouped).Required);
+        Assert.Contains(new PasswordRequirements(null, 16, "required: [!;@]; required: lower").Recipe(PasswordStyle.Grouped).Required,
             group => group.Contains(';'));
     }
 

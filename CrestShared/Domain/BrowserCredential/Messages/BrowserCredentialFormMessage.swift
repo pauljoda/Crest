@@ -12,9 +12,12 @@ struct BrowserCredentialFormFields: Sendable {
     let focusedField: Int?
     let values: [Int: String]?
     let submission: FormSubmission?
+    let key: BrowserCredentialPopupKey?
     let isTrustedUserEvent: Bool
     let hasVisiblePasswordField: Bool?
     let fieldRect: BrowserCredentialFieldRect?
+    let fieldRectInTopViewport: Bool
+    let containsKey: Bool
     let containsFields: Bool
     let containsFocusedField: Bool
     let containsValues: Bool
@@ -98,6 +101,9 @@ struct BrowserCredentialFormMessage: Sendable, Decodable, CustomStringConvertibl
 
     /// How a sent form was sent.
     let submission: FormSubmission?
+
+    /// The key the page held back for Crest's popup.
+    let key: BrowserCredentialPopupKey?
     let isTrustedUserEvent: Bool
     let hasVisiblePasswordField: Bool?
 
@@ -105,6 +111,10 @@ struct BrowserCredentialFormMessage: Sendable, Decodable, CustomStringConvertibl
     /// reported it. Optional on a focus: a field the bridge cannot measure
     /// still deserves a prompt, just not an anchored one.
     let fieldRect: BrowserCredentialFieldRect?
+
+    /// Whether `fieldRect` is in the top page's viewport: a frame the top
+    /// page can reach adds its own place in the page to its field's.
+    let fieldRectInTopViewport: Bool
 
     var description: String {
         "BrowserCredentialFormMessage(event: \(event.name), formID: \(formID ?? "none"), fields: \(fields.count), values: <redacted>)"
@@ -121,9 +131,11 @@ struct BrowserCredentialFormMessage: Sendable, Decodable, CustomStringConvertibl
         case focusedField
         case values
         case submission
+        case key
         case trusted
         case hasVisiblePasswordField
         case fieldRect
+        case topViewport
     }
 
     // MARK: - Initializers
@@ -159,9 +171,12 @@ struct BrowserCredentialFormMessage: Sendable, Decodable, CustomStringConvertibl
                 .flatMap { Self.decodedValues($0, fields: fields) },
             submission: (try? container.decodeIfPresent(WireSubmission.self, forKey: .submission))
                 .flatMap(Self.decodedSubmission),
+            key: try? container.decodeIfPresent(BrowserCredentialPopupKey.self, forKey: .key),
             isTrustedUserEvent: (try? container.decodeIfPresent(Bool.self, forKey: .trusted)) ?? false,
             hasVisiblePasswordField: try? container.decodeIfPresent(Bool.self, forKey: .hasVisiblePasswordField),
             fieldRect: try? container.decodeIfPresent(BrowserCredentialFieldRect.self, forKey: .fieldRect),
+            fieldRectInTopViewport: (try? container.decodeIfPresent(Bool.self, forKey: .topViewport)) ?? false,
+            containsKey: container.contains(.key),
             containsFields: container.contains(.fields),
             containsFocusedField: container.contains(.focusedField),
             containsValues: container.contains(.values),
@@ -178,9 +193,11 @@ struct BrowserCredentialFormMessage: Sendable, Decodable, CustomStringConvertibl
         focusedField = fieldMessage.focusedField
         values = fieldMessage.values ?? [:]
         submission = fieldMessage.submission
+        key = fieldMessage.key
         isTrustedUserEvent = fieldMessage.isTrustedUserEvent
         hasVisiblePasswordField = fieldMessage.hasVisiblePasswordField
         fieldRect = fieldMessage.fieldRect
+        fieldRectInTopViewport = fieldMessage.fieldRectInTopViewport
     }
 
     // MARK: - Actions - Reading

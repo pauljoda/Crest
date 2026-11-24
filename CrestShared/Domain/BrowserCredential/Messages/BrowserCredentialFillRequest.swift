@@ -25,10 +25,11 @@ struct BrowserCredentialFillRequest: Identifiable, Equatable, Sendable {
     /// Where the field that asked sits in the page's viewport, in CSS pixels,
     /// or `nil` where nothing can be said about it.
     ///
-    /// Only a main-frame field ever fills this in. A subframe reports its rect
-    /// in its own viewport, and a cross-origin one cannot know where that
-    /// viewport lands in the page — so a prompt raised from a frame keeps the
-    /// placement it has always had rather than pointing at the wrong place.
+    /// A main-frame field fills this in, and so does a field in a frame the
+    /// top page can reach, which adds its frames' places in the page. A
+    /// cross-origin frame cannot know where its viewport lands in the page, so
+    /// a prompt raised from one keeps its own placement rather than pointing at
+    /// the wrong place.
     let fieldRect: BrowserCredentialFieldRect?
 
     /// The fields the core chose for the fill.

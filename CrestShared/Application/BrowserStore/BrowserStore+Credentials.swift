@@ -170,12 +170,14 @@ extension BrowserStore {
 // MARK: - Generated passwords and system Passwords
 
 extension BrowserStore {
-    /// How to compose a generated password that meets `requirements`, the
-    /// limits of the field it is for. The password itself is drawn natively,
-    /// so it never enters the core.
-    func strongPasswordRecipe(for requirements: PasswordRequirements = .none) throws -> StrongPasswordRecipe {
+    /// How to compose a generated password in `style` that meets
+    /// `requirements`, the limits of the field it is for. The password itself
+    /// is drawn natively, so it never enters the core.
+    func strongPasswordRecipe(
+        for requirements: PasswordRequirements = .none, style: PasswordStyle = .grouped
+    ) throws -> StrongPasswordRecipe {
         do {
-            return try core.query(StrongPassword(requirements: requirements))
+            return try core.query(StrongPassword(requirements: requirements, style: style))
         } catch {
             throw BrowserStrongPasswordGenerationError.unavailable
         }

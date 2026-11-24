@@ -140,6 +140,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var isCredentialAccessEnabled: Bool { credentialSession.isEnabled }
     var credentialFillRequest: BrowserCredentialFillRequest? { credentialState.fillRequest }
     var credentialSaveCandidate: BrowserCredentialSaveCandidate? { credentialState.saveCandidate }
+    var credentialKeyPress: BrowserCredentialKeyPress? { credentialState.keyPress }
     /// The pool that owns this page. Weak because the pool owns the page.
     @ObservationIgnored weak var host: BrowserPagePool?
     @ObservationIgnored var windowRouting: BrowserPageWindowRouting?
@@ -892,6 +893,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     func credentialFormUsername(for requestID: UUID) async -> String? {
         guard let evaluate = credentialEvaluator else { return nil }
         return await credentialSession.currentUsername(for: requestID, evaluate: evaluate)
+    }
+
+    func holdCredentialKeys(_ hold: Bool, for requestID: UUID) async {
+        guard let evaluate = credentialEvaluator else { return }
+        await credentialSession.holdKeys(hold, for: requestID, evaluate: evaluate)
     }
 
     /// Fills go back through the channel the credential bridge came in on.

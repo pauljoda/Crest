@@ -1,50 +1,67 @@
 import SwiftUI
 
-/// One saved account the prompt can put into the form.
+// MARK: - Types
+
+/// What every row of one popup shares: where its logins come from, how to mark
+/// them, and what a fill will put in.
+struct BrowserCredentialSuggestionContext {
+    /// The site's own icon, where the popup may show it.
+    let iconData: Data?
+
+    /// The Space's name and the site the popup fills, which a row's second
+    /// line names.
+    let source: String
+
+    /// Whether a fill writes the username alone, on a step that asks only for
+    /// it, which the selected row says.
+    let fillsUsernameOnly: Bool
+}
+
+/// One saved account the popup can put into the form.
 ///
-/// The name the credential was saved under carries the row and the login it
-/// signs in with sits under it, because the question a list of accounts answers
-/// is *which of mine*. The site is not repeated here: every suggestion is an
-/// exact-origin match for the one the header already named.
+/// The name the credential was saved under carries the row and where it comes
+/// from sits under it: the Space and the site. The selected row says what a
+/// fill will do where that differs from filling both fields, and wears the
+/// selection the arrow keys move.
 struct BrowserCredentialSuggestionRow: View {
     let suggestion: CredentialDescriptor
+    let isSelected: Bool
+    let context: BrowserCredentialSuggestionContext
     let metrics: BrowserCredentialPromptMetrics
     let fill: () -> Void
 
     var body: some View {
         Button(action: fill) {
             HStack(spacing: BrowserCredentialPromptMetrics.suggestionRowSpacing) {
-                Image(systemName: "person.crop.circle")
-                    .font(
-                        .system(
-                            size: BrowserCredentialPromptMetrics
-                                .suggestionRowIconSize
-                        )
-                    )
-                    .foregroundStyle(.secondary)
+                BrowserCredentialPromptIdentity(
+                    kind: .suggestions,
+                    iconData: context.iconData,
+                    showsSiteIcon: context.iconData != nil,
+                    tint: CrestBrandTheme.accent
+                )
                 VStack(
                     alignment: .leading,
-                    spacing: BrowserCredentialPromptMetrics
-                        .suggestionRowTextSpacing
+                    spacing: BrowserCredentialPromptMetrics.suggestionRowTextSpacing
                 ) {
                     Text(title)
-                        .font(.callout)
+                        .font(.callout.weight(.semibold))
                         .lineLimit(1)
                         .truncationMode(.middle)
-                    if let detail {
+                    if metrics.suggestionRowShowsAccountDetail {
                         Text(detail)
-                            .font(.caption2)
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                             .truncationMode(.middle)
                     }
                 }
-                Spacer(
-                    minLength: BrowserCredentialPromptMetrics
-                        .suggestionRowSpacerLength
-                )
-                Image(systemName: "arrow.right.circle.fill")
-                    .foregroundStyle(.tint)
+                Spacer(minLength: BrowserCredentialPromptMetrics.suggestionRowSpacerLength)
+                if isSelected, metrics.showsKeyHints {
+                    Image(systemName: "return")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
+                }
             }
             .padding(.horizontal, metrics.suggestionRowHighlightBleed)
             .frame(
@@ -55,64 +72,50 @@ struct BrowserCredentialSuggestionRow: View {
             .contentShape(.rect)
         }
         .buttonStyle(
-            BrowserCredentialSuggestionRowStyle(
+            BrowserCredentialPopupRowStyle(
+                isSelected: isSelected,
                 highlightCornerRadius: metrics.suggestionRowHighlightCornerRadius
             )
         )
         .padding(.vertical, metrics.suggestionRowVerticalPadding)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     /// What the row is filed under: the name the credential was saved with,
     /// falling back to the login it signs in with.
     private var title: String {
         guard
-            let displayName = suggestion.displayName?.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            ), !displayName.isEmpty
+            let displayName = suggestion.displayName?.trimmingCharacters(in: .whitespacesAndNewlines),
+            !displayName.isEmpty
         else {
             return suggestion.username
         }
         return displayName
     }
 
-    /// The login under the name, where the name is not already it.
-    private var detail: String? {
-        guard metrics.suggestionRowShowsAccountDetail,
-            title != suggestion.username
-        else { return nil }
-        return suggestion.username
-    }
-}
-
-/// The row's resting and pressed treatment, where its shell draws one.
-///
-/// A plain button style everywhere else: a band's rows are aimed at with a
-/// finger, which never rests, and a highlight that only ever appears under the
-/// thumb already covering it is noise.
-private struct BrowserCredentialSuggestionRowStyle: ButtonStyle {
-    let highlightCornerRadius: CGFloat?
-
-    @ViewBuilder
-    func makeBody(configuration: Configuration) -> some View {
-        if let highlightCornerRadius {
-            configuration.label
-                .crestHoverSurface(
-                    cornerRadius: highlightCornerRadius,
-                    isPressed: configuration.isPressed
-                )
-        } else {
-            configuration.label
+    /// The second line: what a fill does on a username step, for the row it
+    /// would take, and otherwise where the login comes from, with the login
+    /// itself when the name is not already it.
+    private var detail: String {
+        if isSelected, context.fillsUsernameOnly {
+            return String(localized: "Fills the username now, the password on the next step")
         }
+        guard title != suggestion.username else { return context.source }
+        return "\(suggestion.username) · \(context.source)"
     }
 }
 
 #if DEBUG
     #Preview("Pointer and touch") {
+        let context = BrowserCredentialSuggestionContext(
+            iconData: nil, source: "Work · example.test", fillsUsernameOnly: false)
         VStack(spacing: 20) {
             BrowserCredentialSuggestionRow(
-                suggestion: BrowserCredentialDetailPreviewFixture.descriptor, metrics: .pointer, fill: {})
+                suggestion: BrowserCredentialDetailPreviewFixture.descriptor, isSelected: true, context: context,
+                metrics: .pointer, fill: {})
             BrowserCredentialSuggestionRow(
-                suggestion: BrowserCredentialDetailPreviewFixture.descriptor, metrics: .touch, fill: {})
+                suggestion: BrowserCredentialDetailPreviewFixture.descriptor, isSelected: false, context: context,
+                metrics: .touch, fill: {})
         }.padding().frame(width: 380)
     }
 #endif

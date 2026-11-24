@@ -101,6 +101,15 @@ final class BrowserCredentialSession {
             context.target.frame) as? String
     }
 
+    /// Sends the request's field's arrow, Return and Escape keys to Crest's
+    /// popup while it is on show, or gives them back to the page.
+    func holdKeys(_ hold: Bool, for requestID: UUID, evaluate: Evaluate) async {
+        guard isEnabled, let target = state.fillTarget(for: requestID) else { return }
+        _ = try? await evaluate(
+            "return globalThis.__crestCredentialBridge?.holdKeys(formID, hold) === true;",
+            ["formID": target.formID, "hold": hold], target.frame)
+    }
+
     private func fill(
         _ entries: [[String: Any]], generated: Bool, into target: FillTarget, evaluate: Evaluate
     ) async throws {

@@ -23,11 +23,14 @@ public enum CredentialUsernameSource { None, Explicit, Hint, CurrentPassword }
 /// `Fields` are the form's inputs as the page script read them, and
 /// `FocusedField` the index of the one a focus came from. `Submission` says
 /// how a submitted form was sent. `FilledUsername` is true when Crest just
-/// filled a username. The platform keeps every value; the core only learns
+/// filled a username. `FieldRectInTopViewport` says the focused field's
+/// position was measured in the top page's viewport, as a frame the top page
+/// can reach measures it. The platform keeps every value; the core only learns
 /// whether each field has one and who entered it.
 public sealed record CredentialFormFacts(CredentialCaptureEvent Event, CredentialOrigin FrameOrigin,
     CredentialOrigin TopLevelOrigin, bool IsMainFrame, bool HasFormId, IReadOnlyList<FormField> Fields, int? FocusedField,
-    FormSubmission? Submission, bool FilledUsername, bool? HasVisiblePasswordField, bool HasFillTarget);
+    FormSubmission? Submission, bool FilledUsername, bool? HasVisiblePasswordField, bool HasFillTarget,
+    bool FieldRectInTopViewport);
 
 /// Whether a fill may go ahead.
 public sealed record CredentialFillDecision(bool IsAllowed);

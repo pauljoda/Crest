@@ -10,8 +10,13 @@ namespace CrestCore.Contracts;
 /// uppercase and one a digit, joined by hyphens: easy to read and to type,
 /// and accepted where hyphens are. Characters easily confused in
 /// proportional fonts are left out wherever a site allows others.
+/// `SiteMinLength`, `SiteMaxLength` and `SiteSymbols` say what the site asked
+/// for, so the offer can show it: its length limits, and the symbols it allows
+/// when it limits them, empty when it allows none. `HasRandomAlternative`
+/// says a random password with symbols can be offered beside a grouped one.
 public sealed record StrongPasswordRecipe(int Segments, int SegmentLength, string Separator, IReadOnlyList<string> Groups,
-    IReadOnlyList<string> Required, int MaxConsecutive) {
+    IReadOnlyList<string> Required, int MaxConsecutive, int? SiteMinLength, int? SiteMaxLength, string? SiteSymbols,
+    bool HasRandomAlternative) {
     #region Static Variables
 
     internal const int DefaultLength = 20;
@@ -52,12 +57,13 @@ public sealed record StrongPasswordRecipe(int Segments, int SegmentLength, strin
 
     /// Crest's grouped style.
     internal static StrongPasswordRecipe Grouped(int maxConsecutive) =>
-        new(GroupedSegments, GroupedSegmentLength, GroupedSeparator, [Lowercase], [Uppercase, Digits], maxConsecutive);
+        new(GroupedSegments, GroupedSegmentLength, GroupedSeparator, [Lowercase], [Uppercase, Digits], maxConsecutive, null, null,
+            null, false);
 
     /// `length` random characters from `groups`, with one from each of `required`.
     internal static StrongPasswordRecipe Random(int length, IReadOnlyList<string> groups, IReadOnlyList<string> required,
         int maxConsecutive) =>
-        new(1, length, "", groups, required, maxConsecutive);
+        new(1, length, "", groups, required, maxConsecutive, null, null, null, false);
 
     #endregion
 }

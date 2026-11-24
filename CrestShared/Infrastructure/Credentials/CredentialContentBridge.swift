@@ -62,6 +62,9 @@ enum BrowserCredentialContentBridge {
           let nextID = 1;
           let pendingSubmission = false;
           let fillingFocus = false;
+          // The form whose focused field Crest's popup is open for. Its arrow,
+          // Return and Escape keys go to the popup instead of the page.
+          let heldForm = null;
           let trackedField = null;
           let trackedFieldRect = null;
           let lastSubmissionFingerprint = "";
@@ -92,6 +95,36 @@ enum BrowserCredentialContentBridge {
             return { x: rect.left, y: rect.top, width: rect.width, height: rect.height };
           };
 
+          // The field's rect in the top page's viewport, adding the place of
+          // each frame on the way up, as far as this frame can reach; the rect
+          // in its own viewport, unmoved, from a frame it can't reach.
+          const followedViews = new WeakSet();
+          const placementOf = (element) => {
+            const rect = rectOf(element);
+            if (!rect) return null;
+            let x = rect.x;
+            let y = rect.y;
+            let view = window;
+            try {
+              while (view !== view.top) {
+                const frame = view.frameElement;
+                if (!frame) return { rect, inTopViewport: false };
+                const box = frame.getBoundingClientRect();
+                x += box.left + frame.clientLeft;
+                y += box.top + frame.clientTop;
+                view = view.parent;
+                // A page around the frame scrolling moves the field too.
+                if (!followedViews.has(view)) {
+                  followedViews.add(view);
+                  view.addEventListener("scroll", () => reportFieldGeometry(), { capture: true, passive: true });
+                }
+              }
+            } catch (_) {
+              return { rect, inTopViewport: false };
+            }
+            return { rect: { x, y, width: rect.width, height: rect.height }, inTopViewport: true };
+          };
+
           const rectsDiffer = (left, right) => !left || !right
             || Math.abs(left.x - right.x) >= 0.5
             || Math.abs(left.y - right.y) >= 0.5
@@ -109,14 +142,15 @@ enum BrowserCredentialContentBridge {
               trackedFieldRect = null;
               return;
             }
-            const rect = rectOf(input);
-            if (!rect || !rectsDiffer(rect, trackedFieldRect)) return;
-            trackedFieldRect = rect;
+            const placement = placementOf(input);
+            if (!placement || !rectsDiffer(placement.rect, trackedFieldRect)) return;
+            trackedFieldRect = placement.rect;
             post({
               event: "fieldGeometry",
               trusted: false,
               formID: trackedField.formID,
-              fieldRect: rect
+              fieldRect: placement.rect,
+              topViewport: placement.inTopViewport
             });
           };
 
@@ -319,14 +353,17 @@ enum BrowserCredentialContentBridge {
           // together so the hook cannot drift away from the path a real focus
           // takes. A focus never carries a password.
           const reportFocus = (input) => {
+            heldForm = null;
             const reading = read(rootFor(input));
             const index = reading.inputs.indexOf(input);
             if (index < 0) return false;
-            const rect = rectOf(input);
+            const placement = placementOf(input);
+            const rect = placement?.rect || null;
             trackedField = rect ? { input: new WeakRef(input), formID: reading.formID } : null;
             trackedFieldRect = rect;
             post({
               event: "focus",
+              topViewport: placement?.inTopViewport || false,
               trusted: true,
               formID: reading.formID,
               readingID: reading.readingID,
@@ -375,11 +412,30 @@ enum BrowserCredentialContentBridge {
                 setInputValue(input, value);
                 if (generated) enteredValues.set(input, value); else enteredValues.delete(input);
               }
+              heldForm = null;
               const last = targets[targets.length - 1].input;
               if (isVisible(last)) {
                 fillingFocus = true;
                 try { last.focus(); } finally { fillingFocus = false; }
               }
+              return true;
+            },
+            // Moves focus to the form control before, -1, or after, 1, the
+            // focused one, as the phone's previous and next buttons do.
+            focusAdjacent(step) {
+              const skipped = ["button", "submit", "reset", "image", "checkbox", "radio", "file", "range", "color", "hidden"];
+              const controls = Array.from(document.querySelectorAll("input, select, textarea, [contenteditable='true']"))
+                .filter((control) => !control.disabled && control.getClientRects().length
+                  && !(control instanceof HTMLInputElement && skipped.includes(control.type)));
+              const next = controls[controls.indexOf(document.activeElement) + step];
+              if (!next) return false;
+              next.focus();
+              return true;
+            },
+            // Sends the focused field's arrow, Return and Escape keys to
+            // Crest's popup while it is open for the form, or gives them back.
+            holdKeys(formID, hold) {
+              heldForm = hold ? formID : null;
               return true;
             },
             valueOf(formID, readingID, index) {
@@ -404,6 +460,7 @@ enum BrowserCredentialContentBridge {
             if (event.relatedTarget instanceof Element) {
               trackedField = null;
               trackedFieldRect = null;
+              heldForm = null;
             }
           }, true);
 
@@ -412,7 +469,15 @@ enum BrowserCredentialContentBridge {
           // typed. A password the page rewrites is no longer the person's.
           const noteEntered = (event) => {
             const input = inputFromEvent(event);
-            if (event.isTrusted && input) enteredValues.set(input, input.value);
+            if (!event.isTrusted || !input) return;
+            enteredValues.set(input, input.value);
+            // Typing in the field closes the popup and gives its keys back,
+            // so Return sends what the person typed.
+            if (heldForm && idsByRoot.get(rootFor(input)) === heldForm) {
+              const formID = heldForm;
+              heldForm = null;
+              post({ event: "key", trusted: true, formID, key: "dismiss" });
+            }
           };
           document.addEventListener("input", noteEntered, true);
           addEventListener("input", (event) => {
@@ -440,6 +505,21 @@ enum BrowserCredentialContentBridge {
               || (control instanceof HTMLInputElement && (control.type === "submit" || control.type === "image"));
             const root = rootFor(control);
             queueMicrotask(() => capture(root, sendsForm ? "submitControl" : "button", control));
+          }, true);
+
+          // Registered first, so a held key never reaches the page or the
+          // Return capture below.
+          const popupKeys = { ArrowDown: "down", ArrowUp: "up", Enter: "choose", Escape: "dismiss" };
+          document.addEventListener("keydown", (event) => {
+            const key = popupKeys[event.key];
+            if (!heldForm || !key || !event.isTrusted || event.isComposing) return;
+            const input = inputFromEvent(event);
+            if (!input || idsByRoot.get(rootFor(input)) !== heldForm) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            const formID = heldForm;
+            if (key === "choose" || key === "dismiss") heldForm = null;
+            post({ event: "key", trusted: true, formID, key });
           }, true);
 
           document.addEventListener("keydown", (event) => {

@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xce, 0x3c, 0xd3, 0x2b, 0x47, 0xd9, 0xd4, 0x3e, 0x3e, 0x40, 0x9c, 0xc5, 0x21, 0x0e, 0x7c, 0x39, 0x1f, 0xde, 0x14, 0xca, 0x6e, 0x69, 0x8a, 0xa6, 0x7b, 0x59, 0x35, 0x72, 0x70, 0xc6, 0x34, 0xea
+        0x87, 0xb3, 0xcb, 0x55, 0x47, 0x23, 0x4b, 0x84, 0xd1, 0xbd, 0xa3, 0xc0, 0x9f, 0xc1, 0xd2, 0x7b, 0xf9, 0x58, 0x33, 0x33, 0x54, 0x99, 0xef, 0x19, 0xc3, 0xb0, 0x14, 0x9f, 0x8a, 0xba, 0x40, 0xf1
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -6662,7 +6662,8 @@ extension CredentialFormFacts {
             hasVisiblePasswordField = nil
         }
         let hasFillTarget = try reader.readBool()
-        self.init(event: event, frameOrigin: frameOrigin, topLevelOrigin: topLevelOrigin, isMainFrame: isMainFrame, hasFormID: hasFormID, fields: fields, focusedField: focusedField, submission: submission, filledUsername: filledUsername, hasVisiblePasswordField: hasVisiblePasswordField, hasFillTarget: hasFillTarget)
+        let fieldRectInTopViewport = try reader.readBool()
+        self.init(event: event, frameOrigin: frameOrigin, topLevelOrigin: topLevelOrigin, isMainFrame: isMainFrame, hasFormID: hasFormID, fields: fields, focusedField: focusedField, submission: submission, filledUsername: filledUsername, hasVisiblePasswordField: hasVisiblePasswordField, hasFillTarget: hasFillTarget, fieldRectInTopViewport: fieldRectInTopViewport)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -6695,6 +6696,7 @@ extension CredentialFormFacts {
             writer.writePresence(false)
         }
         writer.writeBool(hasFillTarget)
+        writer.writeBool(fieldRectInTopViewport)
     }
 }
 
@@ -26253,11 +26255,13 @@ extension StoredSite {
 extension StrongPassword {
     init(from reader: inout WireReader) throws(WireError) {
         let requirements = try PasswordRequirements(from: &reader)
-        self.init(requirements: requirements)
+        let style = try PasswordStyle(from: &reader)
+        self.init(requirements: requirements, style: style)
     }
 
     func encode(into writer: inout WireWriter) {
         requirements.encode(into: &writer)
+        style.encode(into: &writer)
     }
 
     func encodeQuery(into writer: inout WireWriter) {
@@ -26291,7 +26295,29 @@ extension StrongPasswordRecipe {
             required.append(requiredElement)
         }
         let maxConsecutive = try reader.readInt()
-        self.init(segments: segments, segmentLength: segmentLength, separator: separator, groups: groups, required: required, maxConsecutive: maxConsecutive)
+        let siteMinLength: Int?
+        if try reader.readPresence() {
+            let siteMinLengthValue = try reader.readInt()
+            siteMinLength = siteMinLengthValue
+        } else {
+            siteMinLength = nil
+        }
+        let siteMaxLength: Int?
+        if try reader.readPresence() {
+            let siteMaxLengthValue = try reader.readInt()
+            siteMaxLength = siteMaxLengthValue
+        } else {
+            siteMaxLength = nil
+        }
+        let siteSymbols: String?
+        if try reader.readPresence() {
+            let siteSymbolsValue = try reader.readString()
+            siteSymbols = siteSymbolsValue
+        } else {
+            siteSymbols = nil
+        }
+        let hasRandomAlternative = try reader.readBool()
+        self.init(segments: segments, segmentLength: segmentLength, separator: separator, groups: groups, required: required, maxConsecutive: maxConsecutive, siteMinLength: siteMinLength, siteMaxLength: siteMaxLength, siteSymbols: siteSymbols, hasRandomAlternative: hasRandomAlternative)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -26307,6 +26333,25 @@ extension StrongPasswordRecipe {
             writer.writeString(element0)
         }
         writer.writeInt(maxConsecutive)
+        if let present0 = siteMinLength {
+            writer.writePresence(true)
+            writer.writeInt(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = siteMaxLength {
+            writer.writePresence(true)
+            writer.writeInt(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = siteSymbols {
+            writer.writePresence(true)
+            writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        writer.writeBool(hasRandomAlternative)
     }
 }
 
@@ -30175,6 +30220,20 @@ extension PasskeyDeviceConfiguration {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown PasskeyDeviceConfiguration \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension PasswordStyle {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown PasswordStyle \(tag)")
         }
         self = Self.all[tag]
     }

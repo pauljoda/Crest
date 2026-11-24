@@ -26,6 +26,13 @@ struct BrowserCredentialChromePlacement<Content: View>: View {
     var body: some View {
         if let field, metrics.anchorsFillPromptToField {
             anchored(to: field)
+        } else if metrics.surfaceStyle == .panel {
+            // A panel with no field to point at hangs from the page's leading
+            // top corner, under the address field, and grows from there.
+            content(metrics)
+                .transition(.scale(scale: CrestMotion.entranceScale, anchor: .topLeading).combined(with: .opacity))
+                .padding(metrics.chromeInset)
+                .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             content(metrics)
                 .transition(.move(edge: .top).combined(with: .opacity))
@@ -52,8 +59,11 @@ struct BrowserCredentialChromePlacement<Content: View>: View {
             // in on its way to the field.
             .opacity(isMeasured ? 1 : 0)
             .transition(
-                .scale(scale: 0.97, anchor: placement.isAboveField ? .bottom : .top)
-                    .combined(with: .opacity)
+                .scale(
+                    scale: CrestMotion.entranceScale,
+                    anchor: placement.isAboveField ? .bottomLeading : .topLeading
+                )
+                .combined(with: .opacity)
             )
             .offset(x: placement.origin.x, y: placement.origin.y)
             .frame(

@@ -1,5 +1,6 @@
 import Dispatch
 import Observation
+import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 import WebKit
@@ -77,6 +78,17 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// screen. Selecting the tab again is what brings the page back.
     var credentialFillRequest: BrowserCredentialFillRequest? { credentialState.fillRequest }
     var credentialSaveCandidate: BrowserCredentialSaveCandidate? { credentialState.saveCandidate }
+    var credentialKeyPress: BrowserCredentialKeyPress? { credentialState.keyPress }
+
+    /// The fill request whose full offer shows in the band at the top of the
+    /// page. A phone shows its offers in the strip above the keyboard and
+    /// opens the band only when the strip asks.
+    private(set) var credentialOfferRequestID: UUID?
+
+    /// Whether the page shows its fill offers in the strip above the keyboard.
+    var usesCredentialStrip: Bool { credentialStripHost != nil }
+
+    @ObservationIgnored private var credentialStripHost: UIHostingController<MobileCredentialStrip>?
 
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
     @ObservationIgnored private let pullToRefreshControl = UIRefreshControl()
@@ -866,6 +878,49 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     func credentialFormUsername(for requestID: UUID) async -> String? {
         await credentialSession.currentUsername(for: requestID, in: webView)
+    }
+
+    func holdCredentialKeys(_ hold: Bool, for requestID: UUID) async {
+        await credentialSession.holdKeys(hold, for: requestID, in: webView)
+    }
+
+    /// Puts Crest's strip above the keyboard in place of WebKit's bar, on a
+    /// phone, once per page.
+    func installCredentialStrip(browser: BrowserStore) {
+        guard UIDevice.current.userInterfaceIdiom == .phone, credentialStripHost == nil,
+            let webView = webView as? MobilePageWebView
+        else { return }
+        let spaceID = spaceID
+        let actions = MobileCredentialStripActions(
+            fill: { [weak self, weak browser] login, requestID in
+                Task { @MainActor in
+                    guard let self, let browser,
+                        let credential = try? await browser.credential(id: login.id, in: spaceID)
+                    else { return }
+                    try? await self.fillCredential(credential, for: requestID)
+                }
+            },
+            showOffer: { [weak self] requestID in self?.credentialOfferRequestID = requestID },
+            focusAdjacentField: { [weak self] step in self?.focusAdjacentField(step) },
+            done: { [weak webView] in webView?.endEditing(true) })
+        let host = UIHostingController(
+            rootView: MobileCredentialStrip(state: credentialState, browser: browser, actions: actions))
+        host.view.backgroundColor = .clear
+        host.view.frame = CGRect(x: 0, y: 0, width: webView.bounds.width, height: MobileCredentialStrip.height)
+        host.view.autoresizingMask = [.flexibleWidth]
+        credentialStripHost = host
+        webView.formAccessory = host.view
+    }
+
+    /// Moves focus to the field before, -1, or after, 1, the focused one.
+    private func focusAdjacentField(_ step: Int) {
+        Task { @MainActor [webView] in
+            _ = try? await webView.callAsyncJavaScript(
+                "return globalThis.__crestCredentialBridge?.focusAdjacent(step) === true;",
+                arguments: ["step": step],
+                in: nil,
+                contentWorld: BrowserCredentialContentBridge.contentWorld)
+        }
     }
 
     private func installObservations() {

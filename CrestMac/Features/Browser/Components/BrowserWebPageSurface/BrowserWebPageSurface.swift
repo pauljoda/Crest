@@ -21,6 +21,8 @@ struct BrowserWebPageSurface: View {
     var goToSharingCounterpart: (() -> Void)? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.browserMacWindows) private var windows
+    @Environment(\.browserPagePresentationWindowID) private var windowID
 
     /// The agent using the page's tab now, when one does.
     private var agent: AgentSessionState? {
@@ -154,7 +156,15 @@ struct BrowserWebPageSurface: View {
     /// pixels. The chrome is a sibling of the web view inside one box, so the
     /// zoom is the only thing between the two.
     private var credentialFillPort: BrowserCredentialFillPort {
-        BrowserCredentialFillPort(page: page, contentScale: page.renderedPageZoom)
+        BrowserCredentialFillPort(
+            page: page, contentScale: page.renderedPageZoom, openPasswords: openPasswordSettings)
+    }
+
+    /// Opens Settings at the passwords of the page's Space, in this window.
+    private var openPasswordSettings: (() -> Void)? {
+        guard let windows, let windowID, let space = browser.spaceModel(page.spaceID) else { return nil }
+        let assignment = BrowserSpaceRuntimeAssignment(space: space)
+        return { windows.openSettings(.passwords, for: assignment, in: windowID) }
     }
 
     /// What the save prompt asks of this surface's page. This shell makes no

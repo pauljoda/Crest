@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xce, 0x3c, 0xd3, 0x2b, 0x47, 0xd9, 0xd4, 0x3e, 0x3e, 0x40, 0x9c, 0xc5, 0x21, 0x0e, 0x7c, 0x39, 0x1f, 0xde, 0x14, 0xca, 0x6e, 0x69, 0x8a, 0xa6, 0x7b, 0x59, 0x35, 0x72, 0x70, 0xc6, 0x34, 0xea
+        0x87, 0xb3, 0xcb, 0x55, 0x47, 0x23, 0x4b, 0x84, 0xd1, 0xbd, 0xa3, 0xc0, 0x9f, 0xc1, 0xd2, 0x7b, 0xf9, 0x58, 0x33, 0x33, 0x54, 0x99, 0xef, 0x19, 0xc3, 0xb0, 0x14, 0x9f, 0x8a, 0xba, 0x40, 0xf1
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -7533,6 +7533,7 @@ public static class ContractCodec {
             reader.ReadPresence() ? (FormSubmission?)ReadFormSubmission(reader) : null,
             reader.ReadBool(),
             reader.ReadPresence() ? (bool?)reader.ReadBool() : null,
+            reader.ReadBool(),
             reader.ReadBool());
     }
 
@@ -7568,6 +7569,7 @@ public static class ContractCodec {
             writer.WritePresence(false);
         }
         writer.WriteBool(value.HasFillTarget);
+        writer.WriteBool(value.FieldRectInTopViewport);
     }
 
     public static CredentialImportCandidate ReadCredentialImportCandidate(WireReader reader) {
@@ -20686,13 +20688,15 @@ public static class ContractCodec {
     public static StrongPassword ReadStrongPassword(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new StrongPassword(
-            ReadPasswordRequirements(reader));
+            ReadPasswordRequirements(reader),
+            ReadPasswordStyle(reader));
     }
 
     public static void WriteStrongPassword(WireWriter writer, StrongPassword value) {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         WritePasswordRequirements(writer, value.Requirements);
+        WritePasswordStyle(writer, value.Style);
     }
 
     public static StrongPasswordRecipe ReadStrongPasswordRecipe(WireReader reader) {
@@ -20703,7 +20707,11 @@ public static class ContractCodec {
             reader.ReadString(),
             reader.ReadList(() => reader.ReadString()),
             reader.ReadList(() => reader.ReadString()),
-            reader.ReadInt32());
+            reader.ReadInt32(),
+            reader.ReadPresence() ? (int?)reader.ReadInt32() : null,
+            reader.ReadPresence() ? (int?)reader.ReadInt32() : null,
+            reader.ReadPresence() ? (string?)reader.ReadString() : null,
+            reader.ReadBool());
     }
 
     public static void WriteStrongPasswordRecipe(WireWriter writer, StrongPasswordRecipe value) {
@@ -20721,6 +20729,25 @@ public static class ContractCodec {
             writer.WriteString(itemRequired);
         }
         writer.WriteInt32(value.MaxConsecutive);
+        if (value.SiteMinLength is { } presentSiteMinLength) {
+            writer.WritePresence(true);
+            writer.WriteInt32(presentSiteMinLength);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.SiteMaxLength is { } presentSiteMaxLength) {
+            writer.WritePresence(true);
+            writer.WriteInt32(presentSiteMaxLength);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.SiteSymbols is { } presentSiteSymbols) {
+            writer.WritePresence(true);
+            writer.WriteString(presentSiteSymbols);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteBool(value.HasRandomAlternative);
     }
 
     public static SweepExpiredRecords ReadSweepExpiredRecords(WireReader reader) {
@@ -23523,6 +23550,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(PasskeyDeviceConfiguration.All, value));
+    }
+
+    public static PasswordStyle ReadPasswordStyle(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return PasswordStyle.All[reader.ReadEnum(PasswordStyle.All.Count)];
+    }
+
+    public static void WritePasswordStyle(WireWriter writer, PasswordStyle value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(PasswordStyle.All, value));
     }
 
     public static PracticeTab ReadPracticeTab(WireReader reader) {

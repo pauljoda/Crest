@@ -48,6 +48,16 @@ struct BrowserCredentialFillPort {
 
     /// Closes the prompt without filling anything.
     let dismiss: () -> Void
+
+    /// The latest key the page held back for the prompt on show.
+    let keyPress: BrowserCredentialKeyPress?
+
+    /// Sends the request's field's arrow, Return and Escape keys to the
+    /// prompt while it shows, or gives them back to the page.
+    let holdKeys: (Bool, UUID) -> Void
+
+    /// Opens Settings at the Space's passwords, where the shell can.
+    var openPasswords: (() -> Void)? = nil
 }
 
 extension BrowserCredentialFillPort {
@@ -55,7 +65,7 @@ extension BrowserCredentialFillPort {
 
     /// What a credential fill prompt asks of `page`, whose page content the
     /// shell draws at `contentScale`.
-    init(page: BrowserPlatformPage, contentScale: CGFloat) {
+    init(page: BrowserPlatformPage, contentScale: CGFloat, openPasswords: (() -> Void)? = nil) {
         self.init(
             spaceID: page.spaceID,
             contentScale: contentScale,
@@ -65,6 +75,11 @@ extension BrowserCredentialFillPort {
                 try await page.fillGeneratedPassword(password, for: requestID)
             },
             formUsername: { requestID in await page.credentialFormUsername(for: requestID) },
-            dismiss: page.dismissCredentialFillRequest)
+            dismiss: page.dismissCredentialFillRequest,
+            keyPress: page.credentialKeyPress,
+            holdKeys: { hold, requestID in
+                Task { @MainActor in await page.holdCredentialKeys(hold, for: requestID) }
+            },
+            openPasswords: openPasswords)
     }
 }

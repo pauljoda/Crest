@@ -14,6 +14,10 @@ struct BrowserCredentialChrome: View {
     let browser: BrowserStore
     let capabilities: BrowserInteractionCapabilities
 
+    /// Whether a touch shell has room to point a panel at the field, as a
+    /// wide iPad window does, instead of running a band across the page.
+    var hasRoomBesideField = false
+
     /// The quiet request whose site the Space has logins for, once known.
     @State private var revealedQuietRequestID: UUID?
 
@@ -35,7 +39,7 @@ struct BrowserCredentialChrome: View {
                 }
             BrowserCredentialChromePlacement(
                 field: anchoredField,
-                metrics: BrowserCredentialPromptMetrics.resolve(capabilities)
+                metrics: BrowserCredentialPromptMetrics.resolve(capabilities, hasRoomBesideField: hasRoomBesideField)
             ) { metrics in
                 prompt(metrics)
             }

@@ -35,6 +35,9 @@ final class BrowserCredentialPageState<FillTarget> {
     private(set) var fillRequest: BrowserCredentialFillRequest?
     private(set) var saveCandidate: BrowserCredentialSaveCandidate?
 
+    /// The latest key the page held back for the fill popup on show.
+    private(set) var keyPress: BrowserCredentialKeyPress?
+
     @ObservationIgnored private var fillTargets: [UUID: FillTarget] = [:]
 
     /// The form the live request's field belongs to, kept here rather than on
@@ -63,7 +66,11 @@ final class BrowserCredentialPageState<FillTarget> {
         fillTarget: FillTarget?
     ) {
         guard let event = message.event.captureEvent else {
-            followField(message, frameOrigin: frameOrigin, isMainFrame: isMainFrame)
+            if let key = message.key {
+                press(key, from: message, frameOrigin: frameOrigin)
+            } else {
+                followField(message, frameOrigin: frameOrigin, isMainFrame: isMainFrame)
+            }
             return
         }
         let now = Date.now
@@ -71,7 +78,8 @@ final class BrowserCredentialPageState<FillTarget> {
             event: event, frameOrigin: frameOrigin, topLevelOrigin: topLevelOrigin, isMainFrame: isMainFrame,
             hasFormID: message.formID != nil, fields: message.fields, focusedField: message.focusedField,
             submission: message.submission, filledUsername: false,
-            hasVisiblePasswordField: message.hasVisiblePasswordField, hasFillTarget: fillTarget != nil)
+            hasVisiblePasswordField: message.hasVisiblePasswordField, hasFillTarget: fillTarget != nil,
+            fieldRectInTopViewport: message.fieldRectInTopViewport)
         guard
             let decision = captureDecision(
                 facts, usernameHint: pendingUsernameHint,
@@ -89,14 +97,31 @@ final class BrowserCredentialPageState<FillTarget> {
             on: self)
     }
 
+    /// A held key answers only the popup on show for the same form and frame.
+    private func press(
+        _ key: BrowserCredentialPopupKey,
+        from message: BrowserCredentialFormMessage,
+        frameOrigin: CredentialOrigin
+    ) {
+        guard let request = fillRequest, request.origin == frameOrigin, message.formID == fillFormID else { return }
+        keyPress = BrowserCredentialKeyPress(id: UUID(), key: key)
+    }
+
+    /// The form and frame the live request's fields belong to, for releasing
+    /// or holding its keys.
+    func fillTarget(for requestID: UUID) -> FillTarget? {
+        guard fillRequest?.id == requestID else { return nil }
+        return fillTargets[requestID]
+    }
+
     /// A geometry report only moves the prompt already on show, and only for
-    /// the main-frame field of the same form.
+    /// the same form's field, measured in the top page's viewport.
     private func followField(
         _ message: BrowserCredentialFormMessage,
         frameOrigin: CredentialOrigin,
         isMainFrame: Bool
     ) {
-        guard isMainFrame,
+        guard isMainFrame || message.fieldRectInTopViewport,
             let request = fillRequest,
             request.fieldRect != nil,
             let formID = message.formID,
@@ -144,7 +169,8 @@ final class BrowserCredentialPageState<FillTarget> {
         let facts = CredentialFormFacts(
             event: .filled, frameOrigin: request.origin, topLevelOrigin: request.topLevelOrigin,
             isMainFrame: request.fieldRect != nil, hasFormID: fillFormID != nil, fields: [], focusedField: nil,
-            submission: nil, filledUsername: true, hasVisiblePasswordField: nil, hasFillTarget: true)
+            submission: nil, filledUsername: true, hasVisiblePasswordField: nil, hasFillTarget: true,
+            fieldRectInTopViewport: request.fieldRect != nil)
         if let decision = captureDecision(facts, usernameHint: nil, pendingCandidate: nil, now: .now),
             decision.action == .rememberUsername
         {
@@ -162,6 +188,7 @@ final class BrowserCredentialPageState<FillTarget> {
 
     func dismissFillRequest() {
         fillFormID = nil
+        keyPress = nil
         guard let request = fillRequest else { return }
         fillTargets[request.id] = nil
         fillRequest = nil

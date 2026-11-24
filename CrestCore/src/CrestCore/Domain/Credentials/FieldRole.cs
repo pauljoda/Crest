@@ -15,16 +15,16 @@ internal sealed class FieldRole {
     public static readonly FieldRole Username = new(token: "username",
         suggestedBy: new(@"user|login|log-in|signin|sign-in|identifier|account|benutzer|anmeldename|utilisateur|identifiant|usuario|utente|gebruiker",
             Matching),
-        offeredKind: CredentialPasswordKind.Current, needsLoginForm: true);
+        offeredKind: CredentialPasswordKind.Current, needsLoginForm: true, quietWithoutLogins: true);
 
     public static readonly FieldRole CurrentPassword = new(token: "current-password",
         suggestedBy: new(@"current|old|existing|aktuell|bisherig|ancien|actuel|anterior|attuale|vecchi|huidig", Matching),
-        offeredKind: CredentialPasswordKind.Current, needsLoginForm: false);
+        offeredKind: CredentialPasswordKind.Current, needsLoginForm: false, quietWithoutLogins: true);
 
     public static readonly FieldRole NewPassword = new(token: "new-password",
         suggestedBy: new(@"new|neu|nouveau|nouvelle|nuev|nuov|novo|nova|nieuw|create|choose|confirm|retype|re-type|repeat|again|verify|bestätig|wiederhol|répét|repetir|ripet|herhaal",
             Matching),
-        offeredKind: CredentialPasswordKind.New, needsLoginForm: false);
+        offeredKind: CredentialPasswordKind.New, needsLoginForm: false, quietWithoutLogins: false);
 
     /// What the page calls a field that takes something other than an account
     /// name, such as a search, a code or a coupon.
@@ -59,18 +59,24 @@ internal sealed class FieldRole {
     public CredentialPasswordKind OfferedKind { get; }
 
     /// Whether the field offers saved logins only on a form that signs in,
-    /// such as a username step, and stays quiet when none are saved.
+    /// such as a username step.
     public bool NeedsLoginForm { get; }
+
+    /// Whether the field's offer shows only when the Space has logins for the
+    /// site. A new password field always offers one.
+    public bool QuietWithoutLogins { get; }
 
     #endregion
 
     #region Constructors
 
-    private FieldRole(string token, Regex suggestedBy, CredentialPasswordKind offeredKind, bool needsLoginForm) {
+    private FieldRole(string token, Regex suggestedBy, CredentialPasswordKind offeredKind, bool needsLoginForm,
+        bool quietWithoutLogins) {
         this.token = token;
         this.suggestedBy = suggestedBy;
         OfferedKind = offeredKind;
         NeedsLoginForm = needsLoginForm;
+        QuietWithoutLogins = quietWithoutLogins;
     }
 
     #endregion

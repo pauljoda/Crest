@@ -38,19 +38,37 @@ public sealed record PasswordRequirements(int? MinLength, int? MaxLength, string
 
     #region Actions - Generation
 
-    /// How to compose a password that meets these requirements: Crest's
-    /// grouped style where the site allows it, and otherwise random
-    /// characters from what the site allows, of the default length or the
-    /// nearest the site permits.
-    internal StrongPasswordRecipe Recipe() {
+    /// How to compose a password in `style` that meets these requirements,
+    /// with what the site asked for: Crest's grouped style where the style
+    /// asks for it and the site allows it, and otherwise random characters
+    /// from what the site allows, of the default length or the nearest the
+    /// site permits.
+    internal StrongPasswordRecipe Recipe(PasswordStyle style) {
         var rules = Read(Rules);
+        var recipe = Composed(rules, style);
+        string? symbols = rules.Allowed is { } allowed ? new string([.. allowed.Where(character => !char.IsAsciiLetterOrDigit(character))
+            .Order()]) : null;
+        return recipe with {
+            SiteMinLength = Larger(MinLength, rules.MinLength),
+            SiteMaxLength = Smaller(MaxLength, rules.MaxLength),
+            SiteSymbols = symbols,
+            HasRandomAlternative = recipe.Separator.Length > 0 && symbols is not ""
+        };
+    }
+
+    private static int? Larger(int? first, int? second) => first is null ? second : second is null ? first : Math.Max(first.Value, second.Value);
+
+    private static int? Smaller(int? first, int? second) => first is null ? second : second is null ? first : Math.Min(first.Value, second.Value);
+
+    private StrongPasswordRecipe Composed(ReadRules rules, PasswordStyle style) {
         int shortest = Math.Max(MinLength ?? 0, rules.MinLength ?? 0);
         int longest = Math.Min(MaxLength ?? StrongPasswordRecipe.MaximumLength, rules.MaxLength ?? StrongPasswordRecipe.MaximumLength);
         // A length Crest can't make, or one the site contradicts, is refused
         // rather than bent below the site's own minimum.
         if (longest < StrongPasswordRecipe.ShortestLength || shortest > longest) throw new Rejected(Unmakeable);
         int maxConsecutive = rules.MaxConsecutive ?? 0;
-        if (AllowsGrouped(rules) && StrongPasswordRecipe.GroupedLength >= shortest && StrongPasswordRecipe.GroupedLength <= longest)
+        if (style.PrefersGroups && AllowsGrouped(rules)
+            && StrongPasswordRecipe.GroupedLength >= shortest && StrongPasswordRecipe.GroupedLength <= longest)
             return StrongPasswordRecipe.Grouped(maxConsecutive);
         int length = Math.Clamp(StrongPasswordRecipe.DefaultLength, Math.Max(shortest, StrongPasswordRecipe.ShortestLength), longest);
         if (rules.Allowed is null) return StrongPasswordRecipe.Random(length, StrongPasswordRecipe.CharacterGroups,

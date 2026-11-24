@@ -43,9 +43,7 @@ struct BrowserCredentialSaveActions: View {
                     minHeight: metrics.saveBusyIndicatorSize
                 )
                 .accessibilityLabel(Text(busyLabel))
-        } else if let action = route.primaryAction,
-            let title = route.primaryActionTitle(spaceName: space?.name)
-        {
+        } else if let action = route.primaryAction, let title = title(of: action) {
             Button {
                 perform(action)
             } label: {
@@ -53,5 +51,14 @@ struct BrowserCredentialSaveActions: View {
             }
             .buttonStyle(.crestPrimary)
         }
+    }
+
+    /// The commit's title: just Save or Update where the Space shows beside
+    /// the buttons, and otherwise the route's, which names it.
+    private func title(of action: BrowserCredentialPromptPrimaryAction) -> LocalizedStringResource? {
+        if !metrics.saveActionNamesSpace, let save = action.action, !route.offersSystemPasswords {
+            return save.shortTitle
+        }
+        return route.primaryActionTitle(spaceName: space?.name)
     }
 }

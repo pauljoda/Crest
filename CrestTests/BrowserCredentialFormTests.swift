@@ -43,6 +43,24 @@ final class BrowserCredentialFormTests: XCTestCase {
         XCTAssertNil(BrowserCredentialFormMessage(body: exfiltrating))
     }
 
+    func testHeldKeyMessageCarriesOnlyItsKey() throws {
+        let key: [String: Any] = ["version": 2, "event": "key", "trusted": true, "formID": "form-1", "key": "down"]
+        let message = try XCTUnwrap(BrowserCredentialFormMessage(body: key))
+        XCTAssertEqual(message.key, .down)
+        XCTAssertEqual(message.key?.step, 1)
+
+        var untrusted = key
+        untrusted["trusted"] = false
+        XCTAssertNil(BrowserCredentialFormMessage(body: untrusted))
+        var unknown = key
+        unknown["key"] = "tab"
+        XCTAssertNil(BrowserCredentialFormMessage(body: unknown))
+        var smuggling = key
+        smuggling["fields"] = Self.loginFields
+        smuggling["values"] = ["1": "secret"]
+        XCTAssertNil(BrowserCredentialFormMessage(body: smuggling))
+    }
+
     func testSubmitMessageRequiresCompleteTrustedFieldsAndRedactsItsSecret() throws {
         let submit: [String: Any] = [
             "version": 2, "event": "submit", "trusted": true, "formID": "form-7", "fields": Self.loginFields,

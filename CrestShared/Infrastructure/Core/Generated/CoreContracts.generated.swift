@@ -3416,6 +3416,7 @@ struct CredentialFormFacts: Equatable, Sendable {
     var filledUsername: Bool
     var hasVisiblePasswordField: Bool?
     var hasFillTarget: Bool
+    var fieldRectInTopViewport: Bool
 }
 
 struct CredentialImportCandidate: Equatable, Sendable {
@@ -8719,6 +8720,7 @@ struct StrongPassword: Query, Equatable, Sendable {
     typealias Answer = StrongPasswordRecipe
 
     let requirements: PasswordRequirements
+    let style: PasswordStyle
 }
 
 struct StrongPasswordRecipe: Equatable, Sendable {
@@ -8728,6 +8730,10 @@ struct StrongPasswordRecipe: Equatable, Sendable {
     let groups: [String]
     let required: [String]
     let maxConsecutive: Int
+    let siteMinLength: Int?
+    let siteMaxLength: Int?
+    let siteSymbols: String?
+    let hasRandomAlternative: Bool
 }
 
 struct SweepExpiredRecords: Intent, SessionIntent, Equatable, Sendable {
@@ -19213,6 +19219,43 @@ struct PasskeyDeviceConfiguration: Hashable, Sendable {
         init(name: String, rulesOutPasskeys: Bool) {
             self.name = name
             self.rulesOutPasskeys = rulesOutPasskeys
+        }
+    }
+}
+
+/// The members of the core's `PasswordStyle`. A member's wire tag is its index in `all`.
+struct PasswordStyle: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let grouped = PasswordStyle(tag: 0, name: "grouped")
+    static let random = PasswordStyle(tag: 1, name: "random")
+
+    static let all: [PasswordStyle] = [grouped, random]
+
+    static func named(_ name: String?) -> PasswordStyle? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PasswordStyle, rhs: PasswordStyle) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
         }
     }
 }
