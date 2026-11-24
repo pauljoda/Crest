@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "windows-interface-renderer-crash-recovery",
+      "category": "internal",
+      "message": "Crest on Windows stays open when the renderer of its interface crashes or is killed, and loads the interface again"
+    }
+  ]
+}

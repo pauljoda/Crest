@@ -7,9 +7,12 @@
 
 #include "base/memory/raw_ptr.h"
 #include "base/memory/weak_ptr.h"
+#include "base/process/kill.h"
+#include "base/time/time.h"
 #include "base/timer/timer.h"
 #include "base/values.h"
 #include "content/public/browser/web_contents_delegate.h"
+#include "content/public/browser/web_contents_observer.h"
 #include "ui/views/widget/widget.h"
 #include "ui/views/widget/widget_delegate.h"
 #include "ui/views/widget/widget_observer.h"
@@ -36,9 +39,13 @@ class DesktopClientView;
 // button, Alt+F4, the taskbar), the interface first tells the core, then
 // confirms with Finish(). A window whose interface does not answer closes
 // after a moment anyway.
+//
+// An interface whose renderer dies, crashed or killed, loads again in its
+// window. The window's pages live on in the engine and the core.
 class DesktopFrame : public views::WidgetDelegate,
                      public views::WidgetObserver,
-                     public content::WebContentsDelegate {
+                     public content::WebContentsDelegate,
+                     public content::WebContentsObserver {
  public:
   // `launches` marks the window a launch opens before the core says which
   // saved window it is.
@@ -86,6 +93,9 @@ class DesktopFrame : public views::WidgetDelegate,
   void DraggableRegionsChanged(const std::vector<blink::mojom::DraggableRegionPtr>& regions,
                                content::WebContents* contents) override;
 
+  // content::WebContentsObserver:
+  void PrimaryMainFrameRenderProcessGone(base::TerminationStatus status) override;
+
  private:
   // Asked to close: the interface decides, and the window closes on its own
   // after kCloseTimeout if the interface never answers.
@@ -93,6 +103,9 @@ class DesktopFrame : public views::WidgetDelegate,
   void InterceptClose();
   // Tells the interface when what State() answers changed.
   void ReportState();
+  // Loads the interface again, for the window this frame is now, when its
+  // renderer is still gone.
+  void RestoreInterface();
 
   std::string window_;
   bool launches_;
@@ -105,6 +118,11 @@ class DesktopFrame : public views::WidgetDelegate,
   uint64_t activation_ = 0;
   bool finishing_ = false;
   base::OneShotTimer close_timeout_;
+  // When the interface's renderer last died, and how many times in a row it
+  // died soon after the time before.
+  base::TimeTicks interface_died_;
+  int interface_deaths_ = 0;
+  base::OneShotTimer restore_timer_;
   base::WeakPtrFactory<DesktopFrame> weak_factory_{this};
 };
 

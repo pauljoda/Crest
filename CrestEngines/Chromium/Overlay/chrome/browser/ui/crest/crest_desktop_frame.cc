@@ -9,16 +9,19 @@
 #include "build/build_config.h"
 #include "chrome/browser/devtools/devtools_window.h"
 #include "chrome/browser/lifetime/application_lifetime.h"
+#include "chrome/browser/lifetime/browser_shutdown.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/crest/crest_desktop_host.h"
 #include "chrome/browser/ui/crest/crest_desktop_ui.h"
 #include "components/input/native_web_keyboard_event.h"
 #include "content/public/browser/keyboard_event_processing_result.h"
+#include "content/public/browser/navigation_controller.h"
 #include "content/public/browser/web_contents.h"
 #include "third_party/blink/public/common/input/web_input_event.h"
 #include "third_party/blink/public/mojom/page/draggable_region.mojom.h"
 #include "third_party/skia/include/core/SkRegion.h"
 #include "ui/base/hit_test.h"
+#include "ui/base/page_transition_types.h"
 #include "ui/display/display.h"
 #include "ui/display/screen.h"
 #include "ui/events/keycodes/keyboard_codes.h"
@@ -52,6 +55,13 @@ constexpr int kTopResizeThickness = 5;
 constexpr int kTopResizeCornerWidth = 16;
 // How long a window asked to close waits for its interface to tell the core.
 constexpr base::TimeDelta kCloseTimeout = base::Seconds(2);
+// An interface whose renderer died loads again at once, as Chrome's WebUI
+// toolbar recovers its own, but one that died kRestoresAtOnce times in a row,
+// each within kRestoreSettle of the last, waits kRestoreRetry first, so an
+// interface that cannot start never reloads in a loop.
+constexpr int kRestoresAtOnce = 3;
+constexpr base::TimeDelta kRestoreSettle = base::Seconds(10);
+constexpr base::TimeDelta kRestoreRetry = base::Minutes(1);
 
 // Orders the windows by when each was last the one in use.
 uint64_t NextActivation() {
@@ -66,6 +76,11 @@ gfx::Rect InitialBounds() {
   bounds.set_height(std::min(bounds.height(), work_area.height()));
   bounds.set_origin(work_area.CenterPoint() - gfx::Vector2d(bounds.width() / 2, bounds.height() / 2));
   return bounds;
+}
+
+// The interface of the window `window` names.
+GURL InterfaceURL(const std::string& window) {
+  return GURL(std::string(kCrestDesktopURL) + "?window=" + window);
 }
 
 #if BUILDFLAG(IS_WIN)
@@ -179,7 +194,8 @@ DesktopFrame::DesktopFrame(std::string window, Profile* profile, bool launches)
   content::WebContents* contents = web_view->GetWebContents();
   contents->SetDelegate(this);
   contents->SetSupportsDraggableRegions(true);
-  web_view->LoadInitialURL(GURL(std::string(kCrestDesktopURL) + "?window=" + window_));
+  Observe(contents);
+  web_view->LoadInitialURL(InterfaceURL(window_));
   web_view_ = widget_->SetClientContentsView(std::move(web_view));
 }
 
@@ -328,6 +344,32 @@ bool DesktopFrame::HandleContextMenu(content::RenderFrameHost& render_frame_host
 void DesktopFrame::DraggableRegionsChanged(const std::vector<blink::mojom::DraggableRegionPtr>& regions,
                                            content::WebContents* contents) {
   if (client_view_) client_view_->SetDraggableRegion(gfx::DraggableRegionsToSkRegion(regions));
+}
+
+// The interface's renderer crashed or was killed, which let the window's
+// pages go from their embeds. A renderer that ended normally was told to, as
+// the browser quits. The interface loads again on a later turn: loading it
+// from inside the renderer's death would reenter the renderer's host.
+void DesktopFrame::PrimaryMainFrameRenderProcessGone(base::TerminationStatus status) {
+  if (status == base::TERMINATION_STATUS_NORMAL_TERMINATION || status == base::TERMINATION_STATUS_STILL_RUNNING) {
+    return;
+  }
+  if (finishing_ || browser_shutdown::IsTryingToQuit() || browser_shutdown::HasShutdownStarted()) return;
+  const base::TimeTicks now = base::TimeTicks::Now();
+  if (now - interface_died_ >= kRestoreSettle) interface_deaths_ = 0;
+  interface_died_ = now;
+  const base::TimeDelta delay = ++interface_deaths_ <= kRestoresAtOnce ? base::TimeDelta() : kRestoreRetry;
+  restore_timer_.Start(FROM_HERE, delay, base::BindOnce(&DesktopFrame::RestoreInterface, base::Unretained(this)));
+}
+
+void DesktopFrame::RestoreInterface() {
+  content::WebContents* contents = interface_contents();
+  // DevTools, say, may have loaded it again already.
+  if (finishing_ || !contents || !contents->IsCrashed()) return;
+  content::NavigationController::LoadURLParams params(InterfaceURL(window_));
+  params.transition_type = ui::PAGE_TRANSITION_AUTO_TOPLEVEL;
+  params.should_replace_current_entry = true;
+  contents->GetController().LoadURLWithParams(params);
 }
 
 }  // namespace crest
