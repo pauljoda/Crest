@@ -30,8 +30,11 @@
 #include "url/gurl.h"
 
 #if BUILDFLAG(IS_WIN)
+#include "chrome/install_static/install_util.h"
+#include "ui/base/win/shell.h"
 #include "ui/views/widget/desktop_aura/desktop_native_widget_aura.h"
 #include "ui/views/widget/desktop_aura/desktop_window_tree_host_win.h"
+#include "ui/views/win/hwnd_util.h"
 #endif
 
 namespace crest {
@@ -161,6 +164,14 @@ DesktopFrame::DesktopFrame(std::string window, Profile* profile, bool launches)
 #endif
   widget_->Init(std::move(params));
   InterceptClose();
+#if BUILDFLAG(IS_WIN)
+  // The installed Crest's windows are its own on the taskbar: they group and
+  // pin with its Start menu shortcut, which Setup gives the app user model
+  // ID of Crest's install mode.
+  if (IsInstalledProduct()) {
+    ui::win::SetAppIdForWindow(install_static::GetBaseAppId(), views::HWNDForWidget(widget_.get()));
+  }
+#endif
 
   // The interface goes into the client view the widget made, never in place
   // of it: the widget keeps the non-client view it built around that view.

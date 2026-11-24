@@ -5,7 +5,7 @@
   },
   "chrome/browser/ui/startup/startup_browser_creator_impl.cc": {
     "before": "1b78f7e124fea6ffdc97eddbd1c5111011467bf398bb5b80cba1f8a17a43ad1e",
-    "after": "e9b6c001181cab68d2c2e375105a26df222ef561365d97c2001e9f26b06f4d3e"
+    "after": "c91435f8b90b6425a569a1ec8deb14f7c0964dd32320576f5cd5b77d9a44a59f"
   },
   "chrome/browser/app_controller_mac.mm": {
     "before": "b532243a1fd78cf5c77beed511f8e31376809600262147fe0d07585c71e4ef47",
@@ -17,7 +17,7 @@
   },
   "chrome/browser/BUILD.gn": {
     "before": "e4098a876ac02db4ab67a4ce1ab3261545d1a4cd4b13433fa0b4bc03969baac3",
-    "after": "1e5bc626caac94c65ad313aa1869db4a9caa4c5b7b6c97ff6146d1d29372aaa8"
+    "after": "42605d3898b380d8d355e76a2e8186b8d5b031c8a608e2e15a1c2e5411d6300b"
   },
   "chrome/browser/ui/tabs/tab_features.cc": {
     "before": "d73f9115e1f549c9e1b170e722a2ca3f26dddb7fe72b8a3cebe8c3f881ac636c",
@@ -566,5 +566,9 @@
   "chrome/install_static/chromium_install_modes.h": {
     "before": "f1e173ce85627969b995e1844a9260d31aef8f4b27ccdca9ac728b60c4f23cd1",
     "after": "6b6d5a71c5ced47ccdf9bc48d6c0e1cd2b034cf3c7d6bbd265ef81e4ef497887"
+  },
+  "chrome/browser/extensions/external_registry_loader_win.cc": {
+    "before": "a3668695e76ccd62a8a2ace1808b7e48c3d09e77e784e248d2f74d3c2fee7024",
+    "after": "71fa08f60860aa3607d72baaf3f68789f4a70c9bf3fc06e086b0b916722f4982"
   }
 }

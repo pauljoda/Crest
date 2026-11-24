@@ -76,6 +76,7 @@
   import { Browsing } from "../browsing";
   import { openPaletteEvent, spaceEditing, windowCommands } from "../commands";
   import { useDownloads } from "../downloads.svelte";
+  import { opensExternal } from "../external-opening";
   import { copiedNotice, notices } from "../notices";
   import { CommandPalette } from "../palette/CommandPalette";
   import { PaletteModel, type PaletteMode } from "../palette/palette-model";
@@ -136,6 +137,9 @@
   const shownSpaceId = $derived(space?.id ?? null);
   const shownTabId = $derived(window?.shownTabs.find((shown) => shown.spaceId === window.shownSpaceId)?.tabId ?? null);
   const shownTabs = $derived(new Map((window?.shownTabs ?? []).flatMap((shown) => (shown.tabId ? [[shown.spaceId, shown.tabId] as const] : []))));
+  // Links and documents other apps hand Crest open where the core places
+  // them, once the window shows the browser rather than first-run Setup.
+  $effect(() => untrack(() => opensExternal(session)));
 
   // The Space pager follows the Space the window shows, and asks for the one a swipe settles on.
   const spaceIds = $derived(spaces.map((candidate) => candidate.id).join());

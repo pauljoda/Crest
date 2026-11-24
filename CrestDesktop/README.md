@@ -102,6 +102,63 @@ interface; F12 is the page's inspector, as in other Windows browsers.
 The session lives in the profile directory's `Crest` folder; a profile with
 none starts the session a first install starts with.
 
+## Install Crest for Windows
+
+Setup installs Crest for the person running it, with no administrator, in
+Chromium's per-user layout for Crest's install mode:
+`%LOCALAPPDATA%\Crest\Application\chrome.exe` with `CrestCore.Native.dll`,
+the interface under `interface\` and `update.json` beside it. Launched from
+there, the engine is Crest with no switches and keeps its profiles in
+Chromium's folder for the install mode, `%LOCALAPPDATA%\Crest\User Data`.
+Setup adds the Start menu shortcut, whose app user model ID (`Crest`) every
+Crest window carries, the Uninstall entry, and Crest's registration as a
+browser in Chromium's own layout (`CrestDesktop/installer/Crest.iss`): the
+client `Crest` under `StartMenuInternet` with its capabilities, the
+`RegisteredApplications` entry, and the ProgIDs `CrestHTM` and `CrestPDF`.
+It declares the links and documents the Mac app declares (http, https,
+HTML, XHTML, MHTML and PDF) and the images Chromium opens (SVG, WebP).
+Uninstalling keeps the browsing data unless the person asks to delete it.
+
+Package Setup with Inno Setup's `ISCC.exe` from the engine's build output, a
+published core and a built interface:
+
+```sh
+py -3 Scripts/package-windows.py --engine C:\CrestBuild\cr\src\out\CrestBaseline --core <core output>\CrestCore.Native.dll --interface CrestDesktop\ui\app\dist --build <number> --output <folder>
+```
+
+Only the person can make Crest the default browser, in Windows' Settings.
+General settings and Setup's last step show whether it is, as Windows reads
+its choice for http and https, and open Windows' Default apps on Crest's
+page (`defaultBrowser`, `openDefaultApps`).
+
+Windows hands Crest the links and documents it opens on its command line.
+The engine reads them as Chromium reads its launches, and ProcessSingleton
+forwards a second launch's to the running Crest, which comes forward. The
+window in use opens them where the core places them (`crestOpenExternal`;
+`RouteExternalLink` and `RouteLocalDocument`), as the Mac opens what other
+apps hand it. Windows has no Quick Window yet, so a link the core would open
+in one opens as a tab in its Space.
+
+## Updates
+
+An installed Crest updates itself from a Sparkle-format feed beside the
+Mac's on the `updates` branch: `appcast-windows.xml` for Stable and Nightly,
+`appcast-development-windows.xml` for Development. `update.json` names the
+build, its channel, where its feeds are and the Ed25519 key that signs every
+installer, the key that signs the Mac's updates. The interface reads the feed
+through the engine and chooses the update (Settings › About); the engine
+downloads it, installs nothing whose length or signature isn't the feed's,
+runs Setup silently and quits; Setup waits for Crest, installs, and opens it
+again. Feeds and installers come over https, or from this device for a local
+test.
+
+The release workflow publishes Windows beside the Mac app once the
+repository variable `CREST_WINDOWS_RELEASES` is `true`
+(`.github/workflows/windows-release.yml`): it downloads the published
+`win-x64` engine, packages Setup, signs it when the repository holds a
+Windows signing certificate, uploads it to the release, and adds it to the
+feed with `Scripts/windows_update_feed.py`.
+
 ## The window
 
 The title bar is the interface's. The system keeps the window's border,

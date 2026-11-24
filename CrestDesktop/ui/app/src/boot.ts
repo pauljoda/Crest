@@ -31,6 +31,7 @@ import { CoreRejection, CrestCore, DevSocketTransport, ShellTransport } from "@c
 
 import { DevEngine } from "./dev-engine";
 import { startFilterListUpdates } from "./filter-lists";
+import { softwareUpdates } from "./software-update";
 import { touchpadPhases } from "./spaces/space-pager";
 
 /** What a window is opened over. */
@@ -191,6 +192,8 @@ export async function boot(bridgeUrl: string): Promise<Session> {
     closesThroughCore(core, shell, windowId, closing, setup);
     // Crest's Chromium downloads the filter lists, as the Mac app does.
     startFilterListUpdates(core, shell);
+    // An installed Crest updates itself; the launch's window checks on schedule.
+    void softwareUpdates.start(shell, launches);
   }
   return { core, engine, shell, workspaceId: workspace.workspaceId, windowId, closing, setup };
 }

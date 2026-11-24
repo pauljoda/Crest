@@ -23,7 +23,10 @@
 #include "chrome/browser/ui/crest/crest_engine_browsers.h"
 #include "chrome/browser/ui/crest/crest_engine_page.h"
 #include "chrome/browser/ui/crest/crest_permission_prompt.h"
+#include "chrome/browser/ui/startup/startup_tab.h"
+#include "chrome/browser/ui/startup/startup_tab_provider.h"
 #include "chrome/browser/ui/toasts/api/toast_id.h"
+#include "chrome/install_static/install_modes.h"
 #include "components/input/native_web_keyboard_event.h"
 #include "components/surface_embed/browser/surface_embed_handle.h"
 #include "content/public/browser/browser_task_traits.h"
@@ -131,14 +134,19 @@ void DesktopHost::FrameClosed(DesktopFrame* frame) {
   std::erase_if(frames_, [frame](const auto& kept) { return kept.get() == frame; });
 }
 
-bool DesktopHost::RequestClose(DesktopFrame* frame) {
-  DesktopBridge* bridge = BridgeFor(frame);
-  if (!bridge || !bridge->IsJavascriptAllowed()) return false;
+base::ListValue DesktopHost::WindowStack() const {
   std::vector<DesktopFrame*> stacked;
   for (const auto& open : frames_) stacked.push_back(open.get());
   std::ranges::sort(stacked, std::ranges::greater(), &DesktopFrame::activation);
   base::ListValue stack;
   for (DesktopFrame* open : stacked) stack.Append(open->window());
+  return stack;
+}
+
+bool DesktopHost::RequestClose(DesktopFrame* frame) {
+  DesktopBridge* bridge = BridgeFor(frame);
+  if (!bridge || !bridge->IsJavascriptAllowed()) return false;
+  base::ListValue stack = WindowStack();
   // The window's pages, which the interface lets go before the window goes,
   // as the Mac's do: a page the engine closed by itself would close its tab.
   auto& binding = EngineBinding::Get();
@@ -149,12 +157,65 @@ bool DesktopHost::RequestClose(DesktopFrame* frame) {
       pages.Append(page->key());
     }
   }
-  bridge->CloseRequested(frames_.size() == 1, std::move(stack), std::move(pages));
+  // While Crest quits, every window closes as the last one does, so the next
+  // launch reopens them all.
+  bridge->CloseRequested(frames_.size() == 1 || quitting_, std::move(stack), std::move(pages));
   return true;
 }
 
 void DesktopHost::FrameStateChanged(DesktopFrame* frame, const base::DictValue& state) {
   if (DesktopBridge* bridge = BridgeFor(frame)) bridge->WindowState(state);
+}
+
+void DesktopHost::BringForward(DesktopFrame* frame) {
+  views::Widget* widget = frame->widget();
+  if (widget->IsMinimized()) widget->Restore();
+  widget->Show();
+  widget->Activate();
+}
+
+void DesktopHost::Quit() {
+  if (quitting_) return;
+  quitting_ = true;
+  std::vector<views::Widget*> widgets;
+  for (const auto& frame : frames_) widgets.push_back(frame->widget());
+  // Each window asks its interface first, as its own close button does.
+  for (views::Widget* widget : widgets) widget->Close();
+}
+
+bool DesktopHost::OpenLaunch(std::vector<std::string> urls) {
+  if (!started_) {
+    // The first launch: the window it is about to open takes them.
+    launch_opens_.insert(launch_opens_.end(), urls.begin(), urls.end());
+    return false;
+  }
+  // Launching Crest again while it runs brings it forward, as Windows
+  // browsers come forward. The window Crest is about to close has nothing
+  // to bring.
+  DesktopFrame* frame = FrameInUse();
+  if (!frame || quitting_) return true;
+  BringForward(frame);
+  launch_opens_.insert(launch_opens_.end(), urls.begin(), urls.end());
+  DeliverLaunchOpens();
+  return true;
+}
+
+base::DictValue DesktopHost::TakeLaunchOpens(DesktopBridge* bridge) {
+  open_receivers_.insert(bridge);
+  base::ListValue urls;
+  for (std::string& url : launch_opens_) urls.Append(std::move(url));
+  launch_opens_.clear();
+  return base::DictValue().Set("urls", std::move(urls)).Set("stack", WindowStack());
+}
+
+void DesktopHost::DeliverLaunchOpens() {
+  DesktopFrame* frame = FrameInUse();
+  DesktopBridge* bridge = frame ? BridgeFor(frame) : nullptr;
+  // A window whose interface hasn't taken a launch's opens yet still boots;
+  // it takes these with them.
+  if (launch_opens_.empty() || !bridge || !open_receivers_.contains(bridge) || !bridge->IsJavascriptAllowed()) return;
+  base::DictValue opens = TakeLaunchOpens(bridge);
+  bridge->OpenExternal(std::move(*opens.FindList("urls")), std::move(*opens.FindList("stack")));
 }
 
 bool DesktopHost::OfferKey(DesktopFrame* frame,
@@ -271,6 +332,7 @@ void DesktopHost::AddBridge(DesktopBridge* bridge) {
 
 void DesktopHost::RemoveBridge(DesktopBridge* bridge) {
   bridges_.erase(bridge);
+  open_receivers_.erase(bridge);
 }
 
 CoreReply DesktopHost::Create(const std::vector<uint8_t>& fingerprint, const std::vector<uint8_t>& configuration) {
@@ -400,9 +462,35 @@ const permissions::PermissionPrompt::Delegate* g_answering_permission = nullptr;
 
 }  // namespace
 
+bool IsInstalledProduct() {
+  // Decided by where chrome.exe is, as Chromium decides its install mode,
+  // so no launch waits on the disk to know.
+  static const bool installed = [] {
+    base::FilePath exe;
+    if (!base::PathService::Get(base::FILE_EXE, &exe)) return false;
+    const base::FilePath application = exe.DirName();
+    return base::FilePath::CompareEqualIgnoreCase(application.BaseName().value(), FILE_PATH_LITERAL("Application")) &&
+           base::FilePath::CompareEqualIgnoreCase(application.DirName().BaseName().value(),
+                                                  install_static::kProductPathName);
+  }();
+  return installed;
+}
+
 bool IsEnabled() {
-  static const bool enabled = base::CommandLine::ForCurrentProcess()->HasSwitch(kHostSwitch);
+  static const bool enabled = IsInstalledProduct() || base::CommandLine::ForCurrentProcess()->HasSwitch(kHostSwitch);
   return enabled;
+}
+
+bool OpenFromLaunch(Profile* profile, const base::CommandLine& command_line, const base::FilePath& cur_dir) {
+  // Chromium reads the links and documents as it reads its own launches:
+  // the argument after --single-argument whole, a path made a file address
+  // against the folder the launch ran in. A tab only an unregistered direct
+  // launch scheme would bring is no launch of Crest's.
+  std::vector<std::string> urls;
+  for (const StartupTab& tab : StartupTabProviderImpl().GetCommandLineTabs(command_line, cur_dir, profile)) {
+    if (tab.url.is_valid() && !tab.is_untrusted_launch) urls.push_back(tab.url.spec());
+  }
+  return DesktopHost::Get().OpenLaunch(std::move(urls));
 }
 
 void AddNavigationThrottle(content::NavigationThrottleRegistry& registry) {
@@ -440,8 +528,10 @@ void TranslateSelection(const std::u16string& text) {
 
 void EnsureCrestUIStarted(Browser* browser) {
   // A review launch names its own engine profile root, so it never opens a
-  // Chromium profile another browser on the machine keeps.
-  CHECK(base::CommandLine::ForCurrentProcess()->HasSwitch("user-data-dir"));
+  // Chromium profile another browser on the machine keeps. The installed
+  // product keeps Chromium's own folder for Crest's install mode,
+  // %LOCALAPPDATA%\Crest\User Data, which no other browser uses.
+  CHECK(IsInstalledProduct() || base::CommandLine::ForCurrentProcess()->HasSwitch("user-data-dir"));
   DesktopHost::Get().Start(browser);
 }
 

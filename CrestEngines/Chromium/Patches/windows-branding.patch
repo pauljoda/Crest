@@ -14,6 +14,10 @@
 #   product folder (%LOCALAPPDATA%\Crest\User Data when no --user-data-dir is
 #   given) and its ProgIDs and direct-launch scheme. The CLSIDs and GUIDs stay
 #   Chromium's until a Windows installer registers them.
+# - Its external extensions: the extensions other software registers for the
+#   browser in the registry are read from Software\Crest\Extensions, not
+#   Google Chrome's key, which every Chromium build otherwise reads. The Mac's
+#   engine likewise reads only its own External Extensions folders.
 
 --- a/chrome/app/chrome_exe.rc
 +++ b/chrome/app/chrome_exe.rc
@@ -106,3 +110,17 @@
          .active_setup_guid =
              L"{7D2B3E1D-D096-4594-9D8F-A6667F12E0AC}",  // Active Setup
                                                          // GUID.
+--- a/chrome/browser/extensions/external_registry_loader_win.cc
++++ b/chrome/browser/extensions/external_registry_loader_win.cc
+@@ -35,7 +35,10 @@
+ namespace {
+ 
+ // The Registry subkey that contains information about external extensions.
+-const wchar_t kRegistryExtensions[] = L"Software\\Google\\Chrome\\Extensions";
++// Crest reads its own install mode's key, as its Mac engine reads only its
++// own External Extensions folders, never what other software registers for
++// Google Chrome.
++const wchar_t kRegistryExtensions[] = L"Software\\Crest\\Extensions";
+ 
+ // Registry value of the key that defines the installation parameter.
+ const wchar_t kRegistryExtensionInstallParam[] = L"install_parameter";

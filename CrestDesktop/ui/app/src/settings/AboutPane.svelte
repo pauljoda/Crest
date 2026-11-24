@@ -15,6 +15,7 @@
   import { Group } from "./controls";
   import type { PaneProps } from "./panes.svelte";
   import { send } from "./preferences.svelte";
+  import SoftwareUpdateGroup from "./SoftwareUpdateGroup.svelte";
 
   /** BrowserAboutSettingsPane: who Crest is, and where to talk about it. */
   let { session, shownSpace }: PaneProps = $props();
@@ -33,6 +34,7 @@
     <div class="settings-about-version">Version {__CREST_VERSION__}</div>
   </div>
 </div>
+<SoftwareUpdateGroup />
 <Group title="Community and support" footer="Reddit is public. Leave out private details.">
   {#each links as link (link.title)}
     <button type="button" class="settings-row settings-link-row" onclick={() => open(link.address)}>

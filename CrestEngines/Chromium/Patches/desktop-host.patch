@@ -14,6 +14,13 @@
 # own (iCloud passkeys, the app bundle, the system screen picker) stay on the
 # Mac.
 #
+# Windows hands Crest the links and documents it opens on the command line,
+# and ProcessSingleton forwards a later launch's to the running Crest, so
+# Crest's startup gate gives them to the host, which opens them where the
+# core places them. The host also checks the default browser and installs
+# signed updates, which need the installer's registration and Chromium's
+# signature check.
+#
 # A surface embed's <embed> that loses focus to another element of the
 # interface, such as a field the interface focused by script, gives the
 # interface the keyboard back (crbug.com/508638062 leaves this open), so the
@@ -21,7 +28,7 @@
 
 --- a/chrome/browser/BUILD.gn
 +++ b/chrome/browser/BUILD.gn
-@@ -4733,6 +4733,85 @@
+@@ -4733,6 +4733,92 @@
    }
  }
  
@@ -41,12 +48,16 @@
 +      "ui/crest/crest_core.h",
 +      "ui/crest/crest_core_library.cc",
 +      "ui/crest/crest_core_library.h",
++      "ui/crest/crest_desktop_default_browser.cc",
++      "ui/crest/crest_desktop_default_browser.h",
 +      "ui/crest/crest_desktop_frame.cc",
 +      "ui/crest/crest_desktop_frame.h",
 +      "ui/crest/crest_desktop_host.cc",
 +      "ui/crest/crest_desktop_host.h",
 +      "ui/crest/crest_desktop_ui.cc",
 +      "ui/crest/crest_desktop_ui.h",
++      "ui/crest/crest_desktop_updates.cc",
++      "ui/crest/crest_desktop_updates.h",
 +      "ui/crest/crest_engine.h",
 +      "ui/crest/crest_engine_agent.cc",
 +      "ui/crest/crest_engine_agent.h",
@@ -91,9 +102,12 @@
 +
 +    deps = [
 +      ":browser",
++      "//chrome/install_static:install_static_util",
++      "//chrome/installer/util:with_no_strings",
 +      "//components/js_injection/common:common_mojom",
 +      "//components/origin_matcher",
 +      "//components/surface_embed/browser",
++      "//crypto",
 +      "//media/mojo/mojom",
 +      "//services/audio/public/mojom",
 +      "//services/media_session/public/mojom",
@@ -167,15 +181,21 @@
  #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
  #endif
  #include "chrome/browser/apps/platform_apps/install_chrome_app.h"
-@@ -256,7 +256,7 @@
+@@ -256,8 +256,13 @@
      bool restore_tabbed_browser) {
    CHECK(profile, base::NotFatalUntil::M162);
    profile_ = profile;
 -#if BUILDFLAG(IS_MAC)
 +#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
    if (crest::IsEnabled()) {
++#if BUILDFLAG(IS_WIN)
++    // Windows hands Crest links and documents on its command line, and
++    // ProcessSingleton forwards another launch's to the running Crest.
++    if (crest::OpenFromLaunch(profile, *command_line_, cur_dir_)) return;
++#endif
      CreateBrowserWindow(BrowserWindowCreateParams(profile, false))
          ->GetWindow()
+         ->Show();
 --- a/chrome/browser/chrome_content_browser_client_receiver_bindings.cc
 +++ b/chrome/browser/chrome_content_browser_client_receiver_bindings.cc
 @@ -47,6 +47,9 @@

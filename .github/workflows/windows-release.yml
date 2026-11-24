@@ -1,0 +1,235 @@
+name: Publish Windows release
+
+# Crest for Windows, published beside the Mac app by the release workflow,
+# into the same GitHub release: Setup, built from the prebuilt Windows engine,
+# the core and the interface, and its entry in the Windows update feed on the
+# updates branch, which update-feeds.yml publishes at updates.crestbrowser.com.
+# Installed Windows builds read appcast-windows.xml (Stable and Nightly) or
+# appcast-development-windows.xml (Development), and install only an
+# installer signed by the key that signs the Mac's updates.
+on:
+  workflow_call:
+    inputs:
+      source_sha:
+        required: true
+        type: string
+      channel:
+        required: true
+        type: string
+      build_number:
+        required: true
+        type: string
+      marketing_version:
+        required: true
+        type: string
+      release_tag:
+        required: true
+        type: string
+      asset_base:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+jobs:
+  package:
+    name: Package and publish for Windows
+    runs-on: windows-2025
+    timeout-minutes: 90
+    environment: production
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source_sha }}
+          allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: CrestCore/global.json
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - name: Ensure Inno Setup
+        shell: pwsh
+        run: |
+          $find = {
+            @("$env:ProgramFiles\Inno Setup 7", "${env:ProgramFiles(x86)}\Inno Setup 6") |
+              ForEach-Object { Join-Path $_ "ISCC.exe" } | Where-Object { Test-Path $_ } | Select-Object -First 1
+          }
+          $iscc = & $find
+          if (-not $iscc) {
+            choco install innosetup --no-progress -y
+            $iscc = & $find
+          }
+          if (-not $iscc) { throw "Inno Setup's ISCC.exe is missing" }
+          "ISCC=$iscc" >> $env:GITHUB_ENV
+
+      - name: Download the Windows engine
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          engine_root="$RUNNER_TEMP/crest-windows/engine"
+          mkdir -p "$engine_root"
+          tag="$(python Scripts/control-plane/chromium_engine.py tag --host win-x64)"
+          asset="$(python Scripts/control-plane/chromium_engine.py asset --host win-x64)"
+          if ! gh release download "$tag" --repo "$GITHUB_REPOSITORY" \
+              --pattern "$asset" --pattern "${asset}.sha256" --dir "$engine_root"; then
+            echo "No Windows Chromium engine is published for this branch's engine sources ($tag)." >&2
+            exit 1
+          fi
+          (cd "$engine_root" && sha256sum -c "${asset}.sha256")
+          python -m zipfile -e "$engine_root/$asset" "$engine_root/unpacked"
+          chrome="$(find "$engine_root/unpacked" -maxdepth 2 -name chrome.exe -print -quit)"
+          test -n "$chrome"
+          echo "CREST_ENGINE=$(dirname "$chrome")" >> "$GITHUB_ENV"
+
+      - name: Publish the Native AOT core
+        shell: pwsh
+        working-directory: CrestCore
+        run: |
+          $env:Path += ";${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
+          dotnet publish src/CrestCore.Native -c Release -r win-x64 -o "$env:RUNNER_TEMP/crest-windows/core"
+
+      - name: Build the interface
+        shell: bash
+        working-directory: CrestDesktop/ui
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: Package Setup
+        shell: bash
+        env:
+          RELEASE_ASSET_BASE: ${{ inputs.asset_base }}
+          RELEASE_BUILD_NUMBER: ${{ inputs.build_number }}
+          RELEASE_CHANNEL: ${{ inputs.channel }}
+          RELEASE_VERSION: ${{ inputs.marketing_version }}
+          SIGNING_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_BASE64 }}
+          SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/crest-windows"
+          name="Installer-${RELEASE_ASSET_BASE}-windows-x64"
+          arguments=(
+            --engine "$CREST_ENGINE"
+            --core "$root/core/CrestCore.Native.dll"
+            --interface CrestDesktop/ui/app/dist
+            --version "$RELEASE_VERSION"
+            --build "$RELEASE_BUILD_NUMBER"
+            --channel "$RELEASE_CHANNEL"
+            --output "$root/out"
+            --name "$name"
+          )
+          # Authenticode signing waits for Crest's Windows certificate: with
+          # one, every executable, Setup and its uninstaller are signed.
+          if [[ -n "$SIGNING_CERTIFICATE_BASE64" ]]; then
+            certificate="$root/signing.pfx"
+            trap 'rm -f "$certificate"' EXIT
+            printf '%s' "$SIGNING_CERTIFICATE_BASE64" | base64 -d > "$certificate"
+            signtool="$(find "/c/Program Files (x86)/Windows Kits/10/bin" -path '*x64/signtool.exe' | sort | tail -1)"
+            test -n "$signtool"
+            arguments+=(--sign "\"$(cygpath -w "$signtool")\" sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /f \"$(cygpath -w "$certificate")\" /p \"$SIGNING_CERTIFICATE_PASSWORD\" \$f")
+          else
+            echo "::warning::Setup is unsigned; Windows SmartScreen warns before it runs."
+          fi
+          python Scripts/package-windows.py "${arguments[@]}"
+          (cd "$root/out" && sha256sum "$name.exe" > "Checksum-${RELEASE_ASSET_BASE}-windows-x64.exe.sha256")
+
+      - name: Attest Setup
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ runner.temp }}/crest-windows/out/Installer-${{ inputs.asset_base }}-windows-x64.exe
+
+      - name: Upload Setup to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ASSET_BASE: ${{ inputs.asset_base }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/crest-windows/out"
+          gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --clobber \
+            "$out/Installer-${RELEASE_ASSET_BASE}-windows-x64.exe" \
+            "$out/Checksum-${RELEASE_ASSET_BASE}-windows-x64.exe.sha256"
+
+      - name: Publish the signed Windows feed
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ASSET_BASE: ${{ inputs.asset_base }}
+          RELEASE_BUILD_NUMBER: ${{ inputs.build_number }}
+          RELEASE_CHANNEL: ${{ inputs.channel }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_VERSION: ${{ inputs.marketing_version }}
+          SPARKLE_EDDSA_PRIVATE_KEY: ${{ secrets.SPARKLE_EDDSA_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          retry_github() {
+            local attempt delay=2
+            for attempt in 1 2 3 4 5 6; do
+              if "$@"; then return 0; fi
+              [[ "$attempt" == 6 ]] && return 1
+              echo "GitHub request failed; retrying in ${delay} seconds." >&2
+              sleep "$delay"
+              delay=$((delay * 2))
+            done
+          }
+          installer_name="Installer-${RELEASE_ASSET_BASE}-windows-x64.exe"
+          installer="$RUNNER_TEMP/crest-windows/out/$installer_name"
+          if [[ "$RELEASE_CHANNEL" == "development" ]]; then
+            feed=appcast-development-windows.xml
+          else
+            feed=appcast-windows.xml
+          fi
+          # Stable keeps every release, as its Mac feed does; the others
+          # offer their newest build.
+          maximum=1
+          [[ "$RELEASE_CHANNEL" == "stable" ]] && maximum=0
+          updates="$RUNNER_TEMP/crest-windows/updates"
+          git init --initial-branch=updates "$updates"
+          git -C "$updates" remote add origin "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          authorization_header="$(git config --get "http.${GITHUB_SERVER_URL}/.extraheader")"
+          git -C "$updates" config "http.${GITHUB_SERVER_URL}/.extraheader" "$authorization_header"
+          unset authorization_header
+          git -C "$updates" config user.name "github-actions[bot]"
+          git -C "$updates" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          publish() {
+            retry_github git -C "$updates" fetch --depth=1 origin updates
+            git -C "$updates" checkout -B updates FETCH_HEAD
+            printf '%s' "$SPARKLE_EDDSA_PRIVATE_KEY" | python Scripts/windows_update_feed.py publish "$installer" \
+              --key-file - \
+              --feed "$updates/$feed" \
+              --output "$updates/$feed" \
+              --version "$RELEASE_VERSION" \
+              --build "$RELEASE_BUILD_NUMBER" \
+              --channel "$RELEASE_CHANNEL" \
+              --url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${installer_name}" \
+              --release-notes-url "https://github.com/${GITHUB_REPOSITORY}/releases/tag/${RELEASE_TAG}" \
+              --maximum-versions "$maximum"
+            git -C "$updates" add "$feed"
+            git -C "$updates" commit -m "chore(updates): publish ${RELEASE_TAG} for Windows"
+            git -C "$updates" push origin HEAD:updates
+          }
+          # Another publication may have moved the branch meanwhile.
+          for attempt in 1 2 3; do
+            if publish; then exit 0; fi
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Remove generated release data
+        if: always()
+        shell: bash
+        run: rm -rf "$RUNNER_TEMP/crest-windows"

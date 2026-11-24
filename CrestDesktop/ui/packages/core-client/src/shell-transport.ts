@@ -12,7 +12,37 @@ interface ShellCallbacks {
   crestCloseRequested?: (last: boolean, stack: readonly string[], pages: readonly string[]) => void;
   crestEngineNotice?: (message: string, kind: ShellNoticeKind) => void;
   crestWheel?: (phase: number, momentumPhase: number, deltaX: number, deltaY: number, x: number, y: number, time: number) => void;
+  crestOpenExternal?: (urls: readonly string[], stack: readonly string[]) => void;
+  crestUpdateProgress?: (received: number, total: number) => void;
 }
+
+/**
+ * What Windows says about Crest as the browser that opens links: Crest
+ * opens them, another browser does, Crest isn't registered with Windows as a
+ * browser (it isn't installed), or Windows couldn't say.
+ */
+export type DefaultBrowserState = "isDefault" | "notDefault" | "unregistered" | "unknown";
+
+/**
+ * This installed build and where its updates come from, as packaging wrote
+ * them beside the engine (`update.json`): its version and build number, the
+ * channel it was packaged for, and the folder its feeds are in.
+ */
+export interface ShellUpdateSettings {
+  readonly version: string;
+  readonly build: number;
+  readonly channel: string;
+  readonly feedBase: string;
+}
+
+/**
+ * How an update's install went: the installer runs and Crest quits for it,
+ * or it didn't, because the download failed or arrived other than the feed
+ * said, or the installer would not start.
+ */
+export type ShellUpdateInstall =
+  | { readonly result: "installing" }
+  | { readonly result: "failed"; readonly reason: "download" | "length" | "signature" | "launch" | "unavailable" };
 
 /**
  * A precision touchpad's scroll over the interface with the phases the system
@@ -150,6 +180,14 @@ export class ShellTransport implements CoreTransport {
   onCloseRequested?: (last: boolean, stack: readonly string[], pages: readonly string[]) => void;
   /** A precision touchpad's scroll over the interface, with its phases. */
   onWheel?: (wheel: ShellWheel) => void;
+  /**
+   * Links and documents' file addresses another app handed Crest while it
+   * runs, as Windows gave them to a launch, with how the windows stack,
+   * front first. The window in use hears them.
+   */
+  onOpenExternal?: (urls: readonly string[], stack: readonly string[]) => void;
+  /** How much of the update being downloaded has arrived, in bytes. */
+  onUpdateProgress?: (received: number, total: number) => void;
 
   #nextId = 1;
   #pending = new Map<number, (reply: CoreReply) => void>();
@@ -177,6 +215,8 @@ export class ShellTransport implements CoreTransport {
     shellWindow.crestEngineNotice = (message, kind) => this.onNotice?.(message, kind);
     shellWindow.crestWheel = (phase, momentumPhase, deltaX, deltaY, x, y, time) =>
       this.onWheel?.({ phase, momentumPhase, deltaX, deltaY, x, y, time });
+    shellWindow.crestOpenExternal = (urls, stack) => this.onOpenExternal?.(urls, stack);
+    shellWindow.crestUpdateProgress = (received, total) => this.onUpdateProgress?.(received, total);
   }
 
   async hello(): Promise<ShellHello> {
@@ -348,6 +388,87 @@ export class ShellTransport implements CoreTransport {
   /** Reopens the saved window `window` behind this one. */
   reopenWindow(window: string): Promise<CoreReply> {
     return this.#call("window", "open", window);
+  }
+
+  /** Brings the open window `window` in front of the others, and Crest with it. */
+  focusWindow(window: string): Promise<CoreReply> {
+    return this.#call("window", "focus", window);
+  }
+
+  /**
+   * Takes the links and documents a launch brought before a window could
+   * open them, with how the windows stack, front first. From then on, while
+   * this is the window in use, it hears the next ones in `onOpenExternal`.
+   * An engine that predates this answers none.
+   */
+  async takeLaunchOpens(): Promise<{ readonly urls: readonly string[]; readonly stack: readonly string[] }> {
+    const reply = await this.#call("launchOpens");
+    if (reply.status !== CoreStatus.ok) return { urls: [], stack: [] };
+    const answer = JSON.parse(new TextDecoder().decode(reply.bytes)) as { urls?: string[]; stack?: string[] };
+    return { urls: answer.urls ?? [], stack: answer.stack ?? [] };
+  }
+
+  /**
+   * Whether Windows opens links in Crest, as the engine reads Windows'
+   * choice for http and https. Null where the engine can't ask.
+   */
+  async defaultBrowser(): Promise<DefaultBrowserState | null> {
+    const reply = await this.#call("defaultBrowser");
+    if (reply.status !== CoreStatus.ok) return null;
+    const { state } = JSON.parse(new TextDecoder().decode(reply.bytes)) as { state?: string };
+    return state === "isDefault" || state === "notDefault" || state === "unregistered" ? state : "unknown";
+  }
+
+  /**
+   * Opens Windows' Default apps settings on Crest's own page, where the
+   * person makes Crest their browser; Windows lets no app do it for them.
+   * Answers whether the settings opened.
+   */
+  async openDefaultApps(): Promise<boolean> {
+    const reply = await this.#call("openDefaultApps");
+    return reply.status === CoreStatus.ok;
+  }
+
+  /** This installed build's update settings, or null where Crest isn't installed. */
+  async updateSettings(): Promise<ShellUpdateSettings | null> {
+    const reply = await this.#call("updateSettings");
+    if (reply.status !== CoreStatus.ok) return null;
+    const settings = JSON.parse(new TextDecoder().decode(reply.bytes)) as Partial<ShellUpdateSettings>;
+    return typeof settings.version === "string" && typeof settings.build === "number" &&
+      typeof settings.channel === "string" && typeof settings.feedBase === "string"
+      ? settings as ShellUpdateSettings
+      : null;
+  }
+
+  /**
+   * The update feed `name` (such as `appcast-windows.xml`) from the folder
+   * the installed build's feeds are in, as text, or null when it didn't
+   * arrive.
+   */
+  async updateFeed(name: string): Promise<string | null> {
+    const reply = await this.#call("updateFeed", name);
+    if (reply.status !== CoreStatus.ok) return null;
+    const { text } = JSON.parse(new TextDecoder().decode(reply.bytes)) as { text?: string | null };
+    return text ?? null;
+  }
+
+  /**
+   * Downloads the installer at `url`, checks that it is `length` bytes and
+   * carries `signature`, the Ed25519 signature of the key the installed build
+   * trusts, then runs it and quits Crest, which the installer opens again.
+   * `onUpdateProgress` hears the download.
+   */
+  async installUpdate(url: string, length: number, signature: string): Promise<ShellUpdateInstall> {
+    const reply = await this.#call("installUpdate", url, String(length), signature);
+    if (reply.status !== CoreStatus.ok) return { result: "failed", reason: "unavailable" };
+    const answer = JSON.parse(new TextDecoder().decode(reply.bytes)) as Partial<{ result: string; reason: string }>;
+    if (answer.result === "installing") return { result: "installing" };
+    const reason = answer.reason;
+    return {
+      result: "failed",
+      reason: reason === "download" || reason === "length" || reason === "signature" || reason === "launch"
+        ? reason : "unavailable",
+    };
   }
 
   #setFrame(frame: ShellFrame) {

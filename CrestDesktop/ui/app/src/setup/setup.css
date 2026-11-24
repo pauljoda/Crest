@@ -18,6 +18,8 @@
   --settings-primary: 0 0 0;
   --settings-hairline: rgb(0 0 0 / 0.045);
   --settings-accent: var(--setup-accent);
+  --settings-success: rgb(47 112 66);
+  --settings-warning: rgb(138 90 8);
   --forge-tint: var(--setup-accent);
   --forge-line: rgb(234 223 198);
   --forge-label: rgb(138 106 34);

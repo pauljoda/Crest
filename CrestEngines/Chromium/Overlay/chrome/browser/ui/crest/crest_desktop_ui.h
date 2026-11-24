@@ -92,6 +92,15 @@ class CrestDesktopUI : public content::WebUIController {
 // locked Space asks Windows Hello whether the device's owner is there, over
 // the window that asks (the op "verifyOwner"), as the Mac asks
 // LocalAuthentication.
+//
+// Links and documents other apps hand Crest arrive at the window in use as
+// crestOpenExternal(urls, stack) once its interface has taken the ones a
+// launch brought (the op "launchOpens"). Whether Crest is the default browser
+// is Windows' to say (the op "defaultBrowser") and the person's to choose in
+// Windows' Settings, which the op "openDefaultApps" opens on Crest's page. An
+// installed Crest reads its update settings ("updateSettings") and feeds
+// ("updateFeed"), and installs an update ("installUpdate"), whose download is
+// heard as crestUpdateProgress(received, total).
 class DesktopBridge : public content::WebUIMessageHandler,
                       public content::RenderWidgetHost::InputEventObserver,
                       public content::RenderWidgetHostObserver {
@@ -118,6 +127,10 @@ class DesktopBridge : public content::WebUIMessageHandler,
   // first, and `pages` the pages it shows. The interface answers with the
   // window op "close".
   void CloseRequested(bool last, base::ListValue stack, base::ListValue pages);
+  // Links and documents another app handed Crest, which this window opens
+  // where the core places them; `stack` is the windows' identities, front
+  // first.
+  void OpenExternal(base::ListValue urls, base::ListValue stack);
 
   // content::WebUIMessageHandler:
   using content::WebUIMessageHandler::IsJavascriptAllowed;
@@ -153,6 +166,24 @@ class DesktopBridge : public content::WebUIMessageHandler,
   // or "unavailable" (no Windows Hello, or it is not set up or allowed).
   void VerifyOwner(base::Value id, const std::string& reason);
   void AnswerOwner(base::Value id, std::string_view result);
+  // Answers {"state"}: whether Windows opens links in Crest (see
+  // DefaultBrowserState).
+  void CheckDefaultBrowser(base::Value id);
+  // Opens Windows' Default apps settings on Crest's page; answers OK once
+  // they opened.
+  void OpenDefaultApps(base::Value id);
+  // Answers this installed build's {"version", "build", "channel",
+  // "feedBase"}, or fails where Crest isn't installed.
+  void UpdateSettings(base::Value id);
+  // Answers {"text"}: the update feed `name` from the folder the installed
+  // build's feeds are in, or null when it didn't arrive.
+  void UpdateFeed(base::Value id, const std::string& name);
+  // Downloads, checks and runs the installer at `url`, `length` bytes long
+  // and signed with `signature` (base64), answering {"result"} or {"result",
+  // "reason"} (DesktopUpdates::Outcome). Crest quits for the installer.
+  void InstallUpdate(base::Value id, const std::string& url, const std::string& length,
+                     const std::string& signature);
+  void UpdateProgress(int64_t received, int64_t total);
   // Fetches `address`, an https address, as text: without cookies or stored
   // credentials, through no cache, following redirects only to other https
   // addresses, sending the validators of a copy the interface already holds,

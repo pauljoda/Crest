@@ -9,6 +9,8 @@
   --settings-primary: 0 0 0;
   --settings-hairline: rgb(0 0 0 / 0.1);
   --settings-accent: rgb(0 103 192);
+  --settings-success: rgb(47 112 66);
+  --settings-warning: rgb(138 90 8);
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -28,6 +30,8 @@
     --settings-primary: 255 255 255;
     --settings-hairline: rgb(255 255 255 / 0.1);
     --settings-accent: rgb(76 194 255);
+    --settings-success: rgb(134 196 142);
+    --settings-warning: rgb(236 190 92);
   }
 }
 
@@ -696,6 +700,44 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* The Default browser row: what Windows says, in its status's tone, then
+   the way to Windows' own Settings and Check Again, as the Mac's row. */
+.default-browser-control {
+  align-items: center;
+}
+
+.default-browser-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--settings-secondary);
+}
+
+.default-browser-status.success {
+  color: var(--settings-success);
+}
+
+.default-browser-status.warning {
+  color: var(--settings-warning);
+}
+
+.default-browser-status .settings-progress {
+  width: 10px;
+  height: 10px;
+}
+
+/* Software updates: Check for Updates… at the trailing edge, and the
+   download's progress beside the update it brings. */
+.settings-update-actions {
+  justify-content: flex-end;
+}
+
+.settings-update-progress {
+  width: 120px;
+  height: 4px;
+  accent-color: var(--settings-accent);
 }
 
 /* Ad Blocking: the level's "Customized", the lists that wait while blocking

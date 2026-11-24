@@ -5,14 +5,14 @@
   import { ProviderIcon } from "../../palette/CommandPalette";
   import { LevelSection } from "../../settings/AdBlockingPane";
   import { Group, Row } from "../../settings/controls";
+  import DefaultBrowserGroup from "../../settings/DefaultBrowserGroup.svelte";
   import SymbolIcon from "../../SymbolIcon.svelte";
   import { useCoreVersion } from "../../use-core";
 
   /**
    * BrowserSetupHomePage: what makes Crest home, each choice taking effect at
-   * once, as in Settings: the search engine and the level ad blocking blocks
-   * at. The Mac's Default browser row waits for Windows to register Crest as a
-   * browser, which only an installer does.
+   * once, as in Settings: the default browser, the search engine and the level
+   * ad blocking blocks at.
    */
   let { session }: { session: Session } = $props();
 
@@ -24,6 +24,7 @@
 
 <div class="setup-page-content">
   <h2 class="setup-page-heading">Make It Home</h2>
+  <DefaultBrowserGroup shell={session.shell} />
   {#if catalog}
     <Group title="Search">
       <Row title="Search with" htmlFor={searchId}>

@@ -37,6 +37,8 @@
 #include "chrome/browser/extensions/extension_view_host_factory.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/browser.h"
+#include "chrome/browser/ui/crest/crest_desktop_default_browser.h"
+#include "chrome/browser/ui/crest/crest_desktop_updates.h"
 #include "chrome/browser/ui/crest/crest_engine_binding.h"
 #include "chrome/browser/ui/crest/crest_engine_browsers.h"
 #include "chrome/browser/ui/crest/crest_engine_extensions.h"
@@ -443,7 +445,109 @@ void DesktopBridge::OnCall(const base::ListValue& arguments) {
     VerifyOwner(arguments[0].Clone(), StringAt(arguments, 2));
     return;
   }
+  if (op == "defaultBrowser") {
+    CheckDefaultBrowser(arguments[0].Clone());
+    return;
+  }
+  if (op == "openDefaultApps") {
+    OpenDefaultApps(arguments[0].Clone());
+    return;
+  }
+  if (op == "updateSettings") {
+    UpdateSettings(arguments[0].Clone());
+    return;
+  }
+  if (op == "updateFeed") {
+    UpdateFeed(arguments[0].Clone(), StringAt(arguments, 2));
+    return;
+  }
+  if (op == "installUpdate") {
+    InstallUpdate(arguments[0].Clone(), StringAt(arguments, 2), StringAt(arguments, 3), StringAt(arguments, 4));
+    return;
+  }
   Reply(arguments[0], Answer(op, arguments));
+}
+
+void DesktopBridge::CheckDefaultBrowser(base::Value id) {
+  crest::CheckDefaultBrowser(base::BindOnce(
+      [](base::WeakPtr<DesktopBridge> bridge, base::Value id, DefaultBrowserState state) {
+        if (!bridge) return;
+        bridge->Reply(id, Text(base::WriteJson(base::DictValue().Set("state", DefaultBrowserStateName(state)))
+                                   .value_or("{}")));
+      },
+      weak_factory_.GetWeakPtr(), std::move(id)));
+}
+
+void DesktopBridge::OpenDefaultApps(base::Value id) {
+  OpenDefaultAppsSettings(base::BindOnce(
+      [](base::WeakPtr<DesktopBridge> bridge, base::Value id, bool opened) {
+        if (bridge) bridge->Reply(id, {opened ? CREST_OK : CREST_INVALID_ARGUMENT, {}});
+      },
+      weak_factory_.GetWeakPtr(), std::move(id)));
+}
+
+void DesktopBridge::UpdateSettings(base::Value id) {
+  DesktopUpdates::Get().ReadSettings(base::BindOnce(
+      [](base::WeakPtr<DesktopBridge> bridge, base::Value id, const std::optional<DesktopUpdates::Settings>& settings) {
+        if (!bridge) return;
+        if (!settings) {
+          bridge->Reply(id, {CREST_INVALID_ARGUMENT, {}});
+          return;
+        }
+        base::DictValue answer;
+        answer.Set("version", settings->version);
+        answer.Set("build", static_cast<double>(settings->build));
+        answer.Set("channel", settings->channel);
+        answer.Set("feedBase", settings->feed_base.spec());
+        bridge->Reply(id, Text(base::WriteJson(answer).value_or("{}")));
+      },
+      weak_factory_.GetWeakPtr(), std::move(id)));
+}
+
+void DesktopBridge::UpdateFeed(base::Value id, const std::string& name) {
+  DesktopUpdates::Get().FetchFeed(
+      name, base::BindOnce(
+                [](base::WeakPtr<DesktopBridge> bridge, base::Value id, std::optional<std::string> text) {
+                  if (!bridge) return;
+                  base::DictValue answer;
+                  answer.Set("text", text ? base::Value(std::move(*text)) : base::Value());
+                  bridge->Reply(id, Text(base::WriteJson(answer).value_or("{}")));
+                },
+                weak_factory_.GetWeakPtr(), std::move(id)));
+}
+
+void DesktopBridge::InstallUpdate(base::Value id,
+                                  const std::string& url,
+                                  const std::string& length,
+                                  const std::string& signature) {
+  int64_t bytes = 0;
+  std::optional<std::vector<uint8_t>> decoded = base::Base64Decode(signature);
+  auto answer = base::BindOnce(
+      [](base::WeakPtr<DesktopBridge> bridge, base::Value id, DesktopUpdates::Outcome outcome) {
+        if (!bridge) return;
+        base::DictValue answer;
+        if (outcome == DesktopUpdates::Outcome::kInstalling) {
+          answer.Set("result", "installing");
+        } else {
+          answer.Set("result", "failed");
+          answer.Set("reason", DesktopUpdates::OutcomeName(outcome));
+        }
+        bridge->Reply(id, Text(base::WriteJson(answer).value_or("{}")));
+      },
+      weak_factory_.GetWeakPtr(), std::move(id));
+  if (!base::StringToInt64(length, &bytes) || !decoded) {
+    std::move(answer).Run(DesktopUpdates::Outcome::kSignature);
+    return;
+  }
+  DesktopUpdates::Get().Install(
+      GURL(url), bytes, std::move(*decoded),
+      base::BindRepeating(&DesktopBridge::UpdateProgress, weak_factory_.GetWeakPtr()), std::move(answer));
+}
+
+void DesktopBridge::UpdateProgress(int64_t received, int64_t total) {
+  if (!IsJavascriptAllowed()) return;
+  CallJavascriptFunction("crestUpdateProgress", base::Value(static_cast<double>(received)),
+                         base::Value(static_cast<double>(total)));
 }
 
 void DesktopBridge::VerifyOwner(base::Value id, const std::string& reason) {
@@ -755,6 +859,7 @@ CoreReply DesktopBridge::Answer(const std::string& op, const base::ListValue& ar
   if (op == "registerEngine") return host.RegisterEngine(BytesAt(arguments, 2), BytesAt(arguments, 3));
   if (op == "request") return host.Request(BytesAt(arguments, 2));
   if (op == "embed") return Text(host.EmbedPage(StringAt(arguments, 2)));
+  if (op == "launchOpens") return Text(base::WriteJson(host.TakeLaunchOpens(this)).value_or("{}"));
   if (op == "copy") {
     // Text the interface copies: an address Super Copy made (the core's
     // LinkToCopy), or an answer such as the palette's calculator gives.
@@ -801,6 +906,9 @@ CoreReply DesktopBridge::Answer(const std::string& op, const base::ListValue& ar
       host.OpenWindow(saved, /*activates=*/false);
     } else if (frame && action == "adopt" && names_free_window && frame->launches()) {
       frame->Adopt(saved);
+    } else if (action == "focus" && host.FrameFor(saved)) {
+      // The window a link from another app opened in comes forward.
+      host.BringForward(host.FrameFor(saved));
     } else if (frame && action == "minimize") {
       frame->widget()->Minimize();
     } else if (frame && action == "maximize") {
@@ -829,6 +937,11 @@ std::string DesktopBridge::Window() {
 void DesktopBridge::CloseRequested(bool last, base::ListValue stack, base::ListValue pages) {
   CallJavascriptFunction("crestCloseRequested", base::Value(last), base::Value(std::move(stack)),
                          base::Value(std::move(pages)));
+}
+
+void DesktopBridge::OpenExternal(base::ListValue urls, base::ListValue stack) {
+  if (!IsJavascriptAllowed()) return;
+  CallJavascriptFunction("crestOpenExternal", base::Value(std::move(urls)), base::Value(std::move(stack)));
 }
 
 void DesktopBridge::WindowState(const base::DictValue& state) {

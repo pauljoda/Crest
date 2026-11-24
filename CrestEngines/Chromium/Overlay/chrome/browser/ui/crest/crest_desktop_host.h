@@ -39,6 +39,14 @@ namespace crest {
 class DesktopBridge;
 class DesktopFrame;
 
+// Whether this is Crest as Setup installs it: chrome.exe in Chromium's
+// layout for Crest's install mode, <...>\Crest\Application\chrome.exe, with
+// the core and the interface beside it. The installed product is Crest with
+// no switches at all, keeps its profiles in Chromium's own folder for the
+// install mode, and updates itself; a development engine is Crest only when
+// launched with --crest-control-plane and a profile folder of its own.
+bool IsInstalledProduct();
+
 // What Chromium offers that Crest's desktop interface answers with a notice
 // instead, as the Mac's CrestUnavailableFeature does.
 enum class UnavailableFeature {
@@ -123,6 +131,23 @@ class DesktopHost : public EngineBinding::Shell {
   bool RequestClose(DesktopFrame* frame);
   // Tells `frame`'s interface what its window buttons now draw from.
   void FrameStateChanged(DesktopFrame* frame, const base::DictValue& state);
+  // Brings `frame` in front of the others, restored, as a launch does.
+  void BringForward(DesktopFrame* frame);
+  // Quits Crest as closing its last window does: every window's interface
+  // hears it is closing with the others, so each remembers every window for
+  // the next launch rather than closing its own for good.
+  void Quit();
+
+  // A launch's links and documents, as Chromium read them from its command
+  // line. Before the first window is open they wait for its interface; a
+  // launch handed to the running Crest brings the window in use forward and
+  // hands them to it. Answers whether the launch needs nothing more, which a
+  // launch handed to the running Crest never does.
+  bool OpenLaunch(std::vector<std::string> urls);
+  // Takes the links and documents launches brought before `bridge`'s window
+  // could open them, as {"urls", "stack"}, the windows front first. From then
+  // on that window hears the next ones while it is the window in use.
+  base::DictValue TakeLaunchOpens(DesktopBridge* bridge);
 
   // Offers `event`, a key pressed in `frame`'s window, to the commands its
   // interface binds, at `stage`, and answers whether one ran and took it.
@@ -225,6 +250,11 @@ class DesktopHost : public EngineBinding::Shell {
   void ShowKeptHint();
   // Forgets the kept press, and puts away the hint it showed.
   void ForgetKeptPress();
+  // The windows' identities, front first.
+  base::ListValue WindowStack() const;
+  // Hands the launches' links and documents to the window in use once its
+  // interface takes them.
+  void DeliverLaunchOpens();
 
   bool started_ = false;
   base::FilePath interface_directory_;
@@ -243,6 +273,12 @@ class DesktopHost : public EngineBinding::Shell {
   std::string hint_window_;
   base::OneShotTimer hint_timer_;
   std::set<std::string> claimed_download_prompts_;
+  // Links and documents launches brought that no window has opened yet.
+  std::vector<std::string> launch_opens_;
+  // The interfaces that took the launches' opens, which hear the next ones.
+  std::set<raw_ptr<DesktopBridge>> open_receivers_;
+  // Every window is closing with the others.
+  bool quitting_ = false;
 };
 
 }  // namespace crest
