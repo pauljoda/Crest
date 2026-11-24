@@ -1,5 +1,18 @@
 import Foundation
 
+// MARK: - Types
+
+/// The fields a fill writes into, by the index the page script reads them
+/// with: the visible username field and the current password field for a
+/// saved login, and every new password field for one Crest makes.
+struct BrowserCredentialFillFields: Equatable, Sendable {
+    static let none = BrowserCredentialFillFields(username: nil, password: nil, newPasswords: [])
+
+    let username: Int?
+    let password: Int?
+    let newPasswords: [Int]
+}
+
 struct BrowserCredentialFillRequest: Identifiable, Equatable, Sendable {
     let id: UUID
     let origin: CredentialOrigin
@@ -18,6 +31,16 @@ struct BrowserCredentialFillRequest: Identifiable, Equatable, Sendable {
     /// placement it has always had rather than pointing at the wrong place.
     let fieldRect: BrowserCredentialFieldRect?
 
+    /// The fields the core chose for the fill.
+    let fields: BrowserCredentialFillFields
+
+    /// Whether the prompt shows only when the Space has logins for the site,
+    /// as a username field's does.
+    let isQuietWithoutLogins: Bool
+
+    /// What the site asks of a password Crest makes for the new password field.
+    let requirements: PasswordRequirements
+
     init(
         id: UUID,
         origin: CredentialOrigin,
@@ -26,7 +49,10 @@ struct BrowserCredentialFillRequest: Identifiable, Equatable, Sendable {
         passwordKind: CredentialPasswordKind,
         isCrossOriginFrame: Bool,
         requestedAt: Date,
-        fieldRect: BrowserCredentialFieldRect? = nil
+        fieldRect: BrowserCredentialFieldRect? = nil,
+        fields: BrowserCredentialFillFields = .none,
+        isQuietWithoutLogins: Bool = false,
+        requirements: PasswordRequirements = .none
     ) {
         self.id = id
         self.origin = origin
@@ -36,6 +62,9 @@ struct BrowserCredentialFillRequest: Identifiable, Equatable, Sendable {
         self.isCrossOriginFrame = isCrossOriginFrame
         self.requestedAt = requestedAt
         self.fieldRect = fieldRect
+        self.fields = fields
+        self.isQuietWithoutLogins = isQuietWithoutLogins
+        self.requirements = requirements
     }
 
     /// The same request, following its field to where the page just moved it.
@@ -52,7 +81,10 @@ struct BrowserCredentialFillRequest: Identifiable, Equatable, Sendable {
             passwordKind: passwordKind,
             isCrossOriginFrame: isCrossOriginFrame,
             requestedAt: requestedAt,
-            fieldRect: fieldRect
+            fieldRect: fieldRect,
+            fields: fields,
+            isQuietWithoutLogins: isQuietWithoutLogins,
+            requirements: requirements
         )
     }
 }

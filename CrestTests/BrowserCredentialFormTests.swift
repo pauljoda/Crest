@@ -6,88 +6,71 @@ import XCTest
 
 @MainActor
 final class BrowserCredentialFormTests: XCTestCase {
-    func testFocusMessageRequiresATrustedGestureAndNeverAcceptsAPassword() throws {
-        let valid = try XCTUnwrap(
-            BrowserCredentialFormMessage(body: [
-                "version": 1,
-                "event": "focus",
-                "trusted": true,
-                "formID": "form-1",
-                "username": "person@example.com",
-                "passwordKind": "current",
-            ]))
+    private static let loginFields: [[String: Any]] = [
+        [
+            "index": 0, "type": "text", "autocomplete": "username", "name": "user", "id": "", "label": "",
+            "placeholder": "", "visible": true, "hasValue": true, "entered": true,
+        ],
+        [
+            "index": 1, "type": "password", "autocomplete": "current-password", "name": "pass", "id": "", "label": "",
+            "placeholder": "", "visible": true, "hasValue": true, "entered": true,
+        ],
+    ]
 
+    func testFocusMessageRequiresATrustedGestureAndNeverAcceptsAPassword() throws {
+        let focus: [String: Any] = [
+            "version": 2, "event": "focus", "trusted": true, "formID": "form-1", "readingID": 3,
+            "fields": Self.loginFields, "focusedField": 0, "values": ["0": "person@example.com"],
+        ]
+        let valid = try XCTUnwrap(BrowserCredentialFormMessage(body: focus))
         XCTAssertEqual(valid.event, .focus)
         XCTAssertEqual(valid.formID, "form-1")
-        XCTAssertEqual(valid.username, "person@example.com")
-        XCTAssertNil(valid.password)
-        XCTAssertNil(
-            BrowserCredentialFormMessage(body: [
-                "version": 1,
-                "event": "focus",
-                "trusted": false,
-                "formID": "form-1",
-            ]))
-        XCTAssertNil(
-            BrowserCredentialFormMessage(body: [
-                "version": 1,
-                "event": "focus",
-                "trusted": true,
-                "formID": "form-1",
-            ]))
-        XCTAssertNil(
-            BrowserCredentialFormMessage(body: [
-                "version": 1,
-                "event": "focus",
-                "trusted": true,
-                "formID": "form-1",
-                "password": "page-tried-to-exfiltrate-this",
-            ]))
+        XCTAssertEqual(valid.readingID, 3)
+        XCTAssertEqual(valid.fields.map(\.inputType), [.text, .password])
+        XCTAssertEqual(valid.value(at: 0), "person@example.com")
+
+        var untrusted = focus
+        untrusted["trusted"] = false
+        XCTAssertNil(BrowserCredentialFormMessage(body: untrusted))
+        var unfocused = focus
+        unfocused["focusedField"] = 5
+        XCTAssertNil(BrowserCredentialFormMessage(body: unfocused))
+        var unread = focus
+        unread["readingID"] = nil
+        XCTAssertNil(BrowserCredentialFormMessage(body: unread))
+        var exfiltrating = focus
+        exfiltrating["values"] = ["0": "person@example.com", "1": "page-tried-to-exfiltrate-this"]
+        XCTAssertNil(BrowserCredentialFormMessage(body: exfiltrating))
     }
 
     func testSubmitMessageRequiresCompleteTrustedFieldsAndRedactsItsSecret() throws {
-        let message = try XCTUnwrap(
-            BrowserCredentialFormMessage(body: [
-                "version": 1,
-                "event": "submit",
-                "trusted": true,
-                "formID": "form-7",
-                "username": "person",
-                "password": "correct horse battery staple",
-                "passwordKind": "new",
-            ]))
-
+        let submit: [String: Any] = [
+            "version": 2, "event": "submit", "trusted": true, "formID": "form-7", "fields": Self.loginFields,
+            "values": ["0": "person", "1": "correct horse battery staple"],
+            "submission": ["trigger": "submitControl", "inForm": true, "label": "Sign in"],
+        ]
+        let message = try XCTUnwrap(BrowserCredentialFormMessage(body: submit))
         XCTAssertEqual(message.event, .submit)
-        XCTAssertEqual(message.username, "person")
-        XCTAssertEqual(message.password, "correct horse battery staple")
-        XCTAssertEqual(message.passwordKind, .new)
+        XCTAssertEqual(message.value(at: 1), "correct horse battery staple")
+        XCTAssertEqual(message.submission?.trigger, .submitControl)
         XCTAssertFalse(message.description.contains("correct horse battery staple"))
         XCTAssertTrue(message.description.contains("<redacted>"))
 
-        XCTAssertNil(
-            BrowserCredentialFormMessage(body: [
-                "version": 1,
-                "event": "submit",
-                "trusted": false,
-                "formID": "form-7",
-                "username": "person",
-                "password": "secret",
-                "passwordKind": "current",
-            ]))
-        let passwordOnlyStep = try XCTUnwrap(
-            BrowserCredentialFormMessage(body: [
-                "version": 1,
-                "event": "submit",
-                "trusted": true,
-                "formID": "form-7",
-                "password": "secret",
-                "passwordKind": "current",
-            ]))
-        XCTAssertNil(passwordOnlyStep.username)
-        XCTAssertEqual(passwordOnlyStep.password, "secret")
+        var untrusted = submit
+        untrusted["trusted"] = false
+        XCTAssertNil(BrowserCredentialFormMessage(body: untrusted))
+        var unsent = submit
+        unsent["submission"] = nil
+        XCTAssertNil(BrowserCredentialFormMessage(body: unsent))
+        var stray = submit
+        stray["values"] = ["0": "person", "9": "not a field of this form"]
+        XCTAssertNil(BrowserCredentialFormMessage(body: stray))
+        var older = submit
+        older["version"] = 1
+        XCTAssertNil(BrowserCredentialFormMessage(body: older))
     }
 
-    func testIsolatedBridgeClassifiesAndFillsAnOrdinaryLoginForm() async throws {
+    func testIsolatedBridgeReadsAndFillsAnOrdinaryLoginForm() async throws {
         let webView = try await credentialBridgeWebView(
             html: """
                 <!doctype html>
@@ -95,6 +78,7 @@ final class BrowserCredentialFormTests: XCTestCase {
                 <form id="login">
                   <input id="login-user" autocomplete="username" value="person@example.com">
                   <input id="login-password" type="password" autocomplete="current-password" value="old-secret">
+                  <input type="search" name="q">
                 </form>
                 """)
 
@@ -107,16 +91,18 @@ final class BrowserCredentialFormTests: XCTestCase {
             contentWorld: .page
         )
         XCTAssertEqual(pageWorldBridgeVisibility as? String, "undefined")
-        XCTAssertEqual(inspection["username"] as? String, "person@example.com")
-        XCTAssertEqual(inspection["passwordKind"] as? String, "current")
-        XCTAssertEqual(inspection["passwordFieldID"] as? String, "login-password")
-        XCTAssertEqual(inspection["passwordFieldCount"] as? Int, 1)
+        let fields = try XCTUnwrap(inspection["fields"] as? [[String: Any]])
+        XCTAssertEqual(fields.compactMap { $0["type"] as? String }, ["text", "password"])
+        XCTAssertEqual(fields.compactMap { $0["autocomplete"] as? String }, ["username", "current-password"])
+        // A value the page put there is not one the person entered.
+        XCTAssertEqual(fields.compactMap { $0["entered"] as? Bool }, [false, false])
 
         let formID = try XCTUnwrap(inspection["formID"] as? String)
+        let readingID = try XCTUnwrap(inspection["readingID"] as? Int)
         let didFill = try await fill(
             formID: formID,
-            username: "filled@example.com",
-            password: "filled-secret",
+            readingID: readingID,
+            entries: [["index": 0, "value": "filled@example.com"], ["index": 1, "value": "filled-secret"]],
             in: webView
         )
         XCTAssertTrue(didFill)
@@ -131,6 +117,12 @@ final class BrowserCredentialFormTests: XCTestCase {
         )
         XCTAssertEqual(pageValues["username"] as? String, "filled@example.com")
         XCTAssertEqual(pageValues["password"] as? String, "filled-secret")
+        let missingField = try await fill(
+            formID: formID, readingID: readingID, entries: [["index": 7, "value": "x"]], in: webView)
+        XCTAssertFalse(missingField)
+        let staleReading = try await fill(
+            formID: formID, readingID: readingID + 100, entries: [["index": 0, "value": "x"]], in: webView)
+        XCTAssertFalse(staleReading)
     }
 
     private func credentialBridgeWebView(
@@ -166,16 +158,16 @@ final class BrowserCredentialFormTests: XCTestCase {
 
     private func fill(
         formID: String,
-        username: String,
-        password: String,
+        readingID: Int,
+        entries: [[String: Any]],
         in webView: WKWebView
     ) async throws -> Bool {
         let value = try await webView.callAsyncJavaScript(
-            "return globalThis.__crestCredentialBridge?.fill(formID, username, password) === true;",
+            "return globalThis.__crestCredentialBridge?.fill(formID, readingID, entries, false) === true;",
             arguments: [
                 "formID": formID,
-                "username": username,
-                "password": password,
+                "readingID": readingID,
+                "entries": entries,
             ],
             in: nil,
             contentWorld: BrowserCredentialContentBridge.contentWorld

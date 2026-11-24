@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xdd, 0x48, 0x1f, 0xcb, 0xc4, 0xf4, 0xf4, 0x85, 0x9b, 0x8e, 0xd8, 0xf9, 0xf1, 0x51, 0x79, 0x90, 0x5b, 0x8d, 0xcd, 0x9e, 0x77, 0xde, 0x12, 0x76, 0xe2, 0x75, 0x4e, 0xba, 0x27, 0x2b, 0xcc, 0xc4
+        0xce, 0x3c, 0xd3, 0x2b, 0x47, 0xd9, 0xd4, 0x3e, 0x3e, 0x40, 0x9c, 0xc5, 0x21, 0x0e, 0x7c, 0x39, 0x1f, 0xde, 0x14, 0xca, 0x6e, 0x69, 0x8a, 0xa6, 0x7b, 0x59, 0x35, 0x72, 0x70, 0xc6, 0x34, 0xea
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -7403,7 +7403,10 @@ public static class ContractCodec {
             reader.ReadBool(),
             reader.ReadBool(),
             reader.ReadDouble(),
-            reader.ReadDouble());
+            reader.ReadDouble(),
+            ReadSignInForm(reader),
+            reader.ReadPresence() ? (CredentialPasswordKind?)ReadCredentialPasswordKind(reader) : null,
+            reader.ReadBool());
     }
 
     public static void WriteCredentialCaptureDecision(WireWriter writer, CredentialCaptureDecision value) {
@@ -7416,6 +7419,14 @@ public static class ContractCodec {
         writer.WriteBool(value.AnchorsToField);
         writer.WriteDouble(value.CandidateLifetime);
         writer.WriteDouble(value.UsernameHintLifetime);
+        WriteSignInForm(writer, value.Form);
+        if (value.PasswordKind is { } presentPasswordKind) {
+            writer.WritePresence(true);
+            WriteCredentialPasswordKind(writer, presentPasswordKind);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteBool(value.QuietWithoutLogins);
     }
 
     public static CredentialChoice ReadCredentialChoice(WireReader reader) {
@@ -7517,9 +7528,10 @@ public static class ContractCodec {
             ReadCredentialOrigin(reader),
             reader.ReadBool(),
             reader.ReadBool(),
+            reader.ReadList(() => ReadFormField(reader)),
+            reader.ReadPresence() ? (int?)reader.ReadInt32() : null,
+            reader.ReadPresence() ? (FormSubmission?)ReadFormSubmission(reader) : null,
             reader.ReadBool(),
-            reader.ReadBool(),
-            reader.ReadPresence() ? (CredentialPasswordKind?)ReadCredentialPasswordKind(reader) : null,
             reader.ReadPresence() ? (bool?)reader.ReadBool() : null,
             reader.ReadBool());
     }
@@ -7532,14 +7544,23 @@ public static class ContractCodec {
         WriteCredentialOrigin(writer, value.TopLevelOrigin);
         writer.WriteBool(value.IsMainFrame);
         writer.WriteBool(value.HasFormId);
-        writer.WriteBool(value.HasUsername);
-        writer.WriteBool(value.HasPassword);
-        if (value.PasswordKind is { } presentPasswordKind) {
+        writer.WriteCount(value.Fields.Count);
+        foreach (var itemFields in value.Fields) {
+            WriteFormField(writer, itemFields);
+        }
+        if (value.FocusedField is { } presentFocusedField) {
             writer.WritePresence(true);
-            WriteCredentialPasswordKind(writer, presentPasswordKind);
+            writer.WriteInt32(presentFocusedField);
         } else {
             writer.WritePresence(false);
         }
+        if (value.Submission is { } presentSubmission) {
+            writer.WritePresence(true);
+            WriteFormSubmission(writer, presentSubmission);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteBool(value.FilledUsername);
         if (value.HasVisiblePasswordField is { } presentHasVisiblePasswordField) {
             writer.WritePresence(true);
             writer.WriteBool(presentHasVisiblePasswordField);
@@ -10767,6 +10788,73 @@ public static class ContractCodec {
         } else {
             writer.WritePresence(false);
         }
+    }
+
+    public static FormField ReadFormField(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new FormField(
+            reader.ReadInt32(),
+            ReadFormInputType(reader),
+            reader.ReadString(),
+            reader.ReadString(),
+            reader.ReadString(),
+            reader.ReadString(),
+            reader.ReadString(),
+            reader.ReadBool(),
+            reader.ReadBool(),
+            reader.ReadBool(),
+            reader.ReadPresence() ? (int?)reader.ReadInt32() : null,
+            reader.ReadPresence() ? (int?)reader.ReadInt32() : null,
+            reader.ReadPresence() ? (string?)reader.ReadString() : null);
+    }
+
+    public static void WriteFormField(WireWriter writer, FormField value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteInt32(value.Index);
+        WriteFormInputType(writer, value.InputType);
+        writer.WriteString(value.Autocomplete);
+        writer.WriteString(value.Name);
+        writer.WriteString(value.IdAttribute);
+        writer.WriteString(value.Label);
+        writer.WriteString(value.Placeholder);
+        writer.WriteBool(value.IsVisible);
+        writer.WriteBool(value.HasValue);
+        writer.WriteBool(value.EnteredByPerson);
+        if (value.MinLength is { } presentMinLength) {
+            writer.WritePresence(true);
+            writer.WriteInt32(presentMinLength);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.MaxLength is { } presentMaxLength) {
+            writer.WritePresence(true);
+            writer.WriteInt32(presentMaxLength);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.PasswordRules is { } presentPasswordRules) {
+            writer.WritePresence(true);
+            writer.WriteString(presentPasswordRules);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
+    public static FormSubmission ReadFormSubmission(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new FormSubmission(
+            ReadSubmitTrigger(reader),
+            reader.ReadBool(),
+            reader.ReadString());
+    }
+
+    public static void WriteFormSubmission(WireWriter writer, FormSubmission value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteSubmitTrigger(writer, value.Trigger);
+        writer.WriteBool(value.InFormElement);
+        writer.WriteString(value.ControlLabel);
     }
 
     public static GetAgentPreferences ReadGetAgentPreferences(WireReader reader) {
@@ -15244,6 +15332,37 @@ public static class ContractCodec {
         }
     }
 
+    public static PasswordRequirements ReadPasswordRequirements(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new PasswordRequirements(
+            reader.ReadPresence() ? (int?)reader.ReadInt32() : null,
+            reader.ReadPresence() ? (int?)reader.ReadInt32() : null,
+            reader.ReadPresence() ? (string?)reader.ReadString() : null);
+    }
+
+    public static void WritePasswordRequirements(WireWriter writer, PasswordRequirements value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        if (value.MinLength is { } presentMinLength) {
+            writer.WritePresence(true);
+            writer.WriteInt32(presentMinLength);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.MaxLength is { } presentMaxLength) {
+            writer.WritePresence(true);
+            writer.WriteInt32(presentMaxLength);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.Rules is { } presentRules) {
+            writer.WritePresence(true);
+            writer.WriteString(presentRules);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
     public static PauseDownload ReadPauseDownload(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new PauseDownload(
@@ -19015,6 +19134,44 @@ public static class ContractCodec {
         }
     }
 
+    public static SignInForm ReadSignInForm(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new SignInForm(
+            ReadFormPurpose(reader),
+            reader.ReadPresence() ? (int?)reader.ReadInt32() : null,
+            reader.ReadPresence() ? (int?)reader.ReadInt32() : null,
+            reader.ReadList(() => reader.ReadInt32()),
+            reader.ReadPresence() ? (int?)reader.ReadInt32() : null);
+    }
+
+    public static void WriteSignInForm(WireWriter writer, SignInForm value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        WriteFormPurpose(writer, value.Purpose);
+        if (value.Username is { } presentUsername) {
+            writer.WritePresence(true);
+            writer.WriteInt32(presentUsername);
+        } else {
+            writer.WritePresence(false);
+        }
+        if (value.CurrentPassword is { } presentCurrentPassword) {
+            writer.WritePresence(true);
+            writer.WriteInt32(presentCurrentPassword);
+        } else {
+            writer.WritePresence(false);
+        }
+        writer.WriteCount(value.NewPasswords.Count);
+        foreach (var itemNewPasswords in value.NewPasswords) {
+            writer.WriteInt32(itemNewPasswords);
+        }
+        if (value.KeptPassword is { } presentKeptPassword) {
+            writer.WritePresence(true);
+            writer.WriteInt32(presentKeptPassword);
+        } else {
+            writer.WritePresence(false);
+        }
+    }
+
     public static SiteContentBlocking ReadSiteContentBlocking(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new SiteContentBlocking(
@@ -20529,35 +20686,41 @@ public static class ContractCodec {
     public static StrongPassword ReadStrongPassword(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new StrongPassword(
-            reader.ReadPresence() ? (int?)reader.ReadInt32() : null);
+            ReadPasswordRequirements(reader));
     }
 
     public static void WriteStrongPassword(WireWriter writer, StrongPassword value) {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
-        if (value.Length is { } presentLength) {
-            writer.WritePresence(true);
-            writer.WriteInt32(presentLength);
-        } else {
-            writer.WritePresence(false);
-        }
+        WritePasswordRequirements(writer, value.Requirements);
     }
 
     public static StrongPasswordRecipe ReadStrongPasswordRecipe(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new StrongPasswordRecipe(
             reader.ReadInt32(),
-            reader.ReadList(() => reader.ReadString()));
+            reader.ReadInt32(),
+            reader.ReadString(),
+            reader.ReadList(() => reader.ReadString()),
+            reader.ReadList(() => reader.ReadString()),
+            reader.ReadInt32());
     }
 
     public static void WriteStrongPasswordRecipe(WireWriter writer, StrongPasswordRecipe value) {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
-        writer.WriteInt32(value.Length);
+        writer.WriteInt32(value.Segments);
+        writer.WriteInt32(value.SegmentLength);
+        writer.WriteString(value.Separator);
         writer.WriteCount(value.Groups.Count);
         foreach (var itemGroups in value.Groups) {
             writer.WriteString(itemGroups);
         }
+        writer.WriteCount(value.Required.Count);
+        foreach (var itemRequired in value.Required) {
+            writer.WriteString(itemRequired);
+        }
+        writer.WriteInt32(value.MaxConsecutive);
     }
 
     public static SweepExpiredRecords ReadSweepExpiredRecords(WireReader reader) {
@@ -22143,7 +22306,7 @@ public static class ContractCodec {
 
     public static CredentialUsernameSource ReadCredentialUsernameSource(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
-        return (CredentialUsernameSource)reader.ReadEnum(3);
+        return (CredentialUsernameSource)reader.ReadEnum(4);
     }
 
     public static void WriteCredentialUsernameSource(WireWriter writer, CredentialUsernameSource value) {
@@ -23054,6 +23217,28 @@ public static class ContractCodec {
         writer.WriteEnum(TagOf(FilterListGroup.All, value));
     }
 
+    public static FormInputType ReadFormInputType(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return FormInputType.All[reader.ReadEnum(FormInputType.All.Count)];
+    }
+
+    public static void WriteFormInputType(WireWriter writer, FormInputType value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(FormInputType.All, value));
+    }
+
+    public static FormPurpose ReadFormPurpose(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return FormPurpose.All[reader.ReadEnum(FormPurpose.All.Count)];
+    }
+
+    public static void WriteFormPurpose(WireWriter writer, FormPurpose value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(FormPurpose.All, value));
+    }
+
     public static HostedNotificationRequestAction ReadHostedNotificationRequestAction(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return HostedNotificationRequestAction.All[reader.ReadEnum(HostedNotificationRequestAction.All.Count)];
@@ -23734,6 +23919,17 @@ public static class ContractCodec {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(value);
         writer.WriteEnum(TagOf(StorageFailure.All, value));
+    }
+
+    public static SubmitTrigger ReadSubmitTrigger(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return SubmitTrigger.All[reader.ReadEnum(SubmitTrigger.All.Count)];
+    }
+
+    public static void WriteSubmitTrigger(WireWriter writer, SubmitTrigger value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteEnum(TagOf(SubmitTrigger.All, value));
     }
 
     public static SyncDeletionReason ReadSyncDeletionReason(WireReader reader) {

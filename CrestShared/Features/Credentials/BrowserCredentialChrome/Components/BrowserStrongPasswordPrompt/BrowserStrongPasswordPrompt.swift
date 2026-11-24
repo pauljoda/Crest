@@ -45,17 +45,26 @@ struct BrowserStrongPasswordPrompt: View {
     private func generateAndFill() {
         Task { @MainActor in
             await model.generateSaveAndFill(
-                generate: { try BrowserStrongPasswordGenerator.generate(from: browser.strongPasswordRecipe()) },
+                generate: {
+                    try BrowserStrongPasswordGenerator.generate(
+                        from: browser.strongPasswordRecipe(for: request.requirements))
+                },
                 save: { password in
+                    // Saved under what the form's username field holds now, so
+                    // sending the form finds the password already kept. With no
+                    // username yet, it waits for the form to be sent, which
+                    // offers to save it under the name the form sends.
+                    let username = await port.formUsername(request.id) ?? request.usernameHint ?? ""
+                    guard !username.isEmpty else { return }
                     let candidate = BrowserCredentialSaveCandidate(
                         id: UUID(),
                         origin: request.origin,
                         topLevelOrigin: request.topLevelOrigin,
-                        username: request.usernameHint ?? "",
+                        username: username,
                         password: password,
                         passwordKind: .new,
                         isCrossOriginFrame: request.isCrossOriginFrame,
-                        submittedAt: request.requestedAt
+                        submittedAt: .now
                     )
                     _ = try await browser.commitCredentialSave(
                         candidate,

@@ -42,6 +42,10 @@ struct BrowserCredentialFillPort {
     /// field.
     let fillGeneratedPassword: (String, UUID) async throws -> Void
 
+    /// What the form's username field holds now, so a password Crest makes is
+    /// saved under the account it is for.
+    let formUsername: (UUID) async -> String?
+
     /// Closes the prompt without filling anything.
     let dismiss: () -> Void
 }
@@ -60,6 +64,7 @@ extension BrowserCredentialFillPort {
             fillGeneratedPassword: { password, requestID in
                 try await page.fillGeneratedPassword(password, for: requestID)
             },
+            formUsername: { requestID in await page.credentialFormUsername(for: requestID) },
             dismiss: page.dismissCredentialFillRequest)
     }
 }

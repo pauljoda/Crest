@@ -889,6 +889,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         try await credentialSession.fillGeneratedPassword(password, for: requestID, evaluate: evaluate)
     }
 
+    func credentialFormUsername(for requestID: UUID) async -> String? {
+        guard let evaluate = credentialEvaluator else { return nil }
+        return await credentialSession.currentUsername(for: requestID, evaluate: evaluate)
+    }
+
     /// Fills go back through the channel the credential bridge came in on.
     private var credentialEvaluator: BrowserCredentialSession.Evaluate? {
         guard let scripting = pageEngine.contentScripting else { return engineAdapter.credentialEvaluator }

@@ -3367,6 +3367,9 @@ struct CredentialCaptureDecision: Equatable, Sendable {
     let anchorsToField: Bool
     let candidateLifetime: Double
     let usernameHintLifetime: Double
+    let form: SignInForm
+    let passwordKind: CredentialPasswordKind?
+    let quietWithoutLogins: Bool
 }
 
 struct CredentialChoice: Equatable, Sendable {
@@ -3407,9 +3410,10 @@ struct CredentialFormFacts: Equatable, Sendable {
     var topLevelOrigin: CredentialOrigin
     var isMainFrame: Bool
     var hasFormID: Bool
-    var hasUsername: Bool
-    var hasPassword: Bool
-    var passwordKind: CredentialPasswordKind?
+    var fields: [FormField]
+    var focusedField: Int?
+    var submission: FormSubmission?
+    var filledUsername: Bool
     var hasVisiblePasswordField: Bool?
     var hasFillTarget: Bool
 }
@@ -4639,6 +4643,28 @@ struct ForgetPaletteChoices: Intent, PaletteIntent, Equatable, Sendable {
     let windowID: UUID
     let row: PaletteRow.Seed
     let spaceID: UUID?
+}
+
+struct FormField: Equatable, Sendable {
+    var index: Int
+    var inputType: FormInputType
+    var autocomplete: String
+    var name: String
+    var idAttribute: String
+    var label: String
+    var placeholder: String
+    var isVisible: Bool
+    var hasValue: Bool
+    var enteredByPerson: Bool
+    var minLength: Int?
+    var maxLength: Int?
+    var passwordRules: String?
+}
+
+struct FormSubmission: Equatable, Sendable {
+    var trigger: SubmitTrigger
+    var inFormElement: Bool
+    var controlLabel: String
 }
 
 struct GetAgentPreferences: Query, Equatable, Sendable {
@@ -6547,6 +6573,14 @@ struct PasswordImportPreview: Query, Equatable, Sendable {
     let existing: [ExistingCredential]
 }
 
+struct PasswordRequirements: Equatable, Sendable {
+    static let none = PasswordRequirements(minLength: nil, maxLength: nil, rules: nil)
+
+    var minLength: Int?
+    var maxLength: Int?
+    var rules: String?
+}
+
 struct PauseDownload: Intent, DownloadIntent, Equatable, Sendable {
     let downloadID: UUID
 }
@@ -8007,6 +8041,14 @@ struct SidebarRow: Equatable, Sendable, Identifiable {
     let members: [UUID]
 }
 
+struct SignInForm: Equatable, Sendable {
+    let purpose: FormPurpose
+    let username: Int?
+    let currentPassword: Int?
+    let newPasswords: [Int]
+    let keptPassword: Int?
+}
+
 struct SiteContentBlocking: Equatable, Sendable {
     let spaceID: UUID
     let origin: SiteOrigin
@@ -8676,12 +8718,16 @@ struct StoredSite: Equatable, Sendable {
 struct StrongPassword: Query, Equatable, Sendable {
     typealias Answer = StrongPasswordRecipe
 
-    let length: Int?
+    let requirements: PasswordRequirements
 }
 
 struct StrongPasswordRecipe: Equatable, Sendable {
-    let length: Int
+    let segments: Int
+    let segmentLength: Int
+    let separator: String
     let groups: [String]
+    let required: [String]
+    let maxConsecutive: Int
 }
 
 struct SweepExpiredRecords: Intent, SessionIntent, Equatable, Sendable {
@@ -9403,6 +9449,7 @@ enum CredentialUsernameSource: Int, CaseIterable, Sendable {
     case none = 0
     case explicit = 1
     case hint = 2
+    case currentPassword = 3
 }
 
 enum EngineDownloadInterruption: Int, CaseIterable, Sendable {
@@ -16144,6 +16191,89 @@ struct FilterListGroup: Hashable, Sendable {
         init(name: String, title: LocalizedStringResource) {
             self.name = name
             self.title = title
+        }
+    }
+}
+
+/// The members of the core's `FormInputType`. A member's wire tag is its index in `all`.
+struct FormInputType: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let text = FormInputType(tag: 0, name: "text")
+    static let email = FormInputType(tag: 1, name: "email")
+    static let telephone = FormInputType(tag: 2, name: "tel")
+    static let password = FormInputType(tag: 3, name: "password")
+    static let hidden = FormInputType(tag: 4, name: "hidden")
+    static let other = FormInputType(tag: 5, name: "other")
+
+    static let all: [FormInputType] = [text, email, telephone, password, hidden, other]
+
+    static func named(_ name: String?) -> FormInputType? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: FormInputType, rhs: FormInputType) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
+}
+
+/// The members of the core's `FormPurpose`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `keptPassword`.
+struct FormPurpose: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let none = FormPurpose(tag: 0, name: "none")
+    static let usernameStep = FormPurpose(tag: 1, name: "usernameStep")
+    static let possibleUsernameStep = FormPurpose(tag: 2, name: "possibleUsernameStep")
+    static let signIn = FormPurpose(tag: 3, name: "signIn")
+    static let signUp = FormPurpose(tag: 4, name: "signUp")
+    static let changePassword = FormPurpose(tag: 5, name: "changePassword")
+
+    static let all: [FormPurpose] = [none, usernameStep, possibleUsernameStep, signIn, signUp, changePassword]
+
+    static func named(_ name: String?) -> FormPurpose? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: FormPurpose, rhs: FormPurpose) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
         }
     }
 }
@@ -27392,6 +27522,45 @@ struct StorageFailure: Hashable, Sendable {
         init(name: String, message: LocalizedStringResource) {
             self.name = name
             self.message = message
+        }
+    }
+}
+
+/// The members of the core's `SubmitTrigger`. A member's wire tag is its index in `all`.
+struct SubmitTrigger: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let formSubmit = SubmitTrigger(tag: 0, name: "submit")
+    static let returnKey = SubmitTrigger(tag: 1, name: "return")
+    static let submitControl = SubmitTrigger(tag: 2, name: "submitControl")
+    static let button = SubmitTrigger(tag: 3, name: "button")
+
+    static let all: [SubmitTrigger] = [formSubmit, returnKey, submitControl, button]
+
+    static func named(_ name: String?) -> SubmitTrigger? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SubmitTrigger, rhs: SubmitTrigger) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
         }
     }
 }

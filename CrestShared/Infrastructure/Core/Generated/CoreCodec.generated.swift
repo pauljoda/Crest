@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xdd, 0x48, 0x1f, 0xcb, 0xc4, 0xf4, 0xf4, 0x85, 0x9b, 0x8e, 0xd8, 0xf9, 0xf1, 0x51, 0x79, 0x90, 0x5b, 0x8d, 0xcd, 0x9e, 0x77, 0xde, 0x12, 0x76, 0xe2, 0x75, 0x4e, 0xba, 0x27, 0x2b, 0xcc, 0xc4
+        0xce, 0x3c, 0xd3, 0x2b, 0x47, 0xd9, 0xd4, 0x3e, 0x3e, 0x40, 0x9c, 0xc5, 0x21, 0x0e, 0x7c, 0x39, 0x1f, 0xde, 0x14, 0xca, 0x6e, 0x69, 0x8a, 0xa6, 0x7b, 0x59, 0x35, 0x72, 0x70, 0xc6, 0x34, 0xea
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -6471,7 +6471,16 @@ extension CredentialCaptureDecision {
         let anchorsToField = try reader.readBool()
         let candidateLifetime = try reader.readDouble()
         let usernameHintLifetime = try reader.readDouble()
-        self.init(action: action, usernameSource: usernameSource, clearsUsernameHint: clearsUsernameHint, isCrossOriginFrame: isCrossOriginFrame, anchorsToField: anchorsToField, candidateLifetime: candidateLifetime, usernameHintLifetime: usernameHintLifetime)
+        let form = try SignInForm(from: &reader)
+        let passwordKind: CredentialPasswordKind?
+        if try reader.readPresence() {
+            let passwordKindValue = try CredentialPasswordKind(from: &reader)
+            passwordKind = passwordKindValue
+        } else {
+            passwordKind = nil
+        }
+        let quietWithoutLogins = try reader.readBool()
+        self.init(action: action, usernameSource: usernameSource, clearsUsernameHint: clearsUsernameHint, isCrossOriginFrame: isCrossOriginFrame, anchorsToField: anchorsToField, candidateLifetime: candidateLifetime, usernameHintLifetime: usernameHintLifetime, form: form, passwordKind: passwordKind, quietWithoutLogins: quietWithoutLogins)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -6482,6 +6491,14 @@ extension CredentialCaptureDecision {
         writer.writeBool(anchorsToField)
         writer.writeDouble(candidateLifetime)
         writer.writeDouble(usernameHintLifetime)
+        form.encode(into: &writer)
+        if let present0 = passwordKind {
+            writer.writePresence(true)
+            present0.encode(into: &writer)
+        } else {
+            writer.writePresence(false)
+        }
+        writer.writeBool(quietWithoutLogins)
     }
 }
 
@@ -6615,15 +6632,28 @@ extension CredentialFormFacts {
         let topLevelOrigin = try CredentialOrigin(from: &reader)
         let isMainFrame = try reader.readBool()
         let hasFormID = try reader.readBool()
-        let hasUsername = try reader.readBool()
-        let hasPassword = try reader.readBool()
-        let passwordKind: CredentialPasswordKind?
-        if try reader.readPresence() {
-            let passwordKindValue = try CredentialPasswordKind(from: &reader)
-            passwordKind = passwordKindValue
-        } else {
-            passwordKind = nil
+        let fieldsCount = try reader.readCount()
+        var fields: [FormField] = []
+        fields.reserveCapacity(fieldsCount)
+        for _ in 0..<fieldsCount {
+            let fieldsElement = try FormField(from: &reader)
+            fields.append(fieldsElement)
         }
+        let focusedField: Int?
+        if try reader.readPresence() {
+            let focusedFieldValue = try reader.readInt()
+            focusedField = focusedFieldValue
+        } else {
+            focusedField = nil
+        }
+        let submission: FormSubmission?
+        if try reader.readPresence() {
+            let submissionValue = try FormSubmission(from: &reader)
+            submission = submissionValue
+        } else {
+            submission = nil
+        }
+        let filledUsername = try reader.readBool()
         let hasVisiblePasswordField: Bool?
         if try reader.readPresence() {
             let hasVisiblePasswordFieldValue = try reader.readBool()
@@ -6632,7 +6662,7 @@ extension CredentialFormFacts {
             hasVisiblePasswordField = nil
         }
         let hasFillTarget = try reader.readBool()
-        self.init(event: event, frameOrigin: frameOrigin, topLevelOrigin: topLevelOrigin, isMainFrame: isMainFrame, hasFormID: hasFormID, hasUsername: hasUsername, hasPassword: hasPassword, passwordKind: passwordKind, hasVisiblePasswordField: hasVisiblePasswordField, hasFillTarget: hasFillTarget)
+        self.init(event: event, frameOrigin: frameOrigin, topLevelOrigin: topLevelOrigin, isMainFrame: isMainFrame, hasFormID: hasFormID, fields: fields, focusedField: focusedField, submission: submission, filledUsername: filledUsername, hasVisiblePasswordField: hasVisiblePasswordField, hasFillTarget: hasFillTarget)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -6641,14 +6671,23 @@ extension CredentialFormFacts {
         topLevelOrigin.encode(into: &writer)
         writer.writeBool(isMainFrame)
         writer.writeBool(hasFormID)
-        writer.writeBool(hasUsername)
-        writer.writeBool(hasPassword)
-        if let present0 = passwordKind {
+        writer.writeCount(fields.count)
+        for element0 in fields {
+            element0.encode(into: &writer)
+        }
+        if let present0 = focusedField {
+            writer.writePresence(true)
+            writer.writeInt(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = submission {
             writer.writePresence(true)
             present0.encode(into: &writer)
         } else {
             writer.writePresence(false)
         }
+        writer.writeBool(filledUsername)
         if let present0 = hasVisiblePasswordField {
             writer.writePresence(true)
             writer.writeBool(present0)
@@ -11282,6 +11321,89 @@ extension ForgetPaletteChoices {
     func encodeIntent(into writer: inout WireWriter) {
         writer.writeTag(120)
         encode(into: &writer)
+    }
+}
+
+extension FormField {
+    init(from reader: inout WireReader) throws(WireError) {
+        let index = try reader.readInt()
+        let inputType = try FormInputType(from: &reader)
+        let autocomplete = try reader.readString()
+        let name = try reader.readString()
+        let idAttribute = try reader.readString()
+        let label = try reader.readString()
+        let placeholder = try reader.readString()
+        let isVisible = try reader.readBool()
+        let hasValue = try reader.readBool()
+        let enteredByPerson = try reader.readBool()
+        let minLength: Int?
+        if try reader.readPresence() {
+            let minLengthValue = try reader.readInt()
+            minLength = minLengthValue
+        } else {
+            minLength = nil
+        }
+        let maxLength: Int?
+        if try reader.readPresence() {
+            let maxLengthValue = try reader.readInt()
+            maxLength = maxLengthValue
+        } else {
+            maxLength = nil
+        }
+        let passwordRules: String?
+        if try reader.readPresence() {
+            let passwordRulesValue = try reader.readString()
+            passwordRules = passwordRulesValue
+        } else {
+            passwordRules = nil
+        }
+        self.init(index: index, inputType: inputType, autocomplete: autocomplete, name: name, idAttribute: idAttribute, label: label, placeholder: placeholder, isVisible: isVisible, hasValue: hasValue, enteredByPerson: enteredByPerson, minLength: minLength, maxLength: maxLength, passwordRules: passwordRules)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeInt(index)
+        inputType.encode(into: &writer)
+        writer.writeString(autocomplete)
+        writer.writeString(name)
+        writer.writeString(idAttribute)
+        writer.writeString(label)
+        writer.writeString(placeholder)
+        writer.writeBool(isVisible)
+        writer.writeBool(hasValue)
+        writer.writeBool(enteredByPerson)
+        if let present0 = minLength {
+            writer.writePresence(true)
+            writer.writeInt(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = maxLength {
+            writer.writePresence(true)
+            writer.writeInt(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = passwordRules {
+            writer.writePresence(true)
+            writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
+    }
+}
+
+extension FormSubmission {
+    init(from reader: inout WireReader) throws(WireError) {
+        let trigger = try SubmitTrigger(from: &reader)
+        let inFormElement = try reader.readBool()
+        let controlLabel = try reader.readString()
+        self.init(trigger: trigger, inFormElement: inFormElement, controlLabel: controlLabel)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        trigger.encode(into: &writer)
+        writer.writeBool(inFormElement)
+        writer.writeString(controlLabel)
     }
 }
 
@@ -18279,6 +18401,54 @@ extension PasswordImportPreview {
     }
 }
 
+extension PasswordRequirements {
+    init(from reader: inout WireReader) throws(WireError) {
+        let minLength: Int?
+        if try reader.readPresence() {
+            let minLengthValue = try reader.readInt()
+            minLength = minLengthValue
+        } else {
+            minLength = nil
+        }
+        let maxLength: Int?
+        if try reader.readPresence() {
+            let maxLengthValue = try reader.readInt()
+            maxLength = maxLengthValue
+        } else {
+            maxLength = nil
+        }
+        let rules: String?
+        if try reader.readPresence() {
+            let rulesValue = try reader.readString()
+            rules = rulesValue
+        } else {
+            rules = nil
+        }
+        self.init(minLength: minLength, maxLength: maxLength, rules: rules)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        if let present0 = minLength {
+            writer.writePresence(true)
+            writer.writeInt(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = maxLength {
+            writer.writePresence(true)
+            writer.writeInt(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = rules {
+            writer.writePresence(true)
+            writer.writeString(present0)
+        } else {
+            writer.writePresence(false)
+        }
+    }
+}
+
 extension PauseDownload {
     init(from reader: inout WireReader) throws(WireError) {
         let downloadID = try reader.readUUID()
@@ -23917,6 +24087,67 @@ extension SidebarRow {
     }
 }
 
+extension SignInForm {
+    init(from reader: inout WireReader) throws(WireError) {
+        let purpose = try FormPurpose(from: &reader)
+        let username: Int?
+        if try reader.readPresence() {
+            let usernameValue = try reader.readInt()
+            username = usernameValue
+        } else {
+            username = nil
+        }
+        let currentPassword: Int?
+        if try reader.readPresence() {
+            let currentPasswordValue = try reader.readInt()
+            currentPassword = currentPasswordValue
+        } else {
+            currentPassword = nil
+        }
+        let newPasswordsCount = try reader.readCount()
+        var newPasswords: [Int] = []
+        newPasswords.reserveCapacity(newPasswordsCount)
+        for _ in 0..<newPasswordsCount {
+            let newPasswordsElement = try reader.readInt()
+            newPasswords.append(newPasswordsElement)
+        }
+        let keptPassword: Int?
+        if try reader.readPresence() {
+            let keptPasswordValue = try reader.readInt()
+            keptPassword = keptPasswordValue
+        } else {
+            keptPassword = nil
+        }
+        self.init(purpose: purpose, username: username, currentPassword: currentPassword, newPasswords: newPasswords, keptPassword: keptPassword)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        purpose.encode(into: &writer)
+        if let present0 = username {
+            writer.writePresence(true)
+            writer.writeInt(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        if let present0 = currentPassword {
+            writer.writePresence(true)
+            writer.writeInt(present0)
+        } else {
+            writer.writePresence(false)
+        }
+        writer.writeCount(newPasswords.count)
+        for element0 in newPasswords {
+            writer.writeInt(element0)
+        }
+        if let present0 = keptPassword {
+            writer.writePresence(true)
+            writer.writeInt(present0)
+        } else {
+            writer.writePresence(false)
+        }
+    }
+}
+
 extension SiteContentBlocking {
     init(from reader: inout WireReader) throws(WireError) {
         let spaceID = try reader.readUUID()
@@ -26021,23 +26252,12 @@ extension StoredSite {
 
 extension StrongPassword {
     init(from reader: inout WireReader) throws(WireError) {
-        let length: Int?
-        if try reader.readPresence() {
-            let lengthValue = try reader.readInt()
-            length = lengthValue
-        } else {
-            length = nil
-        }
-        self.init(length: length)
+        let requirements = try PasswordRequirements(from: &reader)
+        self.init(requirements: requirements)
     }
 
     func encode(into writer: inout WireWriter) {
-        if let present0 = length {
-            writer.writePresence(true)
-            writer.writeInt(present0)
-        } else {
-            writer.writePresence(false)
-        }
+        requirements.encode(into: &writer)
     }
 
     func encodeQuery(into writer: inout WireWriter) {
@@ -26053,7 +26273,9 @@ extension StrongPassword {
 
 extension StrongPasswordRecipe {
     init(from reader: inout WireReader) throws(WireError) {
-        let length = try reader.readInt()
+        let segments = try reader.readInt()
+        let segmentLength = try reader.readInt()
+        let separator = try reader.readString()
         let groupsCount = try reader.readCount()
         var groups: [String] = []
         groups.reserveCapacity(groupsCount)
@@ -26061,15 +26283,30 @@ extension StrongPasswordRecipe {
             let groupsElement = try reader.readString()
             groups.append(groupsElement)
         }
-        self.init(length: length, groups: groups)
+        let requiredCount = try reader.readCount()
+        var required: [String] = []
+        required.reserveCapacity(requiredCount)
+        for _ in 0..<requiredCount {
+            let requiredElement = try reader.readString()
+            required.append(requiredElement)
+        }
+        let maxConsecutive = try reader.readInt()
+        self.init(segments: segments, segmentLength: segmentLength, separator: separator, groups: groups, required: required, maxConsecutive: maxConsecutive)
     }
 
     func encode(into writer: inout WireWriter) {
-        writer.writeInt(length)
+        writer.writeInt(segments)
+        writer.writeInt(segmentLength)
+        writer.writeString(separator)
         writer.writeCount(groups.count)
         for element0 in groups {
             writer.writeString(element0)
         }
+        writer.writeCount(required.count)
+        for element0 in required {
+            writer.writeString(element0)
+        }
+        writer.writeInt(maxConsecutive)
     }
 }
 
@@ -29541,6 +29778,34 @@ extension FilterListGroup {
     }
 }
 
+extension FormInputType {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown FormInputType \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension FormPurpose {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown FormPurpose \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
 extension HostedNotificationRequestAction {
     init(from reader: inout WireReader) throws(WireError) {
         let tag = try reader.readEnum()
@@ -30414,6 +30679,20 @@ extension StorageFailure {
         let tag = try reader.readEnum()
         guard Self.all.indices.contains(tag) else {
             throw WireError.malformed("Unknown StorageFailure \(tag)")
+        }
+        self = Self.all[tag]
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeEnum(tag)
+    }
+}
+
+extension SubmitTrigger {
+    init(from reader: inout WireReader) throws(WireError) {
+        let tag = try reader.readEnum()
+        guard Self.all.indices.contains(tag) else {
+            throw WireError.malformed("Unknown SubmitTrigger \(tag)")
         }
         self = Self.all[tag]
     }

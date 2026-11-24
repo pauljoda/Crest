@@ -1,0 +1,29 @@
+{
+  "entries": [
+    {
+      "id": "username-fields-offer-saved-logins",
+      "category": "new",
+      "message": "Username and email fields offer the site's saved logins. On a page that asks for the username first, choosing one fills just the username, and the password step lists that login first."
+    },
+    {
+      "id": "save-prompt-only-for-typed-passwords",
+      "category": "fixed",
+      "message": "Crest asks to save a password only when you typed it or chose one Crest made, and sent the form, never for a password a page or extension filled in, or after pressing a button such as Show Password."
+    },
+    {
+      "id": "update-prompt-after-password-change",
+      "category": "fixed",
+      "message": "Changing your password on a site offers to update the saved login, even when the form doesn't show your username."
+    },
+    {
+      "id": "strong-passwords-follow-site-rules",
+      "category": "improved",
+      "message": "Strong passwords follow the site's rules for length and characters, and wherever the site allows, they're three easy-to-type groups such as kvqhet-Mzawp7-rbnoxc."
+    },
+    {
+      "id": "passwords-on-localhost",
+      "category": "improved",
+      "message": "Passwords save and fill on sites served from your own device, such as localhost."
+    }
+  ]
+}

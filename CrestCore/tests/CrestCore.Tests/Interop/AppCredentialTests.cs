@@ -10,7 +10,8 @@ namespace CrestCore.Tests;
 /// encoded answers or one rejection out, and no password on either side.
 public sealed class AppCredentialTests {
     /// Passwords never cross the boundary: the only text a credential question
-    /// carries is an origin and, where accounts are matched, a username.
+    /// carries is an origin, where accounts are matched a username, and what
+    /// the page says about a form's fields, never their values.
     [Fact]
     public void NoCredentialQueryCarriesAPassword() {
         Type[] queries = [typeof(CredentialCapture), typeof(CredentialFill), typeof(CredentialSaveCheck), typeof(MostRecentCredential),
@@ -28,6 +29,10 @@ public sealed class AppCredentialTests {
                 else if (parameterType.IsClass && parameterType.Assembly == typeof(Query<>).Assembly) pending.Enqueue(parameterType);
             }
         }
-        Assert.Equal(["CredentialOrigin.Host", "CredentialOrigin.Scheme", "CredentialRecord.Username", "CredentialSaveMatch.Username"], text);
+        Assert.Equal([
+            "CredentialOrigin.Host", "CredentialOrigin.Scheme", "CredentialRecord.Username", "CredentialSaveMatch.Username",
+            "FormField.Autocomplete", "FormField.IdAttribute", "FormField.Label", "FormField.Name", "FormField.PasswordRules",
+            "FormField.Placeholder", "FormSubmission.ControlLabel", "PasswordRequirements.Rules"
+        ], text);
     }
 }

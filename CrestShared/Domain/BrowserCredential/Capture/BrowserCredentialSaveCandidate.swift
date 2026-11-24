@@ -14,6 +14,26 @@ struct BrowserCredentialSaveCandidate: Identifiable, Equatable, Sendable, Custom
     let isCrossOriginFrame: Bool
     let submittedAt: Date
 
+    /// The form's current password, kept only for a password change that
+    /// named no account, so the saved login holding it can name it.
+    var currentPassword: String? = nil
+
+    /// The saved login a password change was found to be for, which the save
+    /// updates whatever other logins share its username.
+    var accountID: UUID? = nil
+
+    /// Whether the candidate still needs its account named, from the saved
+    /// login that holds its current password.
+    var needsAccount: Bool { currentPassword != nil }
+
+    /// The same candidate for the saved login `account`, which it updates.
+    func naming(_ account: CredentialDescriptor) -> BrowserCredentialSaveCandidate {
+        BrowserCredentialSaveCandidate(
+            id: id, origin: origin, topLevelOrigin: topLevelOrigin, username: account.username, password: password,
+            passwordKind: passwordKind, isCrossOriginFrame: isCrossOriginFrame, submittedAt: submittedAt,
+            accountID: account.id)
+    }
+
     var description: String {
         "BrowserCredentialSaveCandidate(id: \(id), origin: \(origin), username: \(username), password: <redacted>)"
     }

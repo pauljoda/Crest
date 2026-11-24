@@ -6,42 +6,34 @@ import Foundation
 struct BrowserCredentialFormEvent: Hashable, Sendable, Decodable {
     // MARK: - Static Variables
 
+    /// A form without a password field was sent: a step that may name the account.
     static let username = BrowserCredentialFormEvent(
-        name: "username", captureEvent: .username,
-        accepts: { fields in
-            fields.formID != nil
-                && fields.username != nil
-                && fields.isTrustedUserEvent
-                && !fields.containsPassword
-                && !fields.containsPasswordKind
-        })
+        name: "username", captureEvent: .username, accepts: sent)
+
+    /// A field the person focused. It never carries a password.
     static let focus = BrowserCredentialFormEvent(
         name: "focus", captureEvent: .focus, closesFillWhenRefused: true,
-        accepts: { fields in
-            fields.formID != nil
-                && fields.isTrustedUserEvent
-                && !fields.hasInvalidUsername
-                && !fields.containsPassword
-                && fields.passwordKind != nil
+        accepts: { message in
+            guard message.formID != nil, message.readingID != nil, message.isTrustedUserEvent,
+                let fields = message.fields, let focused = message.focusedField,
+                fields.contains(where: { $0.index == focused }),
+                !message.containsSubmission, !message.hasInvalidValues
+            else { return false }
+            return message.values == nil || (message.valuesBelongToFields && !message.carriesPassword)
         })
+
+    /// A form with a password field was sent.
     static let submit = BrowserCredentialFormEvent(
-        name: "submit", captureEvent: .submit,
-        accepts: { fields in
-            fields.formID != nil
-                && fields.isTrustedUserEvent
-                && !fields.hasInvalidUsername
-                && !fields.hasInvalidPassword
-                && !fields.hasInvalidPasswordKind
-                && fields.password != nil
-                && fields.passwordKind != nil
-        })
+        name: "submit", captureEvent: .submit, accepts: sent)
+
     static let documentState = BrowserCredentialFormEvent(
         name: "documentState", captureEvent: .documentState, weighsPendingCandidate: true,
-        accepts: { fields in
-            fields.hasVisiblePasswordField != nil
-                && !fields.containsUsername
-                && !fields.containsPassword
-                && !fields.containsPasswordKind
+        accepts: { message in
+            message.hasVisiblePasswordField != nil
+                && !message.containsFields
+                && !message.containsValues
+                && !message.containsSubmission
+                && !message.containsFocusedField
         })
 
     /// The focused field moved under the prompt already on show — the page
@@ -50,16 +42,28 @@ struct BrowserCredentialFormEvent: Hashable, Sendable, Decodable {
     /// only move one.
     static let fieldGeometry = BrowserCredentialFormEvent(
         name: "fieldGeometry", captureEvent: nil,
-        accepts: { fields in
+        accepts: { message in
             // Geometry and nothing else. A trusted gesture is not asked for —
-            // a scroll is not one — and no credential material is accepted, so
-            // the event cannot be a way in for anything but a rect.
-            fields.formID != nil
-                && fields.fieldRect != nil
-                && !fields.containsUsername
-                && !fields.containsPassword
-                && !fields.containsPasswordKind
+            // a scroll is not one — and no field or value is accepted, so the
+            // event cannot be a way in for anything but a rect.
+            message.formID != nil
+                && message.fieldRect != nil
+                && !message.containsFields
+                && !message.containsValues
+                && !message.containsSubmission
         })
+
+    /// A sent form: trusted, with its fields, how it was sent, and the values
+    /// that belong to its fields.
+    private static let sent: @Sendable (BrowserCredentialFormFields) -> Bool = { message in
+        message.formID != nil
+            && message.isTrustedUserEvent
+            && message.fields != nil
+            && message.submission != nil
+            && !message.containsFocusedField
+            && message.valuesBelongToFields
+            && message.values?.isEmpty == false
+    }
 
     static let all: [BrowserCredentialFormEvent] = [username, focus, submit, documentState, fieldGeometry]
 

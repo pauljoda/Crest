@@ -69,8 +69,8 @@ final class BrowserCredentialPageState<FillTarget> {
         let now = Date.now
         let facts = CredentialFormFacts(
             event: event, frameOrigin: frameOrigin, topLevelOrigin: topLevelOrigin, isMainFrame: isMainFrame,
-            hasFormID: message.formID != nil, hasUsername: message.username != nil,
-            hasPassword: message.password != nil, passwordKind: message.passwordKind,
+            hasFormID: message.formID != nil, fields: message.fields, focusedField: message.focusedField,
+            submission: message.submission, filledUsername: false,
             hasVisiblePasswordField: message.hasVisiblePasswordField, hasFillTarget: fillTarget != nil)
         guard
             let decision = captureDecision(
@@ -143,8 +143,8 @@ final class BrowserCredentialPageState<FillTarget> {
         guard let request = fillRequest, request.id == requestID else { return }
         let facts = CredentialFormFacts(
             event: .filled, frameOrigin: request.origin, topLevelOrigin: request.topLevelOrigin,
-            isMainFrame: request.fieldRect != nil, hasFormID: fillFormID != nil, hasUsername: true, hasPassword: false,
-            passwordKind: request.passwordKind, hasVisiblePasswordField: nil, hasFillTarget: true)
+            isMainFrame: request.fieldRect != nil, hasFormID: fillFormID != nil, fields: [], focusedField: nil,
+            submission: nil, filledUsername: true, hasVisiblePasswordField: nil, hasFillTarget: true)
         if let decision = captureDecision(facts, usernameHint: nil, pendingCandidate: nil, now: .now),
             decision.action == .rememberUsername
         {
@@ -252,7 +252,9 @@ final class BrowserCredentialPageState<FillTarget> {
         (try? core.query(CredentialFill(source: source, passwordKind: passwordKind)))?.isAllowed ?? false
     }
 
-    /// The username the core chose: the message's own, or the remembered one.
+    /// The username the core chose: the form's own, or the remembered one.
+    /// A change of password that named no account has none yet; the saved
+    /// login holding its current password names it when the save is planned.
     private func username(
         from source: CredentialUsernameSource,
         explicitUsername: String?
@@ -260,6 +262,7 @@ final class BrowserCredentialPageState<FillTarget> {
         switch source {
         case .explicit: explicitUsername
         case .hint: pendingUsernameHint?.username
+        case .currentPassword: ""
         case .none: nil
         }
     }
@@ -277,7 +280,7 @@ extension BrowserCredentialPageState: CredentialCapturePerformer {
     func ignore(_ observation: BrowserCredentialObservation<FillTarget>) {}
 
     func rememberUsername(_ observation: BrowserCredentialObservation<FillTarget>) {
-        guard let username = observation.message.username else { return }
+        guard let username = observation.message.value(at: observation.decision.form.username) else { return }
         rememberUsername(
             username, origin: observation.frameOrigin, topLevelOrigin: observation.topLevelOrigin,
             lifetime: observation.decision.usernameHintLifetime)
@@ -290,18 +293,28 @@ extension BrowserCredentialPageState: CredentialCapturePerformer {
     func offerFill(_ observation: BrowserCredentialObservation<FillTarget>) {
         let message = observation.message
         let decision = observation.decision
-        guard let passwordKind = message.passwordKind, let formID = message.formID,
+        let form = decision.form
+        guard let passwordKind = decision.passwordKind, let formID = message.formID,
             let fillTarget = observation.fillTarget
         else { return }
+        // A hidden username field is the page's own record; a fill leaves it be.
+        let usernameField = message.field(at: form.username)?.isVisible == true ? form.username : nil
         let request = BrowserCredentialFillRequest(
             id: UUID(),
             origin: observation.frameOrigin,
             topLevelOrigin: observation.topLevelOrigin,
-            usernameHint: username(from: decision.usernameSource, explicitUsername: message.username),
+            usernameHint: username(
+                from: decision.usernameSource, explicitUsername: message.value(at: form.username)),
             passwordKind: passwordKind,
             isCrossOriginFrame: decision.isCrossOriginFrame,
             requestedAt: observation.now,
-            fieldRect: decision.anchorsToField ? message.fieldRect : nil
+            fieldRect: decision.anchorsToField ? message.fieldRect : nil,
+            fields: BrowserCredentialFillFields(
+                username: usernameField, password: form.currentPassword, newPasswords: form.newPasswords),
+            isQuietWithoutLogins: decision.quietWithoutLogins,
+            requirements: message.field(at: message.focusedField).map {
+                PasswordRequirements(minLength: $0.minLength, maxLength: $0.maxLength, rules: $0.passwordRules)
+            } ?? .none
         )
         if let previousRequest = fillRequest {
             fillTargets[previousRequest.id] = nil
@@ -311,13 +324,18 @@ extension BrowserCredentialPageState: CredentialCapturePerformer {
         fillRequest = request
     }
 
+    /// Keeps the password the form sent as a candidate, once every new
+    /// password field agrees with it.
     func captureCandidate(_ observation: BrowserCredentialObservation<FillTarget>) {
         let message = observation.message
         let decision = observation.decision
+        let form = decision.form
         guard
-            let username = username(from: decision.usernameSource, explicitUsername: message.username),
-            let password = message.password,
-            let passwordKind = message.passwordKind
+            let username = username(
+                from: decision.usernameSource, explicitUsername: message.value(at: form.username)),
+            let password = message.value(at: form.keptPassword),
+            let passwordKind = decision.passwordKind,
+            form.newPasswords.allSatisfy({ message.value(at: $0) == password })
         else { return }
         dismissSaveCandidate()
         let candidate = BrowserCredentialSaveCandidate(
@@ -328,7 +346,8 @@ extension BrowserCredentialPageState: CredentialCapturePerformer {
             password: password,
             passwordKind: passwordKind,
             isCrossOriginFrame: decision.isCrossOriginFrame,
-            submittedAt: observation.now
+            submittedAt: observation.now,
+            currentPassword: decision.usernameSource == .currentPassword ? message.value(at: form.currentPassword) : nil
         )
         dismissFillRequest()
         clearUsernameHint()

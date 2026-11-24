@@ -21,7 +21,10 @@ public sealed record CredentialOrigin(string Scheme, string Host, int Port) {
     public bool IsValid => WebScheme.Named(Scheme) is not null && !string.IsNullOrEmpty(Host) && Host.Length <= SiteOrigin.MaximumHostLength
         && CanonicalHost(Host) == Host && Port is >= 1 and <= 65_535;
 
-    public bool IsSecure => WebScheme.Named(Scheme)?.IsSecure == true;
+    /// Whether the page is a secure context: served over a secure scheme, or
+    /// from this device itself, as `localhost` and loopback addresses are, so
+    /// passwords work while developing a site locally.
+    public bool IsSecure => new SiteOrigin(Scheme, Host, Port).IsSecureContext;
 
     /// The origin as an address spells it: its scheme and host, an IPv6 host
     /// in brackets, and its port only where it is not the scheme's default.

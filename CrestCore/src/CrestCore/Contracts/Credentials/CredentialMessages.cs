@@ -14,15 +14,20 @@ public enum CredentialCaptureAction {
     DiscardPending
 }
 
-/// Where a fill request or save candidate takes its username from.
-public enum CredentialUsernameSource { None, Explicit, Hint }
+/// Where a fill request or save candidate takes its username from: the form's
+/// own field, the step before it, or the saved login whose password the
+/// form's current password field holds.
+public enum CredentialUsernameSource { None, Explicit, Hint, CurrentPassword }
 
-/// What one validated form message says, without its credential material. The
-/// platform keeps the username and password values; the core only learns
-/// whether they are present.
+/// What one validated form message says, without its credential material.
+/// `Fields` are the form's inputs as the page script read them, and
+/// `FocusedField` the index of the one a focus came from. `Submission` says
+/// how a submitted form was sent. `FilledUsername` is true when Crest just
+/// filled a username. The platform keeps every value; the core only learns
+/// whether each field has one and who entered it.
 public sealed record CredentialFormFacts(CredentialCaptureEvent Event, CredentialOrigin FrameOrigin,
-    CredentialOrigin TopLevelOrigin, bool IsMainFrame, bool HasFormId, bool HasUsername, bool HasPassword,
-    CredentialPasswordKind? PasswordKind, bool? HasVisiblePasswordField, bool HasFillTarget);
+    CredentialOrigin TopLevelOrigin, bool IsMainFrame, bool HasFormId, IReadOnlyList<FormField> Fields, int? FocusedField,
+    FormSubmission? Submission, bool FilledUsername, bool? HasVisiblePasswordField, bool HasFillTarget);
 
 /// Whether a fill may go ahead.
 public sealed record CredentialFillDecision(bool IsAllowed);

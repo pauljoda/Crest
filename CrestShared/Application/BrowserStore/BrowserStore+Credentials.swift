@@ -170,11 +170,12 @@ extension BrowserStore {
 // MARK: - Generated passwords and system Passwords
 
 extension BrowserStore {
-    /// How to compose a generated password. The password itself is drawn
-    /// natively, so it never enters the core.
-    func strongPasswordRecipe() throws -> StrongPasswordRecipe {
+    /// How to compose a generated password that meets `requirements`, the
+    /// limits of the field it is for. The password itself is drawn natively,
+    /// so it never enters the core.
+    func strongPasswordRecipe(for requirements: PasswordRequirements = .none) throws -> StrongPasswordRecipe {
         do {
-            return try core.query(StrongPassword(length: nil))
+            return try core.query(StrongPassword(requirements: requirements))
         } catch {
             throw BrowserStrongPasswordGenerationError.unavailable
         }
@@ -265,11 +266,23 @@ extension BrowserStore {
             try await credentialVault.descriptors(matching: candidate.origin, in: $0)
         }
         try validateCredentialSaveCandidate(candidate, in: spaceID, now: now)
+        // A password change found its saved login by the current password,
+        // and updates that one even when others share its username.
         let descriptor: CredentialDescriptor?
-        do {
-            descriptor = try core.credentialSaveMatch(username: candidate.username, in: descriptors)
-        } catch {
-            throw CredentialVaultError.saveDecisionUnavailable
+        if let accountID = candidate.accountID {
+            guard let account = descriptors.first(where: { $0.id == accountID }) else {
+                throw CredentialVaultError.saveDecisionUnavailable
+            }
+            descriptor = account
+        } else if candidate.username.isEmpty {
+            // A password made before the form names its account matches none.
+            descriptor = nil
+        } else {
+            do {
+                descriptor = try core.credentialSaveMatch(username: candidate.username, in: descriptors)
+            } catch {
+                throw CredentialVaultError.saveDecisionUnavailable
+            }
         }
         var storedPasswordMatches: Bool?
         if let descriptor {
@@ -294,6 +307,27 @@ extension BrowserStore {
         case (.alreadyStored, let descriptor?): return BrowserCredentialAlreadyStoredPlan(existing: descriptor)
         default: throw CredentialVaultError.saveDecisionUnavailable
         }
+    }
+
+    /// The saved login, among those the Space keeps for the candidate's site,
+    /// whose password is the candidate's current password: the most recent
+    /// when several are. Nil when none is, or the candidate has no current
+    /// password. The passwords are compared here; the core only chooses among
+    /// the logins that match.
+    func accountHoldingCurrentPassword(
+        of candidate: BrowserCredentialSaveCandidate,
+        in spaceID: UUID
+    ) async throws -> CredentialDescriptor? {
+        guard let currentPassword = candidate.currentPassword else { return nil }
+        let descriptors = try await groupDescriptors(of: spaceID) {
+            try await credentialVault.descriptors(matching: candidate.origin, in: $0)
+        }
+        var holding: [CredentialDescriptor] = []
+        for descriptor in descriptors {
+            let credential = try await credentialVault.credential(id: descriptor.id, in: descriptor.spaceID)
+            if credential?.password == currentPassword { holding.append(descriptor) }
+        }
+        return try core.mostRecentCredential(holding)
     }
 
     func commitCredentialSave(

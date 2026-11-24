@@ -864,6 +864,10 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         try await credentialSession.fillGeneratedPassword(password, for: requestID, in: webView)
     }
 
+    func credentialFormUsername(for requestID: UUID) async -> String? {
+        await credentialSession.currentUsername(for: requestID, in: webView)
+    }
+
     private func installObservations() {
         observations = [
             webView.observe(\.url, options: [.initial, .new]) { [weak self] webView, _ in

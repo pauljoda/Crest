@@ -7,7 +7,9 @@ import Observation
 @Observable
 @MainActor
 final class BrowserCredentialSession {
-    typealias FillTarget = (formID: String, frame: BrowserContentFrame)
+    /// Where a fill lands: the form, the page script's reading of its fields
+    /// that the core chose them from, and the frame.
+    typealias FillTarget = (formID: String, readingID: Int, frame: BrowserContentFrame)
     typealias Evaluate = @MainActor (String, [String: Any], BrowserContentFrame) async throws -> Any?
 
     let state: BrowserCredentialPageState<FillTarget>
@@ -55,27 +57,24 @@ final class BrowserCredentialSession {
             frameOrigin: frameOrigin,
             topLevelOrigin: topLevelOrigin,
             isMainFrame: frame.isMainFrame,
-            fillTarget: message.formID.map { ($0, frame) }
+            fillTarget: message.formID.flatMap { formID in message.readingID.map { (formID, $0, frame) } }
         )
     }
 
+    /// Fills a saved login into the fields the core chose: its username, and
+    /// its password where the form asks for one, so a username step takes
+    /// the username alone.
     func fill(_ credential: BrowserCredential, for requestID: UUID, evaluate: Evaluate) async throws {
         guard isEnabled else {
             throw BrowserCredentialFillError.staleOrMismatchedRequest
         }
         let context = try state.fillContext(for: requestID, credential: credential)
-        let result = try await evaluate(
-            "return globalThis.__crestCredentialBridge?.fill(formID, username, password) === true;",
-            [
-                "formID": context.target.formID,
-                "username": credential.descriptor.username,
-                "password": credential.password,
-            ],
-            context.target.frame
-        )
-        guard result as? Bool == true else {
-            throw BrowserCredentialFillError.formChanged
-        }
+        let fields = context.request.fields
+        let entries = [
+            fields.username.map { ["index": $0, "value": credential.descriptor.username] as [String: Any] },
+            fields.password.map { ["index": $0, "value": credential.password] as [String: Any] },
+        ].compactMap { $0 }
+        try await fill(entries, generated: false, into: context.target, evaluate: evaluate)
         state.completeFill(username: credential.descriptor.username, requestID: requestID)
     }
 
@@ -84,17 +83,35 @@ final class BrowserCredentialSession {
             throw BrowserCredentialFillError.staleOrMismatchedRequest
         }
         let context = try state.generatedPasswordFillContext(for: requestID)
+        let entries = context.request.fields.newPasswords.map { ["index": $0, "value": password] as [String: Any] }
+        try await fill(entries, generated: true, into: context.target, evaluate: evaluate)
+        state.completeGeneratedPasswordFill(requestID: requestID)
+    }
+
+    /// What the form's username field holds now, empty when the person
+    /// cleared it, for a password Crest makes before the form is sent; nil
+    /// when the form has no username field or it can't be read.
+    func currentUsername(for requestID: UUID, evaluate: Evaluate) async -> String? {
+        guard isEnabled, let context = try? state.generatedPasswordFillContext(for: requestID),
+            let index = context.request.fields.username
+        else { return nil }
+        return try? await evaluate(
+            "return globalThis.__crestCredentialBridge?.valueOf(formID, readingID, index) ?? null;",
+            ["formID": context.target.formID, "readingID": context.target.readingID, "index": index],
+            context.target.frame) as? String
+    }
+
+    private func fill(
+        _ entries: [[String: Any]], generated: Bool, into target: FillTarget, evaluate: Evaluate
+    ) async throws {
+        guard !entries.isEmpty else { throw BrowserCredentialFillError.formChanged }
         let result = try await evaluate(
-            "return globalThis.__crestCredentialBridge?.fillGenerated(formID, password) === true;",
-            [
-                "formID": context.target.formID,
-                "password": password,
-            ],
-            context.target.frame
+            "return globalThis.__crestCredentialBridge?.fill(formID, readingID, entries, generated) === true;",
+            ["formID": target.formID, "readingID": target.readingID, "entries": entries, "generated": generated],
+            target.frame
         )
         guard result as? Bool == true else {
             throw BrowserCredentialFillError.formChanged
         }
-        state.completeGeneratedPasswordFill(requestID: requestID)
     }
 }
