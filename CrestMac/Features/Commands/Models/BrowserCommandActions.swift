@@ -482,6 +482,20 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         pages.select()
     }
 
+    /// Sends the pinned or saved tab this window shows back to the address it
+    /// was saved at, as the sidebar's Return to Saved URL does.
+    func returnSelectedTabToSavedAddress() {
+        guard let assignment = browser.shownTabAssignment else { return }
+        BrowserSavedLocationRestoreAction(
+            browser: browser, pages: pages, spaceAccess: spaceAccess,
+            show: { [browser, pages] assignment in
+                browser.selectTab(assignment.tabID)
+                pages.select()
+                return pages.activePage(matching: assignment)
+            }
+        ).perform(assignment)
+    }
+
     func duplicateSelectedTab() {
         guard browser.duplicateSelectedTab() != nil else { return }
         pages.reconcile()
