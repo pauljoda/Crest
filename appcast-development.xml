@@ -6,28 +6,37 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.10.171</title>
-            <pubDate>Mon, 23 Nov 2026 23:12:44 +0000</pubDate>
+            <title>0.10.172</title>
+            <pubDate>Tue, 24 Nov 2026 00:42:43 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1700</sparkle:version>
-            <sparkle:shortVersionString>0.10.171</sparkle:shortVersionString>
+            <sparkle:version>1701</sparkle:version>
+            <sparkle:shortVersionString>0.10.172</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### New
+
+- Give any Space color an exact hex code, or pick it with the system color picker.
+
 ### Improved
 
-- Setup lies on Crest's navy in light and dark mode, on Mac, iPhone and iPad.
+- A Space's appearance starts with templates, each a full set of icon and colors, then the colors and the icon to refine it, with Undo when a template replaces colors you chose.
+- More Customization for a Space opens as its own page, with the crest's colors at the top.
+
+### Fixed
+
+- Choosing a crest, symbol or emoji as a Space's icon keeps the Space's colors.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[Release notes](https://crestbrowser.com/releases/mac/development/0.10.171/) · [View all changes](https://github.com/crest-browser/Crest/compare/752ce0495c2fa7d640a7c0cb7fbc06834d4dd676...402fcb4e8b85dcf0cf7f7e63d1b3febb25c70f63) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.10.171-2026-11-23-1700-r700.1/Installer-Crest-0.10.171-development-2026-11-23-402fcb4.dmg)
+[Release notes](https://crestbrowser.com/releases/mac/development/0.10.172/) · [View all changes](https://github.com/crest-browser/Crest/compare/402fcb4e8b85dcf0cf7f7e63d1b3febb25c70f63...e2cc7d62228ee59ca75df57b83ffce5926e40e86) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.10.172-2026-11-23-1701-r701.1/Installer-Crest-0.10.172-development-2026-11-23-e2cc7d6.dmg)
 
 [Browse Development releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.10.171-2026-11-23-1700-r700.1/Installer-Crest-0.10.171-development-2026-11-23-402fcb4.dmg" length="410331126" type="application/octet-stream" sparkle:edSignature="J8qjwTzvU2YmzyuuDOPriYWoyric/MSg6mMFc9yed+d/NQ8NvPObAb/g6quG1//XLj0MKbqXWokpw5x9h22lCg=="/>
+            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.10.172-2026-11-23-1701-r701.1/Installer-Crest-0.10.172-development-2026-11-23-e2cc7d6.dmg" length="410439158" type="application/octet-stream" sparkle:edSignature="qPM2np8/LWceMPzhP+clC52J9RinGV+SEzPyrjXRoUF66suGykMRtRee19G7yWS2E8qxXpHlPCxPWrsaMqmGAQ=="/>
         </item>
         <item>
             <title>0.10.138</title>
@@ -89,6 +98,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: HAyXSA77fScM8JBH2+quwOLfISHWVK3H63LIdMD/Xd+wlI5eBvY/T5rbgqbmgEBHj7onmFiSmWbl73Ex/vUgAQ==
-length: 6812
+edSignature: CSU6n6zwPdH1c2F6w3HpWHuGpF6dY58IyXFRulZhwVeCFA7zJjk+eydMsZTVuwGCrpLohSZ5ep9BO4WG1afwCQ==
+length: 7189
 -->

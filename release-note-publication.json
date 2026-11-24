@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "onboarding-on-navy",
+    "development": "space-more-customization-page",
     "nightly": "opens-in-engine-logos"
   }
 }
