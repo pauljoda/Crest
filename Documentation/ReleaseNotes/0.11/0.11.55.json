@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "tabs-settings-shift-note-under-its-switch",
+      "category": "fixed",
+      "message": "In Settings › Tabs, the note about holding Shift sits under Switch to tabs opened from links, the only setting it changes. Thanks to Miguel Villalobos (@MotherJammer)."
+    }
+  ]
+}
