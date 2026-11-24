@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "palette-fallback-unknown-sites-only",
-    "development": "space-more-customization-page",
+    "development": "crest-0-11-new-look",
     "nightly": "opens-in-engine-logos"
   }
 }
