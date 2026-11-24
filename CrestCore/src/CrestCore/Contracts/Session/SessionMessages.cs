@@ -56,8 +56,48 @@ public sealed record TabIconAccent(double Red, double Green, double Blue);
 
 #region Models - Preferences
 
-/// <summary>Whether a Space offers to save and fill passwords, and where it keeps them.</summary>
-public sealed record CredentialPreferences(bool IsEnabled, bool SyncsCrestPasswordsWithICloud, bool AlsoOffersSaveToSystemPasswords);
+/// <summary>Whether a Space offers to save and fill passwords, where it keeps them, and
+/// the sites the person asked it never to offer to save for. Only whether it offers
+/// them reaches the person's other devices.</summary>
+public sealed record CredentialPreferences(bool IsEnabled, bool SyncsCrestPasswordsWithICloud, bool AlsoOffersSaveToSystemPasswords,
+    IReadOnlyList<CredentialOrigin> NeverSavedSites) {
+    #region Static Variables
+
+    /// The most sites a Space keeps in its never-save list.
+    public const int MaximumNeverSavedSites = 1000;
+
+    #endregion
+
+    #region Variables
+
+    /// Collections are owned when constructed or replaced on a copy.
+    public IReadOnlyList<CredentialOrigin> NeverSavedSites {
+        get;
+        init => field = [.. value];
+    } = [.. NeverSavedSites];
+
+    #endregion
+
+    #region Actions - Reading
+
+    /// Whether the person asked the Space never to offer to save for `site`.
+    internal bool NeverSaves(CredentialOrigin site) => NeverSavedSites.Contains(site);
+
+    #endregion
+
+    #region Actions - Equality
+
+    public bool Equals(CredentialPreferences? other) => other is not null
+        && IsEnabled == other.IsEnabled
+        && SyncsCrestPasswordsWithICloud == other.SyncsCrestPasswordsWithICloud
+        && AlsoOffersSaveToSystemPasswords == other.AlsoOffersSaveToSystemPasswords
+        && NeverSavedSites.SequenceEqual(other.NeverSavedSites);
+
+    public override int GetHashCode() =>
+        HashCode.Combine(IsEnabled, SyncsCrestPasswordsWithICloud, AlsoOffersSaveToSystemPasswords, NeverSavedSites.Count);
+
+    #endregion
+}
 
 /// <summary>How long a Space keeps its history, archived tabs and downloads.</summary>
 public sealed record DataRetentionPreferences(DataRetention History, DataRetention Archive, DataRetention Downloads);

@@ -57,6 +57,25 @@ struct BrowserNotice: Equatable, Hashable {
         )
     }
 
+    /// What the window says once `count` passwords moved to the Space `spaceName`.
+    static func passwordsMoved(count: Int, to spaceName: String) -> BrowserNotice {
+        BrowserNotice(
+            message: String(localized: "Moved \(count) passwords to \(spaceName)"),
+            systemImage: "arrow.right.circle.fill"
+        )
+    }
+
+    /// An extension handles passwords in the Space, so Crest leaves them to it.
+    static let passwordsLeftToExtension = BrowserNotice(
+        message: String(localized: "Your password manager extension handles passwords here"),
+        systemImage: "puzzlepiece.extension.fill")
+
+    static let cardSaved = BrowserNotice(
+        message: String(localized: "Card Saved"), systemImage: "checkmark.circle.fill")
+
+    static let addressSaved = BrowserNotice(
+        message: String(localized: "Address Saved"), systemImage: "checkmark.circle.fill")
+
     /// The page's zoom, as `label` names it.
     static func pageZoom(_ label: String) -> BrowserNotice {
         BrowserNotice(

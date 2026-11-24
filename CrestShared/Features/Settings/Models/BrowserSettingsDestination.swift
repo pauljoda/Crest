@@ -96,8 +96,10 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
             "ads trackers content blocking filter lists subscribe EasyList uBlock AdGuard my filters custom rules block element cookie notices strict balanced",
         symbol: "shield.fill", color: CrestBrandPalette.sage, requiredCapability: .contentBlocking)
     static let passwords = BrowserSettingsDestination(
-        kind: .passwords, name: "passwords", title: "Passwords", subtitle: "Credentials and autofill",
-        searchTerms: "credentials autofill iCloud Keychain passkeys synchronization", symbol: "key.fill",
+        kind: .passwords, name: "passwords", title: "Autofill", subtitle: "Passwords, codes, addresses and cards",
+        searchTerms:
+            "passwords credentials autofill iCloud Keychain passkeys synchronization one-time codes authenticator two-factor addresses payment cards credit",
+        symbol: "key.fill",
         color: CrestBrandPalette.butter)
     static let extensions = BrowserSettingsDestination(
         kind: .extensions, name: "extensions", title: "Extensions", subtitle: "Space extensions and permissions",

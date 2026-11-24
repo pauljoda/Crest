@@ -54,6 +54,10 @@ internal static partial class StoredSessionCodec {
         public const string CompletesInline = "completesInline";
         public const string ContentBlockingPolicy = "contentBlockingPolicy";
         public const string CredentialPreferences = "credentialPreferences";
+        public const string NeverSavedSites = "neverSavedSites";
+        public const string Scheme = "scheme";
+        public const string Host = "host";
+        public const string Port = "port";
         public const string Crest = "crest";
         public const string CurrentTabCleanupPolicy = "currentTabCleanupPolicy";
         public const string CustomIconSymbol = "customIconSymbol";

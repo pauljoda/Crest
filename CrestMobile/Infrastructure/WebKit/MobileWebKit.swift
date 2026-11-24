@@ -56,7 +56,7 @@ enum MobileWebKit {
     /// The web view over `configuration`, one the binding assembled or one
     /// WebKit made for a popup.
     static func makeWebView(configuration: WKWebViewConfiguration) -> WKWebView {
-        let webView = WKWebView(frame: .zero, configuration: configuration)
+        let webView = MobilePageWebView(frame: .zero, configuration: configuration)
         webView.underPageBackgroundColor = .clear
         return webView
     }

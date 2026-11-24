@@ -47,4 +47,14 @@ actor PrivateBrowsingCredentialVault: CredentialVault {
     func deleteAll(in spaceID: UUID) async throws {}
 
     func deleteUnreadableCredentials(in spaceID: UUID) async throws {}
+
+    func extras(id: UUID, in spaceID: UUID) async throws -> BrowserCredentialExtras? {
+        nil
+    }
+
+    func saveExtras(_ extras: BrowserCredentialExtras, for descriptor: CredentialDescriptor, in spaceID: UUID)
+        async throws
+    {
+        throw CredentialVaultError.unavailableInPrivateBrowsing
+    }
 }

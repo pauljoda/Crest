@@ -7,15 +7,16 @@ namespace CrestCore.Contracts;
 
 /// A password file to save as `FileName`: a Space's passwords as a browser
 /// password file every browser and password manager reads, with a name, site,
-/// username, password and note for each password, in order of site, then
-/// username as a person sorts them, then identity. A password without a name
-/// is named after its site's host. The file is named after the Space.
+/// username, password, note and `otpauth://` link for each password, in order
+/// of site, then username as a person sorts them, then identity. A password
+/// without a name is named after its site's host, and one without one-time
+/// codes leaves its link empty. The file is named after the Space.
 [HoldsSecrets]
 public sealed record CredentialExportFile(string FileName, byte[] Contents) {
     #region Static Variables
 
     /// The columns the file names in its first row.
-    private static readonly IReadOnlyList<string> Headers = ["name", "url", "username", "password", "note"];
+    private static readonly IReadOnlyList<string> Headers = ["name", "url", "username", "password", "note", "otpauth"];
 
     /// The most characters of the Space's name the file name keeps.
     private const int MaximumNameCharacters = 80;
@@ -32,7 +33,7 @@ public sealed record CredentialExportFile(string FileName, byte[] Contents) {
             .ThenBy(credential => credential.Username, Comparer<string>.Create(CompareUsernames))
             .ThenBy(credential => credential.Id.ToString("D"), StringComparer.Ordinal)
             .Select(credential => (IReadOnlyList<string>)[credential.DisplayName ?? credential.Origin.Host, credential.Origin.Spelling,
-                credential.Username, credential.Password, credential.Note]);
+                credential.Username, credential.Password, credential.Note, credential.OneTimeCodeLink ?? ""]);
         string text = CsvWriter.Write([Headers, .. rows]);
         return new(Named(query.SpaceName, query.FallbackName), Encoding.UTF8.GetBytes(text));
     }

@@ -53,7 +53,7 @@ enum BrowserPasswordImportCommitter {
             do {
                 let existing = try await browser.credentialInventory(in: spaceID)
                 let plan = try browser.core.query(
-                    PasswordImportPreview(credentials: credentials, existing: existing.map(ExistingCredential.init)))
+                    PasswordImportPreview(credentials: credentials, existing: existing.map { ExistingCredential($0) }))
                 let review = BrowserCredentialImportReview(
                     plan: plan,
                     existingCredentials: existing,
@@ -66,7 +66,22 @@ enum BrowserPasswordImportCommitter {
                 if taking > 0 {
                     try await browser.replaceCredentialInventory(resolution.credentials, in: spaceID)
                 }
-                importedCount += taking
+                // Notes and code links an import brings go beside the passwords
+                // now written, keeping what a login kept where it brought none.
+                // A login whose notes or code can't be saved counts as unsaved,
+                // and what it kept is never written over.
+                var unsavedDetails = 0
+                for (id, details) in resolution.details {
+                    do {
+                        let saved = try await browser.credentialExtras(id: id, in: spaceID)
+                        try await browser.saveCredentialExtras(
+                            details.merged(into: saved), forCredential: id, in: spaceID)
+                    } catch {
+                        unsavedDetails += 1
+                    }
+                }
+                importedCount += taking - unsavedDetails
+                unsavedCount += unsavedDetails
             } catch {
                 unsavedCount += taking
             }

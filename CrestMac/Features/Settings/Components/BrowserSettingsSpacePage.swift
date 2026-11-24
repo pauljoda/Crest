@@ -12,7 +12,6 @@ struct BrowserSettingsSpacePage: View {
     let addSubSpace: (UUID) -> Void
 
     @State private var downloads = BrowserSpaceDownloadSettingsModel()
-    @State private var passwordSearchText = ""
     @State private var pendingDeletion: BrowserSpaceDeletionRequest?
     @State private var pendingGroupChange: BrowserSpaceGroupChange?
     @State private var showsArtworkCredits = false
@@ -155,16 +154,26 @@ struct BrowserSettingsSpacePage: View {
                 permissionCenter: pages.permissionCenter,
                 fixedSpaceID: space.id
             )
-        case .passwords:
-            BrowserPasswordSettingsPane(
-                browser: browser,
-                spaceAccess: spaceAccess,
-                layout: .macOSSpacePage,
-                searchText: $passwordSearchText,
-                fixedSpaceID: space.id
-            )
         case .extensions:
             BrowserEngineExtensionSettingsPane(browser: browser, spaceAccess: spaceAccess, spaceID: space.id)
+        }
+    }
+
+    /// The way into Autofill on this Space, where its passwords and codes live.
+    private var autofillRow: some View {
+        Section {
+            Button {
+                tabState.navigation.selection = .destination(.passwords)
+            } label: {
+                LabeledContent {
+                    CrestFormDisclosureChevron()
+                } label: {
+                    Label("Passwords and Autofill", systemImage: "key.fill")
+                }
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("space-settings-autofill")
         }
     }
 
@@ -173,6 +182,7 @@ struct BrowserSettingsSpacePage: View {
     private var browsingPane: some View {
         BrowserSettingsPane(.spaces) {
             BrowserSpaceBrowsingSection(browser: browser, space: space)
+            autofillRow
             BrowserSpaceGroupPinnedTabsSection(browser: browser, space: space)
             BrowserSpaceDownloadsSection(settings: downloads.settings(for: space))
             BrowserSpaceDeletionSection(browser: browser, spaceID: space.id, dataDeleter: dataDeleter)

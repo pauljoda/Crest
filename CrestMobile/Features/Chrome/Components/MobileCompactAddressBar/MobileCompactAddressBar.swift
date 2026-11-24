@@ -79,6 +79,21 @@ struct MobileCompactAddressBar: View {
             )
             .modifier(MobileTabStepActions(step: isEditing ? nil : stepTab))
 
+            if !isEditing, let page = pageActions?.activePage, page.credentialHeldSaveCandidate != nil {
+                // The password the person answered Not Now to, still theirs
+                // to save while the page stays on its site.
+                Button("Save Password", systemImage: "key.fill", action: page.reofferCredentialSaveCandidate)
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .frame(
+                        width: MobileCompactAddressBarLayout.clearControlSize.width,
+                        height: MobileCompactAddressBarLayout.clearControlSize.height
+                    )
+                    .transition(.opacity.combined(with: .scale(scale: CrestMotion.entranceScale)))
+                    .accessibilityIdentifier("browser-address-save-password")
+            }
+
             if isEditing, !text.isEmpty {
                 Button("Clear", systemImage: "xmark.circle.fill") { text = "" }
                     .labelStyle(.iconOnly)

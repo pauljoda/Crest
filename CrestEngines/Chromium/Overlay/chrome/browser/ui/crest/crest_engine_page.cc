@@ -28,6 +28,8 @@
 #include "chrome/browser/ui/crest/crest_engine_store.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/profiles/profile.h"
+#include "components/password_manager/core/common/password_manager_pref_names.h"
+#include "components/prefs/pref_service.h"
 #include "chrome/browser/renderer_host/chrome_navigation_ui_data.h"
 #include "chrome/browser/ssl/chrome_security_state_util.h"
 #include "components/blocked_content/popup_blocker_tab_helper.h"
@@ -257,6 +259,7 @@ void EnginePage::Start(content::WebContents* contents) {
   }
   const auto present = base::BindRepeating(&EnginePage::Present, weak_factory_.GetWeakPtr());
   Present(engine::PageViewReady{.page_id = id_});
+  NotePasswordControl();
   media_ = std::make_unique<PageMedia>(contents, id_, present,
                                        base::BindRepeating(&EnginePage::StateChanged, weak_factory_.GetWeakPtr()));
   infobars_ = std::make_unique<PageInfoBars>(contents, id_, present);
@@ -634,6 +637,7 @@ void EnginePage::DidFinishNavigation(content::NavigationHandle* navigation) {
   }
   Present(engine::PageNavigationCommitted{
       .page_id = id_, .url = PresentedURL(committed), .is_loading = web_contents()->IsLoading()});
+  NotePasswordControl();
   NoteTitle();
   FinishIfLoaded();
   StateChanged();
@@ -1752,6 +1756,22 @@ void EnginePage::InspectorClosing() {
   if (inspector_) {
     inspector_->Closing();
   }
+}
+
+// Whether an extension controls password saving in the page's profile, as
+// a password manager's does: the platform hears it when the page starts and
+// whenever it changes, so Crest leaves passwords and codes to it there.
+void EnginePage::NotePasswordControl() {
+  auto* profile = web_contents() ? Profile::FromBrowserContext(web_contents()->GetBrowserContext()) : nullptr;
+  PrefService* prefs = profile ? profile->GetOriginalProfile()->GetPrefs() : nullptr;
+  const PrefService::Preference* preference =
+      prefs ? prefs->FindPreference(password_manager::prefs::kCredentialsEnableService) : nullptr;
+  const bool controlled = preference && preference->IsExtensionControlled();
+  if (presented_password_control_ == controlled) {
+    return;
+  }
+  presented_password_control_ = controlled;
+  Present(engine::PagePasswordControlChanged{.page_id = id_, .extension_controls_passwords = controlled});
 }
 
 }  // namespace crest

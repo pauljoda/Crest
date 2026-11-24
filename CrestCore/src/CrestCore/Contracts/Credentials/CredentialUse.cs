@@ -12,8 +12,12 @@ public sealed class CredentialUse {
     public static readonly CredentialUse Fill = new(name: "fill", needsManager: true, refusedInPrivate: false);
     /// Saving a password a page submitted or the person entered.
     public static readonly CredentialUse Save = new(name: "save", needsManager: true, refusedInPrivate: true);
+    /// Asking whether to save a password a page submitted, which a site the
+    /// person asked never to save for doesn't do.
+    public static readonly CredentialUse OfferSave = new(name: "offerSave", needsManager: true, refusedInPrivate: true,
+        offersSave: true);
 
-    public static IReadOnlyList<CredentialUse> All { get; } = [Read, Fill, Save];
+    public static IReadOnlyList<CredentialUse> All { get; } = [Read, Fill, Save, OfferSave];
 
     #endregion
 
@@ -28,14 +32,19 @@ public sealed class CredentialUse {
     /// Whether a private window, which keeps nothing, refuses the use.
     public bool RefusedInPrivate { get; }
 
+    /// Whether the use asks the person to save, which the Space's never-save
+    /// sites refuse.
+    internal bool OffersSave { get; }
+
     #endregion
 
     #region Constructors
 
-    private CredentialUse(string name, bool needsManager, bool refusedInPrivate) {
+    private CredentialUse(string name, bool needsManager, bool refusedInPrivate, bool offersSave = false) {
         Name = name;
         NeedsManager = needsManager;
         RefusedInPrivate = refusedInPrivate;
+        OffersSave = offersSave;
     }
 
     #endregion

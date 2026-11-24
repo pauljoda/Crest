@@ -1,7 +1,14 @@
 import Foundation
 
 struct CredentialKeychainCodec {
-    private let encoder = JSONEncoder()
+    /// Keys in a fixed order, so the same login always writes the same bytes
+    /// and a replacement rewrites only what changed. Readers don't depend on
+    /// the order.
+    private let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return encoder
+    }()
     private let decoder = JSONDecoder()
 
     func item(
@@ -104,7 +111,80 @@ struct CredentialKeychainCodec {
         return descriptor
     }
 
-    private func account(for id: UUID) -> String {
+    func account(for id: UUID) -> String {
         id.uuidString.lowercased()
     }
+
+    // MARK: - Actions - Extras
+
+    /// The companion item keeping `extras` for the login `descriptor`
+    /// describes: what it holds in the open metadata, the secrets themselves
+    /// in the item's data, and the login's iCloud choice.
+    func extrasItem(for extras: BrowserCredentialExtras, of descriptor: CredentialDescriptor) throws
+        -> CredentialKeychainItem
+    {
+        guard extras.notes.count <= BrowserCredentialExtras.maximumNotesLength else {
+            throw CredentialVaultError.malformedStoredCredential
+        }
+        return CredentialKeychainItem(
+            account: account(for: descriptor.id),
+            metadata: try encoder.encode(
+                StoredExtrasMetadata(
+                    version: StoredExtrasMetadata.currentVersion, ownerID: descriptor.id, summary: extras.summary)),
+            secret: try encoder.encode(StoredExtrasSecret(notes: extras.notes.nilIfEmpty, codeLink: extras.codeLink)),
+            isSynchronizable: descriptor.isSynchronizable)
+    }
+
+    /// The extras a companion item keeps, or nil when it isn't one this
+    /// build reads.
+    func extras(from item: CredentialKeychainItem, expectedID: UUID) -> BrowserCredentialExtras? {
+        guard extrasSummary(account: item.account, metadata: item.metadata, expectedID: expectedID) != nil,
+            let secret = try? decoder.decode(StoredExtrasSecret.self, from: item.secret)
+        else { return nil }
+        return BrowserCredentialExtras(notes: secret.notes ?? "", codeLink: secret.codeLink)
+    }
+
+    /// What a companion item says it keeps, read without its secrets, with
+    /// the login it belongs to; nil when it isn't one this build reads.
+    func extrasSummary(from item: CredentialKeychainDescriptorItem) -> (
+        ownerID: UUID, summary: BrowserCredentialExtrasSummary
+    )? {
+        guard let metadata = try? decoder.decode(StoredExtrasMetadata.self, from: item.metadata),
+            metadata.version <= StoredExtrasMetadata.currentVersion,
+            account(for: metadata.ownerID) == item.account
+        else { return nil }
+        return (metadata.ownerID, metadata.summary)
+    }
+
+    /// The companion item `item` again, under the login's new iCloud choice.
+    func migratedExtrasItem(from item: CredentialKeychainItem, isSynchronizable: Bool) -> CredentialKeychainItem {
+        CredentialKeychainItem(
+            account: item.account, metadata: item.metadata, secret: item.secret, isSynchronizable: isSynchronizable)
+    }
+
+    private func extrasSummary(account: String, metadata: Data, expectedID: UUID) -> BrowserCredentialExtrasSummary? {
+        guard let stored = try? decoder.decode(StoredExtrasMetadata.self, from: metadata),
+            stored.ownerID == expectedID, self.account(for: expectedID) == account,
+            stored.version <= StoredExtrasMetadata.currentVersion
+        else { return nil }
+        return stored.summary
+    }
+}
+
+// MARK: - Types
+
+/// What a companion item says in the open: its format, the login it belongs
+/// to, and whether it keeps notes or a code.
+private struct StoredExtrasMetadata: Codable {
+    static let currentVersion = 1
+
+    let version: Int
+    let ownerID: UUID
+    let summary: BrowserCredentialExtrasSummary
+}
+
+/// What a companion item keeps as its secret.
+private struct StoredExtrasSecret: Codable {
+    let notes: String?
+    let codeLink: String?
 }

@@ -10,11 +10,14 @@ namespace CrestCore.Tests;
 /// encoded answers or one rejection out, and no password on either side.
 public sealed class AppCredentialTests {
     /// Passwords never cross the boundary: the only text a credential question
-    /// carries is an origin and, where accounts are matched, a username.
+    /// carries is an origin, where accounts are matched a username, and what
+    /// the page says about a form's fields and a select's choices, never the
+    /// values in them.
     [Fact]
     public void NoCredentialQueryCarriesAPassword() {
         Type[] queries = [typeof(CredentialCapture), typeof(CredentialFill), typeof(CredentialSaveCheck), typeof(MostRecentCredential),
-            typeof(CredentialSaveMatch), typeof(CredentialSave), typeof(StrongPassword), typeof(CredentialAccess)];
+            typeof(CredentialSaveMatch), typeof(CredentialSave), typeof(StrongPassword), typeof(CredentialAccess),
+            typeof(CredentialsToRespell)];
         var found = new HashSet<Type>();
         var pending = new Queue<Type>(queries);
         var text = new SortedSet<string>(StringComparer.Ordinal);
@@ -28,6 +31,11 @@ public sealed class AppCredentialTests {
                 else if (parameterType.IsClass && parameterType.Assembly == typeof(Query<>).Assembly) pending.Enqueue(parameterType);
             }
         }
-        Assert.Equal(["CredentialOrigin.Host", "CredentialOrigin.Scheme", "CredentialRecord.Username", "CredentialSaveMatch.Username"], text);
+        Assert.Equal([
+            "CredentialOrigin.Host", "CredentialOrigin.Scheme", "CredentialRecord.Username", "CredentialSaveMatch.Username",
+            "FormField.Autocomplete", "FormField.IdAttribute", "FormField.InputMode", "FormField.Label", "FormField.Name",
+            "FormField.PasswordRules", "FormField.Placeholder", "FormOption.Text", "FormOption.Value", "FormSubmission.ControlLabel",
+            "PasswordRequirements.Rules"
+        ], text);
     }
 }

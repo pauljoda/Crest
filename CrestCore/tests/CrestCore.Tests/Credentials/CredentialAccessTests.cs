@@ -22,7 +22,8 @@ public sealed partial class BrowserContractsTests {
         var privateWorkspace = device.Attach(SessionOf(SpaceOf(hidden, Fixed(3_493), "Private")), WorkspaceKind.Private);
         device.Send(new JoinSpace(device.Workspace, member, primary));
         device.Send(new SetCredentialPreferences(device.Workspace, alone,
-            new CredentialPreferences(IsEnabled: false, SyncsCrestPasswordsWithICloud: false, AlsoOffersSaveToSystemPasswords: false)));
+            new CredentialPreferences(IsEnabled: false, SyncsCrestPasswordsWithICloud: false, AlsoOffersSaveToSystemPasswords: false,
+                NeverSavedSites: [])));
         var secure = new CredentialOrigin("https", "accounts.example.com", 443);
         var plain = new CredentialOrigin("http", "accounts.example.com", 80);
         CredentialAccessAnswer Access(Guid space, CredentialUse use, CredentialOrigin? origin = null, Guid? workspace = null) =>
@@ -40,6 +41,27 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal(CredentialRefusal.PrivateBrowsing, Access(hidden, CredentialUse.Save, secure, privateWorkspace).Refusal);
         Assert.Null(Access(hidden, CredentialUse.Fill, secure, privateWorkspace).Refusal);
         Assert.IsType<UnknownSpace>(Assert.Throws<Rejected>(() => Access(Fixed(3_404), CredentialUse.Read)).Rejection);
+    }
+
+    /// A site the person asked never to save for gets no offer to save, but
+    /// still fills, and a password the person saves for it on purpose is kept.
+    [Fact]
+    public void NeverSavedSitesRefuseOnlyTheOfferToSave() {
+        var space = Fixed(3_410);
+        using var device = new TestDevice(SessionOf(SpaceOf(space, Fixed(3_495), "Work")));
+        var never = new CredentialOrigin("https", "accounts.example.com", 443);
+        var other = new CredentialOrigin("https", "shop.example.com", 443);
+        device.Send(new SetCredentialPreferences(device.Workspace, space,
+            new CredentialPreferences(IsEnabled: true, SyncsCrestPasswordsWithICloud: true, AlsoOffersSaveToSystemPasswords: false,
+                NeverSavedSites: [never, never, new CredentialOrigin("https", "", 443)])));
+        CredentialRefusal? Refusal(CredentialUse use, CredentialOrigin origin) =>
+            device.Query(new CredentialAccess(device.Workspace, space, use, origin)).Refusal;
+
+        Assert.Equal(CredentialRefusal.NeverSaved, Refusal(CredentialUse.OfferSave, never));
+        Assert.Null(Refusal(CredentialUse.OfferSave, other));
+        Assert.Null(Refusal(CredentialUse.Save, never));
+        Assert.Null(Refusal(CredentialUse.Fill, never));
+        Assert.Equal([never], device.Authority.Current.KnownSpace(space).Settings.CredentialPreferences.NeverSavedSites);
     }
 
     #endregion

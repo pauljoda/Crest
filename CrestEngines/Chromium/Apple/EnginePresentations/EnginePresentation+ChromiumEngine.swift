@@ -24,6 +24,7 @@
             case .pageNavigationCommitted(let presentation): presentation.present(on: engine)
             case .pageNavigationFailed(let presentation): presentation.present(on: engine)
             case .pageNavigationStarted(let presentation): presentation.present(on: engine)
+            case .pagePasswordControlChanged(let presentation): presentation.present(on: engine)
             case .pageRendererGone(let presentation): presentation.present(on: engine)
             case .pageThemeChanged(let presentation): presentation.present(on: engine)
             case .pageViewClosed(let presentation): presentation.present(on: engine)

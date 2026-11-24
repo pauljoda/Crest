@@ -1,0 +1,29 @@
+{
+  "entries": [
+    {
+      "id": "notes-moved-to-icloud-meanwhile-kept",
+      "category": "internal",
+      "message": "A login's notes and code key that move into iCloud Keychain while Crest tidies a Space are kept, never removed as left behind."
+    },
+    {
+      "id": "add-password-stays-with-its-space",
+      "category": "internal",
+      "message": "Add Password closes when the Space it was opened on changes, and saves only to that Space."
+    },
+    {
+      "id": "unsaved-import-notes-added-by-hand",
+      "category": "internal",
+      "message": "When imported notes or codes can't be saved, Settings asks to add them to those passwords by hand, since importing the file again wouldn't."
+    },
+    {
+      "id": "add-password-waits-for-the-list",
+      "category": "internal",
+      "message": "Add Password waits until the Space's passwords have loaded, so it can tell an account that's already saved."
+    },
+    {
+      "id": "new-password-holds-while-saving",
+      "category": "internal",
+      "message": "The New Password sheet can't be changed while it saves, so what's saved is what was typed."
+    }
+  ]
+}

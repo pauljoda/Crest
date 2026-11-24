@@ -109,6 +109,7 @@ struct BrowserWebContentView: View {
                 page.isFindPresented
                 || page.credentialFillRequest != nil
                 || page.credentialSaveCandidate != nil
+                || page.autofillSaveCandidate != nil
                 || page.isRegionCapturePresented
                 || page.live.failure != nil
                 || page.webContentFailureMessage != nil

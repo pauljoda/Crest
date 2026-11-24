@@ -3,15 +3,24 @@ enum BrowserCredentialChromePresentation: Equatable {
     case save(BrowserCredentialSaveCandidate)
     case strongPassword(BrowserCredentialFillRequest)
     case suggestions(BrowserCredentialFillRequest)
+    case codes(BrowserCredentialFillRequest)
+    case autofill(BrowserCredentialFillRequest)
+    case saveAutofill(BrowserAutofillSaveCandidate)
 
     static func resolve(
         saveCandidate: BrowserCredentialSaveCandidate?,
-        fillRequest: BrowserCredentialFillRequest?
+        fillRequest: BrowserCredentialFillRequest?,
+        autofillSaveCandidate: BrowserAutofillSaveCandidate? = nil
     ) -> BrowserCredentialChromePresentation {
         if let saveCandidate {
             return .save(saveCandidate)
         }
+        if let autofillSaveCandidate {
+            return .saveAutofill(autofillSaveCandidate)
+        }
         guard let fillRequest else { return .none }
+        if fillRequest.codeFields != nil { return .codes(fillRequest) }
+        if fillRequest.autofill != nil { return .autofill(fillRequest) }
         switch fillRequest.passwordKind {
         case .current:
             return .suggestions(fillRequest)
@@ -25,9 +34,9 @@ enum BrowserCredentialChromePresentation: Equatable {
     /// to point at.
     var fillRequest: BrowserCredentialFillRequest? {
         switch self {
-        case .none, .save:
+        case .none, .save, .saveAutofill:
             nil
-        case .strongPassword(let request), .suggestions(let request):
+        case .strongPassword(let request), .suggestions(let request), .codes(let request), .autofill(let request):
             request
         }
     }

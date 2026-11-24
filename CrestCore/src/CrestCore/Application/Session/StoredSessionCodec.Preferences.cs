@@ -15,7 +15,7 @@ internal static partial class StoredSessionCodec {
         new(DataRetention.Forever, DataRetention.Forever, DataRetention.Forever));
 
     /// What a Space that stored no credential preferences offers.
-    internal static CredentialPreferences DefaultCredentialPreferences { get; } = new(true, true, false);
+    internal static CredentialPreferences DefaultCredentialPreferences { get; } = new(true, true, false, []);
 
     #endregion
 
@@ -101,14 +101,39 @@ internal static partial class StoredSessionCodec {
         var value = Object(node);
         return new(Flag(value[Key.IsEnabled]) ?? DefaultCredentialPreferences.IsEnabled,
             Flag(value[Key.SyncsCrestPasswordsWithICloud]) ?? DefaultCredentialPreferences.SyncsCrestPasswordsWithICloud,
-            Flag(value[Key.AlsoOffersSaveToSystemPasswords]) ?? DefaultCredentialPreferences.AlsoOffersSaveToSystemPasswords);
+            Flag(value[Key.AlsoOffersSaveToSystemPasswords]) ?? DefaultCredentialPreferences.AlsoOffersSaveToSystemPasswords,
+            NeverSavedSites(value[Key.NeverSavedSites]));
     }
 
-    internal static JsonObject Encode(CredentialPreferences preferences) => new() {
-        [Key.IsEnabled] = preferences.IsEnabled,
-        [Key.SyncsCrestPasswordsWithICloud] = preferences.SyncsCrestPasswordsWithICloud,
-        [Key.AlsoOffersSaveToSystemPasswords] = preferences.AlsoOffersSaveToSystemPasswords
-    };
+    internal static JsonObject Encode(CredentialPreferences preferences) {
+        var encoded = new JsonObject {
+            [Key.IsEnabled] = preferences.IsEnabled,
+            [Key.SyncsCrestPasswordsWithICloud] = preferences.SyncsCrestPasswordsWithICloud,
+            [Key.AlsoOffersSaveToSystemPasswords] = preferences.AlsoOffersSaveToSystemPasswords
+        };
+        if (preferences.NeverSavedSites.Count > 0)
+            encoded[Key.NeverSavedSites] = new JsonArray([.. preferences.NeverSavedSites.Select(site => (JsonNode?)new JsonObject {
+                [Key.Scheme] = site.Scheme, [Key.Host] = site.Host, [Key.Port] = site.Port
+            })]);
+        return encoded;
+    }
+
+    /// The sites a Space never offers to save for, each once and in the order
+    /// they were added. A site this build cannot read is left out.
+    private static IReadOnlyList<CredentialOrigin> NeverSavedSites(JsonNode? node) =>
+        node is JsonArray sites
+            ? [.. sites.Select(NeverSavedSite).OfType<CredentialOrigin>().Distinct()
+                .Take(Contracts.CredentialPreferences.MaximumNeverSavedSites)]
+            : [];
+
+    private static CredentialOrigin? NeverSavedSite(JsonNode? node) {
+        if (node is not JsonObject value || TolerantText(value[Key.Scheme]) is not { } scheme
+            || TolerantText(value[Key.Host]) is not { } host || value[Key.Port] is not JsonValue port
+            || !port.TryGetValue(out int number))
+            return null;
+        var site = new CredentialOrigin(scheme, host, number);
+        return site.IsValid ? site : null;
+    }
 
     #endregion
 

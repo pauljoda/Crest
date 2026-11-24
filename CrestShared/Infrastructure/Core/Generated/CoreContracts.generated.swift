@@ -637,7 +637,10 @@ enum Rejection: Equatable, Error, Sendable {
     case guideSpaceLocked(GuideSpaceLocked)
     case incompleteSplit(IncompleteSplit)
     case invalidAgent(InvalidAgent)
+    case invalidAutofillRecord(InvalidAutofillRecord)
     case invalidBlockedPopup(InvalidBlockedPopup)
+    case invalidCodeSetup(InvalidCodeSetup)
+    case invalidCodeTime(InvalidCodeTime)
     case invalidCredentialDate(InvalidCredentialDate)
     case invalidCredentialFile(InvalidCredentialFile)
     case invalidCredentialOrigin(InvalidCredentialOrigin)
@@ -677,6 +680,7 @@ enum Rejection: Equatable, Error, Sendable {
     case linkRouteExists(LinkRouteExists)
     case linkRoutesFull(LinkRoutesFull)
     case mediaSessionLimitReached(MediaSessionLimitReached)
+    case mismatchedCodeLength(MismatchedCodeLength)
     case noArchivedTabs(NoArchivedTabs)
     case noBrowsingDataCategory(NoBrowsingDataCategory)
     case noCurrentTabs(NoCurrentTabs)
@@ -1026,9 +1030,24 @@ enum Rejection: Equatable, Error, Sendable {
         if case .invalidAgent(let value) = self { value } else { nil }
     }
 
+    /// The `InvalidAutofillRecord` this rejection carries, or nil for another member.
+    var invalidAutofillRecord: InvalidAutofillRecord? {
+        if case .invalidAutofillRecord(let value) = self { value } else { nil }
+    }
+
     /// The `InvalidBlockedPopup` this rejection carries, or nil for another member.
     var invalidBlockedPopup: InvalidBlockedPopup? {
         if case .invalidBlockedPopup(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidCodeSetup` this rejection carries, or nil for another member.
+    var invalidCodeSetup: InvalidCodeSetup? {
+        if case .invalidCodeSetup(let value) = self { value } else { nil }
+    }
+
+    /// The `InvalidCodeTime` this rejection carries, or nil for another member.
+    var invalidCodeTime: InvalidCodeTime? {
+        if case .invalidCodeTime(let value) = self { value } else { nil }
     }
 
     /// The `InvalidCredentialDate` this rejection carries, or nil for another member.
@@ -1224,6 +1243,11 @@ enum Rejection: Equatable, Error, Sendable {
     /// The `MediaSessionLimitReached` this rejection carries, or nil for another member.
     var mediaSessionLimitReached: MediaSessionLimitReached? {
         if case .mediaSessionLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `MismatchedCodeLength` this rejection carries, or nil for another member.
+    var mismatchedCodeLength: MismatchedCodeLength? {
+        if case .mismatchedCodeLength(let value) = self { value } else { nil }
     }
 
     /// The `NoArchivedTabs` this rejection carries, or nil for another member.
@@ -1802,6 +1826,7 @@ enum EnginePresentation: Equatable, Sendable {
     case pageNavigationCommitted(PageNavigationCommitted)
     case pageNavigationFailed(PageNavigationFailed)
     case pageNavigationStarted(PageNavigationStarted)
+    case pagePasswordControlChanged(PagePasswordControlChanged)
     case pageRendererGone(PageRendererGone)
     case pageScriptEvaluated(PageScriptEvaluated)
     case pageThemeChanged(PageThemeChanged)
@@ -1846,6 +1871,7 @@ enum EnginePresentation: Equatable, Sendable {
         case .pageNavigationCommitted(let value): value.pageID
         case .pageNavigationFailed(let value): value.pageID
         case .pageNavigationStarted(let value): value.pageID
+        case .pagePasswordControlChanged(let value): value.pageID
         case .pageRendererGone(let value): value.pageID
         case .pageScriptEvaluated(let value): value.pageID
         case .pageThemeChanged(let value): value.pageID
@@ -2169,6 +2195,33 @@ struct AddressCompletion: Equatable, Sendable {
     let typed: String
     let suffix: String
     let accepted: String
+}
+
+struct AddressFill: Query, Equatable, Sendable {
+    typealias Answer = AutofillPlan
+
+    let fields: [FormField]
+    let focused: Int
+    let address: AddressRecord
+}
+
+struct AddressRecord: Equatable, Sendable, Identifiable {
+    static let maximumStreetLines: Int = 3
+    static let maximumTextLength: Int = 200
+
+    var id: UUID
+    var label: String
+    var givenName: String
+    var additionalName: String
+    var familyName: String
+    var organization: String
+    var streetLines: [String]
+    var city: String
+    var region: String
+    var postalCode: String
+    var country: String
+    var phone: String
+    var email: String
 }
 
 struct AdoptDevicePreferences: Intent, DevicePreferenceIntent, Equatable, Sendable {
@@ -2641,6 +2694,49 @@ struct AuthenticationSourceLabel: Equatable, Sendable {
     let label: String?
 }
 
+struct AutofillCapture: Query, Equatable, Sendable {
+    typealias Answer = AutofillProposal
+
+    let fields: [FormField]
+    let values: [AutofillValue]
+}
+
+struct AutofillFieldReading: Equatable, Sendable {
+    let field: Int
+    let role: AutofillFieldRole
+    let isDeclared: Bool
+}
+
+struct AutofillPlan: Equatable, Sendable {
+    let values: [AutofillValue]
+}
+
+struct AutofillProposal: Equatable, Sendable {
+    let address: AddressRecord?
+    let card: CardRecord?
+}
+
+struct AutofillSection: Equatable, Sendable {
+    let kind: AutofillSectionKind
+    let fields: [AutofillFieldReading]
+}
+
+struct AutofillSectionAnswer: Equatable, Sendable {
+    let section: AutofillSection?
+}
+
+struct AutofillSectionAt: Query, Equatable, Sendable {
+    typealias Answer = AutofillSectionAnswer
+
+    let fields: [FormField]
+    let focused: Int
+}
+
+struct AutofillValue: Equatable, Sendable {
+    var field: Int
+    var value: String
+}
+
 struct AutomaticDownloadCheck: Query, Equatable, Sendable {
     typealias Answer = AutomaticDownloadVerdict
 
@@ -2894,6 +2990,41 @@ struct CapturePage: PageRequest, Equatable, Sendable {
     let width: Double
 }
 
+struct CardDetails: Query, Equatable, Sendable {
+    typealias Answer = CardSummary
+
+    let number: String
+}
+
+struct CardFill: Query, Equatable, Sendable {
+    typealias Answer = AutofillPlan
+
+    let fields: [FormField]
+    let focused: Int
+    let card: CardRecord
+}
+
+struct CardRecord: Equatable, Sendable, Identifiable {
+    static let minimumNumberDigits: Int = 12
+    static let maximumNumberDigits: Int = 19
+    static let maximumTextLength: Int = 200
+
+    var id: UUID
+    var nickname: String
+    var cardholder: String
+    var number: String
+    var expiryMonth: Int
+    var expiryYear: Int
+    var securityCode: String?
+    var billingAddressID: UUID?
+}
+
+struct CardSummary: Equatable, Sendable {
+    let network: CardNetwork
+    let lastFour: String
+    let isValid: Bool
+}
+
 struct CertificateChain: Equatable, Sendable {
     let certificates: [Data]
 }
@@ -2925,6 +3056,13 @@ struct ChangeExtension: Intent, ExtensionIntent, Equatable, Sendable {
 
 struct CheckBeforeUnload: Equatable, Sendable {
     let pageID: UUID
+}
+
+struct CheckedCredential: Equatable, Sendable, Identifiable {
+    var id: UUID
+    var origin: CredentialOrigin
+    var username: String
+    var password: String
 }
 
 struct ChooseCloudCopy: Intent, CloudSyncControlIntent, Equatable, Sendable {
@@ -3208,6 +3346,10 @@ struct CloudTransportSynced: Intent, CloudSyncControlIntent, Equatable, Sendable
     let localChangesUnsaved: Bool
 }
 
+struct CodeSetupLink: Equatable, Sendable {
+    let link: String
+}
+
 struct CollapseAllFolders: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let spaceID: UUID
@@ -3248,6 +3390,9 @@ struct ContentFrame: Equatable, Sendable, Identifiable {
     let `protocol`: String
     let host: String
     let port: Int
+    let hasViewportOffset: Bool
+    let viewportOffsetX: Double
+    let viewportOffsetY: Double
 }
 
 struct ContentFullscreenChanged: Equatable, Sendable {
@@ -3367,6 +3512,11 @@ struct CredentialCaptureDecision: Equatable, Sendable {
     let anchorsToField: Bool
     let candidateLifetime: Double
     let usernameHintLifetime: Double
+    let form: SignInForm
+    let passwordKind: CredentialPasswordKind?
+    let quietWithoutLogins: Bool
+    let codeFields: OneTimeCodeFields?
+    let autofill: AutofillSection?
 }
 
 struct CredentialChoice: Equatable, Sendable {
@@ -3407,11 +3557,19 @@ struct CredentialFormFacts: Equatable, Sendable {
     var topLevelOrigin: CredentialOrigin
     var isMainFrame: Bool
     var hasFormID: Bool
-    var hasUsername: Bool
-    var hasPassword: Bool
-    var passwordKind: CredentialPasswordKind?
+    var fields: [FormField]
+    var focusedField: Int?
+    var submission: FormSubmission?
+    var filledUsername: Bool
     var hasVisiblePasswordField: Bool?
     var hasFillTarget: Bool
+    var fieldRectInTopViewport: Bool
+}
+
+struct CredentialHealth: Equatable, Sendable, Identifiable {
+    let id: UUID
+    let concerns: [PasswordConcern]
+    let sharedWith: [UUID]
 }
 
 struct CredentialImportCandidate: Equatable, Sendable {
@@ -3419,6 +3577,8 @@ struct CredentialImportCandidate: Equatable, Sendable {
     let username: String
     let displayName: String?
     let password: String
+    let note: String?
+    let oneTimeCodeLink: String?
     let effect: CredentialImportEffect
 }
 
@@ -3438,6 +3598,7 @@ struct CredentialImportPlan: Equatable, Sendable {
     let rejections: [CredentialRowRejection]
     let warnings: [CredentialRowWarning]
     let validRowCount: Int
+    let rejectionCounts: [CredentialRowFlawCount]
 }
 
 struct CredentialImportPreview: Query, Equatable, Sendable {
@@ -3461,9 +3622,12 @@ struct CredentialPendingCandidate: Equatable, Sendable {
 }
 
 struct CredentialPreferences: Equatable, Sendable {
+    static let maximumNeverSavedSites: Int = 1000
+
     var isEnabled: Bool
     var syncsCrestPasswordsWithICloud: Bool
     var alsoOffersSaveToSystemPasswords: Bool
+    var neverSavedSites: [CredentialOrigin]
 }
 
 struct CredentialRecord: Equatable, Sendable, Identifiable {
@@ -3479,6 +3643,15 @@ struct CredentialRecord: Equatable, Sendable, Identifiable {
 
 struct CredentialRecordLimitReached: Equatable, Sendable {
     let limit: Int
+}
+
+struct CredentialRespellings: Equatable, Sendable {
+    let respelled: [SavedCredentialOrigin]
+}
+
+struct CredentialRowFlawCount: Equatable, Sendable {
+    let flaw: CredentialRowFlaw
+    let count: Int
 }
 
 struct CredentialRowRejection: Equatable, Sendable {
@@ -3539,6 +3712,12 @@ struct CredentialsFillingPage: Query, Equatable, Sendable {
 
     let page: CredentialOrigin
     let saved: [CredentialOrigin]
+}
+
+struct CredentialsToRespell: Query, Equatable, Sendable {
+    typealias Answer = CredentialRespellings
+
+    let saved: [SavedCredentialOrigin]
 }
 
 struct CrestCharge: Equatable, Sendable {
@@ -4177,6 +4356,8 @@ struct ExistingCredential: Equatable, Sendable, Identifiable {
     var updatedAt: Double
     var lastUsedAt: Double?
     var password: String
+    var note: String?
+    var oneTimeCodeLink: String?
 }
 
 struct ExitPictureInPicture: Equatable, Sendable {
@@ -4212,6 +4393,7 @@ struct ExportedCredential: Equatable, Sendable, Identifiable {
     var displayName: String?
     var password: String
     var note: String
+    var oneTimeCodeLink: String?
 }
 
 struct ExportedDocument: Equatable, Sendable {
@@ -4641,6 +4823,37 @@ struct ForgetPaletteChoices: Intent, PaletteIntent, Equatable, Sendable {
     let spaceID: UUID?
 }
 
+struct FormField: Equatable, Sendable {
+    static let maximumOptions: Int = 400
+
+    var index: Int
+    var inputType: FormInputType
+    var autocomplete: String
+    var name: String
+    var idAttribute: String
+    var label: String
+    var placeholder: String
+    var isVisible: Bool
+    var hasValue: Bool
+    var enteredByPerson: Bool
+    var minLength: Int?
+    var maxLength: Int?
+    var passwordRules: String?
+    var inputMode: String
+    var options: [FormOption]
+}
+
+struct FormOption: Equatable, Sendable {
+    var value: String
+    var text: String
+}
+
+struct FormSubmission: Equatable, Sendable {
+    var trigger: SubmitTrigger
+    var inFormElement: Bool
+    var controlLabel: String
+}
+
 struct GetAgentPreferences: Query, Equatable, Sendable {
     typealias Answer = AgentPreferences
 
@@ -4858,6 +5071,8 @@ struct ImportedCredential: Equatable, Sendable {
     var origin: CredentialOrigin
     var username: String
     var password: String
+    var note: String?
+    var oneTimeCodeLink: String?
 }
 
 struct ImportedSpaces: Equatable, Sendable {
@@ -4980,7 +5195,17 @@ struct InvalidAgent: Equatable, Sendable {
     }
 }
 
+struct InvalidAutofillRecord: Equatable, Sendable {
+}
+
 struct InvalidBlockedPopup: Equatable, Sendable {
+}
+
+struct InvalidCodeSetup: Equatable, Sendable {
+    let refusal: CodeSetupRefusal
+}
+
+struct InvalidCodeTime: Equatable, Sendable {
 }
 
 struct InvalidCredentialDate: Equatable, Sendable {
@@ -5498,6 +5723,11 @@ struct MergeSyncRecords: Intent, CloudSyncIntent, Equatable, Sendable {
     let records: [SyncRecord]
 }
 
+struct MismatchedCodeLength: Equatable, Sendable {
+    let fields: Int
+    let length: Int
+}
+
 struct MostRecentCredential: Query, Equatable, Sendable {
     typealias Answer = CredentialChoice
 
@@ -5826,6 +6056,42 @@ struct OfferedWindowAdopted: CoreChange, Equatable, Sendable {
     let windowID: UUID
     let spaceID: UUID
     let url: String
+}
+
+struct OneTimeCode: Query, Equatable, Sendable {
+    typealias Answer = OneTimeCodeReading
+
+    let setup: OneTimeCodeSetup
+    let now: Double
+}
+
+struct OneTimeCodeEntry: Equatable, Sendable {
+    let field: Int
+    let text: String
+}
+
+struct OneTimeCodeFields: Equatable, Sendable {
+    var fields: [Int]
+}
+
+struct OneTimeCodeFill: Equatable, Sendable {
+    let entries: [OneTimeCodeEntry]
+}
+
+struct OneTimeCodeReading: Equatable, Sendable {
+    let code: String
+    let validFrom: Double
+    let validUntil: Double
+}
+
+struct OneTimeCodeSetup: Equatable, Sendable {
+    var secret: String
+    var issuer: String
+    var account: String
+    var algorithm: OneTimeCodeAlgorithm
+    var digits: Int
+    var period: Int
+    var style: OneTimeCodeStyle
 }
 
 struct OpenAddress: Intent, SessionIntent, Equatable, Sendable {
@@ -6191,6 +6457,11 @@ struct PageOpened: CoreChange, Equatable, Sendable {
     let page: PageState
 }
 
+struct PagePasswordControlChanged: Equatable, Sendable {
+    let pageID: UUID
+    let extensionControlsPasswords: Bool
+}
+
 struct PagePoint: Equatable, Sendable {
     var x: Double
     var y: Double
@@ -6528,6 +6799,17 @@ struct PaletteSuggestions: Query, Equatable, Sendable {
     let spaceID: UUID?
 }
 
+struct ParseCodeSetup: Query, Equatable, Sendable {
+    typealias Answer = ParsedCodeSetup
+
+    let text: String
+}
+
+struct ParsedCodeSetup: Equatable, Sendable {
+    let setup: OneTimeCodeSetup?
+    let refusal: CodeSetupRefusal?
+}
+
 struct PasskeyAccess: Query, Equatable, Sendable {
     typealias Answer = PasskeyAccessVerdict
 
@@ -6540,11 +6822,29 @@ struct PasskeyAccessVerdict: Equatable, Sendable {
     let status: PasskeyAccessStatus
 }
 
+struct PasswordHealth: Query, Equatable, Sendable {
+    typealias Answer = PasswordHealthReport
+
+    let credentials: [CheckedCredential]
+}
+
+struct PasswordHealthReport: Equatable, Sendable {
+    let credentials: [CredentialHealth]
+}
+
 struct PasswordImportPreview: Query, Equatable, Sendable {
     typealias Answer = CredentialImportPlan
 
     let credentials: [ImportedCredential]
     let existing: [ExistingCredential]
+}
+
+struct PasswordRequirements: Equatable, Sendable {
+    static let none = PasswordRequirements(minLength: nil, maxLength: nil, rules: nil)
+
+    var minLength: Int?
+    var maxLength: Int?
+    var rules: String?
 }
 
 struct PauseDownload: Intent, DownloadIntent, Equatable, Sendable {
@@ -7212,6 +7512,11 @@ struct Saved: CoreChange, Equatable, Sendable {
 
 struct SavedAddressReturn: Equatable, Sendable {
     let changesPage: Bool
+}
+
+struct SavedCredentialOrigin: Equatable, Sendable, Identifiable {
+    var id: UUID
+    var origin: CredentialOrigin
 }
 
 struct SchemeHandled: Equatable, Sendable {
@@ -8007,6 +8312,14 @@ struct SidebarRow: Equatable, Sendable, Identifiable {
     let members: [UUID]
 }
 
+struct SignInForm: Equatable, Sendable {
+    let purpose: FormPurpose
+    let username: Int?
+    let currentPassword: Int?
+    let newPasswords: [Int]
+    let keptPassword: Int?
+}
+
 struct SiteContentBlocking: Equatable, Sendable {
     let spaceID: UUID
     let origin: SiteOrigin
@@ -8562,6 +8875,13 @@ struct SplitTabs: Intent, SessionIntent, Equatable, Sendable {
     let index: Int?
 }
 
+struct SpreadOneTimeCode: Query, Equatable, Sendable {
+    typealias Answer = OneTimeCodeFill
+
+    let fields: OneTimeCodeFields
+    let code: String
+}
+
 struct StageLink: Intent, PageIntent, Equatable, Sendable {
     let pageID: UUID
     let sourcePageID: UUID
@@ -8676,12 +8996,21 @@ struct StoredSite: Equatable, Sendable {
 struct StrongPassword: Query, Equatable, Sendable {
     typealias Answer = StrongPasswordRecipe
 
-    let length: Int?
+    let requirements: PasswordRequirements
+    let style: PasswordStyle
 }
 
 struct StrongPasswordRecipe: Equatable, Sendable {
-    let length: Int
+    let segments: Int
+    let segmentLength: Int
+    let separator: String
     let groups: [String]
+    let required: [String]
+    let maxConsecutive: Int
+    let siteMinLength: Int?
+    let siteMaxLength: Int?
+    let siteSymbols: String?
+    let hasRandomAlternative: Bool
 }
 
 struct SweepExpiredRecords: Intent, SessionIntent, Equatable, Sendable {
@@ -9235,6 +9564,12 @@ struct WorkspaceOpened: CoreChange, Equatable, Sendable {
     let session: SessionState
 }
 
+struct WriteCodeSetup: Query, Equatable, Sendable {
+    typealias Answer = CodeSetupLink
+
+    let setup: OneTimeCodeSetup
+}
+
 struct WrongDeletionOperation: Equatable, Sendable {
     let spaceID: UUID
 }
@@ -9247,6 +9582,127 @@ struct ZoomPage: PageRequest, Equatable, Sendable {
 }
 
 // MARK: - Redaction
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension AddressFill: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "AddressFill(fields: \(fields.count), focused: <redacted>, address: <redacted>)"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension AddressRecord: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "AddressRecord(id: <redacted>, label: <redacted>, givenName: <redacted>, additionalName: <redacted>, familyName: <redacted>, organization: <redacted>, streetLines: \(streetLines.count), city: <redacted>, region: <redacted>, postalCode: <redacted>, country: <redacted>, phone: <redacted>, email: <redacted>)"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension AutofillCapture: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "AutofillCapture(fields: \(fields.count), values: \(values.count))"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension AutofillPlan: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "AutofillPlan(values: \(values.count))"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension AutofillProposal: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "AutofillProposal(address: <redacted>, card: <redacted>)"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension AutofillValue: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "AutofillValue(field: <redacted>, value: <redacted>)"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension CardDetails: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "CardDetails(number: <redacted>)"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension CardFill: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "CardFill(fields: \(fields.count), focused: <redacted>, card: <redacted>)"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension CardRecord: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "CardRecord(id: <redacted>, nickname: <redacted>, cardholder: <redacted>, number: <redacted>, expiryMonth: <redacted>, expiryYear: <redacted>, securityCode: <redacted>, billingAddressID: <redacted>)"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension CheckedCredential: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "CheckedCredential(id: <redacted>, origin: <redacted>, username: <redacted>, password: <redacted>)"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension CodeSetupLink: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "CodeSetupLink(link: <redacted>)"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
 
 /// Holds a password, itself or in its fields, so its text names none: it shows
 /// each list's count and nothing else of its values.
@@ -9274,7 +9730,7 @@ extension CredentialExportFile: CustomStringConvertible, CustomDebugStringConver
 /// each list's count and nothing else of its values.
 extension CredentialImportCandidate: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     var description: String {
-        "CredentialImportCandidate(rowNumber: <redacted>, username: <redacted>, displayName: <redacted>, password: <redacted>, effect: <redacted>)"
+        "CredentialImportCandidate(rowNumber: <redacted>, username: <redacted>, displayName: <redacted>, password: <redacted>, note: <redacted>, oneTimeCodeLink: <redacted>, effect: <redacted>)"
     }
 
     var debugDescription: String { description }
@@ -9296,7 +9752,7 @@ extension CredentialImportGroup: CustomStringConvertible, CustomDebugStringConve
 /// each list's count and nothing else of its values.
 extension CredentialImportPlan: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     var description: String {
-        "CredentialImportPlan(format: <redacted>, groups: \(groups.count), rejections: \(rejections.count), warnings: \(warnings.count), validRowCount: <redacted>)"
+        "CredentialImportPlan(format: <redacted>, groups: \(groups.count), rejections: \(rejections.count), warnings: \(warnings.count), validRowCount: <redacted>, rejectionCounts: \(rejectionCounts.count))"
     }
 
     var debugDescription: String { description }
@@ -9318,7 +9774,7 @@ extension CredentialImportPreview: CustomStringConvertible, CustomDebugStringCon
 /// each list's count and nothing else of its values.
 extension ExistingCredential: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     var description: String {
-        "ExistingCredential(id: <redacted>, origin: <redacted>, username: <redacted>, isWebForm: <redacted>, updatedAt: <redacted>, lastUsedAt: <redacted>, password: <redacted>)"
+        "ExistingCredential(id: <redacted>, origin: <redacted>, username: <redacted>, isWebForm: <redacted>, updatedAt: <redacted>, lastUsedAt: <redacted>, password: <redacted>, note: <redacted>, oneTimeCodeLink: <redacted>)"
     }
 
     var debugDescription: String { description }
@@ -9329,7 +9785,7 @@ extension ExistingCredential: CustomStringConvertible, CustomDebugStringConverti
 /// each list's count and nothing else of its values.
 extension ExportedCredential: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     var description: String {
-        "ExportedCredential(id: <redacted>, origin: <redacted>, username: <redacted>, displayName: <redacted>, password: <redacted>, note: <redacted>)"
+        "ExportedCredential(id: <redacted>, origin: <redacted>, username: <redacted>, displayName: <redacted>, password: <redacted>, note: <redacted>, oneTimeCodeLink: <redacted>)"
     }
 
     var debugDescription: String { description }
@@ -9340,7 +9796,95 @@ extension ExportedCredential: CustomStringConvertible, CustomDebugStringConverti
 /// each list's count and nothing else of its values.
 extension ImportedCredential: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     var description: String {
-        "ImportedCredential(rowNumber: <redacted>, displayName: <redacted>, origin: <redacted>, username: <redacted>, password: <redacted>)"
+        "ImportedCredential(rowNumber: <redacted>, displayName: <redacted>, origin: <redacted>, username: <redacted>, password: <redacted>, note: <redacted>, oneTimeCodeLink: <redacted>)"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension OneTimeCode: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "OneTimeCode(setup: <redacted>, now: <redacted>)"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension OneTimeCodeEntry: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "OneTimeCodeEntry(field: <redacted>, text: <redacted>)"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension OneTimeCodeFill: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "OneTimeCodeFill(entries: \(entries.count))"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension OneTimeCodeReading: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "OneTimeCodeReading(code: <redacted>, validFrom: <redacted>, validUntil: <redacted>)"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension OneTimeCodeSetup: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "OneTimeCodeSetup(secret: <redacted>, issuer: <redacted>, account: <redacted>, algorithm: <redacted>, digits: <redacted>, period: <redacted>, style: <redacted>)"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension ParseCodeSetup: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "ParseCodeSetup(text: <redacted>)"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension ParsedCodeSetup: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "ParsedCodeSetup(setup: <redacted>, refusal: <redacted>)"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension PasswordHealth: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "PasswordHealth(credentials: \(credentials.count))"
     }
 
     var debugDescription: String { description }
@@ -9352,6 +9896,28 @@ extension ImportedCredential: CustomStringConvertible, CustomDebugStringConverti
 extension PasswordImportPreview: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
     var description: String {
         "PasswordImportPreview(credentials: \(credentials.count), existing: \(existing.count))"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension SpreadOneTimeCode: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "SpreadOneTimeCode(fields: <redacted>, code: <redacted>)"
+    }
+
+    var debugDescription: String { description }
+    var customMirror: Mirror { Mirror(self, children: [], displayStyle: .struct) }
+}
+
+/// Holds a password, itself or in its fields, so its text names none: it shows
+/// each list's count and nothing else of its values.
+extension WriteCodeSetup: CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    var description: String {
+        "WriteCodeSetup(setup: <redacted>)"
     }
 
     var debugDescription: String { description }
@@ -9403,6 +9969,7 @@ enum CredentialUsernameSource: Int, CaseIterable, Sendable {
     case none = 0
     case explicit = 1
     case hint = 2
+    case currentPassword = 3
 }
 
 enum EngineDownloadInterruption: Int, CaseIterable, Sendable {
@@ -10036,6 +10603,140 @@ struct AuthenticationMethod: Hashable, Sendable {
         init(name: String, promptsForCredentials: Bool) {
             self.name = name
             self.promptsForCredentials = promptsForCredentials
+        }
+    }
+}
+
+/// The members of the core's `AutofillFieldRole`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `accepts`, `refine`, `spell`, `capture`.
+struct AutofillFieldRole: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var kind: AutofillSectionKind { facts.kind }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, kind: AutofillSectionKind) {
+        self.tag = tag
+        facts = Facts(name: name, kind: kind)
+    }
+
+    static let fullName = AutofillFieldRole(tag: 0, name: "fullName", kind: AutofillSectionKind.address)
+    static let givenName = AutofillFieldRole(tag: 1, name: "givenName", kind: AutofillSectionKind.address)
+    static let additionalName = AutofillFieldRole(tag: 2, name: "additionalName", kind: AutofillSectionKind.address)
+    static let familyName = AutofillFieldRole(tag: 3, name: "familyName", kind: AutofillSectionKind.address)
+    static let organization = AutofillFieldRole(tag: 4, name: "organization", kind: AutofillSectionKind.address)
+    static let streetAddress = AutofillFieldRole(tag: 5, name: "streetAddress", kind: AutofillSectionKind.address)
+    static let addressLine1 = AutofillFieldRole(tag: 6, name: "addressLine1", kind: AutofillSectionKind.address)
+    static let addressLine2 = AutofillFieldRole(tag: 7, name: "addressLine2", kind: AutofillSectionKind.address)
+    static let addressLine3 = AutofillFieldRole(tag: 8, name: "addressLine3", kind: AutofillSectionKind.address)
+    static let houseNumber = AutofillFieldRole(tag: 9, name: "houseNumber", kind: AutofillSectionKind.address)
+    static let city = AutofillFieldRole(tag: 10, name: "city", kind: AutofillSectionKind.address)
+    static let region = AutofillFieldRole(tag: 11, name: "region", kind: AutofillSectionKind.address)
+    static let postalCode = AutofillFieldRole(tag: 12, name: "postalCode", kind: AutofillSectionKind.address)
+    static let country = AutofillFieldRole(tag: 13, name: "country", kind: AutofillSectionKind.address)
+    static let phone = AutofillFieldRole(tag: 14, name: "phone", kind: AutofillSectionKind.address)
+    static let email = AutofillFieldRole(tag: 15, name: "email", kind: AutofillSectionKind.address)
+    static let cardholderName = AutofillFieldRole(tag: 16, name: "cardholderName", kind: AutofillSectionKind.card)
+    static let cardholderGivenName = AutofillFieldRole(
+        tag: 17,
+        name: "cardholderGivenName",
+        kind: AutofillSectionKind.card
+    )
+    static let cardholderFamilyName = AutofillFieldRole(
+        tag: 18,
+        name: "cardholderFamilyName",
+        kind: AutofillSectionKind.card
+    )
+    static let cardNumber = AutofillFieldRole(tag: 19, name: "cardNumber", kind: AutofillSectionKind.card)
+    static let expiry = AutofillFieldRole(tag: 20, name: "expiry", kind: AutofillSectionKind.card)
+    static let expiryMonth = AutofillFieldRole(tag: 21, name: "expiryMonth", kind: AutofillSectionKind.card)
+    static let expiryYear = AutofillFieldRole(tag: 22, name: "expiryYear", kind: AutofillSectionKind.card)
+    static let securityCode = AutofillFieldRole(tag: 23, name: "securityCode", kind: AutofillSectionKind.card)
+
+    static let all: [AutofillFieldRole] = [
+        fullName,
+        givenName,
+        additionalName,
+        familyName,
+        organization,
+        streetAddress,
+        addressLine1,
+        addressLine2,
+        addressLine3,
+        houseNumber,
+        city,
+        region,
+        postalCode,
+        country,
+        phone,
+        email,
+        cardholderName,
+        cardholderGivenName,
+        cardholderFamilyName,
+        cardNumber,
+        expiry,
+        expiryMonth,
+        expiryYear,
+        securityCode
+    ]
+
+    static func named(_ name: String?) -> AutofillFieldRole? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: AutofillFieldRole, rhs: AutofillFieldRole) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let kind: AutofillSectionKind
+
+        init(name: String, kind: AutofillSectionKind) {
+            self.name = name
+            self.kind = kind
+        }
+    }
+}
+
+/// The members of the core's `AutofillSectionKind`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `isFillable`.
+struct AutofillSectionKind: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let address = AutofillSectionKind(tag: 0, name: "address")
+    static let card = AutofillSectionKind(tag: 1, name: "card")
+
+    static let all: [AutofillSectionKind] = [address, card]
+
+    static func named(_ name: String?) -> AutofillSectionKind? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: AutofillSectionKind, rhs: AutofillSectionKind) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
         }
     }
 }
@@ -11000,6 +11701,163 @@ struct BuiltInSearchProvider: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `CardNetwork`. A member's wire tag is its index in `all`.
+struct CardNetwork: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var displayName: LocalizedStringResource { facts.displayName }
+    var lengths: [Int] { facts.lengths }
+    var securityCodeLength: Int { facts.securityCodeLength }
+    var grouping: [Int] { facts.grouping }
+    private let facts: Facts
+
+    private init(
+        tag: Int,
+        name: String,
+        displayName: LocalizedStringResource,
+        lengths: [Int],
+        securityCodeLength: Int,
+        grouping: [Int]
+    ) {
+        self.tag = tag
+        facts = Facts(
+            name: name,
+            displayName: displayName,
+            lengths: lengths,
+            securityCodeLength: securityCodeLength,
+            grouping: grouping
+        )
+    }
+
+    static let visa = CardNetwork(
+        tag: 0,
+        name: "visa",
+        displayName: LocalizedStringResource("Visa", comment: "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."),
+        lengths: [13, 16, 19],
+        securityCodeLength: 3,
+        grouping: [4, 4, 4, 4]
+    )
+    static let mastercard = CardNetwork(
+        tag: 1,
+        name: "mastercard",
+        displayName: LocalizedStringResource("Mastercard", comment: "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."),
+        lengths: [16],
+        securityCodeLength: 3,
+        grouping: [4, 4, 4, 4]
+    )
+    static let americanExpress = CardNetwork(
+        tag: 2,
+        name: "americanExpress",
+        displayName: LocalizedStringResource("American Express", comment: "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."),
+        lengths: [15],
+        securityCodeLength: 4,
+        grouping: [4, 6, 5]
+    )
+    static let discover = CardNetwork(
+        tag: 3,
+        name: "discover",
+        displayName: LocalizedStringResource("Discover", comment: "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."),
+        lengths: [16, 17, 18, 19],
+        securityCodeLength: 3,
+        grouping: [4, 4, 4, 4]
+    )
+    static let dinersClub = CardNetwork(
+        tag: 4,
+        name: "dinersClub",
+        displayName: LocalizedStringResource("Diners Club", comment: "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."),
+        lengths: [14, 15, 16, 17, 18, 19],
+        securityCodeLength: 3,
+        grouping: [4, 6, 4]
+    )
+    static let jcb = CardNetwork(
+        tag: 5,
+        name: "jcb",
+        displayName: LocalizedStringResource("JCB", comment: "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."),
+        lengths: [16, 17, 18, 19],
+        securityCodeLength: 3,
+        grouping: [4, 4, 4, 4]
+    )
+    static let unionPay = CardNetwork(
+        tag: 6,
+        name: "unionPay",
+        displayName: LocalizedStringResource("UnionPay", comment: "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."),
+        lengths: [16, 17, 18, 19],
+        securityCodeLength: 3,
+        grouping: [4, 4, 4, 4]
+    )
+    static let maestro = CardNetwork(
+        tag: 7,
+        name: "maestro",
+        displayName: LocalizedStringResource("Maestro", comment: "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."),
+        lengths: [12, 13, 14, 15, 16, 17, 18, 19],
+        securityCodeLength: 3,
+        grouping: [4, 4, 4, 4]
+    )
+    static let mir = CardNetwork(
+        tag: 8,
+        name: "mir",
+        displayName: LocalizedStringResource("Mir", comment: "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."),
+        lengths: [16, 17, 18, 19],
+        securityCodeLength: 3,
+        grouping: [4, 4, 4, 4]
+    )
+    static let unknown = CardNetwork(
+        tag: 9,
+        name: "unknown",
+        displayName: LocalizedStringResource("Card", comment: "The name of a payment card network, shown beside a saved card. Keep brand names as they are; “Card” names a card of no known network."),
+        lengths: [12, 13, 14, 15, 16, 17, 18, 19],
+        securityCodeLength: 3,
+        grouping: [4, 4, 4, 4]
+    )
+
+    static let all: [CardNetwork] = [
+        visa,
+        mastercard,
+        americanExpress,
+        discover,
+        dinersClub,
+        jcb,
+        unionPay,
+        maestro,
+        mir,
+        unknown
+    ]
+
+    static func named(_ name: String?) -> CardNetwork? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CardNetwork, rhs: CardNetwork) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let displayName: LocalizedStringResource
+        let lengths: [Int]
+        let securityCodeLength: Int
+        let grouping: [Int]
+
+        init(
+            name: String,
+            displayName: LocalizedStringResource,
+            lengths: [Int],
+            securityCodeLength: Int,
+            grouping: [Int]
+        ) {
+            self.name = name
+            self.displayName = displayName
+            self.lengths = lengths
+            self.securityCodeLength = securityCodeLength
+            self.grouping = grouping
+        }
+    }
+}
+
 /// The members of the core's `CloudAccountState`. A member's wire tag is its index in `all`.
 struct CloudAccountState: Hashable, Sendable {
     let tag: Int
@@ -11501,6 +12359,87 @@ struct CloudZoneLoss: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `CodeSetupRefusal`. A member's wire tag is its index in `all`.
+struct CodeSetupRefusal: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var message: LocalizedStringResource { facts.message }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, message: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, message: message)
+    }
+
+    static let notASetup = CodeSetupRefusal(
+        tag: 0,
+        name: "notASetup",
+        message: LocalizedStringResource("This isn’t a setup key.")
+    )
+    static let counterBased = CodeSetupRefusal(
+        tag: 1,
+        name: "counterBased",
+        message: LocalizedStringResource("Crest doesn’t support counter-based codes.")
+    )
+    static let unsupportedAlgorithm = CodeSetupRefusal(
+        tag: 2,
+        name: "unsupportedAlgorithm",
+        message: LocalizedStringResource("Crest doesn’t support this setup key’s algorithm.")
+    )
+    static let secretTooShort = CodeSetupRefusal(
+        tag: 3,
+        name: "secretTooShort",
+        message: LocalizedStringResource("This setup key is too short.")
+    )
+    static let invalidSecret = CodeSetupRefusal(
+        tag: 4,
+        name: "invalidSecret",
+        message: LocalizedStringResource("This setup key isn’t valid.")
+    )
+    static let invalidDigits = CodeSetupRefusal(
+        tag: 5,
+        name: "invalidDigits",
+        message: LocalizedStringResource("Crest doesn’t support this code length.")
+    )
+    static let invalidPeriod = CodeSetupRefusal(
+        tag: 6,
+        name: "invalidPeriod",
+        message: LocalizedStringResource("Crest doesn’t support this code interval.")
+    )
+
+    static let all: [CodeSetupRefusal] = [
+        notASetup,
+        counterBased,
+        unsupportedAlgorithm,
+        secretTooShort,
+        invalidSecret,
+        invalidDigits,
+        invalidPeriod
+    ]
+
+    static func named(_ name: String?) -> CodeSetupRefusal? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CodeSetupRefusal, rhs: CodeSetupRefusal) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let message: LocalizedStringResource
+
+        init(name: String, message: LocalizedStringResource) {
+            self.name = name
+            self.message = message
+        }
+    }
+}
+
 /// The members of the core's `ContentBlockKind`. A member's wire tag is its index in `all`.
 struct ContentBlockKind: Hashable, Sendable {
     let tag: Int
@@ -11751,6 +12690,54 @@ struct CredentialCaptureEvent: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `CredentialFileColumn`. A member's wire tag is its index in `all`.
+struct CredentialFileColumn: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, title: title)
+    }
+
+    static let site = CredentialFileColumn(tag: 0, name: "site", title: LocalizedStringResource("Site"))
+    static let username = CredentialFileColumn(tag: 1, name: "username", title: LocalizedStringResource("Username"))
+    static let password = CredentialFileColumn(tag: 2, name: "password", title: LocalizedStringResource("Password"))
+    static let displayName = CredentialFileColumn(tag: 3, name: "displayName", title: LocalizedStringResource("Name"))
+    static let note = CredentialFileColumn(tag: 4, name: "note", title: LocalizedStringResource("Notes"))
+    static let oneTimeCode = CredentialFileColumn(
+        tag: 5,
+        name: "oneTimeCode",
+        title: LocalizedStringResource("One-time code")
+    )
+
+    static let all: [CredentialFileColumn] = [site, username, password, displayName, note, oneTimeCode]
+
+    static func named(_ name: String?) -> CredentialFileColumn? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: CredentialFileColumn, rhs: CredentialFileColumn) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource) {
+            self.name = name
+            self.title = title
+        }
+    }
+}
+
 /// The members of the core's `CredentialFileFlaw`. A member's wire tag is its index in `all`.
 struct CredentialFileFlaw: Hashable, Sendable {
     let tag: Int
@@ -11975,8 +12962,9 @@ struct CredentialImportEffect: Hashable, Sendable {
     static let adds = CredentialImportEffect(tag: 0, name: "adds", changesPasswords: true)
     static let replaces = CredentialImportEffect(tag: 1, name: "replaces", changesPasswords: true)
     static let matches = CredentialImportEffect(tag: 2, name: "matches", changesPasswords: false)
+    static let updatesDetails = CredentialImportEffect(tag: 3, name: "updatesDetails", changesPasswords: true)
 
-    static let all: [CredentialImportEffect] = [adds, replaces, matches]
+    static let all: [CredentialImportEffect] = [adds, replaces, matches, updatesDetails]
 
     static func named(_ name: String?) -> CredentialImportEffect? {
         all.first { $0.name == name }
@@ -12015,8 +13003,9 @@ struct CredentialRefusal: Hashable, Sendable {
     static let privateBrowsing = CredentialRefusal(tag: 0, name: "privateBrowsing")
     static let managerOff = CredentialRefusal(tag: 1, name: "managerOff")
     static let insecureOrigin = CredentialRefusal(tag: 2, name: "insecureOrigin")
+    static let neverSaved = CredentialRefusal(tag: 3, name: "neverSaved")
 
-    static let all: [CredentialRefusal] = [privateBrowsing, managerOff, insecureOrigin]
+    static let all: [CredentialRefusal] = [privateBrowsing, managerOff, insecureOrigin, neverSaved]
 
     static func named(_ name: String?) -> CredentialRefusal? {
         all.first { $0.name == name }
@@ -12086,31 +13075,88 @@ struct CredentialRowCaution: Hashable, Sendable {
 struct CredentialRowFlaw: Hashable, Sendable {
     let tag: Int
     var name: String { facts.name }
+    var column: CredentialFileColumn? { facts.column }
     var message: LocalizedStringResource { facts.message }
     private let facts: Facts
 
-    private init(tag: Int, name: String, message: LocalizedStringResource) {
+    private init(tag: Int, name: String, column: CredentialFileColumn?, message: LocalizedStringResource) {
         self.tag = tag
-        facts = Facts(name: name, message: message)
+        facts = Facts(name: name, column: column, message: message)
     }
 
     static let invalidOrigin = CredentialRowFlaw(
         tag: 0,
         name: "invalidOrigin",
+        column: CredentialFileColumn.site,
         message: LocalizedStringResource("The site is not a valid web address.")
     )
     static let emptyPassword = CredentialRowFlaw(
         tag: 1,
         name: "emptyPassword",
+        column: CredentialFileColumn.password,
         message: LocalizedStringResource("The password is empty.")
     )
     static let malformedRow = CredentialRowFlaw(
         tag: 2,
         name: "malformedRow",
+        column: nil,
         message: LocalizedStringResource("The row does not match the detected columns.")
     )
+    static let noSite = CredentialRowFlaw(
+        tag: 3,
+        name: "noSite",
+        column: CredentialFileColumn.site,
+        message: LocalizedStringResource("The site is empty.")
+    )
+    static let notWebAddress = CredentialRowFlaw(
+        tag: 4,
+        name: "notWebAddress",
+        column: CredentialFileColumn.site,
+        message: LocalizedStringResource("The site is not an http or https address.")
+    )
+    static let notIPv6Address = CredentialRowFlaw(
+        tag: 5,
+        name: "notIPv6Address",
+        column: CredentialFileColumn.site,
+        message: LocalizedStringResource("The site’s address in brackets is not an IPv6 address.")
+    )
+    static let zoneIdentifier = CredentialRowFlaw(
+        tag: 6,
+        name: "zoneIdentifier",
+        column: CredentialFileColumn.site,
+        message: LocalizedStringResource("The site’s IPv6 address names a network interface, which a web page’s address never does.")
+    )
+    static let notIPv4Address = CredentialRowFlaw(
+        tag: 7,
+        name: "notIPv4Address",
+        column: CredentialFileColumn.site,
+        message: LocalizedStringResource("The site’s IP address is not a valid IPv4 address.")
+    )
+    static let mixedDirectionName = CredentialRowFlaw(
+        tag: 8,
+        name: "mixedDirectionName",
+        column: CredentialFileColumn.site,
+        message: LocalizedStringResource("The site’s name mixes right-to-left and left-to-right text in a way web addresses don’t allow.")
+    )
+    static let invalidPort = CredentialRowFlaw(
+        tag: 9,
+        name: "invalidPort",
+        column: CredentialFileColumn.site,
+        message: LocalizedStringResource("The site’s port is not a number from 1 to 65535.")
+    )
 
-    static let all: [CredentialRowFlaw] = [invalidOrigin, emptyPassword, malformedRow]
+    static let all: [CredentialRowFlaw] = [
+        invalidOrigin,
+        emptyPassword,
+        malformedRow,
+        noSite,
+        notWebAddress,
+        notIPv6Address,
+        zoneIdentifier,
+        notIPv4Address,
+        mixedDirectionName,
+        invalidPort
+    ]
 
     static func named(_ name: String?) -> CredentialRowFlaw? {
         all.first { $0.name == name }
@@ -12126,10 +13172,12 @@ struct CredentialRowFlaw: Hashable, Sendable {
 
     private final class Facts: Sendable {
         let name: String
+        let column: CredentialFileColumn?
         let message: LocalizedStringResource
 
-        init(name: String, message: LocalizedStringResource) {
+        init(name: String, column: CredentialFileColumn?, message: LocalizedStringResource) {
             self.name = name
+            self.column = column
             self.message = message
         }
     }
@@ -12151,8 +13199,9 @@ struct CredentialUse: Hashable, Sendable {
     static let read = CredentialUse(tag: 0, name: "read", needsManager: false, refusedInPrivate: false)
     static let fill = CredentialUse(tag: 1, name: "fill", needsManager: true, refusedInPrivate: false)
     static let save = CredentialUse(tag: 2, name: "save", needsManager: true, refusedInPrivate: true)
+    static let offerSave = CredentialUse(tag: 3, name: "offerSave", needsManager: true, refusedInPrivate: true)
 
-    static let all: [CredentialUse] = [read, fill, save]
+    static let all: [CredentialUse] = [read, fill, save, offerSave]
 
     static func named(_ name: String?) -> CredentialUse? {
         all.first { $0.name == name }
@@ -16148,6 +17197,93 @@ struct FilterListGroup: Hashable, Sendable {
     }
 }
 
+/// The members of the core's `FormInputType`. A member's wire tag is its index in `all`.
+struct FormInputType: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let text = FormInputType(tag: 0, name: "text")
+    static let email = FormInputType(tag: 1, name: "email")
+    static let telephone = FormInputType(tag: 2, name: "tel")
+    static let password = FormInputType(tag: 3, name: "password")
+    static let hidden = FormInputType(tag: 4, name: "hidden")
+    static let other = FormInputType(tag: 5, name: "other")
+    static let number = FormInputType(tag: 6, name: "number")
+    static let select = FormInputType(tag: 7, name: "select")
+    static let textArea = FormInputType(tag: 8, name: "textarea")
+    static let month = FormInputType(tag: 9, name: "month")
+
+    static let all: [FormInputType] = [text, email, telephone, password, hidden, other, number, select, textArea, month]
+
+    static func named(_ name: String?) -> FormInputType? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: FormInputType, rhs: FormInputType) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
+}
+
+/// The members of the core's `FormPurpose`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `keptPassword`.
+struct FormPurpose: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let none = FormPurpose(tag: 0, name: "none")
+    static let usernameStep = FormPurpose(tag: 1, name: "usernameStep")
+    static let possibleUsernameStep = FormPurpose(tag: 2, name: "possibleUsernameStep")
+    static let signIn = FormPurpose(tag: 3, name: "signIn")
+    static let signUp = FormPurpose(tag: 4, name: "signUp")
+    static let changePassword = FormPurpose(tag: 5, name: "changePassword")
+
+    static let all: [FormPurpose] = [none, usernameStep, possibleUsernameStep, signIn, signUp, changePassword]
+
+    static func named(_ name: String?) -> FormPurpose? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: FormPurpose, rhs: FormPurpose) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
+}
+
 /// The members of the core's `HostedNotificationRequestAction`. A member's wire tag is its index in `all`.
 struct HostedNotificationRequestAction: Hashable, Sendable {
     enum Kinds: Sendable {
@@ -17522,6 +18658,82 @@ struct NumberedSelectionTarget: Hashable, Sendable {
 
         init(kind: Kinds, name: String) {
             self.kind = kind
+            self.name = name
+        }
+    }
+}
+
+/// The members of the core's `OneTimeCodeAlgorithm`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `sign`.
+struct OneTimeCodeAlgorithm: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let sha1 = OneTimeCodeAlgorithm(tag: 0, name: "SHA1")
+    static let sha256 = OneTimeCodeAlgorithm(tag: 1, name: "SHA256")
+    static let sha512 = OneTimeCodeAlgorithm(tag: 2, name: "SHA512")
+
+    static let all: [OneTimeCodeAlgorithm] = [sha1, sha256, sha512]
+
+    static func named(_ name: String?) -> OneTimeCodeAlgorithm? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: OneTimeCodeAlgorithm, rhs: OneTimeCodeAlgorithm) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
+        }
+    }
+}
+
+/// The members of the core's `OneTimeCodeStyle`. A member's wire tag is its index in `all`.
+struct OneTimeCodeStyle: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let numeric = OneTimeCodeStyle(tag: 0, name: "numeric")
+    static let steam = OneTimeCodeStyle(tag: 1, name: "steam")
+
+    static let all: [OneTimeCodeStyle] = [numeric, steam]
+
+    static func named(_ name: String?) -> OneTimeCodeStyle? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: OneTimeCodeStyle, rhs: OneTimeCodeStyle) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
             self.name = name
         }
     }
@@ -19083,6 +20295,103 @@ struct PasskeyDeviceConfiguration: Hashable, Sendable {
         init(name: String, rulesOutPasskeys: Bool) {
             self.name = name
             self.rulesOutPasskeys = rulesOutPasskeys
+        }
+    }
+}
+
+/// The members of the core's `PasswordConcern`. A member's wire tag is its index in `all`.
+/// Core-only behavior, not emitted: `applies`.
+struct PasswordConcern: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var title: LocalizedStringResource { facts.title }
+    var message: LocalizedStringResource { facts.message }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, title: LocalizedStringResource, message: LocalizedStringResource) {
+        self.tag = tag
+        facts = Facts(name: name, title: title, message: message)
+    }
+
+    static let reused = PasswordConcern(
+        tag: 0,
+        name: "reused",
+        title: LocalizedStringResource("Reused"),
+        message: LocalizedStringResource("This password is also used for other accounts.")
+    )
+    static let weak = PasswordConcern(
+        tag: 1,
+        name: "weak",
+        title: LocalizedStringResource("Weak"),
+        message: LocalizedStringResource("This password is easy to guess.")
+    )
+    static let insecureSite = PasswordConcern(
+        tag: 2,
+        name: "insecureSite",
+        title: LocalizedStringResource("No HTTPS"),
+        message: LocalizedStringResource("This website doesn’t use an encrypted connection.")
+    )
+
+    static let all: [PasswordConcern] = [reused, weak, insecureSite]
+
+    static func named(_ name: String?) -> PasswordConcern? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PasswordConcern, rhs: PasswordConcern) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let title: LocalizedStringResource
+        let message: LocalizedStringResource
+
+        init(name: String, title: LocalizedStringResource, message: LocalizedStringResource) {
+            self.name = name
+            self.title = title
+            self.message = message
+        }
+    }
+}
+
+/// The members of the core's `PasswordStyle`. A member's wire tag is its index in `all`.
+struct PasswordStyle: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let grouped = PasswordStyle(tag: 0, name: "grouped")
+    static let random = PasswordStyle(tag: 1, name: "random")
+
+    static let all: [PasswordStyle] = [grouped, random]
+
+    static func named(_ name: String?) -> PasswordStyle? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: PasswordStyle, rhs: PasswordStyle) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
         }
     }
 }
@@ -27392,6 +28701,45 @@ struct StorageFailure: Hashable, Sendable {
         init(name: String, message: LocalizedStringResource) {
             self.name = name
             self.message = message
+        }
+    }
+}
+
+/// The members of the core's `SubmitTrigger`. A member's wire tag is its index in `all`.
+struct SubmitTrigger: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    private let facts: Facts
+
+    private init(tag: Int, name: String) {
+        self.tag = tag
+        facts = Facts(name: name)
+    }
+
+    static let formSubmit = SubmitTrigger(tag: 0, name: "submit")
+    static let returnKey = SubmitTrigger(tag: 1, name: "return")
+    static let submitControl = SubmitTrigger(tag: 2, name: "submitControl")
+    static let button = SubmitTrigger(tag: 3, name: "button")
+
+    static let all: [SubmitTrigger] = [formSubmit, returnKey, submitControl, button]
+
+    static func named(_ name: String?) -> SubmitTrigger? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: SubmitTrigger, rhs: SubmitTrigger) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+
+        init(name: String) {
+            self.name = name
         }
     }
 }

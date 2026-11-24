@@ -21,6 +21,8 @@ struct BrowserWebPageSurface: View {
     var goToSharingCounterpart: (() -> Void)? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.browserMacWindows) private var windows
+    @Environment(\.browserPagePresentationWindowID) private var windowID
 
     /// The agent using the page's tab now, when one does.
     private var agent: AgentSessionState? {
@@ -107,7 +109,8 @@ struct BrowserWebPageSurface: View {
             BrowserCredentialChrome(
                 presentation: BrowserCredentialChromePresentation.resolve(
                     saveCandidate: page.credentialSaveCandidate,
-                    fillRequest: page.credentialFillRequest
+                    fillRequest: page.credentialFillRequest,
+                    autofillSaveCandidate: page.autofillSaveCandidate
                 ),
                 fillPort: credentialFillPort,
                 savePort: credentialSavePort,
@@ -137,6 +140,16 @@ struct BrowserWebPageSurface: View {
             }
         }
         .animation(reduceMotion ? nil : CrestMotion.step, value: page.elementPicker.isActive)
+        .onChange(of: page.live.documentURL) {
+            // The engine's own passwords and autofill pages belong to Crest's
+            // Settings › Autofill, which opens instead; the page steps away.
+            guard page.showsEngineAutofillPage, let openPasswordSettings else { return }
+            let leaving = page.leaveEngineAutofillPage { [browser, page] in
+                guard let tabID = page.navigationContext?.tabID else { return }
+                browser.closeTab(tabID, in: page.spaceID)
+            }
+            if leaving { openPasswordSettings() }
+        }
     }
 
     /// The questions the find bar asks, bound to this surface's page.
@@ -154,7 +167,15 @@ struct BrowserWebPageSurface: View {
     /// pixels. The chrome is a sibling of the web view inside one box, so the
     /// zoom is the only thing between the two.
     private var credentialFillPort: BrowserCredentialFillPort {
-        BrowserCredentialFillPort(page: page, contentScale: page.renderedPageZoom)
+        BrowserCredentialFillPort(
+            page: page, contentScale: page.renderedPageZoom, openPasswords: openPasswordSettings)
+    }
+
+    /// Opens Settings at the passwords of the page's Space, in this window.
+    private var openPasswordSettings: (() -> Void)? {
+        guard let windows, let windowID, let space = browser.spaceModel(page.spaceID) else { return nil }
+        let assignment = BrowserSpaceRuntimeAssignment(space: space)
+        return { windows.openSettings(.passwords, for: assignment, in: windowID) }
     }
 
     /// What the save prompt asks of this surface's page. This shell makes no

@@ -4,10 +4,11 @@ namespace CrestCore.Contracts;
 /// spells, each distinct password its rows offer, how many rows only repeat
 /// one of them, the saved password it would change, if any, and the row the
 /// import proposes, or null to keep the saved password. A group offers each
-/// distinct password once, in row order, and a password the Space keeps for
-/// the account, its most recent web form password, is the one the group would
-/// change. A group the Space keeps a password for proposes keeping it; any
-/// other proposes its first row.
+/// distinct password once, in row order, with the note and link of the first
+/// row that brings it, and a password the Space keeps for the account, its
+/// most recent web form password, is the one the group would change. A group
+/// the Space keeps a password for proposes keeping it, or the row that only
+/// brings it a note or one-time code link; any other proposes its first row.
 [HoldsSecrets]
 public sealed record CredentialImportGroup(CredentialOrigin Origin, string Username, IReadOnlyList<CredentialImportCandidate> Candidates,
     int CollapsedDuplicateRowCount, Guid? ExistingId, int? SuggestedRow) {
@@ -17,7 +18,7 @@ public sealed record CredentialImportGroup(CredentialOrigin Origin, string Usern
     /// one that differs from the saved password.
     [Resolved]
     public bool RequiresChoice => Candidates.Count > 1
-        || ExistingId is not null && !(Candidates.Count == 1 && Candidates[0].Effect == CredentialImportEffect.Matches);
+        || ExistingId is not null && !(Candidates.Count == 1 && Candidates[0].Effect.KeepsSavedPassword);
 
     #endregion
 
@@ -29,12 +30,12 @@ public sealed record CredentialImportGroup(CredentialOrigin Origin, string Usern
         var candidates = new List<CredentialImportCandidate>();
         foreach (var row in rows) {
             if (candidates.Any(candidate => candidate.Password == row.Password)) continue;
-            var effect = existing is null ? CredentialImportEffect.Adds
-                : existing.Password == row.Password ? CredentialImportEffect.Matches : CredentialImportEffect.Replaces;
-            candidates.Add(new(row.RowNumber, row.Username, row.DisplayName, row.Password, effect));
+            candidates.Add(new(row.RowNumber, row.Username, row.DisplayName, row.Password, row.Note, row.OneTimeCodeLink,
+                CredentialImportEffect.Of(row, existing)));
         }
-        return new(rows[0].Origin, rows[0].Username, candidates, rows.Count - candidates.Count, existing?.Id,
-            existing is null ? candidates[0].RowNumber : null);
+        int? suggested = existing is null ? candidates[0].RowNumber
+            : candidates.FirstOrDefault(candidate => candidate.Effect is { KeepsSavedPassword: true, ChangesPasswords: true })?.RowNumber;
+        return new(rows[0].Origin, rows[0].Username, candidates, rows.Count - candidates.Count, existing?.Id, suggested);
     }
 
     #endregion

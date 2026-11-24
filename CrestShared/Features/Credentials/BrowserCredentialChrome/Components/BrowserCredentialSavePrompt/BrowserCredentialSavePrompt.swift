@@ -29,13 +29,26 @@ struct BrowserCredentialSavePrompt: View {
                 space: space,
                 namesSystemPasswordsDestination: namesSystemPasswordsDestination,
                 metrics: metrics,
-                dismiss: port.dismiss,
+                dismiss: answerDismiss,
+                neverSave: neverSave,
                 perform: perform
             )
         }
         .task(id: candidate.id) {
             await prepare()
         }
+    }
+
+    /// Not Now keeps the candidate for the address field's key; Done after a
+    /// save puts it away.
+    private func answerDismiss() {
+        if route.dismissAction.holdsCandidate { port.decline() } else { port.dismiss() }
+    }
+
+    /// Never for This Site: the Space stops offering to save for the site.
+    private func neverSave() {
+        browser.neverSaveCredentials(for: candidate.origin, in: port.spaceID)
+        port.dismiss()
     }
 
     private var space: BrowserSpaceIdentity? {

@@ -403,6 +403,10 @@
     "before": "d1fc130bfd4b46bb4975fccb4aa1bd82cb7990f94858e2012984c9d129332ffb",
     "after": "eb328bf02cf0ca770770c9e5c1faa8475b7ab563d91885f1de8a7e1b4cb5e039"
   },
+  "chrome/browser/password_manager/chrome_password_manager_client.cc": {
+    "before": "362984dc8a2c504c75ab7f6d4810d67bd459f2f4b232fdf2158d5da9fdde364b",
+    "after": "a50cbb7f660472462ba0c7da20db8de88f17e8b7b08055ff16ff97d01d104d8f"
+  },
   "services/network/BUILD.gn": {
     "before": "1e38a27be4dc0ddd09617493b68d2a6d31f8073a5e73e014739d60eed56561e9",
     "after": "e4066df86c009ff175a046782988bb415dfac0f5f15fc0841750f782d88ec2ce"

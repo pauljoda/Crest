@@ -8,9 +8,13 @@
 #include "base/strings/string_split.h"
 #include "base/strings/utf_string_conversions.h"
 #include "chrome/browser/ui/crest/crest_chrome_hooks.h"
+#include "content/public/browser/host_zoom_map.h"
 #include "content/public/browser/render_frame_host.h"
+#include "content/public/browser/render_widget_host_view.h"
 #include "content/public/browser/web_contents.h"
 #include "mojo/public/cpp/bindings/callback_helpers.h"
+#include "third_party/blink/public/common/page/page_zoom.h"
+#include "ui/gfx/geometry/point_f.h"
 #include "url/origin.h"
 
 namespace crest {
@@ -124,11 +128,25 @@ void PageContent::Deliver(content::GlobalRenderFrameHostId id, const std::string
     return;
   }
   const url::Origin origin = frame->GetLastCommittedOrigin();
-  const engine::ContentFrame source{.id = FrameIdentity(frame, document),
-                                    .is_main_frame = frame->IsInPrimaryMainFrame(),
-                                    .protocol = origin.scheme(),
-                                    .host = origin.host(),
-                                    .port = origin.port()};
+  engine::ContentFrame source{.id = FrameIdentity(frame, document),
+                              .is_main_frame = frame->IsInPrimaryMainFrame(),
+                              .protocol = origin.scheme(),
+                              .host = origin.host(),
+                              .port = origin.port()};
+  // A frame drawn in a view of its own, as one from another site is, can't
+  // see where it sits in the page; its view's corner in the main frame's,
+  // in the main frame's CSS pixels, lets Crest point at its fields.
+  content::RenderWidgetHostView* view = frame->GetView();
+  content::RenderWidgetHostView* main_view = contents_->GetPrimaryMainFrame()->GetView();
+  if (!source.is_main_frame && view && main_view && view != main_view) {
+    const gfx::PointF corner = view->TransformPointToRootCoordSpaceF(gfx::PointF());
+    const double zoom = blink::ZoomLevelToZoomFactor(content::HostZoomMap::GetZoomLevel(contents_));
+    if (zoom > 0) {
+      source.has_viewport_offset = true;
+      source.viewport_offset_x = corner.x() / zoom;
+      source.viewport_offset_y = corner.y() / zoom;
+    }
+  }
   for (const auto& message : *messages) {
     if (!message.is_dict()) {
       continue;

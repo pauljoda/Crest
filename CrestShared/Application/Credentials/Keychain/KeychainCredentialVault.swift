@@ -6,12 +6,14 @@ import Foundation
 /// reports what was left out, and only `deleteUnreadableCredentials(in:)`
 /// removes it. Writes take turns: the actor answers other calls while a write
 /// waits on the Keychain, and a write never reads or restores over what
-/// another is halfway through changing.
+/// another is halfway through changing. What a login keeps beside its
+/// password, its notes and code key, lives in a companion item under the
+/// login's own account in the Space's extras service, which goes with it.
 actor KeychainCredentialVault: CredentialVault {
     // MARK: - Variables
 
     private let store: any CredentialKeychainStoring
-    private let servicePrefix: String
+    nonisolated let servicePrefix: String
     private let codec = CredentialKeychainCodec()
     /// Whether passwords saved for each origin fill a page at the first, in
     /// order, which the core answers in production.
@@ -70,9 +72,18 @@ actor KeychainCredentialVault: CredentialVault {
     func inventory(in spaceID: UUID) async throws -> CredentialInventory {
         let items = try await store.descriptorItems(in: service(for: spaceID))
         let descriptors = items.compactMap { try? codec.descriptor(from: $0, expectedSpaceID: spaceID) }
+        let readable = Set(descriptors.map(\.id))
+        var extras: [UUID: BrowserCredentialExtrasSummary] = [:]
+        let companions = try await store.descriptorItems(in: extrasService(for: spaceID))
+        for item in companions {
+            guard let owned = codec.extrasSummary(from: item), readable.contains(owned.ownerID) else { continue }
+            extras[owned.ownerID] = owned.summary
+        }
+        try await tendCompanions(companions, logins: items, in: spaceID)
         return CredentialInventory(
             descriptors: descriptors.sorted(by: Self.descriptorOrder),
-            unreadableCount: items.count - descriptors.count)
+            unreadableCount: items.count - descriptors.count,
+            extras: extras)
     }
 
     func credential(
@@ -143,6 +154,10 @@ actor KeychainCredentialVault: CredentialVault {
                     try await store.delete(account: item.account, in: service)
                     removed.append(item)
                 }
+                // A login that went takes its notes and code with it.
+                for item in removed {
+                    try? await removeCompanion(of: item.account, in: spaceID)
+                }
             } catch {
                 do {
                     for item in written.reversed() {
@@ -170,7 +185,9 @@ actor KeychainCredentialVault: CredentialVault {
         let service = service(for: spaceID)
         try await writing {
             let originalItems = try await store.items(in: service)
+            let extrasService = extrasService(for: spaceID)
             var migratedOriginalItems: [CredentialKeychainItem] = []
+            var migratedOriginalCompanions: [CredentialKeychainItem] = []
 
             do {
                 for item in originalItems
@@ -183,11 +200,21 @@ actor KeychainCredentialVault: CredentialVault {
                     try await store.upsert(migratedItem, in: service)
                     migratedOriginalItems.append(item)
                 }
+                // A login's notes and code follow it into or out of iCloud.
+                for item in try await store.items(in: extrasService)
+                where item.isSynchronizable != isSynchronizable && isCompanion(item) {
+                    try await store.upsert(
+                        codec.migratedExtrasItem(from: item, isSynchronizable: isSynchronizable), in: extrasService)
+                    migratedOriginalCompanions.append(item)
+                }
             } catch {
-                // Each item changes in place, so one that stays moved is still
-                // whole, and the next change moves the rest.
+                // What moved goes back, logins and companions alike, so the
+                // Space keeps the iCloud choice it had and a retry moves all.
                 for originalItem in migratedOriginalItems.reversed() {
                     try? await store.upsert(originalItem, in: service)
+                }
+                for originalCompanion in migratedOriginalCompanions.reversed() {
+                    try? await store.upsert(originalCompanion, in: extrasService)
                 }
                 throw error
             }
@@ -195,17 +222,17 @@ actor KeychainCredentialVault: CredentialVault {
     }
 
     func delete(id: UUID, in spaceID: UUID) async throws {
+        let account = codec.account(for: id)
         try await writing {
-            try await store.delete(
-                account: id.uuidString.lowercased(),
-                in: service(for: spaceID)
-            )
+            try await store.delete(account: account, in: service(for: spaceID))
+            try await removeCompanion(of: account, in: spaceID)
         }
     }
 
     func deleteAll(in spaceID: UUID) async throws {
         try await writing {
             try await store.deleteAll(in: service(for: spaceID))
+            try await store.deleteAll(in: extrasService(for: spaceID))
         }
     }
 
@@ -214,8 +241,114 @@ actor KeychainCredentialVault: CredentialVault {
         try await writing {
             for item in try await store.descriptorItems(in: service) where !reads(item, in: spaceID) {
                 try await store.delete(account: item.account, in: service)
+                try await removeCompanion(of: item.account, in: spaceID)
             }
         }
+    }
+
+    // MARK: - Actions - Extras
+
+    func extras(id: UUID, in spaceID: UUID) async throws -> BrowserCredentialExtras? {
+        guard let item = try await store.item(account: codec.account(for: id), in: extrasService(for: spaceID)) else {
+            return nil
+        }
+        guard let extras = codec.extras(from: item, expectedID: id) else {
+            throw CredentialVaultError.malformedStoredCredential
+        }
+        return extras
+    }
+
+    func saveExtras(_ extras: BrowserCredentialExtras, for descriptor: CredentialDescriptor, in spaceID: UUID)
+        async throws
+    {
+        guard descriptor.spaceID == spaceID else {
+            throw CredentialVaultError.spaceMismatch(expected: spaceID, actual: descriptor.spaceID)
+        }
+        let item = extras.isEmpty ? nil : try codec.extrasItem(for: extras, of: descriptor)
+        try await writing {
+            // Extras belong to a saved login; the login is read again here so a
+            // deletion that just finished never leaves an orphan behind.
+            guard
+                let login = try await store.item(account: codec.account(for: descriptor.id), in: service(for: spaceID)),
+                (try? codec.descriptor(from: login, expectedSpaceID: spaceID)) != nil
+            else {
+                throw CredentialVaultError.missingCredential
+            }
+            if let item {
+                try await store.upsert(
+                    CredentialKeychainItem(
+                        account: item.account, metadata: item.metadata, secret: item.secret,
+                        isSynchronizable: login.isSynchronizable),
+                    in: extrasService(for: spaceID))
+            } else {
+                try await store.delete(account: codec.account(for: descriptor.id), in: extrasService(for: spaceID))
+            }
+        }
+    }
+
+    /// Removes the companion item of the login `account`, where it has one.
+    private func removeCompanion(of account: String, in spaceID: UUID) async throws {
+        let extrasService = extrasService(for: spaceID)
+        guard let item = try await store.item(account: account, in: extrasService), isCompanion(item) else { return }
+        try await store.delete(account: account, in: extrasService)
+    }
+
+    /// Whether `item` is a companion this build reads, rather than anything
+    /// else stored under the same account.
+    private func isCompanion(_ item: CredentialKeychainItem) -> Bool {
+        codec.extrasSummary(
+            from: CredentialKeychainDescriptorItem(
+                account: item.account, metadata: item.metadata, isSynchronizable: item.isSynchronizable)) != nil
+    }
+
+    /// Keeps each companion with its login. One whose login keeps the other
+    /// iCloud choice follows it, as when an older build moved the logins
+    /// alone. A local one whose login is gone, as when an older build deleted
+    /// the login, goes. One in iCloud stays even without its login: iCloud
+    /// may bring the login after it, as it does to a device being restored,
+    /// and removing it would remove it everywhere. Logins in either iCloud
+    /// state count, since every read covers both.
+    private func tendCompanions(
+        _ companions: [CredentialKeychainDescriptorItem],
+        logins: [CredentialKeychainDescriptorItem],
+        in spaceID: UUID
+    ) async throws {
+        let owned = companions.filter { codec.extrasSummary(from: $0) != nil }
+        let syncedAccounts = Set(owned.filter(\.isSynchronizable).map(\.account))
+        let loginSync = Self.synchronization(of: logins)
+        let strays = owned.filter {
+            loginSync[$0.account] == nil && !$0.isSynchronizable && !syncedAccounts.contains($0.account)
+        }
+        let misaligned = owned.filter { companion in
+            loginSync[companion.account].map { $0 != companion.isSynchronizable } ?? false
+        }
+        guard !strays.isEmpty || !misaligned.isEmpty else { return }
+        let extrasService = extrasService(for: spaceID)
+        try await writing {
+            // Read again in the write's turn: a login written meanwhile keeps
+            // its companion and sets its iCloud choice.
+            let current = Self.synchronization(of: try await store.descriptorItems(in: service(for: spaceID)))
+            // A companion moved into iCloud since the inventory read it is
+            // kept like any other in iCloud, so only one still local alone goes.
+            let companionsNow = Self.synchronization(
+                of: try await store.descriptorItems(in: extrasService).filter { codec.extrasSummary(from: $0) != nil })
+            for stray in strays where current[stray.account] == nil && companionsNow[stray.account] == false {
+                try await store.delete(account: stray.account, in: extrasService)
+            }
+            for companion in misaligned {
+                guard let wanted = current[companion.account], wanted != companion.isSynchronizable,
+                    let item = try await store.item(account: companion.account, in: extrasService), isCompanion(item)
+                else { continue }
+                try await store.upsert(
+                    codec.migratedExtrasItem(from: item, isSynchronizable: wanted), in: extrasService)
+            }
+        }
+    }
+
+    /// Each stored login's iCloud choice by account; a login kept in both
+    /// states counts as in iCloud.
+    private static func synchronization(of logins: [CredentialKeychainDescriptorItem]) -> [String: Bool] {
+        Dictionary(logins.map { ($0.account, $0.isSynchronizable) }, uniquingKeysWith: { $0 || $1 })
     }
 
     // MARK: - Actions - Turns
@@ -252,16 +385,19 @@ actor KeychainCredentialVault: CredentialVault {
         _ origin: CredentialOrigin,
         from descriptors: [CredentialDescriptor]
     ) throws -> [CredentialDescriptor] {
-        let others = descriptors.filter { $0.origin != origin }
+        // Each site a login names is asked about, the one it was saved for and
+        // the ones the person added.
+        let others = descriptors.filter { !$0.origins.contains(origin) }
+            .flatMap { descriptor in descriptor.origins.map { (descriptor.id, $0) } }
         let othersFill: [Bool]
         do {
-            othersFill = try fills(origin, others.map(\.origin))
+            othersFill = try fills(origin, others.map(\.1))
         } catch Rejection.invalidCredentialOrigin {
             // No page has such an origin, but if one did, its own passwords still fill it.
             othersFill = []
         }
-        let filling = Set(zip(others, othersFill).filter(\.1).map(\.0.id))
-        return descriptors.filter { $0.origin == origin || filling.contains($0.id) }
+        let filling = Set(zip(others, othersFill).filter(\.1).map(\.0.0))
+        return descriptors.filter { $0.origins.contains(origin) || filling.contains($0.id) }
     }
 
     private func reads(_ item: CredentialKeychainDescriptorItem, in spaceID: UUID) -> Bool {
@@ -274,6 +410,10 @@ actor KeychainCredentialVault: CredentialVault {
 
     private func service(for spaceID: UUID) -> String {
         CredentialKeychainNamespace.service(for: spaceID, prefix: servicePrefix)
+    }
+
+    private func extrasService(for spaceID: UUID) -> String {
+        CredentialKeychainNamespace.extrasService(for: spaceID, prefix: servicePrefix)
     }
 
     private static func descriptorOrder(

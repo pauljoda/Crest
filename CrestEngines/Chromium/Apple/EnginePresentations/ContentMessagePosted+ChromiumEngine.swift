@@ -12,7 +12,9 @@
                     handlerName: handler, body: value,
                     frame: BrowserContentFrame(
                         isMainFrame: frame.isMainFrame, securityProtocol: frame.protocol, host: frame.host,
-                        port: Int(frame.port), handle: frame.id as NSString)))
+                        port: Int(frame.port), handle: frame.id as NSString,
+                        viewportOffset: frame.hasViewportOffset ? (frame.viewportOffsetX, frame.viewportOffsetY) : nil))
+            )
         }
     }
 #endif

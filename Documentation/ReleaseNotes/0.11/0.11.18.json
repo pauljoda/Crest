@@ -1,0 +1,85 @@
+{
+  "entries": [
+    {
+      "id": "username-fields-offer-saved-logins",
+      "category": "new",
+      "message": "Username and email fields offer the site's saved logins. On a page that asks for the username first, choosing one fills just the username, and the password step lists that login first."
+    },
+    {
+      "id": "save-prompt-only-for-typed-passwords",
+      "category": "fixed",
+      "message": "Crest asks to save a password only when you typed it or chose one Crest made, and sent the form, never for a password a page or extension filled in, or after pressing a button such as Show Password."
+    },
+    {
+      "id": "update-prompt-after-password-change",
+      "category": "fixed",
+      "message": "Changing your password on a site offers to update the saved login, even when the form doesn't show your username."
+    },
+    {
+      "id": "strong-passwords-follow-site-rules",
+      "category": "improved",
+      "message": "Strong passwords follow the site's rules for length and characters, and wherever the site allows, they're three easy-to-type groups such as kvqhet-Mzawp7-rbnoxc."
+    },
+    {
+      "id": "passwords-on-localhost",
+      "category": "improved",
+      "message": "Passwords save and fill on sites served from your own device, such as localhost."
+    },
+    {
+      "id": "fill-popup-under-the-field",
+      "category": "improved",
+      "message": "On Mac and iPad, clicking a username, email or password field opens a popup under it with the site's logins, or says none are saved. Choose one with the arrow keys and Return, or open your passwords in Settings from the popup."
+    },
+    {
+      "id": "strong-password-preview-and-rules",
+      "category": "improved",
+      "message": "Use Strong Password shows the password it will fill and the site's rules for it, draws another with one click, and offers a random password with symbols where the site allows it."
+    },
+    {
+      "id": "save-prompts-with-notices",
+      "category": "improved",
+      "message": "Offers to save a password, address or card appear in the top right, where notices do. Not Now leaves a key in the address field so you can still save, and Never for This Site stops asking on that site."
+    },
+    {
+      "id": "iphone-autofill-strip",
+      "category": "new",
+      "message": "On iPhone, Crest's strip above the keyboard offers the site's logins, one-time codes, your addresses and cards, or a strong password for a new account, beside the previous, next and Done buttons.",
+      "platforms": ["ios"]
+    },
+    {
+      "id": "suggestions-in-same-site-frames",
+      "category": "fixed",
+      "message": "Suggestions point at sign-in fields inside a frame from the same site, and follow the page as it scrolls."
+    },
+    {
+      "id": "autofill-settings",
+      "category": "new",
+      "message": "Settings › Passwords is now Autofill, with each Space's passwords and your addresses and payment cards. A password opens in an editor for its title, username, password, websites and notes, and the list searches, sorts, and moves, exports or deletes what you select."
+    },
+    {
+      "id": "password-health",
+      "category": "new",
+      "message": "Autofill marks reused, weak and plain-HTTP passwords, with a filter for each, and opens the site's own page for changing a password."
+    },
+    {
+      "id": "password-files-carry-notes-and-codes",
+      "category": "improved",
+      "message": "Password files carry notes and one-time code links when you import or export them, and an import says which column made a row fail."
+    },
+    {
+      "id": "ip-address-logins-fill-again",
+      "category": "fixed",
+      "message": "Logins saved for an IP address written another way, such as 127.1, fill again."
+    },
+    {
+      "id": "one-time-codes",
+      "category": "new",
+      "message": "Passwords can make one-time codes. Set one up from the site's QR code, a pasted key or link, an image, or the iPhone camera, and Crest offers the live code in the code field, across split fields too."
+    },
+    {
+      "id": "addresses-and-cards",
+      "category": "new",
+      "message": "Crest fills addresses and payment cards into whole forms, menus included, and offers to save new ones you send. They're shared by every Space, and a card fills only after Touch ID or your device password."
+    }
+  ]
+}

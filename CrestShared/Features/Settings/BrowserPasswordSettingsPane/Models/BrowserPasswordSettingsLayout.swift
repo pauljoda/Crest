@@ -10,18 +10,9 @@ struct BrowserPasswordSettingsLayout: Equatable {
     /// with a platform check inside the pane.
     let exportDestinationName: String
 
+    /// Settings › Autofill on the desktop: the Space's preferences, with its
+    /// iCloud Keychain switch, beside its list.
     static let macOSPage = BrowserPasswordSettingsLayout(
-        showsCredentialPreferences: false,
-        showsSavedPasswords: true,
-        showsExportAction: true,
-        showsManageAction: false,
-        supportsCredentialFileImport: true,
-        exportDestinationName: "save panel"
-    )
-
-    /// One Space's Passwords page in desktop Settings, with its iCloud
-    /// Keychain switch beside the list.
-    static let macOSSpacePage = BrowserPasswordSettingsLayout(
         showsCredentialPreferences: true,
         showsSavedPasswords: true,
         showsExportAction: true,

@@ -185,6 +185,83 @@ final class KeychainCredentialVaultTests: XCTestCase {
         XCTAssertEqual(String(data: remainingItems[0].secret, encoding: .utf8), "changed")
     }
 
+    /// What a login keeps beside its password lives in a companion item: the
+    /// login's own item stays as older builds read it, the list says whether
+    /// it keeps notes and a code, and the companion goes with its login, even
+    /// a local one whose login an older build deleted.
+    func testNotesAndCodesLiveBesideTheLoginAndGoWithIt() async throws {
+        let spaceID = UUID()
+        let store = InMemoryCredentialKeychainStore()
+        let vault = KeychainCredentialVault(store: store, servicePrefix: "test.crest")
+        let login = descriptor(id: UUID(), spaceID: spaceID, username: "person")
+        let other = descriptor(id: UUID(), spaceID: spaceID, username: "other")
+        let extras = BrowserCredentialExtras(
+            notes: "In the safe.", codeLink: "otpauth://totp/Example?secret=JBSWY3DPEHPK3PXP")
+        for saved in [login, other] {
+            try await vault.save(BrowserCredential(descriptor: saved, password: "secret"), in: spaceID)
+            try await vault.saveExtras(extras, for: saved, in: spaceID)
+        }
+        let service = CredentialKeychainNamespace.service(for: spaceID, prefix: "test.crest")
+        let extrasService = CredentialKeychainNamespace.extrasService(for: spaceID, prefix: "test.crest")
+
+        let inventory = try await vault.inventory(in: spaceID)
+        XCTAssertEqual(inventory.extras[login.id], BrowserCredentialExtrasSummary(hasNotes: true, hasCode: true))
+        let loginItem = try await store.item(account: login.id.uuidString.lowercased(), in: service)
+        XCTAssertEqual(loginItem.map { String(decoding: $0.secret, as: UTF8.self) }, "secret")
+        let read = try await vault.extras(id: login.id, in: spaceID)
+        XCTAssertEqual(read, extras)
+
+        try await vault.delete(id: login.id, in: spaceID)
+        try await store.delete(account: other.id.uuidString.lowercased(), in: service)
+        _ = try await vault.inventory(in: spaceID)
+        let companions = try await store.items(in: extrasService)
+        XCTAssertTrue(companions.isEmpty)
+    }
+
+    /// A companion in iCloud is never taken for an orphan, since iCloud may
+    /// bring its login after it and removing it would remove it everywhere; a
+    /// local one whose login is gone goes. A companion whose login keeps the
+    /// other iCloud choice, as after an older build moved the logins alone,
+    /// follows its login.
+    func testCompanionsInICloudOutliveAMissingLoginAndFollowTheirLoginsICloudChoice() async throws {
+        let spaceID = UUID()
+        let store = InMemoryCredentialKeychainStore()
+        let vault = KeychainCredentialVault(store: store, servicePrefix: "test.crest")
+        let extras = BrowserCredentialExtras(notes: "Kept.", codeLink: "otpauth://totp/Example?secret=JBSWY3DPEHPK3PXP")
+        var arriving = descriptor(id: UUID(), spaceID: spaceID, username: "arriving")
+        arriving.isSynchronizable = true
+        let deleted = descriptor(id: UUID(), spaceID: spaceID, username: "deleted")
+        let moved = descriptor(id: UUID(), spaceID: spaceID, username: "moved")
+        let kept = descriptor(id: UUID(), spaceID: spaceID, username: "kept")
+        for login in [arriving, deleted, moved, kept] {
+            try await vault.save(BrowserCredential(descriptor: login, password: "secret"), in: spaceID)
+            try await vault.saveExtras(extras, for: login, in: spaceID)
+        }
+        let service = CredentialKeychainNamespace.service(for: spaceID, prefix: "test.crest")
+        let extrasService = CredentialKeychainNamespace.extrasService(for: spaceID, prefix: "test.crest")
+        // iCloud has brought the companion of `arriving` but not yet its login;
+        // an older build deleted `deleted` and moved `moved` into iCloud alone.
+        try await store.delete(account: arriving.id.uuidString.lowercased(), in: service)
+        try await store.delete(account: deleted.id.uuidString.lowercased(), in: service)
+        var movedInICloud = moved
+        movedInICloud.isSynchronizable = true
+        try await store.upsert(try keychainItem(descriptor: movedInICloud, password: "secret"), in: service)
+
+        _ = try await vault.inventory(in: spaceID)
+
+        let companions = Dictionary(
+            uniqueKeysWithValues: try await store.items(in: extrasService).map { ($0.account, $0.isSynchronizable) })
+        XCTAssertEqual(
+            companions,
+            [
+                arriving.id.uuidString.lowercased(): true,
+                moved.id.uuidString.lowercased(): true,
+                kept.id.uuidString.lowercased(): false,
+            ])
+        let movedExtras = try await vault.extras(id: moved.id, in: spaceID)
+        XCTAssertEqual(movedExtras, extras)
+    }
+
     private func descriptor(
         id: UUID,
         spaceID: UUID,
@@ -209,9 +286,11 @@ final class KeychainCredentialVaultTests: XCTestCase {
         descriptor: CredentialDescriptor,
         password: String
     ) throws -> CredentialKeychainItem {
-        CredentialKeychainItem(
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return CredentialKeychainItem(
             account: descriptor.id.uuidString.lowercased(),
-            metadata: try JSONEncoder().encode(descriptor),
+            metadata: try encoder.encode(descriptor),
             secret: Data(password.utf8),
             isSynchronizable: descriptor.isSynchronizable
         )

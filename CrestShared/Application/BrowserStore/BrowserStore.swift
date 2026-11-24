@@ -16,6 +16,15 @@ struct BrowserCredentialSaveOperation {
 @Observable
 @MainActor
 final class BrowserStore {
+    // MARK: - Static Variables
+
+    /// The saved logins a move is carrying between Spaces now, from any
+    /// window: a login moves once at a time, so opposing moves can't each
+    /// delete the copy the other wrote.
+    @ObservationIgnored static var credentialsBeingMoved: Set<UUID> = []
+
+    // MARK: - Variables
+
     /// This window in the core's device, which owns what it shows.
     let windowID: UUID
     /// Advances each time this window shows another Space or tab by an
@@ -34,6 +43,16 @@ final class BrowserStore {
     /// The process's core, which every window of every browsing mode shares.
     @ObservationIgnored let core: CrestCore
     @ObservationIgnored let credentialVault: any CredentialVault
+
+    /// Where this window's addresses and payment cards live: beside the
+    /// Keychain passwords, in memory where the passwords are, and nowhere in
+    /// a private window.
+    @ObservationIgnored private(set) lazy var autofillVault: BrowserAutofillVault = {
+        if let keychain = credentialVault as? KeychainCredentialVault {
+            return BrowserAutofillVault(store: SecurityCredentialKeychainStore(), servicePrefix: keychain.servicePrefix)
+        }
+        return credentialVault is PrivateBrowsingCredentialVault ? .unavailable : .inMemory
+    }()
     @ObservationIgnored var credentialSaveOperations: [BrowserCredentialSaveKey: BrowserCredentialSaveOperation] = [:]
     @ObservationIgnored let linkPreferences: BrowserLinkPreferenceStore
     @ObservationIgnored var pendingMovedTabActivation: BrowserTabRuntimeAssignment?

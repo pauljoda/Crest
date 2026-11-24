@@ -13,30 +13,19 @@ enum BrowserCredentialContentBridge {
                   const selectedRoot = document.querySelector(selector);
                   const root = selectedRoot?.shadowRoot || selectedRoot;
                   if (!root) return null;
-                  const selection = passwordSelection(root);
-                  if (!selection) return null;
-                  const usernameInput = usernameInputIn(root, selection.input);
-                  return {
-                    formID: idFor(root),
-                    username: usernameInput?.value?.trim() || "",
-                    passwordKind: selection.kind,
-                    passwordFieldID: selection.input.id || selection.input.name || "",
-                    passwordFieldCount: selection.count,
-                    passwordLength: selection.input.value.length
-                  };
+                  const reading = read(root);
+                  return { formID: reading.formID, readingID: reading.readingID, fields: reading.fields };
                 },
                 captureForTesting(selector) {
                   const selectedRoot = document.querySelector(selector);
                   const root = selectedRoot?.shadowRoot || selectedRoot;
                   if (!root) return false;
-                  captureFormInteraction(root, true);
+                  capture(root, "submit", null);
                   return true;
                 },
                 focusForTesting(selector) {
                   const input = document.querySelector(selector);
-                  if (!(input instanceof HTMLInputElement) || input.type !== "password") {
-                    return false;
-                  }
+                  if (!isReadable(input)) return false;
                   return reportFocus(input);
                 }
             """#
@@ -50,25 +39,47 @@ enum BrowserCredentialContentBridge {
           if (globalThis.__crestCredentialBridge) return;
 
           const handler = webkit.messageHandlers.crestCredentials;
+          const maximumFields = 40;
+          const maximumReadings = 32;
+          const maximumText = 256;
+          const maximumRules = 1024;
           const rootsByID = new Map();
           const idsByRoot = new WeakMap();
           const observersByRoot = new WeakMap();
+          // Each recent reading's inputs, by the index the core names them
+          // with, so a fill lands in the fields of the reading the core chose
+          // them from, however the form changed since.
+          const readings = new Map();
+          let nextReadingID = 1;
+          // The value the person last typed, pasted or dictated into each
+          // input, or took from a password Crest made for them. A value the
+          // page put there afterwards is not theirs.
+          const enteredValues = new WeakMap();
+          // Inputs that were password fields, still read as ones after a
+          // "Show password" button turns them into text fields.
+          const seenPasswords = new WeakSet();
+          const seenPasswordReferences = new Set();
           let nextID = 1;
           let pendingSubmission = false;
+          let fillingFocus = false;
+          // The form whose focused field Crest's popup is open for. Its arrow,
+          // Return and Escape keys go to the popup instead of the page.
+          let heldForm = null;
+          // The form whose focus Crest may answer with a popup, until the
+          // person types in it. Only its popup may hold the keys.
+          let offeredForm = null;
           let trackedField = null;
           let trackedFieldRect = null;
           let lastSubmissionFingerprint = "";
           let lastSubmissionTime = 0;
-          let lastUsernameFingerprint = "";
-          let lastUsernameTime = 0;
           let observeRoot = () => {};
 
           const post = (body) => {
-            try { handler.postMessage({ version: 1, ...body }); } catch (_) {}
+            try { handler.postMessage({ version: 2, ...body }); } catch (_) {}
           };
 
           const isVisible = (element) => {
-            if (!(element instanceof HTMLInputElement) || element.disabled) return false;
+            if (!isControl(element) || element.disabled) return false;
             const style = getComputedStyle(element);
             if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
             const rect = element.getBoundingClientRect();
@@ -87,6 +98,36 @@ enum BrowserCredentialContentBridge {
             return { x: rect.left, y: rect.top, width: rect.width, height: rect.height };
           };
 
+          // The field's rect in the top page's viewport, adding the place of
+          // each frame on the way up, as far as this frame can reach; the rect
+          // in its own viewport, unmoved, from a frame it can't reach.
+          const followedViews = new WeakSet();
+          const placementOf = (element) => {
+            const rect = rectOf(element);
+            if (!rect) return null;
+            let x = rect.x;
+            let y = rect.y;
+            let view = window;
+            try {
+              while (view !== view.top) {
+                const frame = view.frameElement;
+                if (!frame) return { rect, inTopViewport: false };
+                const box = frame.getBoundingClientRect();
+                x += box.left + frame.clientLeft;
+                y += box.top + frame.clientTop;
+                view = view.parent;
+                // A page around the frame scrolling moves the field too.
+                if (!followedViews.has(view)) {
+                  followedViews.add(view);
+                  view.addEventListener("scroll", () => reportFieldGeometry(), { capture: true, passive: true });
+                }
+              }
+            } catch (_) {
+              return { rect, inTopViewport: false };
+            }
+            return { rect: { x, y, width: rect.width, height: rect.height }, inTopViewport: true };
+          };
+
           const rectsDiffer = (left, right) => !left || !right
             || Math.abs(left.x - right.x) >= 0.5
             || Math.abs(left.y - right.y) >= 0.5
@@ -96,7 +137,10 @@ enum BrowserCredentialContentBridge {
           // WebKit already delivers scroll events at most once per rendering
           // update, so the change gate below is the whole of the throttling:
           // a page that scrolls without moving the field posts nothing.
-          const reportFieldGeometry = () => {
+          // `frameMoved` is true when a page out of this frame's reach moved
+          // it: the field stays put in the frame's own viewport, and the
+          // engine adds the frame's new place to the rect.
+          const reportFieldGeometry = (frameMoved) => {
             if (!trackedField) return;
             const input = trackedField.input.deref();
             if (!input || !input.isConnected || !isVisible(input)) {
@@ -104,14 +148,17 @@ enum BrowserCredentialContentBridge {
               trackedFieldRect = null;
               return;
             }
-            const rect = rectOf(input);
-            if (!rect || !rectsDiffer(rect, trackedFieldRect)) return;
-            trackedFieldRect = rect;
+            const placement = placementOf(input);
+            if (!placement) return;
+            const movedOutOfReach = frameMoved === true && !placement.inTopViewport;
+            if (!movedOutOfReach && !rectsDiffer(placement.rect, trackedFieldRect)) return;
+            trackedFieldRect = placement.rect;
             post({
               event: "fieldGeometry",
               trusted: false,
               formID: trackedField.formID,
-              fieldRect: rect
+              fieldRect: placement.rect,
+              topViewport: placement.inTopViewport
             });
           };
 
@@ -123,19 +170,17 @@ enum BrowserCredentialContentBridge {
             return treeRoot instanceof ShadowRoot ? treeRoot : document.body;
           };
 
-          const elementFromEvent = (event) => {
-            const path = typeof event.composedPath === "function" ? event.composedPath() : [];
-            return path.find((node) => node instanceof Element)
-              || (event.target instanceof Element ? event.target : null);
-          };
+          const pathOf = (event) => typeof event.composedPath === "function" ? event.composedPath() : [];
 
-          const passwordInputFromEvent = (event) => {
-            const path = typeof event.composedPath === "function" ? event.composedPath() : [];
-            return path.find((node) => node instanceof HTMLInputElement && node.type === "password")
-              || (event.target instanceof HTMLInputElement && event.target.type === "password"
-                ? event.target
-                : null);
-          };
+          const elementFromEvent = (event) =>
+            pathOf(event).find((node) => node instanceof Element)
+              || (event.target instanceof Element ? event.target : null);
+
+          const isControl = (node) =>
+            node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+
+          const inputFromEvent = (event) =>
+            pathOf(event).find(isControl) || (isControl(event.target) ? event.target : null);
 
           const idFor = (root) => {
             let id = idsByRoot.get(root);
@@ -148,122 +193,153 @@ enum BrowserCredentialContentBridge {
             return id;
           };
 
-          const inputsIn = (root) => Array.from(root.querySelectorAll("input"));
+          const notePassword = (input) => {
+            if (seenPasswords.has(input)) return;
+            seenPasswords.add(input);
+            seenPasswordReferences.add(new WeakRef(input));
+          };
 
-          const passwordInputsIn = (root) => inputsIn(root).filter((input) =>
-            input.type === "password" && isVisible(input)
+          const isPassword = (input) => input.type === "password" || seenPasswords.has(input);
+
+          const autocompleteOf = (input) => (input.getAttribute("autocomplete") || "").trim().toLowerCase();
+
+          // A control Crest can read and fill: a text, email, phone, number,
+          // month or password field, a select or a text area for addresses
+          // and cards, or a hidden field the page declares to hold the
+          // username, as a change-password form does.
+          const fillableTypes = ["text", "email", "tel", "number", "month"];
+          const isReadable = (input) => {
+            if (input instanceof HTMLSelectElement) return !input.disabled;
+            if (input instanceof HTMLTextAreaElement) return !input.disabled && !input.readOnly;
+            if (!(input instanceof HTMLInputElement) || input.disabled) return false;
+            if (input.type === "hidden") return /(^|\s)(username|email)(\s|$)/.test(autocompleteOf(input));
+            if (input.readOnly) return false;
+            return fillableTypes.includes(input.type) || isPassword(input);
+          };
+
+          const typeOf = (input) =>
+            input instanceof HTMLSelectElement ? "select" : input instanceof HTMLTextAreaElement ? "textarea" : input.type;
+
+          const maximumOptions = 400;
+          const optionsOf = (input) => input instanceof HTMLSelectElement
+            ? Array.from(input.options).slice(0, maximumOptions)
+              .map((option) => ({ value: textOf(option.value), text: textOf(option.text) }))
+            : undefined;
+
+          const isEntered = (input) => enteredValues.has(input) && enteredValues.get(input) === input.value;
+
+          const textOf = (value, limit = maximumText) => (value || "").replace(/\s+/g, " ").trim().slice(0, limit);
+
+          // The text of the elements `element` names with aria-labelledby.
+          const labelledByOf = (element) => {
+            const root = element.getRootNode();
+            return (element.getAttribute("aria-labelledby") || "").split(/\s+/).filter(Boolean)
+              .map((id) => root.getElementById?.(id)?.textContent || "").join(" ");
+          };
+
+          const labelOf = (input) => {
+            const labels = input.labels ? Array.from(input.labels, (label) => label.textContent).join(" ") : "";
+            return textOf(`${labels} ${input.getAttribute("aria-label") || ""} ${labelledByOf(input)}`);
+          };
+
+          // A control's name: the one it declares before its text, so a
+          // button showing an arrow but labelled Sign in reads as Sign in.
+          const controlLabelOf = (control) => !control ? "" : textOf(
+            textOf(control.getAttribute("aria-label")) || textOf(labelledByOf(control)) || control.innerText
+              || control.value || control.title || ""
           );
 
-          const credentialScopeFor = (root, input) =>
-            input?.closest("form, [role='form']") || root;
-
-          const spansIndependentCredentialScopes = (root, inputs) =>
-            new Set(inputs.map((input) => credentialScopeFor(root, input))).size > 1;
-
-          const passwordKind = (input) =>
-            input.autocomplete.toLowerCase().includes("new-password") ? "new" : "current";
-
-          const passwordSelection = (root, preferredInput = null) => {
-            const inputs = passwordInputsIn(root);
-            if (!inputs.length) return null;
-            if (spansIndependentCredentialScopes(root, inputs)) return null;
-            if (preferredInput && inputs.includes(preferredInput)) {
-              return { input: preferredInput, kind: passwordKind(preferredInput), count: inputs.length };
-            }
-
-            const explicitNewInputs = inputs.filter((input) => passwordKind(input) === "new");
-            if (explicitNewInputs.length) {
-              const populated = explicitNewInputs.filter((input) => input.value);
-              if (new Set(populated.map((input) => input.value)).size > 1) return null;
-              return {
-                input: populated[0] || explicitNewInputs[0],
-                kind: "new",
-                count: inputs.length
-              };
-            }
-
-            if (inputs.length >= 2) {
-              const likelyNewInputs = inputs.slice(-2);
-              if (inputs.length >= 3
-                  && likelyNewInputs.every((input) => input.value)
-                  && likelyNewInputs[0].value !== likelyNewInputs[1].value) {
-                return null;
-              }
-              return { input: inputs[inputs.length - 1], kind: "new", count: inputs.length };
-            }
-
-            return { input: inputs[0], kind: "current", count: 1 };
-          };
-
-          const usernameInputIn = (root, passwordInput) => {
-            const inputs = inputsIn(credentialScopeFor(root, passwordInput)).filter(isVisible);
-            return inputs.find((input) => input.autocomplete.toLowerCase().includes("username"))
-              || inputs.find((input) => input.type === "email")
-              || inputs.slice(0, Math.max(inputs.indexOf(passwordInput), 0)).reverse().find((input) =>
-                input.type === "text" || input.type === "email" || input.type === "tel"
-              )
-              || inputs.find((input) => input.type === "text" || input.type === "email");
-          };
-
-          const snapshot = (root, preferredPasswordInput = null) => {
-            const selection = passwordSelection(root, preferredPasswordInput);
-            if (!selection) return null;
-            const passwordInput = selection.input;
-            const usernameInput = usernameInputIn(root, passwordInput);
-            return {
-              formID: idFor(root),
-              username: usernameInput?.value?.trim() || "",
-              password: passwordInput.value || "",
-              passwordKind: selection.kind
+          const describe = (input, index) => {
+            const password = isPassword(input);
+            if (password) notePassword(input);
+            const field = {
+              index,
+              type: password ? "password" : typeOf(input),
+              autocomplete: textOf(autocompleteOf(input)),
+              name: textOf(input.name),
+              id: textOf(input.id),
+              label: labelOf(input),
+              placeholder: textOf(input.placeholder),
+              visible: isVisible(input),
+              hasValue: password ? input.value.length > 0 : input.value.trim().length > 0,
+              entered: isEntered(input),
+              inputMode: textOf(input.getAttribute("inputmode"))
             };
+            const options = optionsOf(input);
+            if (options) field.options = options;
+            if (input.minLength >= 0) field.minLength = input.minLength;
+            if (input.maxLength >= 0) field.maxLength = input.maxLength;
+            // Rules too long to read are left out whole, never cut short.
+            const rules = password ? (input.getAttribute("passwordrules") || "").trim() : "";
+            if (rules && rules.length <= maximumRules) field.passwordRules = rules;
+            return field;
           };
 
-          const captureSubmission = (root, trusted) => {
-            if (!trusted) return;
-            const fields = snapshot(root);
-            if (!fields || !fields.password) return;
+          // The form's readable inputs, in the order the page shows them. A
+          // scope that isn't a form leaves out the inputs of the forms inside it.
+          // A form reads the controls it owns, its form attribute's too; any
+          // other scope reads the inputs inside it.
+          const read = (root) => {
+            const controls = root instanceof HTMLFormElement ? root.elements : root.querySelectorAll("input, select, textarea");
+            const inputs = Array.from(controls)
+              .filter((input) => isReadable(input) && rootFor(input) === root)
+              .slice(0, maximumFields);
+            const formID = idFor(root);
+            const readingID = nextReadingID++;
+            readings.set(readingID, { formID, inputs: inputs.map((input) => new WeakRef(input)) });
+            if (readings.size > maximumReadings) readings.delete(readings.keys().next().value);
+            return { formID, readingID, inputs, fields: inputs.map(describe) };
+          };
+
+          // The values a reading holds, by index. `withPasswords` false leaves
+          // every password out, as a focus must.
+          const valuesOf = (reading, withPasswords) => {
+            const values = {};
+            reading.inputs.forEach((input, index) => {
+              if (!withPasswords && isPassword(input)) return;
+              const value = isPassword(input) ? input.value : input.value.trim();
+              if (value) values[index] = value;
+            });
+            return values;
+          };
+
+          // A form being sent. The core decides whether it was, and what to
+          // keep; this reports how it went and what the person entered.
+          const capture = (root, trigger, control) => {
+            const reading = read(root);
+            const values = valuesOf(reading, true);
+            const keys = Object.keys(values);
+            if (!keys.length) return;
+            const hasPassword = reading.inputs.some(isPassword);
             const now = Date.now();
-            const fingerprint = `${fields.formID}\u0000${fields.username}`;
+            const fingerprint = [reading.formID, trigger, controlLabelOf(control),
+              ...keys.map((key) => `${key}:${values[key].length}`)].join("\u0000");
             if (fingerprint === lastSubmissionFingerprint && now - lastSubmissionTime < 750) return;
             lastSubmissionFingerprint = fingerprint;
             lastSubmissionTime = now;
-            pendingSubmission = true;
-            const body = {
-              event: "submit",
+            if (hasPassword) pendingSubmission = true;
+            post({
+              event: hasPassword ? "submit" : "username",
               trusted: true,
-              formID: fields.formID,
-              password: fields.password,
-              passwordKind: fields.passwordKind
-            };
-            if (fields.username) body.username = fields.username;
-            post(body);
-          };
-
-          const captureUsernameStep = (root, trusted) => {
-            if (!trusted || passwordInputsIn(root).length) return;
-            const usernameInput = usernameInputIn(root, null);
-            const username = usernameInput?.value?.trim() || "";
-            if (!username) return;
-            const formID = idFor(root);
-            const now = Date.now();
-            const fingerprint = `${formID}\u0000${username}`;
-            if (fingerprint === lastUsernameFingerprint && now - lastUsernameTime < 750) return;
-            lastUsernameFingerprint = fingerprint;
-            lastUsernameTime = now;
-            post({ event: "username", trusted: true, formID, username });
-          };
-
-          const captureFormInteraction = (root, trusted) => {
-            if (passwordInputsIn(root).length) {
-              captureSubmission(root, trusted);
-            } else {
-              captureUsernameStep(root, trusted);
-            }
+              formID: reading.formID,
+              readingID: reading.readingID,
+              fields: reading.fields,
+              values,
+              submission: { trigger, inForm: root instanceof HTMLFormElement, label: controlLabelOf(control) }
+            });
           };
 
           const hasVisiblePasswordField = () => {
             if (Array.from(document.querySelectorAll("input[type='password']")).some(isVisible)) {
               return true;
+            }
+            for (const reference of seenPasswordReferences) {
+              const input = reference.deref();
+              if (!input || !input.isConnected) {
+                seenPasswordReferences.delete(reference);
+                continue;
+              }
+              if (isVisible(input)) return true;
             }
             for (const [id, reference] of rootsByID) {
               const root = reference.deref();
@@ -305,69 +381,139 @@ enum BrowserCredentialContentBridge {
             observersByRoot.set(root, observer);
           };
 
-          // Raising the prompt, and starting to follow the field it points at.
-          // The listener and the testing hook go through here together so the
-          // hook cannot drift away from the path a real focus takes.
+          // Asking the core what the focused field offers, and starting to
+          // follow it. The listener and the testing hook go through here
+          // together so the hook cannot drift away from the path a real focus
+          // takes. A focus never carries a password.
+          // Closes the popup open, or loading, for the focused form and gives
+          // its keys back.
+          const dismissOffer = () => {
+            const formID = heldForm || offeredForm;
+            heldForm = null;
+            offeredForm = null;
+            if (formID) post({ event: "key", trusted: true, formID, key: "dismiss" });
+          };
+
           const reportFocus = (input) => {
-            const root = rootFor(input);
-            const fields = snapshot(root, input);
-            if (!fields) return false;
-            const rect = rectOf(input);
-            trackedField = rect ? { input: new WeakRef(input), formID: fields.formID } : null;
+            heldForm = null;
+            offeredForm = null;
+            const reading = read(rootFor(input));
+            const index = reading.inputs.indexOf(input);
+            if (index < 0) return false;
+            offeredForm = reading.formID;
+            const placement = placementOf(input);
+            const rect = placement?.rect || null;
+            trackedField = rect ? { input: new WeakRef(input), formID: reading.formID } : null;
             trackedFieldRect = rect;
             post({
               event: "focus",
+              topViewport: placement?.inTopViewport || false,
               trusted: true,
-              formID: fields.formID,
-              username: fields.username || undefined,
-              passwordKind: fields.passwordKind,
+              formID: reading.formID,
+              readingID: reading.readingID,
+              fields: reading.fields,
+              focusedField: index,
+              values: valuesOf(reading, false),
               fieldRect: rect || undefined
             });
             return true;
           };
 
           const setInputValue = (input, value) => {
-            const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+            const prototype = input instanceof HTMLSelectElement ? HTMLSelectElement.prototype
+              : input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+            const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
             if (setter) setter.call(input, value); else input.value = value;
             input.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertReplacementText", data: null }));
             input.dispatchEvent(new Event("change", { bubbles: true }));
           };
 
+          const inputAt = (formID, readingID, index) => {
+            const root = rootsByID.get(formID)?.deref();
+            if (!root || !root.isConnected) {
+              rootsByID.delete(formID);
+              return null;
+            }
+            const reading = readings.get(readingID);
+            if (!reading || reading.formID !== formID) return null;
+            const input = reading.inputs[index]?.deref();
+            return input && input.isConnected && !input.disabled && rootFor(input) === root ? input : null;
+          };
+
           globalThis.__crestCredentialBridge = Object.freeze({
-            fill(formID, username, password) {
-              const root = rootsByID.get(formID)?.deref();
-              if (!root || !root.isConnected) {
-                rootsByID.delete(formID);
-                return false;
+            // Writes each entry's value into the field the core named. A
+            // password Crest made counts as the person's own; a saved one
+            // doesn't, so sending it back unchanged asks nothing.
+            fill(formID, readingID, entries, generated) {
+              if (!Array.isArray(entries) || !entries.length) return false;
+              const targets = entries.map((entry) => ({
+                input: inputAt(formID, readingID, entry.index),
+                value: String(entry.value)
+              }));
+              if (targets.some((target) => !target.input)) return false;
+              for (const { input, value } of targets) {
+                // A page that rebuilt the field while an earlier one filled
+                // leaves this one detached: the fill failed.
+                if (!input.isConnected || input.disabled) return false;
+                setInputValue(input, value);
+                if (generated) enteredValues.set(input, value); else enteredValues.delete(input);
               }
-              const passwordInput = passwordInputsIn(root).find((input) => passwordKind(input) === "current");
-              if (!passwordInput) return false;
-              const usernameInput = usernameInputIn(root, passwordInput);
-              if (usernameInput) setInputValue(usernameInput, username);
-              setInputValue(passwordInput, password);
-              passwordInput.focus();
+              heldForm = null;
+              const last = targets[targets.length - 1].input;
+              if (isVisible(last)) {
+                fillingFocus = true;
+                try { last.focus(); } finally { fillingFocus = false; }
+              }
               return true;
             },
-            fillGenerated(formID, password) {
-              const root = rootsByID.get(formID)?.deref();
-              if (!root || !root.isConnected) {
-                rootsByID.delete(formID);
-                return false;
+            // Moves focus to the form control before, -1, or after, 1, the
+            // focused one, as the phone's previous and next buttons do.
+            focusAdjacent(step) {
+              const skipped = ["button", "submit", "reset", "image", "checkbox", "radio", "file", "range", "color", "hidden"];
+              const controls = Array.from(document.querySelectorAll("input, select, textarea, [contenteditable='true']"))
+                .filter((control) => !control.disabled && !control.closest("[inert]") && control.tabIndex >= 0
+                  && control.getClientRects().length && !(control instanceof HTMLInputElement && skipped.includes(control.type)));
+              // A control that still can't take focus, such as a hidden one,
+              // is passed over for the one after it.
+              const start = controls.indexOf(document.activeElement);
+              if (start < 0) return false;
+              for (let index = start + step; index >= 0 && index < controls.length; index += step) {
+                controls[index].focus();
+                if (document.activeElement === controls[index]) return true;
               }
-              const inputs = passwordInputsIn(root);
-              if (spansIndependentCredentialScopes(root, inputs)) return false;
-              const newPasswordInputs = inputs.filter((input) => passwordKind(input) === "new");
-              if (!newPasswordInputs.length) return false;
-              newPasswordInputs.forEach((input) => setInputValue(input, password));
-              newPasswordInputs[0].focus();
+              return false;
+            },
+            // Offers the page's password field to Crest as if it were focused,
+            // for the password step after a username step where the person
+            // chose a login, which fills it. It moves no focus itself.
+            offerPasswordStep() {
+              const input = Array.from(document.querySelectorAll("input[type='password']")).find((field) =>
+                !field.disabled && !field.readOnly && isVisible(field)
+                  && !/new-password/i.test(field.getAttribute("autocomplete") || ""));
+              return input ? reportFocus(input) : false;
+            },
+            // Sends the focused field's arrow, Return and Escape keys to
+            // Crest's popup while it is open for the form, or gives them back.
+            holdKeys(formID, hold) {
+              if (hold) {
+                // An offer the person typed past while it loaded takes no keys.
+                if (formID !== offeredForm) return false;
+                heldForm = formID;
+              } else if (heldForm === formID) {
+                heldForm = null;
+              }
               return true;
+            },
+            valueOf(formID, readingID, index) {
+              const input = inputAt(formID, readingID, index);
+              return input && !isPassword(input) ? input.value.trim() : null;
             }
             \#(testingMethods)
           });
 
           document.addEventListener("focusin", (event) => {
-            const input = passwordInputFromEvent(event);
-            if (!event.isTrusted || !input) return;
+            const input = inputFromEvent(event);
+            if (!event.isTrusted || fillingFocus || !isReadable(input) || input.type === "hidden") return;
             reportFocus(input);
           }, true);
 
@@ -380,32 +526,115 @@ enum BrowserCredentialContentBridge {
             if (event.relatedTarget instanceof Element) {
               trackedField = null;
               trackedFieldRect = null;
+              heldForm = null;
             }
           }, true);
+
+          // Recorded before the page's own handlers run, and for a field that
+          // isn't a password, again after them in case they reformat what was
+          // typed. A password the page rewrites is no longer the person's.
+          const noteEntered = (event) => {
+            const input = inputFromEvent(event);
+            if (!event.isTrusted || !input) return;
+            enteredValues.set(input, input.value);
+            // Typing in the field closes the popup, or the one still loading,
+            // and gives its keys back, so Return sends what the person typed.
+            const formID = heldForm || offeredForm;
+            if (formID && idsByRoot.get(rootFor(input)) === formID) dismissOffer();
+          };
+          document.addEventListener("input", noteEntered, true);
+          addEventListener("input", (event) => {
+            const input = inputFromEvent(event);
+            if (input && !isPassword(input)) noteEntered(event);
+          });
 
           addEventListener("scroll", reportFieldGeometry, { capture: true, passive: true });
           addEventListener("resize", reportFieldGeometry, { passive: true });
 
+          // A frame from another site can't see the pages around it scroll,
+          // though its fields move with them. The frame holding the focus
+          // hears of each move, once an animation frame, and passes it down.
+          const frameMovedSignal = "crest-credential-frame-moved";
+          const pressedOutsideSignal = "crest-credential-pressed-outside";
+          let frameMoveQueued = false;
+          const tellFocusedFrame = () => {
+            if (frameMoveQueued) return;
+            const frame = document.activeElement;
+            if (!(frame instanceof HTMLIFrameElement || frame instanceof HTMLFrameElement)) return;
+            frameMoveQueued = true;
+            requestAnimationFrame(() => {
+              frameMoveQueued = false;
+              try { frame.contentWindow?.postMessage(frameMovedSignal, "*"); } catch (_) {}
+            });
+          };
+          addEventListener("scroll", tellFocusedFrame, { capture: true, passive: true });
+          addEventListener("message", (event) => {
+            if (window === window.top || event.source !== window.parent) return;
+            if (event.data === frameMovedSignal) {
+              reportFieldGeometry(true);
+              tellFocusedFrame();
+            } else if (event.data === pressedOutsideSignal) {
+              pressedOutside();
+            }
+          });
+
+          // A press anywhere but the focused field closes its popup, as a
+          // menu closes. A frame holding the focus hears of presses around it.
+          const pressedOutside = () => {
+            if (heldForm || offeredForm) dismissOffer();
+            const frame = document.activeElement;
+            if (frame instanceof HTMLIFrameElement || frame instanceof HTMLFrameElement) {
+              try { frame.contentWindow?.postMessage(pressedOutsideSignal, "*"); } catch (_) {}
+            }
+          };
+          addEventListener("pointerdown", (event) => {
+            if (!event.isTrusted) return;
+            const path = pathOf(event);
+            const focused = document.activeElement;
+            const field = trackedField?.input.deref();
+            if ((field && path.includes(field)) || (focused && focused !== document.body && path.includes(focused))) return;
+            pressedOutside();
+          }, true);
+
           document.addEventListener("submit", (event) => {
-            captureFormInteraction(event.target, event.isTrusted);
+            if (!event.isTrusted || !(event.target instanceof HTMLFormElement)) return;
+            capture(event.target, "submit", event.submitter);
           }, true);
 
           document.addEventListener("click", (event) => {
             if (!event.isTrusted) return;
             const target = elementFromEvent(event);
             if (!(target instanceof Element)) return;
-            const control = target.closest("button, input[type='submit'], input[type='button']");
+            const control = target.closest(
+              "button, input[type='submit'], input[type='image'], input[type='button'], [role='button']"
+            );
             if (!control) return;
+            const sendsForm = (control instanceof HTMLButtonElement && control.type === "submit")
+              || (control instanceof HTMLInputElement && (control.type === "submit" || control.type === "image"));
             const root = rootFor(control);
-            queueMicrotask(() => captureFormInteraction(root, true));
+            queueMicrotask(() => capture(root, sendsForm ? "submitControl" : "button", control));
+          }, true);
+
+          // Captured at the window, ahead of the page's document listeners and
+          // of window listeners it adds later, so a held key never reaches
+          // the page or the Return capture below.
+          const popupKeys = { ArrowDown: "down", ArrowUp: "up", Enter: "choose", Escape: "dismiss" };
+          addEventListener("keydown", (event) => {
+            const key = popupKeys[event.key];
+            if (!heldForm || !key || !event.isTrusted || event.isComposing) return;
+            const input = inputFromEvent(event);
+            if (!input || idsByRoot.get(rootFor(input)) !== heldForm) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            const formID = heldForm;
+            if (key === "choose" || key === "dismiss") heldForm = null;
+            post({ event: "key", trusted: true, formID, key });
           }, true);
 
           document.addEventListener("keydown", (event) => {
-            const input = elementFromEvent(event);
-            if (!event.isTrusted
-                || event.key !== "Enter"
-                || !(input instanceof HTMLInputElement)) return;
-            captureFormInteraction(rootFor(input), true);
+            const input = inputFromEvent(event);
+            if (!event.isTrusted || event.isComposing || event.key !== "Enter" || !input) return;
+            capture(rootFor(input), "return", null);
           }, true);
 
           const begin = () => {

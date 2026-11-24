@@ -11,6 +11,10 @@ import SwiftUI
 struct BrowserPasswordDescriptorRow: View {
     let descriptor: CredentialDescriptor
     let space: BrowserSpaceIdentity?
+    /// What the login keeps beside its password, which the row marks.
+    var extras: BrowserCredentialExtrasSummary? = nil
+    /// What the core found wrong with the password, which the row marks.
+    var concerns: [PasswordConcern] = []
     var isDeleting = false
     var isSelectionActive = false
     var isSelected = false
@@ -72,7 +76,7 @@ struct BrowserPasswordDescriptorRow: View {
             } else if !isSelectionActive {
                 Menu("Password Actions", systemImage: "ellipsis.circle") {
                     Group {
-                        Button("View Password", systemImage: "eye", action: showDetails)
+                        Button("Show Details", systemImage: "info.circle", action: showDetails)
                         Divider()
                         Button(
                             "Delete Password",
@@ -93,7 +97,7 @@ struct BrowserPasswordDescriptorRow: View {
         .contextMenu {
             if !isSelectionActive {
                 Group {
-                    Button("View Password", systemImage: "eye", action: showDetails)
+                    Button("Show Details", systemImage: "info.circle", action: showDetails)
                     Button(
                         "Delete Password",
                         systemImage: "trash",
@@ -124,15 +128,30 @@ struct BrowserPasswordDescriptorRow: View {
                 )
                 .accessibilityHidden(true)
         } else {
-            Image(systemName: "key.fill")
-                .foregroundStyle(spaceAccent)
-                .frame(width: 22)
-                .accessibilityHidden(true)
+            BrowserSiteIconMark(origins: descriptor.origins, symbol: "key.fill", tint: spaceAccent, size: 22)
         }
     }
 
     @ViewBuilder
     private var statusIcons: some View {
+        if let concern = concerns.first {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(CrestColor.warning)
+                .help(Text(concern.message))
+                .accessibilityLabel(Text(concern.title))
+        }
+        if extras?.hasCode == true {
+            Image(systemName: "clock.badge.checkmark")
+                .foregroundStyle(.secondary)
+                .help("Makes one-time codes")
+                .accessibilityLabel("Makes one-time codes")
+        }
+        if extras?.hasNotes == true {
+            Image(systemName: "note.text")
+                .foregroundStyle(.secondary)
+                .help("Has notes")
+                .accessibilityLabel("Has notes")
+        }
         if descriptor.isSynchronizable {
             Image(systemName: "icloud")
                 .foregroundStyle(.secondary)
@@ -159,9 +178,12 @@ struct BrowserPasswordDescriptorRow: View {
             descriptor.username.isEmpty
             ? String(localized: "No username")
             : descriptor.username
-        return descriptor.displayName == nil
+        let site =
+            descriptor.displayName == nil
             ? "\(account) · \(descriptor.origin.description)"
             : "\(account) · \(descriptor.origin.host)"
+        guard !descriptor.sites.isEmpty else { return site }
+        return String(localized: "\(site) · \(descriptor.origins.count) sites")
     }
 
     private func primaryAction() {

@@ -22,7 +22,8 @@ struct BrowserCredential: Equatable, Sendable, CustomStringConvertible, CustomDe
                 id: descriptor.id, spaceID: spaceID, origin: descriptor.origin, scope: descriptor.scope,
                 username: descriptor.username, displayName: descriptor.displayName, createdAt: descriptor.createdAt,
                 updatedAt: descriptor.updatedAt, lastUsedAt: descriptor.lastUsedAt,
-                isSynchronizable: descriptor.isSynchronizable),
+                isSynchronizable: descriptor.isSynchronizable, sites: descriptor.sites,
+                passwordChangedAt: descriptor.passwordChangedAt),
             password: password)
     }
 }

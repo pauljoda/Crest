@@ -3621,3 +3621,35 @@
        providers.emplace_back(
            /*precedence=*/10u,
            std::make_unique<os_crypt_async::KeychainKeyProvider>());
+--- a/chrome/browser/password_manager/chrome_password_manager_client.cc
++++ b/chrome/browser/password_manager/chrome_password_manager_client.cc
+@@ -283,6 +283,14 @@
+ bool ChromePasswordManagerClient::IsSavingAndFillingEnabled(
+     const url::Origin& origin,
+     base::optional_ref<const GURL> url) const {
++#if BUILDFLAG(IS_MAC)
++  // Crest saves and fills passwords itself, whatever the setting: the
++  // engine's own prompts need a Views browser window, which Crest's pages
++  // don't have, and would compete with Crest's.
++  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
++    return false;
++  }
++#endif
+   if (base::CommandLine::ForCurrentProcess()->HasSwitch(
+           switches::kEnableAutomation)) {
+     // Disable the password saving UI for automated tests. It obscures the
+@@ -300,6 +308,14 @@
+ bool ChromePasswordManagerClient::IsFillingEnabled(
+     const url::Origin& origin,
+     base::optional_ref<const GURL> url) const {
++#if BUILDFLAG(IS_MAC)
++  // Crest saves and fills passwords itself, whatever the setting: the
++  // engine's own prompts need a Views browser window, which Crest's pages
++  // don't have, and would compete with Crest's.
++  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
++    return false;
++  }
++#endif
+   if (origin.opaque() &&
+       base::FeatureList::IsEnabled(
+           password_manager::features::kPasswordBlockOpaqueOrigins)) {

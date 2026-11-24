@@ -1,5 +1,6 @@
 import Dispatch
 import Observation
+import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 import WebKit
@@ -77,6 +78,23 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// screen. Selecting the tab again is what brings the page back.
     var credentialFillRequest: BrowserCredentialFillRequest? { credentialState.fillRequest }
     var credentialSaveCandidate: BrowserCredentialSaveCandidate? { credentialState.saveCandidate }
+    var credentialHeldSaveCandidate: BrowserCredentialSaveCandidate? { credentialState.heldSaveCandidate }
+    var autofillSaveCandidate: BrowserAutofillSaveCandidate? { credentialState.autofillSaveCandidate }
+
+    func dismissAutofillSaveCandidate() {
+        credentialState.dismissAutofillSaveCandidate()
+    }
+    var credentialKeyPress: BrowserCredentialKeyPress? { credentialState.keyPress }
+
+    /// The fill request whose full offer shows in the band at the top of the
+    /// page. A phone shows its offers in the strip above the keyboard and
+    /// opens the band only when the strip asks.
+    private(set) var credentialOfferRequestID: UUID?
+
+    /// Whether the page shows its fill offers in the strip above the keyboard.
+    var usesCredentialStrip: Bool { credentialStripHost != nil }
+
+    @ObservationIgnored private var credentialStripHost: UIHostingController<MobileCredentialStrip>?
 
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
     @ObservationIgnored private let pullToRefreshControl = UIRefreshControl()
@@ -852,6 +870,15 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         credentialState.dismissSaveCandidate()
     }
 
+    /// Not Now: the offer goes, and the key in the address field keeps it.
+    func declineCredentialSaveCandidate() {
+        credentialState.holdSaveCandidate()
+    }
+
+    func reofferCredentialSaveCandidate() {
+        credentialState.reofferHeldSaveCandidate()
+    }
+
     func setCredentialAccessEnabled(_ isEnabled: Bool) {
         credentialSession.setEnabled(isEnabled)
     }
@@ -862,6 +889,82 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     func fillGeneratedPassword(_ password: String, for requestID: UUID) async throws {
         try await credentialSession.fillGeneratedPassword(password, for: requestID, in: webView)
+    }
+
+    func fillAutofillValues(_ values: [BrowserAutofillValue], for requestID: UUID) async throws {
+        try await credentialSession.fillValues(values, for: requestID, in: webView)
+    }
+
+    /// The login the page last filled, whose code a code step offers first.
+    var lastFilledCredentialID: UUID? { credentialState.lastFilledCredentialID }
+
+    func credentialFormUsername(for requestID: UUID) async -> String? {
+        await credentialSession.currentUsername(for: requestID, in: webView)
+    }
+
+    func holdCredentialKeys(_ hold: Bool, for requestID: UUID) async {
+        await credentialSession.holdKeys(hold, for: requestID, in: webView)
+    }
+
+    /// Puts Crest's strip above the keyboard in place of WebKit's bar, on a
+    /// phone, once per page.
+    func installCredentialStrip(browser: BrowserStore) {
+        guard UIDevice.current.userInterfaceIdiom == .phone, credentialStripHost == nil,
+            let webView = webView as? MobilePageWebView
+        else { return }
+        let spaceID = spaceID
+        let actions = MobileCredentialStripActions(
+            fill: { [weak self, weak browser] login, requestID in
+                Task { @MainActor in
+                    guard let self, let browser else { return }
+                    do {
+                        guard let credential = try await browser.credential(id: login.id, in: spaceID) else {
+                            throw BrowserCredentialFillError.staleOrMismatchedRequest
+                        }
+                        try await self.fillCredential(credential, for: requestID)
+                    } catch {
+                        self.credentialFillFailed()
+                    }
+                }
+            },
+            fillValues: { [weak self] values, requestID in
+                Task { @MainActor in
+                    guard let self else { return }
+                    do { try await self.fillAutofillValues(values, for: requestID) } catch {
+                        self.credentialFillFailed()
+                    }
+                }
+            },
+            showOffer: { [weak self] requestID in self?.credentialOfferRequestID = requestID },
+            focusAdjacentField: { [weak self] step in self?.focusAdjacentField(step) },
+            done: { [weak webView] in webView?.endEditing(true) })
+        let host = UIHostingController(
+            rootView: MobileCredentialStrip(state: credentialState, browser: browser, actions: actions))
+        host.view.backgroundColor = .clear
+        host.view.frame = CGRect(x: 0, y: 0, width: webView.bounds.width, height: MobileCredentialStrip.height)
+        host.view.autoresizingMask = [.flexibleWidth]
+        credentialStripHost = host
+        webView.formAccessory = host.view
+    }
+
+    /// A fill from the strip that the page's form no longer fits: the person
+    /// hears so, and the stale offer goes.
+    private func credentialFillFailed() {
+        BrowserNoticeCenter.shared.post(.failure(String(localized: "Crest couldn’t fill this form.")))
+        credentialState.dismissFillRequest()
+    }
+
+    /// Moves focus to the field before, -1, or after, 1, the focused one, in
+    /// the frame that holds it, or the page's own when no field has said.
+    private func focusAdjacentField(_ step: Int) {
+        Task { @MainActor [weak self, webView] in
+            if await self?.credentialSession.focusAdjacentField(step, in: webView) != nil { return }
+            _ = try? await webView.callAsyncJavaScript(
+                "return globalThis.__crestCredentialBridge?.focusAdjacent(step) === true;",
+                arguments: ["step": step],
+                in: nil,
+                contentWorld: BrowserCredentialContentBridge.contentWorld)
+        }
     }
 
     private func installObservations() {

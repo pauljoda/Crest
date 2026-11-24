@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// The mark a fill prompt opens with: the site's own icon where the page has
-/// one, and the Space's key where it does not.
+/// one, a saved login's site icon where a row names one, and the Space's key
+/// otherwise.
 ///
 /// The icon is the page's, so it is only shown for a request the page can speak
 /// for. A sign-in embedded from somewhere else is named by its own origin on the
@@ -11,6 +12,9 @@ struct BrowserCredentialPromptIdentity: View {
     let kind: BrowserCredentialPromptHeaderKind
     let iconData: Data?
     let showsSiteIcon: Bool
+    /// The saved login's sites, whose own icon stands in when the page has
+    /// none.
+    var fallbackOrigins: [CredentialOrigin] = []
     let tint: Color
 
     @State private var icon = BrowserCredentialSiteIcon()
@@ -32,14 +36,14 @@ struct BrowserCredentialPromptIdentity: View {
                 )
             )
             .accessibilityHidden(true)
-            .task(id: requestedIconData) {
+            .task(id: requestKey) {
                 await loadIcon()
             }
     }
 
     @ViewBuilder
     private var mark: some View {
-        if let image = icon.image(for: requestedIconData) {
+        if let image = icon.image(for: requestKey) {
             image
                 .resizable()
                 .interpolation(.high)
@@ -66,14 +70,24 @@ struct BrowserCredentialPromptIdentity: View {
         showsSiteIcon ? iconData : nil
     }
 
+    /// What the mark shows an icon for: the page's bytes, or the saved
+    /// login's site when the page has none.
+    private var requestKey: AnyHashable? {
+        requestedIconData.map(AnyHashable.init) ?? (fallbackOrigins.isEmpty ? nil : AnyHashable(fallbackOrigins))
+    }
+
     private func loadIcon() async {
-        let requested = requestedIconData
-        guard let requested else {
+        let requested = requestKey
+        var data = requestedIconData
+        if data == nil, !fallbackOrigins.isEmpty {
+            data = await BrowserSiteIconStore.shared.icon(forFirstOf: fallbackOrigins)
+        }
+        guard let data else {
             icon.publish(nil, for: nil)
             return
         }
         let decoded = await BrowserFaviconImageDecoder.decode(
-            requested,
+            data,
             maximumPixelSize: BrowserCredentialSiteIcon.maximumPixelSize
         )
         guard !Task.isCancelled, let decoded else { return }
@@ -84,7 +98,7 @@ struct BrowserCredentialPromptIdentity: View {
     }
 }
 
-/// The last site icon a prompt decoded, and the bytes it was decoded from.
+/// The last site icon a prompt decoded, and what it was decoded for.
 ///
 /// The bytes are kept beside the image for the same reason a favicon render
 /// state keeps its request identity: a decode that lands after the page has
@@ -95,16 +109,16 @@ struct BrowserCredentialSiteIcon {
     static let maximumPixelSize = 64
     static let scale: CGFloat = 2
 
-    private var iconData: Data?
+    private var request: AnyHashable?
     private var decoded: Image?
 
-    func image(for iconData: Data?) -> Image? {
-        guard let iconData, iconData == self.iconData else { return nil }
+    func image(for request: AnyHashable?) -> Image? {
+        guard let request, request == self.request else { return nil }
         return decoded
     }
 
-    mutating func publish(_ image: Image?, for iconData: Data?) {
-        self.iconData = iconData
+    mutating func publish(_ image: Image?, for request: AnyHashable?) {
+        self.request = request
         decoded = image
     }
 }

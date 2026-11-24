@@ -132,9 +132,11 @@ struct BrowserCredentialSavePromptAction: Hashable, Sendable {
 
     static let create = BrowserCredentialSavePromptAction(
         name: "create", promptTitle: "Save password?", offerTitle: "Save & Offer to Passwords",
+        shortTitle: "Save", symbol: "key.fill",
         commitTitle: { spaceName in spaceName.map { "Save in \($0)" } ?? "Save in this Space" })
     static let update = BrowserCredentialSavePromptAction(
         name: "update", promptTitle: "Update password?", offerTitle: "Update & Offer to Passwords",
+        shortTitle: "Update", symbol: "arrow.triangle.2.circlepath",
         commitTitle: { spaceName in spaceName.map { "Update in \($0)" } ?? "Update in this Space" })
 
     let name: String
@@ -145,6 +147,12 @@ struct BrowserCredentialSavePromptAction: Hashable, Sendable {
     /// The commit button's title when the save also offers the password to
     /// the system's Passwords app.
     let offerTitle: LocalizedStringResource
+
+    /// The commit button's title beside the Space it saves in.
+    let shortTitle: LocalizedStringResource
+
+    /// The glyph on the prompt's tile.
+    let symbol: String
 
     /// The commit button's title, naming the Space the password is saved in.
     let commitTitle: @Sendable (_ spaceName: String?) -> LocalizedStringResource

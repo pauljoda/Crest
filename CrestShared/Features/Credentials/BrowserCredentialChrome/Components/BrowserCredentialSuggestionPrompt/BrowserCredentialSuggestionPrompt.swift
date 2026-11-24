@@ -31,14 +31,38 @@ struct BrowserCredentialSuggestionPrompt: View {
                 fillErrorMessage: fillErrorMessage,
                 metrics: metrics,
                 dismiss: port.dismiss,
+                openPasswords: port.openPasswords,
                 fill: fill
             )
         }
         .task(id: request.id) {
             fillErrorMessage = nil
             await model.load(request, in: port.spaceID, using: browser)
+            // Return and the arrows go to the popup only once it has a row
+            // to take; otherwise Return sends the form.
+            if !Task.isCancelled, !model.suggestions.isEmpty {
+                port.holdKeys(true, request.id)
+            }
         }
-        .onDisappear(perform: model.cancel)
+        .onChange(of: port.keyPress) { _, press in
+            press.map { answer($0.key) }
+        }
+        .onDisappear {
+            port.holdKeys(false, request.id)
+            model.cancel()
+        }
+    }
+
+    /// What a key the page held back does: the arrows move the selection,
+    /// Return fills it, Escape closes the popup.
+    private func answer(_ key: BrowserCredentialPopupKey) {
+        if key.dismissesPopup {
+            port.dismiss()
+        } else if key.choosesSelection {
+            if let selected = model.selectedSuggestion { fill(selected) } else { port.dismiss() }
+        } else {
+            model.moveSelection(by: key.step)
+        }
     }
 
     private var space: BrowserSpaceIdentity? {

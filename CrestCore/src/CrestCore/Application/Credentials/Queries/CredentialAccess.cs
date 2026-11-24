@@ -7,8 +7,9 @@ namespace CrestCore.Contracts;
 /// `Origin` when it names one, and the Spaces whose vaults hold them: the
 /// group's primary, which keeps its new passwords, then its Sub-Spaces, or the
 /// Space alone. A private window refuses a save, an off password manager a
-/// fill or a save, and a page without HTTPS either, in that order. Refused
-/// with `UnknownSpace` for a Space that is not there.
+/// fill or a save, a page without HTTPS either, and a site the person asked
+/// never to save for an offer to save, in that order. Refused with
+/// `UnknownSpace` for a Space that is not there.
 public sealed record CredentialAccess(Guid WorkspaceId, Guid SpaceId, CredentialUse Use, CredentialOrigin? Origin = null)
     : Query<CredentialAccessAnswer> {
     #region Actions - Answering
@@ -26,7 +27,9 @@ public sealed record CredentialAccess(Guid WorkspaceId, Guid SpaceId, Credential
         if (Use.RefusedInPrivate && isPrivate) return CredentialRefusal.PrivateBrowsing;
         if (!Use.NeedsManager) return null;
         if (!space.Settings.CredentialPreferences.IsEnabled) return CredentialRefusal.ManagerOff;
-        return Origin is { IsSecure: false } ? CredentialRefusal.InsecureOrigin : null;
+        if (Origin is { IsSecure: false }) return CredentialRefusal.InsecureOrigin;
+        return Use.OffersSave && Origin is { } site && space.Settings.CredentialPreferences.NeverSaves(site)
+            ? CredentialRefusal.NeverSaved : null;
     }
 
     #endregion
