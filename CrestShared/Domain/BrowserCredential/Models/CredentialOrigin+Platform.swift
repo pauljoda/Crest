@@ -44,6 +44,16 @@ extension CredentialOrigin {
         self.init(scheme: webScheme.name, host: canonicalHost, port: resolvedPort)
     }
 
+    /// The site a person typed, such as `example.com` or a page's address,
+    /// with `https://` assumed when they left the scheme out.
+    init?(typed text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let url = URL(string: trimmed.contains("://") ? trimmed : "https://\(trimmed)") else {
+            return nil
+        }
+        self.init(url: url)
+    }
+
     /// The origin of `rawHost` for a protocol and port, as an authentication
     /// challenge or a stored password names them. A host holding a character
     /// that parsing it into an address would read as a delimiter or an escape,

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "add-password-by-hand",
+      "category": "new",
+      "message": "Settings › Autofill › Passwords has Add Password, for a password you type in yourself, with a strong password one click away."
+    },
+    {
+      "id": "companions-kept-through-icloud",
+      "category": "internal",
+      "message": "A login's notes and code key stay in iCloud Keychain even when they reach a device before the login does, follow the login's iCloud choice, and are written with their keys in a fixed order."
+    }
+  ]
+}

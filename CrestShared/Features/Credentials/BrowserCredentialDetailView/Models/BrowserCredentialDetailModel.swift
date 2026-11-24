@@ -279,7 +279,7 @@ final class BrowserCredentialDetailModel {
         guard let draft, !isSaving, isAssignmentCurrent(spaceAssignment) else { return false }
         var sites: [CredentialOrigin] = []
         for text in draft.sites.map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) }) where !text.isEmpty {
-            guard let site = Self.site(text) else {
+            guard let site = CredentialOrigin(typed: text) else {
                 errorMessage = String(localized: "“\(text)” isn’t a website address.")
                 return false
             }
@@ -335,13 +335,6 @@ final class BrowserCredentialDetailModel {
         activeOperationTask = task
         await task.value
         finishAuthentication(token: token)
-    }
-
-    /// The site a person typed, with `https://` assumed when they left the
-    /// scheme out.
-    private static func site(_ text: String) -> CredentialOrigin? {
-        let spelled = text.contains("://") ? text : "https://\(text)"
-        return URL(string: spelled).flatMap(CredentialOrigin.init(url:))
     }
 
     private func performReveal(token: BrowserCredentialDetailOperationToken) async {

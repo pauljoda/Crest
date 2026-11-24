@@ -74,11 +74,12 @@ actor KeychainCredentialVault: CredentialVault {
         let descriptors = items.compactMap { try? codec.descriptor(from: $0, expectedSpaceID: spaceID) }
         let readable = Set(descriptors.map(\.id))
         var extras: [UUID: BrowserCredentialExtrasSummary] = [:]
-        for item in try await store.descriptorItems(in: extrasService(for: spaceID)) {
+        let companions = try await store.descriptorItems(in: extrasService(for: spaceID))
+        for item in companions {
             guard let owned = codec.extrasSummary(from: item), readable.contains(owned.ownerID) else { continue }
             extras[owned.ownerID] = owned.summary
         }
-        try await removeOrphanedExtras(keeping: Set(items.map(\.account)), in: spaceID)
+        try await tendCompanions(companions, logins: items, in: spaceID)
         return CredentialInventory(
             descriptors: descriptors.sorted(by: Self.descriptorOrder),
             unreadableCount: items.count - descriptors.count,
@@ -295,20 +296,50 @@ actor KeychainCredentialVault: CredentialVault {
                 account: item.account, metadata: item.metadata, isSynchronizable: item.isSynchronizable)) != nil
     }
 
-    /// Removes companion items whose login is gone, as when an older build
-    /// deleted the login, keeping any whose login is still stored even if it
-    /// no longer reads back.
-    private func removeOrphanedExtras(keeping accounts: Set<String>, in spaceID: UUID) async throws {
+    /// Keeps each companion with its login. One whose login keeps the other
+    /// iCloud choice follows it, as when an older build moved the logins
+    /// alone. A local one whose login is gone, as when an older build deleted
+    /// the login, goes. One in iCloud stays even without its login: iCloud
+    /// may bring the login after it, as it does to a device being restored,
+    /// and removing it would remove it everywhere. Logins in either iCloud
+    /// state count, since every read covers both.
+    private func tendCompanions(
+        _ companions: [CredentialKeychainDescriptorItem],
+        logins: [CredentialKeychainDescriptorItem],
+        in spaceID: UUID
+    ) async throws {
+        let owned = companions.filter { codec.extrasSummary(from: $0) != nil }
+        let syncedAccounts = Set(owned.filter(\.isSynchronizable).map(\.account))
+        let loginSync = Self.synchronization(of: logins)
+        let strays = owned.filter {
+            loginSync[$0.account] == nil && !$0.isSynchronizable && !syncedAccounts.contains($0.account)
+        }
+        let misaligned = owned.filter { companion in
+            loginSync[companion.account].map { $0 != companion.isSynchronizable } ?? false
+        }
+        guard !strays.isEmpty || !misaligned.isEmpty else { return }
         let extrasService = extrasService(for: spaceID)
-        let orphans = try await store.descriptorItems(in: extrasService)
-            .filter { !accounts.contains($0.account) && codec.extrasSummary(from: $0) != nil }
-        guard !orphans.isEmpty else { return }
         try await writing {
-            let stored = Set(try await store.descriptorItems(in: service(for: spaceID)).map(\.account))
-            for orphan in orphans where !stored.contains(orphan.account) {
-                try await store.delete(account: orphan.account, in: extrasService)
+            // Read again in the write's turn: a login written meanwhile keeps
+            // its companion and sets its iCloud choice.
+            let current = Self.synchronization(of: try await store.descriptorItems(in: service(for: spaceID)))
+            for stray in strays where current[stray.account] == nil {
+                try await store.delete(account: stray.account, in: extrasService)
+            }
+            for companion in misaligned {
+                guard let wanted = current[companion.account], wanted != companion.isSynchronizable,
+                    let item = try await store.item(account: companion.account, in: extrasService), isCompanion(item)
+                else { continue }
+                try await store.upsert(
+                    codec.migratedExtrasItem(from: item, isSynchronizable: wanted), in: extrasService)
             }
         }
+    }
+
+    /// Each stored login's iCloud choice by account; a login kept in both
+    /// states counts as in iCloud.
+    private static func synchronization(of logins: [CredentialKeychainDescriptorItem]) -> [String: Bool] {
+        Dictionary(logins.map { ($0.account, $0.isSynchronizable) }, uniquingKeysWith: { $0 || $1 })
     }
 
     // MARK: - Actions - Turns

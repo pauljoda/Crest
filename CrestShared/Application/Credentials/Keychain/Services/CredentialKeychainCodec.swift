@@ -1,7 +1,14 @@
 import Foundation
 
 struct CredentialKeychainCodec {
-    private let encoder = JSONEncoder()
+    /// Keys in a fixed order, so the same login always writes the same bytes
+    /// and a replacement rewrites only what changed. Readers don't depend on
+    /// the order.
+    private let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return encoder
+    }()
     private let decoder = JSONDecoder()
 
     func item(

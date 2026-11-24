@@ -2105,6 +2105,9 @@
     "Add Packing list" : {
 
     },
+    "Add Password" : {
+
+    },
     "Add Pattern Color" : {
 
     },
@@ -8838,6 +8841,9 @@
     "New Pages of This Site Open in" : {
 
     },
+    "New Password" : {
+
+    },
     "New primary" : {
 
     },
@@ -14817,6 +14823,9 @@
 
     },
     "Thin" : {
+
+    },
+    "This account already has a saved password." : {
 
     },
     "This action requires webpage tabs. Deselect built-in pages first." : {
