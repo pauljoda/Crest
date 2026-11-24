@@ -50,7 +50,7 @@
    * menu, behind the trailing ellipsis and a right-click alike, names it, gives
    * it an emoji or a colour, separates its tabs or closes them.
    */
-  let { session, space, groupId, group, members, focusedId, pagesByTab, depth, onMenu }: {
+  let { session, space, groupId, group, members, focusedId, pagesByTab, depth, onMenu, onToggling }: {
     session: Session;
     space: SpaceState;
     groupId: string;
@@ -61,6 +61,8 @@
     depth: number;
     /** The menu a right-click shows, where the window's selection holds a member: its tabs' own. */
     onMenu?: (event: MouseEvent) => boolean;
+    /** Called just before the split opens or closes, so the rows around it can move as it does. */
+    onToggling?: () => void;
   } = $props();
 
   const title = $derived(group?.displayTitle ?? SplitGroupStateTexts.defaultTitle.text);
@@ -117,6 +119,7 @@
   {...{ "aria-description": collapsed ? "Expands this Split View" : "Collapses this Split View" }}
   onclick={(event) => {
     if (renaming || event.detail > 1) return;
+    onToggling?.();
     send(CollapseSplit({ workspaceId: session.workspaceId, spaceId: space.id, groupId, isCollapsed: !collapsed }));
   }}
   ondblclick={() => (renaming = true)}

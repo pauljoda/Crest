@@ -135,6 +135,8 @@ export const motion = Object.freeze({
   step: snappy(0.22),
   collection: snappy(0.17),
   dragPreview: smooth(0.14),
+  /** Rows making room or closing up as a row comes or goes, as the Mac's sidebar list moves them. */
+  dragSource: snappy(0.15),
   navigation: snappy(0.2),
   chrome: smooth(0.2),
   sidebarMorph: smooth(0.21),

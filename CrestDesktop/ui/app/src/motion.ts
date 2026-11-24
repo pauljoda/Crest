@@ -165,13 +165,21 @@ export function animatePose(element: Element, from: Pose, to: Pose, timing: Timi
   });
 }
 
-/** Lifts a going element out of the layout where it stands. */
+/**
+ * Lifts a going element out of the layout where it stands, placed from where it is drawn against its offset
+ * parent, so a list scrolled between the two keeps it in place.
+ */
 function pop(element: HTMLElement): void {
-  const { offsetLeft, offsetTop, offsetWidth, offsetHeight } = element;
+  const { offsetWidth, offsetHeight } = element;
+  const parent = element.offsetParent as HTMLElement | null;
+  const box = element.getBoundingClientRect();
+  const origin = parent?.getBoundingClientRect();
+  const left = origin ? box.left - origin.left - parent!.clientLeft + parent!.scrollLeft : box.left;
+  const top = origin ? box.top - origin.top - parent!.clientTop + parent!.scrollTop : box.top;
   Object.assign(element.style, {
     position: "absolute",
-    left: `${offsetLeft}px`,
-    top: `${offsetTop}px`,
+    left: `${left}px`,
+    top: `${top}px`,
     width: `${offsetWidth}px`,
     height: `${offsetHeight}px`,
     margin: "0",

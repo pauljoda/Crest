@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "windows-sidebar-motion-matches-mac",
+      "category": "internal",
+      "message": "The Windows sidebar shows a newly selected tab at once, with a pressed row easing in, and its rows slide as folders, groups and splits open and close and as tabs close, reopen or open, as on the Mac."
+    }
+  ]
+}

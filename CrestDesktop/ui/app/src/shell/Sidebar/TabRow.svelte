@@ -45,7 +45,7 @@
   import { rowIconSize } from "../sidebar-layout";
   import { previewHandlers } from "../TabPreview.svelte";
   import RenameField from "./RenameField.svelte";
-  import { rowStyle, tabSelectionSurface } from "./sidebar-parts.svelte";
+  import { rowStyle } from "./sidebar-parts.svelte";
   import TabIcon from "./TabIcon.svelte";
 
   let {
@@ -54,7 +54,6 @@
   }: TabRowProps = $props();
 
   // The surface under the shown tab, which moves between the page's rows (sidebar-parts.svelte.ts).
-  const { out: leaves } = tabSelectionSurface();
   // A tab whose page isn't loaded reads dimmer, as the Mac's residency shows it.
   const loaded = $derived(resident || (pageId !== null && coreState(session).pages.get(pageId)?.phase.name === "live"));
 </script>
@@ -77,7 +76,7 @@
   {...previewHandlers(tab.id)}
 >
   {#if selected}
-    <span class="row-selection" out:leaves></span>
+    <span class="row-selection"></span>
   {/if}
   <TabIcon {session} {tab} {pageId} size={rowIconSize} />
   {#if renaming}

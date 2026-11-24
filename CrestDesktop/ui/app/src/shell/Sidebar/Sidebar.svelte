@@ -132,7 +132,7 @@
   import LiftPreview from "./LiftPreview.svelte";
   import PinnedGrid from "./PinnedGrid.svelte";
   import PinnedTileFace from "./PinnedTileFace.svelte";
-  import { folderTabCount, useTabSelectionSurface } from "./sidebar-parts.svelte";
+  import { folderTabCount, useRowMotion } from "./sidebar-parts.svelte";
   import TabRow from "./TabRow.svelte";
 
   /**
@@ -146,6 +146,9 @@
   }: SidebarProps = $props();
 
   let aside = $state<HTMLElement | null>(null);
+  // Rows coming and going move the rest, as the Mac's sidebar list does: on disclosure as something opens or closes.
+  const disclosure = useRowMotion(() => aside?.querySelector(".space-page:not([aria-hidden])") ?? aside,
+    () => useCoreVersion(session), () => lift !== null);
 
   // The window's utility list, as the Mac's utility presentation: the list
   // open in place of the Space's tabs, if any. The Common Lists button opens
@@ -343,9 +346,12 @@
     if (tab.placement === TabPlacement.current) close(tab.id);
     else if (pageId) void send(session, ReleasePage({ pageId, keepsState: true }));
   };
-  const toggleFolder = (folder: FolderState) => void session.core.send(CollapseFolder({
-    workspaceId: session.workspaceId, spaceId: space.id, folderId: folder.id, collapsed: !folder.isCollapsed,
-  }));
+  const toggleFolder = (folder: FolderState) => {
+    disclosure.prepare();
+    void session.core.send(CollapseFolder({
+      workspaceId: session.workspaceId, spaceId: space.id, folderId: folder.id, collapsed: !folder.isCollapsed,
+    }));
+  };
   /** Shows a tab from its row, which collapses the selection to the row, as the Mac's activation does. */
   const activate = (tabId: string) => {
     const { units, current } = selectionOverRows();
@@ -574,9 +580,12 @@
     },
   } : null);
 
-  const toggleSavedTabs = (pageSpace: SpaceState) => void session.core.send(ExpandSavedTabs({
-    workspaceId: session.workspaceId, spaceId: pageSpace.id, isExpanded: !pageSpace.settings.isSavedTabsExpanded,
-  }));
+  const toggleSavedTabs = (pageSpace: SpaceState) => {
+    disclosure.prepare();
+    void session.core.send(ExpandSavedTabs({
+      workspaceId: session.workspaceId, spaceId: pageSpace.id, isExpanded: !pageSpace.settings.isSavedTabsExpanded,
+    }));
+  };
   const isPinnedTop = (list: SidebarList) => list.section.name === "pinned" && list.folderId === null;
   const isCurrentTop = (list: SidebarList) => list.folderId === null && list.section.name === "current";
   const openNewTab = () => (practice ? practice.openExampleTab() : openPalette("newTab"));
@@ -640,12 +649,6 @@
     const rows = inside.rows.filter((candidate) => candidate.kind.name !== "folder" && candidate.members.concat(candidate.id).some(keeps));
     return { ...inside, rows };
   };
-
-  // The selection under the shown tab moves between each page's rows as Motion's shared layout moved it.
-  useTabSelectionSurface(() => aside, () => [
-    useCoreVersion(session), space, spaces, shownTabId, shownTabs, page, pagesByTab, showsNavigation, permission, docked, practice,
-    utility, selection, lift, renaming, shaken, siteControlsOpen, folderLook, tabLook,
-  ]);
 
   // The folder or tab whose look is being chosen, while it stands.
   const lookedFolder = $derived(folderLook ? folders.get(folderLook.folderId) ?? null : null);
@@ -767,7 +770,7 @@
               {#if groupId}
                 <!-- Where the window's selection holds a member, the menu is its tabs'. -->
                 <SplitGroupHeader {session} space={pageSpace} {groupId} {group} members={memberTabs}
-                  focusedId={focusedMember} {pagesByTab} depth={row.depth}
+                  focusedId={focusedMember} {pagesByTab} depth={row.depth} onToggling={() => disclosure.prepare()}
                   onMenu={(event) => {
                     if (!row.members.some((id) => view.marked(tabItem(id)))) return false;
                     rowMenu(event, tabItem(row.members[0]), () => tabMenu(context, memberTabs[0]));
