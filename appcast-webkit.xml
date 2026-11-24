@@ -6,6 +6,42 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
+            <title>0.11.2</title>
+            <pubDate>Tue, 24 Nov 2026 20:29:11 +0000</pubDate>
+            <link>https://crestbrowser.com/</link>
+            <sparkle:channel>nightly</sparkle:channel>
+            <sparkle:version>1707</sparkle:version>
+            <sparkle:shortVersionString>0.11.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[## Highlights
+
+### New
+
+- Give any Space color an exact hex code, or pick it with the system color picker.
+- Crest 0.11 has a new look, with a new mark and app icons, warm paper, Crest blue and the Allo typeface. It brings Site Controls to Mac, iPhone and iPad, a new setup, Space looks made from a template, colors and an icon, Chromium 158, and Crest for Mac on Intel Macs and macOS 15 Sequoia.
+
+### Improved
+
+- Setup lies on Crest's navy in light and dark mode, on Mac, iPhone and iPad.
+- A Space's appearance starts with templates, each a full set of icon and colors, then the colors and the icon to refine it, with Undo when a template replaces colors you chose.
+- More Customization for a Space opens as its own page, with the crest's colors at the top.
+
+### Fixed
+
+- Choosing a crest, symbol or emoji as a Space's icon keeps the Space's colors.
+- Chromium is updated to 158.0.8127.89 with upstream security and compatibility fixes.
+
+---
+
+Nightly builds contain the newest changes and may be less reliable than stable releases.
+
+[Release notes](https://crestbrowser.com/releases/mac/nightly/0.11.2/) · [View all changes](https://github.com/crest-browser/Crest/compare/752ce0495c2fa7d640a7c0cb7fbc06834d4dd676...59f6d549259747b314b5f7a82d7123c1e90b85d9) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/nightly-0.11.2-2026-11-24-1707-r707.1/Installer-Crest-0.11.2-nightly-2026-11-24-59f6d54.dmg)
+
+[Browse Nightly releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
+]]></description>
+            <enclosure url="https://github.com/crest-browser/Crest/releases/download/nightly-0.11.2-2026-11-24-1707-r707.1/Installer-Crest-0.11.2-nightly-2026-11-24-59f6d54.dmg" length="410438124" type="application/octet-stream" sparkle:edSignature="TmxC7u8ChwdObiciETB6SQINnRSNvh2IjBqQE9clOIrt1aSrfpr4PThdiezuCRz0en0oZnqs1lZ4+pq+xM2uDQ=="/>
+        </item>
+        <item>
             <title>0.11.0</title>
             <pubDate>Tue, 24 Nov 2026 03:52:02 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
@@ -79,49 +115,6 @@ Stable releases are signed, notarized, and ready for everyday use.
 [Browse Stable releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Afalse)
 ]]></description>
             <enclosure url="https://github.com/crest-browser/Crest/releases/download/v0.11.0/Installer-Crest-0.11.0.dmg" length="410483116" type="application/octet-stream" sparkle:edSignature="hD2Xx0GVUlV6r8ALMQqKloz6bS+eXnmO35BS3RT8j1FJSK4HhkT7wchmHvUKxwAmnWrjTsn8C6QtBu6rHHCkAA=="/>
-        </item>
-        <item>
-            <title>0.10.169</title>
-            <pubDate>Mon, 23 Nov 2026 22:12:04 +0000</pubDate>
-            <link>https://crestbrowser.com/</link>
-            <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1698</sparkle:version>
-            <sparkle:shortVersionString>0.10.169</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[## Highlights
-
-Showing the 12 most recent highlights from 20 user-facing changes.
-
-### New
-
-- Site Controls gather the page's actions and the site's settings in one place, with the actions you use most on top.
-- Drag actions into, along and out of the row on top of Site Controls; each device keeps its own.
-- Copy Page Title, Show QR Code and Open Page in Private Window are new commands in the menu bar and the command palette.
-
-### Improved
-
-- Every row of an extension's action menu now shows an icon.
-- When a page can't read files you chose, and when a download starts with the sidebar hidden or Reduce Motion on, Crest says so in the notice at the top of the window instead of an alert or a box in the corner.
-- About Crest, Getting Started with Crest, Paste and Match Style and the developer toolbar's viewport sizes show icons in their menus.
-- The menu of the Archive, History and Downloads button beside the Space switcher shows each list's icon.
-- Getting Started no longer labels its lessons Try It or its practice pages Example Page and Split View Practice.
-- Counts such as selected tabs, passwords, import warnings, Sub-Spaces and downloads in progress follow each language's plural rules, and the password count and deletion message in Passwords settings can be translated.
-- In Arabic, the Pin row of the tab selection menu reads in Arabic for any number of tabs.
-- Opens in shows each engine's logo.
-
-### Fixed
-
-- After updating to Chromium 158, every Space opens with its own extensions, sign-ins and sessions again instead of starting empty.
-
----
-
-Nightly builds contain the newest changes and may be less reliable than stable releases.
-
-[Release notes](https://crestbrowser.com/releases/mac/nightly/0.10.169/) · [View all changes](https://github.com/crest-browser/Crest/compare/4167974c2481e04f319c947dbae70be0de7e663b...752ce0495c2fa7d640a7c0cb7fbc06834d4dd676) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/nightly-0.10.169-2026-11-23-1698-r698.1/Installer-Crest-0.10.169-nightly-2026-11-23-752ce04.dmg)
-
-[Browse Nightly releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
-]]></description>
-            <enclosure url="https://github.com/crest-browser/Crest/releases/download/nightly-0.10.169-2026-11-23-1698-r698.1/Installer-Crest-0.10.169-nightly-2026-11-23-752ce04.dmg" length="410306030" type="application/octet-stream" sparkle:edSignature="ieyJPUWpGRChYRv924Qxi+AmrKD4zAAwaTu7pB7k5Fc7Q1fLHJNtowPKq7dS4icyNN+aRdsLA4kyxg8AHJTvBA=="/>
         </item>
         <item>
             <title>0.10.138</title>
@@ -245,6 +238,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: wpSZC7p/3xD2Eavi1KxObGfdL4BESSn3pPUSP1btpH8CU7KQVMceped2ZjMxBf6Vup+8s+eoe22aTSJx4+QoDg==
-length: 22775
+edSignature: 38j5bYAi3N+NM31l0+8MXhkGfB7dpyPcWKbn2gTfCmYKbijyhYbnsVhBhHyYQwGsPFi2m/gWVq+fUxPGW6YVCA==
+length: 22137
 -->
