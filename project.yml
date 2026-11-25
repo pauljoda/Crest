@@ -142,6 +142,9 @@ targetTemplates:
       - sdk: UserNotifications.framework
       - sdk: WebKit.framework
       - sdk: Security.framework
+      # Tidy's on-device model arrives with macOS 26; older systems run without it.
+      - sdk: FoundationModels.framework
+        weak: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pauldavis.crest.chromium-ui
@@ -216,6 +219,9 @@ targets:
       - sdk: UserNotifications.framework
       - sdk: WebKit.framework
       - sdk: Security.framework
+      # Tidy's on-device model arrives with macOS 26; older systems run without it.
+      - sdk: FoundationModels.framework
+        weak: true
     settings:
       base:
         CREST_NATIVE_CORE_ENTITLEMENTS: CrestNative/Apple/Composition/ControlPlane.entitlements
@@ -282,6 +288,9 @@ targets:
       - sdk: UserNotifications.framework
       - sdk: WebKit.framework
       - sdk: Security.framework
+      # Tidy's on-device model arrives with macOS 26; older systems run without it.
+      - sdk: FoundationModels.framework
+        weak: true
     settings:
       base:
         CREST_MAC_ENTITLEMENTS: CrestMac/Configuration/Crest.entitlements

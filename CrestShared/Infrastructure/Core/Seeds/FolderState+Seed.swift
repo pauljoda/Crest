@@ -21,6 +21,6 @@ extension FolderState.Seed {
         self.init(
             id: id, location: location, title: title, symbol: symbol, color: color, parentID: parentID,
             isCollapsed: isCollapsed, collapseModifiedAt: collapseModifiedAt, orderAnchorTabID: orderAnchorTabID,
-            isGroup: isGroup)
+            isGroup: isGroup, madeByTidy: false)
     }
 }

@@ -67,6 +67,8 @@ struct SpaceSidebarBrowsingContent: View {
                 createFolder: beginCreatingFolder,
                 collapseAllFolders: { _ = tabActions.collapseAllFolders() },
                 canCollapseAllFolders: { tabActions.canCollapseAllFolders },
+                tidyOpenTabs: { tabActions.startTidying() },
+                canTidyOpenTabs: { tabActions.canTidy },
                 showHistory: showHistory,
                 clearOtherTabs: { _ = tabActions.clearCurrentTabs(keepingShownTab: true) },
                 clearAllTabs: { _ = tabActions.clearCurrentTabs(keepingShownTab: false) },

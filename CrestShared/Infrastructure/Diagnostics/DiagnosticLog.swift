@@ -31,6 +31,9 @@ struct DiagnosticLog: Sendable {
     static let sessionStorage = DiagnosticLog(category: "SessionStorage")
     static let shortcuts = DiagnosticLog(category: "Shortcuts")
     static let sitePermissions = DiagnosticLog(category: "SitePermissions")
+    /// Tidy's word-table downloads and the on-device model's failures, named
+    /// by the error alone, never by a tab.
+    static let tidy = DiagnosticLog(category: "Tidy")
     static let windows = DiagnosticLog(category: "Windows")
     /// A page view's host claiming and letting go of it, timed for
     /// Instruments.

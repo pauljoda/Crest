@@ -6,9 +6,9 @@ namespace CrestCore.Application;
 
 /// A folder's synced value: where it lives, its title and look, its parent,
 /// its disclosure with the clock of its last change, its position, whether it
-/// is a group, which older clients keep and show as a folder, and when it went
+/// is a group, which older clients keep and show as a folder, when it went
 /// for holding nothing and when a device last held a tab in it after that,
-/// which older clients keep and ignore.
+/// and whether Tidy made it, which older clients keep and ignore.
 internal sealed record FolderPayload(
     Guid Id,
     Guid SpaceId,
@@ -23,7 +23,8 @@ internal sealed record FolderPayload(
     string OrderToken,
     bool IsGroup = false,
     SyncTime? EmptiedAt = null,
-    SyncTime? HeldAt = null) : SyncPayload {
+    SyncTime? HeldAt = null,
+    bool MadeByTidy = false) : SyncPayload {
     #region Static Variables
 
     /// The members a folder's value carries; a record keeps what a newer build
@@ -32,7 +33,7 @@ internal sealed record FolderPayload(
         StoredSessionCodec.Key.Id, StoredSessionCodec.Key.SpaceId, StoredSessionCodec.Key.Title, StoredSessionCodec.Key.Location,
         StoredSessionCodec.Key.Symbol, StoredSessionCodec.Key.Color, StoredSessionCodec.Key.ParentId, StoredSessionCodec.Key.IsCollapsed,
         StoredSessionCodec.Key.CollapseModifiedAt, StoredSessionCodec.Key.OrderAnchorTabId, SyncPayload.Key.OrderToken,
-        StoredSessionCodec.Key.IsGroup, Key.EmptiedAt, Key.HeldAt
+        StoredSessionCodec.Key.IsGroup, Key.EmptiedAt, Key.HeldAt, StoredSessionCodec.Key.MadeByTidy
     ];
 
     #endregion
@@ -68,8 +69,9 @@ internal sealed record FolderPayload(
     /// The folder `value` holds. One without a location is saved, without a
     /// symbol keeps none of its own and is drawn with the folder symbol,
     /// without a color takes the folder color, and without a disclosure is
-    /// expanded, without a group mark is a folder, and without an emptied date
-    /// later than its held date shows wherever it is.
+    /// expanded, without a group mark is a folder, without an emptied date
+    /// later than its held date shows wherever it is, and without a Tidy mark
+    /// is one a person made.
     public static FolderPayload Read(SyncPayloadReader value) => new(value.WrappedIdentity(StoredSessionCodec.Key.Id),
         value.WrappedIdentity(StoredSessionCodec.Key.SpaceId),
         value.OptionalText(StoredSessionCodec.Key.Location) is { } location ? Placement(location) : TabPlacement.Saved,
@@ -78,7 +80,7 @@ internal sealed record FolderPayload(
         value.OptionalWrappedIdentity(StoredSessionCodec.Key.ParentId), value.OptionalFlag(StoredSessionCodec.Key.IsCollapsed) ?? false,
         value.OptionalTime(StoredSessionCodec.Key.CollapseModifiedAt), value.OptionalWrappedIdentity(StoredSessionCodec.Key.OrderAnchorTabId),
         value.Text(Key.OrderToken), value.OptionalFlag(StoredSessionCodec.Key.IsGroup) ?? false, value.OptionalTime(Key.EmptiedAt),
-        value.OptionalTime(Key.HeldAt));
+        value.OptionalTime(Key.HeldAt), value.OptionalFlag(StoredSessionCodec.Key.MadeByTidy) ?? false);
 
     public override JsonObject EncodeValue(SyncPayloadForm form) {
         var value = new JsonObject {
@@ -97,6 +99,7 @@ internal sealed record FolderPayload(
         if (IsGroup) value[StoredSessionCodec.Key.IsGroup] = true;
         Put(value, Key.EmptiedAt, EmptiedAt, form);
         Put(value, Key.HeldAt, HeldAt, form);
+        if (MadeByTidy) value[StoredSessionCodec.Key.MadeByTidy] = true;
         return value;
     }
 

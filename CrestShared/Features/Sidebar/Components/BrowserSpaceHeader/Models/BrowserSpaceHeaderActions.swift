@@ -21,6 +21,14 @@ struct BrowserSpaceHeaderActions {
     /// opens.
     var canCollapseAllFolders: () -> Bool = { true }
 
+    /// Sorts this Space's loose open tabs into Groups by topic. Nil where the
+    /// shell offers it elsewhere.
+    var tidyOpenTabs: (() -> Void)?
+
+    /// Whether the Space holds enough loose web pages to tidy, asked as the
+    /// menu opens.
+    var canTidyOpenTabs: () -> Bool = { false }
+
     /// Opens the history list.
     let showHistory: () -> Void
 

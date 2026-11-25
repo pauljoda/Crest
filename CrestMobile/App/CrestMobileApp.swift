@@ -91,6 +91,7 @@ private final class BrowserMobileApplication {
         BrowserSearchCatalog.restore(into: core)
         BrowserAppPreferenceStore.shared.bind(
             to: browser, legacy: LegacyAppPreferences.read(for: launchEnvironment))
+        TabTidying.shared.follow(BrowserAppPreferenceStore.shared)
         let transientBrowsing = BrowserTransientBrowsingCoordinator()
         let cloudSync =
             usesIsolatedLaunch

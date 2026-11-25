@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0x41, 0x42, 0x96, 0x4d, 0x24, 0x71, 0x5f, 0xd5, 0xdf, 0x41, 0xc3, 0xd7, 0xef, 0xb2, 0x92, 0xa9, 0xc8, 0x30, 0xb7, 0x4a, 0xdb, 0xab, 0x68, 0x8d, 0x3c, 0x35, 0x0f, 0xed, 0x25, 0x10, 0xcd, 0xe7
+        0x42, 0xe3, 0x94, 0x9f, 0xe6, 0x26, 0xee, 0xcb, 0x3c, 0x7e, 0xc3, 0x7a, 0x97, 0x4f, 0x36, 0x67, 0x76, 0x63, 0xf5, 0x55, 0x03, 0x2c, 0x3d, 0x21, 0x39, 0x85, 0x3d, 0xc1, 0x37, 0xc3, 0xdf, 0x0b
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -311,11 +311,12 @@ public static class ContractCodec {
             case 283: return ReadStopAllAgents(reader);
             case 284: return ReadSweepExpiredRecords(reader);
             case 285: return ReadTakeReleaseNotes(reader);
-            case 286: return ReadTintSplit(reader);
-            case 287: return ReadToggleImportSource(reader);
-            case 288: return ReadTogglePin(reader);
-            case 289: return ReadUnassignShortcut(reader);
-            case 290: return ReadUnblockElements(reader);
+            case 286: return ReadTidyTabs(reader);
+            case 287: return ReadTintSplit(reader);
+            case 288: return ReadToggleImportSource(reader);
+            case 289: return ReadTogglePin(reader);
+            case 290: return ReadUnassignShortcut(reader);
+            case 291: return ReadUnblockElements(reader);
             default: throw new WireFormatException($"Unknown Intent tag {tag}.");
         }
     }
@@ -1468,24 +1469,28 @@ public static class ContractCodec {
                 writer.WriteTag(285);
                 WriteTakeReleaseNotes(writer, member);
                 break;
-            case TintSplit member:
+            case TidyTabs member:
                 writer.WriteTag(286);
+                WriteTidyTabs(writer, member);
+                break;
+            case TintSplit member:
+                writer.WriteTag(287);
                 WriteTintSplit(writer, member);
                 break;
             case ToggleImportSource member:
-                writer.WriteTag(287);
+                writer.WriteTag(288);
                 WriteToggleImportSource(writer, member);
                 break;
             case TogglePin member:
-                writer.WriteTag(288);
+                writer.WriteTag(289);
                 WriteTogglePin(writer, member);
                 break;
             case UnassignShortcut member:
-                writer.WriteTag(289);
+                writer.WriteTag(290);
                 WriteUnassignShortcut(writer, member);
                 break;
             case UnblockElements member:
-                writer.WriteTag(290);
+                writer.WriteTag(291);
                 WriteUnblockElements(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Intent.");
@@ -2046,34 +2051,36 @@ public static class ContractCodec {
             case 153: return ReadSyncStagingRefused(reader);
             case 154: return ReadTabAlreadyExists(reader);
             case 155: return ReadTabAlreadyHasPage(reader);
-            case 156: return ReadTabLimitReached(reader);
-            case 157: return ReadTransientAlreadyCompleted(reader);
-            case 158: return ReadTranslationRuleLimitReached(reader);
-            case 159: return ReadUnknownAgentSession(reader);
-            case 160: return ReadUnknownArchivedTab(reader);
-            case 161: return ReadUnknownCloudMerge(reader);
-            case 162: return ReadUnknownExtension(reader);
-            case 163: return ReadUnknownFolder(reader);
-            case 164: return ReadUnknownLinkRoute(reader);
-            case 165: return ReadUnknownPage(reader);
-            case 166: return ReadUnknownPrompt(reader);
-            case 167: return ReadUnknownSearchEngine(reader);
-            case 168: return ReadUnknownSearchOption(reader);
-            case 169: return ReadUnknownSpace(reader);
-            case 170: return ReadUnknownSplitGroup(reader);
-            case 171: return ReadUnknownTab(reader);
-            case 172: return ReadUnknownWorkspace(reader);
-            case 173: return ReadUnpreparedImport(reader);
-            case 174: return ReadUnregisteredEngine(reader);
-            case 175: return ReadUnrelatedWorkspaces(reader);
-            case 176: return ReadUnsavedWorkspace(reader);
-            case 177: return ReadUnsuitableDefaultSearch(reader);
-            case 178: return ReadUnsupportedAddress(reader);
-            case 179: return ReadUnsupportedArchiveVersion(reader);
-            case 180: return ReadWebPagesOnly(reader);
-            case 181: return ReadWindowNotOpen(reader);
-            case 182: return ReadWorkspaceBusy(reader);
-            case 183: return ReadWrongDeletionOperation(reader);
+            case 156: return ReadTabCannotBeTidied(reader);
+            case 157: return ReadTabLimitReached(reader);
+            case 158: return ReadTidyTopicNeedsTwoTabs(reader);
+            case 159: return ReadTransientAlreadyCompleted(reader);
+            case 160: return ReadTranslationRuleLimitReached(reader);
+            case 161: return ReadUnknownAgentSession(reader);
+            case 162: return ReadUnknownArchivedTab(reader);
+            case 163: return ReadUnknownCloudMerge(reader);
+            case 164: return ReadUnknownExtension(reader);
+            case 165: return ReadUnknownFolder(reader);
+            case 166: return ReadUnknownLinkRoute(reader);
+            case 167: return ReadUnknownPage(reader);
+            case 168: return ReadUnknownPrompt(reader);
+            case 169: return ReadUnknownSearchEngine(reader);
+            case 170: return ReadUnknownSearchOption(reader);
+            case 171: return ReadUnknownSpace(reader);
+            case 172: return ReadUnknownSplitGroup(reader);
+            case 173: return ReadUnknownTab(reader);
+            case 174: return ReadUnknownWorkspace(reader);
+            case 175: return ReadUnpreparedImport(reader);
+            case 176: return ReadUnregisteredEngine(reader);
+            case 177: return ReadUnrelatedWorkspaces(reader);
+            case 178: return ReadUnsavedWorkspace(reader);
+            case 179: return ReadUnsuitableDefaultSearch(reader);
+            case 180: return ReadUnsupportedAddress(reader);
+            case 181: return ReadUnsupportedArchiveVersion(reader);
+            case 182: return ReadWebPagesOnly(reader);
+            case 183: return ReadWindowNotOpen(reader);
+            case 184: return ReadWorkspaceBusy(reader);
+            case 185: return ReadWrongDeletionOperation(reader);
             default: throw new WireFormatException($"Unknown Rejection tag {tag}.");
         }
     }
@@ -2706,116 +2713,124 @@ public static class ContractCodec {
                 writer.WriteTag(155);
                 WriteTabAlreadyHasPage(writer, member);
                 break;
-            case TabLimitReached member:
+            case TabCannotBeTidied member:
                 writer.WriteTag(156);
+                WriteTabCannotBeTidied(writer, member);
+                break;
+            case TabLimitReached member:
+                writer.WriteTag(157);
                 WriteTabLimitReached(writer, member);
                 break;
+            case TidyTopicNeedsTwoTabs member:
+                writer.WriteTag(158);
+                WriteTidyTopicNeedsTwoTabs(writer, member);
+                break;
             case TransientAlreadyCompleted member:
-                writer.WriteTag(157);
+                writer.WriteTag(159);
                 WriteTransientAlreadyCompleted(writer, member);
                 break;
             case TranslationRuleLimitReached member:
-                writer.WriteTag(158);
+                writer.WriteTag(160);
                 WriteTranslationRuleLimitReached(writer, member);
                 break;
             case UnknownAgentSession member:
-                writer.WriteTag(159);
+                writer.WriteTag(161);
                 WriteUnknownAgentSession(writer, member);
                 break;
             case UnknownArchivedTab member:
-                writer.WriteTag(160);
+                writer.WriteTag(162);
                 WriteUnknownArchivedTab(writer, member);
                 break;
             case UnknownCloudMerge member:
-                writer.WriteTag(161);
+                writer.WriteTag(163);
                 WriteUnknownCloudMerge(writer, member);
                 break;
             case UnknownExtension member:
-                writer.WriteTag(162);
+                writer.WriteTag(164);
                 WriteUnknownExtension(writer, member);
                 break;
             case UnknownFolder member:
-                writer.WriteTag(163);
+                writer.WriteTag(165);
                 WriteUnknownFolder(writer, member);
                 break;
             case UnknownLinkRoute member:
-                writer.WriteTag(164);
+                writer.WriteTag(166);
                 WriteUnknownLinkRoute(writer, member);
                 break;
             case UnknownPage member:
-                writer.WriteTag(165);
+                writer.WriteTag(167);
                 WriteUnknownPage(writer, member);
                 break;
             case UnknownPrompt member:
-                writer.WriteTag(166);
+                writer.WriteTag(168);
                 WriteUnknownPrompt(writer, member);
                 break;
             case UnknownSearchEngine member:
-                writer.WriteTag(167);
+                writer.WriteTag(169);
                 WriteUnknownSearchEngine(writer, member);
                 break;
             case UnknownSearchOption member:
-                writer.WriteTag(168);
+                writer.WriteTag(170);
                 WriteUnknownSearchOption(writer, member);
                 break;
             case UnknownSpace member:
-                writer.WriteTag(169);
+                writer.WriteTag(171);
                 WriteUnknownSpace(writer, member);
                 break;
             case UnknownSplitGroup member:
-                writer.WriteTag(170);
+                writer.WriteTag(172);
                 WriteUnknownSplitGroup(writer, member);
                 break;
             case UnknownTab member:
-                writer.WriteTag(171);
+                writer.WriteTag(173);
                 WriteUnknownTab(writer, member);
                 break;
             case UnknownWorkspace member:
-                writer.WriteTag(172);
+                writer.WriteTag(174);
                 WriteUnknownWorkspace(writer, member);
                 break;
             case UnpreparedImport member:
-                writer.WriteTag(173);
+                writer.WriteTag(175);
                 WriteUnpreparedImport(writer, member);
                 break;
             case UnregisteredEngine member:
-                writer.WriteTag(174);
+                writer.WriteTag(176);
                 WriteUnregisteredEngine(writer, member);
                 break;
             case UnrelatedWorkspaces member:
-                writer.WriteTag(175);
+                writer.WriteTag(177);
                 WriteUnrelatedWorkspaces(writer, member);
                 break;
             case UnsavedWorkspace member:
-                writer.WriteTag(176);
+                writer.WriteTag(178);
                 WriteUnsavedWorkspace(writer, member);
                 break;
             case UnsuitableDefaultSearch member:
-                writer.WriteTag(177);
+                writer.WriteTag(179);
                 WriteUnsuitableDefaultSearch(writer, member);
                 break;
             case UnsupportedAddress member:
-                writer.WriteTag(178);
+                writer.WriteTag(180);
                 WriteUnsupportedAddress(writer, member);
                 break;
             case UnsupportedArchiveVersion member:
-                writer.WriteTag(179);
+                writer.WriteTag(181);
                 WriteUnsupportedArchiveVersion(writer, member);
                 break;
             case WebPagesOnly member:
-                writer.WriteTag(180);
+                writer.WriteTag(182);
                 WriteWebPagesOnly(writer, member);
                 break;
             case WindowNotOpen member:
-                writer.WriteTag(181);
+                writer.WriteTag(183);
                 WriteWindowNotOpen(writer, member);
                 break;
             case WorkspaceBusy member:
-                writer.WriteTag(182);
+                writer.WriteTag(184);
                 WriteWorkspaceBusy(writer, member);
                 break;
             case WrongDeletionOperation member:
-                writer.WriteTag(183);
+                writer.WriteTag(185);
                 WriteWrongDeletionOperation(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Rejection.");
@@ -3889,8 +3904,9 @@ public static class ContractCodec {
             case 276: return ReadSplitTabs(reader);
             case 281: return ReadStepSplitMember(reader);
             case 284: return ReadSweepExpiredRecords(reader);
-            case 286: return ReadTintSplit(reader);
-            case 288: return ReadTogglePin(reader);
+            case 286: return ReadTidyTabs(reader);
+            case 287: return ReadTintSplit(reader);
+            case 289: return ReadTogglePin(reader);
             default: throw new WireFormatException($"Intent tag {tag} is not a SessionIntent.");
         }
     }
@@ -5357,7 +5373,8 @@ public static class ContractCodec {
             reader.ReadBool(),
             ReadNewTabPosition(reader),
             reader.ReadBool(),
-            ReadPalettePreferences(reader));
+            ReadPalettePreferences(reader),
+            reader.ReadBool());
     }
 
     public static void WriteAppPreferences(WireWriter writer, AppPreferences value) {
@@ -5382,6 +5399,7 @@ public static class ContractCodec {
         WriteNewTabPosition(writer, value.NewTabPosition);
         writer.WriteBool(value.NewTabsJoinFolder);
         WritePalettePreferences(writer, value.Palette);
+        writer.WriteBool(value.OffersTabTidying);
     }
 
     public static AppPreferencesChanged ReadAppPreferencesChanged(WireReader reader) {
@@ -11096,6 +11114,7 @@ public static class ContractCodec {
             reader.ReadBool(),
             reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
             reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadBool(),
             reader.ReadBool());
         _ = reader.ReadString();
         _ = ReadBrandColor(reader);
@@ -11140,6 +11159,7 @@ public static class ContractCodec {
             writer.WritePresence(false);
         }
         writer.WriteBool(value.IsGroup);
+        writer.WriteBool(value.MadeByTidy);
         writer.WriteString(value.DisplaySymbol);
         WriteBrandColor(writer, value.DisplayColor);
     }
@@ -11156,6 +11176,7 @@ public static class ContractCodec {
             reader.ReadBool(),
             reader.ReadPresence() ? (DateTimeOffset?)reader.ReadDate() : null,
             reader.ReadPresence() ? (Guid?)reader.ReadGuid() : null,
+            reader.ReadBool(),
             reader.ReadBool());
     }
 
@@ -11197,6 +11218,7 @@ public static class ContractCodec {
             writer.WritePresence(false);
         }
         writer.WriteBool(value.IsGroup);
+        writer.WriteBool(value.MadeByTidy);
     }
 
     public static FolderTabs ReadFolderTabs(WireReader reader) {
@@ -21819,6 +21841,18 @@ public static class ContractCodec {
         writer.WriteGuid(value.PageId);
     }
 
+    public static TabCannotBeTidied ReadTabCannotBeTidied(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new TabCannotBeTidied(
+            reader.ReadGuid());
+    }
+
+    public static void WriteTabCannotBeTidied(WireWriter writer, TabCannotBeTidied value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.TabId);
+    }
+
     public static TabContent ReadTabContent(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new TabContent(
@@ -22349,6 +22383,54 @@ public static class ContractCodec {
         } else {
             writer.WritePresence(false);
         }
+    }
+
+    public static TidyTabs ReadTidyTabs(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new TidyTabs(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadList(() => ReadTidyTopic(reader)));
+    }
+
+    public static void WriteTidyTabs(WireWriter writer, TidyTabs value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.SpaceId);
+        writer.WriteCount(value.Topics.Count);
+        foreach (var itemTopics in value.Topics) {
+            WriteTidyTopic(writer, itemTopics);
+        }
+    }
+
+    public static TidyTopic ReadTidyTopic(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new TidyTopic(
+            reader.ReadString(),
+            reader.ReadList(() => reader.ReadGuid()));
+    }
+
+    public static void WriteTidyTopic(WireWriter writer, TidyTopic value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteString(value.Title);
+        writer.WriteCount(value.TabIds.Count);
+        foreach (var itemTabIds in value.TabIds) {
+            writer.WriteGuid(itemTabIds);
+        }
+    }
+
+    public static TidyTopicNeedsTwoTabs ReadTidyTopicNeedsTwoTabs(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new TidyTopicNeedsTwoTabs(
+            reader.ReadString());
+    }
+
+    public static void WriteTidyTopicNeedsTwoTabs(WireWriter writer, TidyTopicNeedsTwoTabs value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteString(value.Title);
     }
 
     public static TintSplit ReadTintSplit(WireReader reader) {

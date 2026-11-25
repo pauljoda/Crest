@@ -70,6 +70,8 @@ struct MobileBrowserSpacePage: View {
                     createFolder: beginCreatingFolder,
                     collapseAllFolders: { _ = tabActions.collapseAllFolders() },
                     canCollapseAllFolders: { tabActions.canCollapseAllFolders },
+                    tidyOpenTabs: { tabActions.startTidying() },
+                    canTidyOpenTabs: { tabActions.canTidy },
                     showHistory: showHistory,
                     showPasswords: showPasswords,
                     closePrivateBrowsing: closePrivateBrowsing,

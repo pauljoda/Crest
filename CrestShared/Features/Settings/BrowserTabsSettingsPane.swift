@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// How new, pinned and saved tabs behave, Split View focus, switching between
-/// recent tabs, and the sidebar's optional widgets.
+/// recent tabs, Tidy, and the sidebar's optional widgets.
 struct BrowserTabsSettingsPane: View {
     let browser: BrowserStore
 
@@ -16,6 +16,7 @@ struct BrowserTabsSettingsPane: View {
                 BrowserSplitFocusSettingsSection()
                 BrowserRecentTabsSettingsSection()
             #endif
+            BrowserTidySettingsSection(preferences: appPreferences)
             if let sidebarWidgets {
                 BrowserSidebarWidgetSettingsSection(runtime: sidebarWidgets)
             }

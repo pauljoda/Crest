@@ -36,6 +36,17 @@ public sealed record CannotBecomeGroup(Guid FolderId) : Rejection;
 
 #endregion
 
+#region Rejections - Tidy
+
+/// Tidy files only an open tab outside every folder, group and split, and each
+/// one in at most one of the topics it found.
+public sealed record TabCannotBeTidied(Guid TabId) : Rejection;
+
+/// A topic Tidy found holds fewer than two tabs.
+public sealed record TidyTopicNeedsTwoTabs(string Title) : Rejection;
+
+#endregion
+
 #region Rejections - Splits
 
 /// The tab is already a member of that split.

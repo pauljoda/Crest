@@ -71,6 +71,14 @@ struct BrowserSpaceHeaderActionsMenu: View {
             .accessibilityIdentifier("collapse-all-folders")
         }
 
+        // Shown while Tidy is on and can run, so a keyboard or VoiceOver
+        // reaches it as well as the divider's control on hover.
+        if let tidyOpenTabs = actions.tidyOpenTabs, TabTidying.shared.isReady, !isPrivateBrowsing {
+            Button("Tidy Open Tabs", systemImage: "wand.and.sparkles", action: tidyOpenTabs)
+                .disabled(!actions.canTidyOpenTabs())
+                .accessibilityIdentifier("tidy-open-tabs")
+        }
+
         Button(ShortcutCommand.showHistory, action: actions.showHistory)
 
         if let showPasswords = actions.showPasswords {

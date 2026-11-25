@@ -2,9 +2,9 @@ import SwiftUI
 
 /// The seam between the saved run and the current one, on every shell.
 ///
-/// Pointer-only shells reveal Clear on hover, and holding Option turns it into
-/// Clear All. Touch shells center its hit target on the line, using the saved
-/// drop band as the space above it.
+/// Pointer-only shells reveal Tidy and Clear on hover, and holding Option
+/// turns Clear into Clear All. Touch shells center their hit targets on the
+/// line, using the saved drop band as the space above it.
 struct BrowserCurrentTabsDivider: View {
     // MARK: - Static Variables
 
@@ -26,6 +26,19 @@ struct BrowserCurrentTabsDivider: View {
     let clearOthers: () -> Void
     /// Archives every open tab.
     let clearAll: () -> Void
+    /// Whether Tidy is ready and enough loose tabs are open to sort.
+    var canTidy = false
+    /// Whether a Tidy is under way in this Space.
+    var isTidying = false
+    /// Whether the last Tidy in this Space failed, which the control says for
+    /// a moment.
+    var tidyFailed = false
+    /// Starts filing the loose open tabs into Groups by topic.
+    var tidy: () -> Void = {}
+    /// Readies the model once Tidy shows, so pressing it starts sooner.
+    var prepareTidy: () -> Void = {}
+    /// How wide the tidy control's label draws.
+    @State private var tidyLabelWidth: CGFloat = 0
     /// How wide the clear control's label draws, which the line stops short
     /// of.
     @State private var clearLabelWidth: CGFloat = 0
@@ -44,7 +57,7 @@ struct BrowserCurrentTabsDivider: View {
             if revealsOnHoverOnly {
                 ZStack(alignment: .trailing) {
                     line
-                    clearButton
+                    controls
                 }
                 .padding(
                     .vertical,
@@ -53,7 +66,7 @@ struct BrowserCurrentTabsDivider: View {
                 .onOptionKeyChange { isOptionHeld = $0 }
             } else {
                 line
-                    .overlay(alignment: .trailing) { clearButton }
+                    .overlay(alignment: .trailing) { controls }
                     .padding(
                         .top,
                         hasSavedTabsEndBand ? max(0, touchSpacing - metrics.savedSectionEndBandHeight) : touchSpacing
@@ -67,7 +80,45 @@ struct BrowserCurrentTabsDivider: View {
     private var line: some View {
         Divider()
             .frame(height: 1 / displayScale)
-            .padding(.trailing, showsClearButton ? clearActionOcclusion : 0)
+            .padding(.trailing, lineOcclusion)
+    }
+
+    private var controls: some View {
+        HStack(spacing: metrics.clearActionGap) {
+            if showsTidyButton { tidyButton }
+            clearButton
+        }
+    }
+
+    private var tidyButton: some View {
+        Button(action: tidy) {
+            HStack(spacing: CrestSpacing.extraSmall) {
+                if revealsOnHoverOnly { Text(tidyFailed ? "Couldn’t Tidy" : "Tidy") }
+                if isTidying {
+                    ProgressView().controlSize(.mini)
+                } else {
+                    Image(systemName: tidyFailed ? "exclamationmark.triangle" : "wand.and.sparkles")
+                }
+            }
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.size.width
+            } action: { width in
+                tidyLabelWidth = width
+            }
+            .frame(
+                minWidth: revealsOnHoverOnly ? nil : Self.touchTarget,
+                minHeight: revealsOnHoverOnly ? nil : Self.touchTarget
+            )
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .font(.caption.weight(.medium))
+        .foregroundStyle(.secondary)
+        .fixedSize()
+        .disabled(isTidying)
+        .onAppear(perform: prepareTidy)
+        .accessibilityLabel(tidyFailed ? "Couldn’t Tidy Open Tabs" : "Tidy Open Tabs")
+        .accessibilityHint("Sorts open tabs into Groups by topic")
     }
 
     private var clearButton: some View {
@@ -128,6 +179,21 @@ struct BrowserCurrentTabsDivider: View {
         !revealsOnHoverOnly || (showsClearAction && canClear)
     }
 
+    /// Tidy shows where Clear does, and stays while it works or says it
+    /// failed.
+    private var showsTidyButton: Bool {
+        isTidying || tidyFailed || (canTidy && (!revealsOnHoverOnly || showsClearAction))
+    }
+
+    /// How much of the line's trailing end the controls take: the clear
+    /// control's share, and the tidy control's label, its hit target and the
+    /// gap before it while it shows.
+    private var lineOcclusion: CGFloat {
+        guard showsTidyButton else { return showsClearButton ? clearActionOcclusion : 0 }
+        let tidyTarget = revealsOnHoverOnly ? tidyLabelWidth : max(Self.touchTarget, tidyLabelWidth)
+        return clearActionOcclusion + tidyTarget + metrics.clearActionGap
+    }
+
     private var revealsOnHoverOnly: Bool {
         capabilities.revealsRowControlsOnHoverOnly
     }
@@ -149,7 +215,7 @@ extension View {
     #Preview("Component") {
         BrowserCurrentTabsDivider(
             capabilities: BrowserInteractionCapabilities(), showsClearAction: true, canClearOthers: true,
-            canClearAll: true, clearOthers: {}, clearAll: {}
+            canClearAll: true, clearOthers: {}, clearAll: {}, canTidy: true
         ).padding().frame(width: 320)
     }
 #endif
