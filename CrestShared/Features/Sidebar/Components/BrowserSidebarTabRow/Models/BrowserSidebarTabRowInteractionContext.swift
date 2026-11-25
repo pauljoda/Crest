@@ -9,7 +9,6 @@ struct BrowserSidebarTabRowInteractionContext {
     let isHovering: Binding<Bool>
     let isRenaming: Bool
     let draftTitle: Binding<String>
-    let isTitleFocused: FocusState<Bool>.Binding
     let isChoosingIcon: Binding<Bool>
     let activate: () -> Void
     let beginRenaming: () -> Void

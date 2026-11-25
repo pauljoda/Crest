@@ -29,7 +29,6 @@ struct BrowserSidebarTabRowContent: View {
                 metrics: configuration.metrics,
                 leadingInset: configuration.metrics.contentLeadingInset + folderIndent,
                 draftTitle: interaction.draftTitle,
-                isTitleFocused: interaction.isTitleFocused,
                 commitTitle: interaction.commitTitle,
                 cancelTitleEditing: interaction.cancelTitleEditing
             )

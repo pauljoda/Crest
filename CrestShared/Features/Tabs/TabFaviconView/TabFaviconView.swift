@@ -22,7 +22,7 @@ struct TabFaviconView: View {
             subject: subject,
             size: size,
             requestIdentity: request.identity,
-            renderedImage: renderState.renderedImage
+            renderedImage: shownImage(for: request)
         )
         .frame(width: size, height: size)
         .accessibilityHidden(true)
@@ -31,21 +31,31 @@ struct TabFaviconView: View {
         }
     }
 
+    /// The icon this view renders for `request`, or the one an icon view
+    /// drew before for the same image while this one renders its own.
+    private func shownImage(for request: BrowserFaviconRenderRequest) -> BrowserFaviconRenderedImage? {
+        if renderState.renderedImage?.image(matching: request.identity) != nil { return renderState.renderedImage }
+        return BrowserFaviconShownImages.shared.image(for: request).map {
+            BrowserFaviconRenderedImage(requestIdentity: request.identity, image: $0)
+        }
+    }
+
     private func loadRenderedImage(for request: BrowserFaviconRenderRequest) async {
         guard !Task.isCancelled else { return }
         renderState.begin(request.identity, isCancelled: Task.isCancelled)
+        // An icon drawn before is already on screen. The view keeps it as its
+        // own, so it still draws it after the shared images let it go.
+        if let shown = BrowserFaviconShownImages.shared.image(for: request) {
+            renderState.publish(shown, for: request.identity, isCancelled: Task.isCancelled)
+            return
+        }
         guard !Task.isCancelled else { return }
         guard let image = await BrowserFaviconRenderLoader.decode(request),
             !Task.isCancelled
         else { return }
-        renderState.publish(
-            Image(
-                decorative: image,
-                scale: TabFaviconMetrics.renderedImageScale
-            ),
-            for: request.identity,
-            isCancelled: Task.isCancelled
-        )
+        let rendered = Image(decorative: image, scale: TabFaviconMetrics.renderedImageScale)
+        BrowserFaviconShownImages.shared.keep(rendered, for: request)
+        renderState.publish(rendered, for: request.identity, isCancelled: Task.isCancelled)
     }
 }
 

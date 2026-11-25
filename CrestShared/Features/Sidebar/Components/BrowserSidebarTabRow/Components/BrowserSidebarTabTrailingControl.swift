@@ -5,6 +5,12 @@ import SwiftUI
 ///
 /// Once a saved tab is unloaded, its row offers to delete it instead, unless
 /// unloaded saved tabs stay as they are.
+///
+/// The control is made only while the row shows it, or while VoiceOver or
+/// Switch Control is on, which reach it without the pointer. Until then an
+/// empty frame of its size holds its place, so the title never moves. Every
+/// row made the control it hides as it scrolled into view, and that was a
+/// good part of what each row cost the sidebar to make.
 struct BrowserSidebarTabTrailingControl: View {
     // MARK: - Static Variables
 
@@ -19,9 +25,25 @@ struct BrowserSidebarTabTrailingControl: View {
     @Binding var isHovering: Bool
 
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
+    @Environment(\.accessibilityVoiceOverEnabled) private var isVoiceOverEnabled
+    @Environment(\.accessibilitySwitchControlEnabled) private var isSwitchControlEnabled
 
     @ViewBuilder
     var body: some View {
+        if isRevealed || isVoiceOverEnabled || isSwitchControlEnabled {
+            control
+        } else {
+            Color.clear
+                .frame(
+                    width: configuration.trailingControlMetrics.controlSize.width,
+                    height: configuration.trailingControlMetrics.controlSize.height
+                )
+                .accessibilityHidden(true)
+        }
+    }
+
+    @ViewBuilder
+    private var control: some View {
         if configuration.tab.placement == .saved {
             if offersDelete {
                 BrowserSidebarTabDeleteButton(

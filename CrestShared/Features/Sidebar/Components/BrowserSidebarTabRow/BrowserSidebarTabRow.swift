@@ -21,7 +21,6 @@ struct BrowserSidebarTabRow: View {
     @State private var renameRequest: BrowserTabRuntimeAssignment?
     @State private var iconRequest: BrowserTabRuntimeAssignment?
     @State private var draftTitle = ""
-    @FocusState private var isTitleFocused: Bool
 
     var body: some View {
         let configuration = self.configuration
@@ -85,7 +84,6 @@ struct BrowserSidebarTabRow: View {
             isHovering: $isHovering,
             isRenaming: isRenaming,
             draftTitle: $draftTitle,
-            isTitleFocused: $isTitleFocused,
             isChoosingIcon: iconPresentation,
             activate: activate,
             beginRenaming: beginRenaming,
@@ -112,9 +110,6 @@ struct BrowserSidebarTabRow: View {
         guard configuration.isCurrentAndUnlocked else { return }
         draftTitle = tab.shownTitle
         renameRequest = runtimeAssignment
-        Task { @MainActor in
-            isTitleFocused = true
-        }
     }
 
     private func beginChangingIcon() {

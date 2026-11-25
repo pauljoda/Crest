@@ -26,7 +26,6 @@ struct BrowserSidebarSplitGroupRow: View {
     @State private var iconRequest: BrowserSplitGroupRuntimeAssignment?
     @State private var tintRequest: BrowserSplitGroupRuntimeAssignment?
     @State private var draftTitle = ""
-    @FocusState private var isTitleFocused: Bool
 
     var body: some View {
         BrowserSidebarSplitGroupRowContent(
@@ -83,7 +82,6 @@ struct BrowserSidebarSplitGroupRow: View {
         BrowserSidebarSplitGroupRowInteractionContext(
             isRenaming: isRenaming,
             draftTitle: $draftTitle,
-            isTitleFocused: $isTitleFocused,
             isChoosingIcon: iconPresentation,
             isChoosingTint: tintPresentation,
             tint: tintBinding,
@@ -127,7 +125,6 @@ struct BrowserSidebarSplitGroupRow: View {
         guard configuration.isCurrentAndUnlocked else { return }
         draftTitle = configuration.shownTitle
         renameRequest = configuration.runtimeAssignment
-        Task { @MainActor in isTitleFocused = true }
     }
 
     private func commitTitle() {
@@ -146,7 +143,6 @@ struct BrowserSidebarSplitGroupRow: View {
     private func cancelTitleEditing() {
         draftTitle = configuration.shownTitle
         renameRequest = nil
-        isTitleFocused = false
     }
 
     private func beginChangingIcon() {

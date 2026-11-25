@@ -86,7 +86,7 @@ actor BrowserFaviconFallbackLoader {
         return cachedData[key]
     }
 
-    func removeAll(for profileID: UUID) {
+    func removeAll(for profileID: UUID) async {
         profileGenerations[profileID] = currentGeneration(for: profileID) &+ 1
         cachedData = cachedData.filter { $0.key.profileID != profileID }
         cacheRecency.removeAll { $0.profileID == profileID }
@@ -99,6 +99,9 @@ actor BrowserFaviconFallbackLoader {
             inFlight[key]?.task.cancel()
             inFlight[key] = nil
         }
+        // The icons drawn from them go with them. Last, so the cache above
+        // is already let go when this waits for the main actor.
+        await BrowserFaviconShownImages.shared.removeAll(for: profileID)
     }
 
     private func rememberMissing(_ key: BrowserFaviconFallbackCacheKey) {
