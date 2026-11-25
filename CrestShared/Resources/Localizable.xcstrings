@@ -4683,6 +4683,9 @@
     "Crest can save files in %@." : {
 
     },
+    "Crest can’t find this file. It may have been moved or deleted." : {
+
+    },
     "Crest can’t open this address" : {
       "localizations" : {
         "ar" : {
@@ -4830,6 +4833,9 @@
 
     },
     "Crest couldn’t import these passwords. This Space’s passwords are unchanged." : {
+
+    },
+    "Crest couldn’t keep access to this folder." : {
 
     },
     "Crest couldn’t move every selected password." : {
@@ -10961,6 +10967,9 @@
         }
       }
     },
+    "Quick Look" : {
+
+    },
     "Quick Window" : {
       "localizations" : {
         "ar" : {
@@ -16185,6 +16194,9 @@
 
     },
     "Use Clear on the line in the practice sidebar." : {
+
+    },
+    "Use Crest Folder" : {
 
     },
     "Use Crest Passwords" : {

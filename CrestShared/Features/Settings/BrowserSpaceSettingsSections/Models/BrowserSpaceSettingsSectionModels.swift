@@ -9,8 +9,9 @@ import SwiftUI
 /// them. This carries only what the section draws and the two things it can ask
 /// for.
 struct BrowserSpaceDownloadSettings {
-    /// Whether every download stops to ask where it should go.
-    var asksWhereToSave: Binding<Bool>
+    /// Whether every download stops to ask where it should go, where the
+    /// shell can ask; nil on a device whose downloads never ask.
+    var asksWhereToSave: Binding<Bool>?
 
     /// The display name of the folder downloads land in.
     var directoryName: String
@@ -25,6 +26,9 @@ struct BrowserSpaceDownloadSettings {
     /// Opens the shell's folder chooser.
     var chooseDirectory: () -> Void
 
-    /// Returns this Space to the system download folder.
+    /// What returning to the platform's own folder is called.
+    var resetTitle: LocalizedStringKey = "Use Downloads"
+
+    /// Returns this Space to the platform's own download folder.
     var resetDirectory: () -> Void
 }

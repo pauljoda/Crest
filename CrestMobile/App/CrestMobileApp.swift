@@ -125,6 +125,7 @@ private final class BrowserMobileApplication {
             core.addShowcaseDownloads(profileID: profileID)
         }
         let downloads = MobileBrowserDownloads(core: core, permissionCenter: permissionCenter)
+        BrowserPlatformDownloadPreferences.configure(core: core)
         downloadNotices = BrowserDownloadNotices(core: core, access: spaceAccess)
         let privateDownloads = MobileBrowserDownloads(
             core: core,
@@ -151,6 +152,8 @@ private final class BrowserMobileApplication {
         self.onboardingCoordinator = onboardingCoordinator
         self.pages = pages
         self.spaceAccess = spaceAccess
+        // A finished download's notice opens the file in Quick Look.
+        downloadNotices.open = { [weak pages] download in pages?.openDownload(download.id, in: .quickLook) }
         passkeyAccess = BrowserPasskeyAccessController(core: core)
         self.sidebarWidgets = sidebarWidgets
         // A hardware keyboard on iPad reads the same rebindable command table

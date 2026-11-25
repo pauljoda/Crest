@@ -45,7 +45,7 @@ final class BrowserDownloadTransferTests: XCTestCase {
         return data as Data
     }
 
-    func testFinishingAWebDownloadAppliesSystemQuarantineMetadata() throws {
+    func testFinishingAWebDownloadAppliesSystemQuarantineMetadata() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         let staging = directory.appendingPathComponent("staging/source.txt")
@@ -62,7 +62,7 @@ final class BrowserDownloadTransferTests: XCTestCase {
         )
         try Data("hello".utf8).write(to: staging)
 
-        try BrowserDownloadTransfer.finish(
+        try await BrowserDownloadTransfer.finish(
             from: staging,
             to: destination,
             quarantine: BrowserDownloadQuarantine(
