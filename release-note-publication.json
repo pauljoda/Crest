@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-11-new-look",
-    "development": "sidebar-scrolls-smoothly-with-many-tabs",
+    "development": "picture-in-picture-keyboard-and-late-entry",
     "nightly": "sidebar-scrolls-smoothly-with-many-tabs"
   }
 }
