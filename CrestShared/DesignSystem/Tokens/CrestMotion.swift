@@ -49,6 +49,8 @@ enum CrestMotion {
     static let sidebarDockAttachmentTransition: TimeInterval = 0.12
     /// Letting the undocked sidebar retreat after pointer interaction ends.
     static let sidebarRetreatTransition: TimeInterval = 0.22
+    /// How long a hidden sidebar stays out after a shortcut changes Space.
+    static let spaceShortcutSidebarHold: Duration = .seconds(1.2)
     /// Keeps phased sidebar work aligned with the visible geometry handoff.
     static let sidebarMorphCompletionDelay: Duration = .seconds(
         sidebarMorphTransition

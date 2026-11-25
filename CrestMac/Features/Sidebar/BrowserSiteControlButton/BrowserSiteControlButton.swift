@@ -70,13 +70,23 @@ struct BrowserSiteControlButton: View {
         .onChange(of: commands?.actions.chrome.siteControlsRequest) { takeRequest() }
         .onAppear {
             presence.isOnScreen = true
-            if configuration.page.sitePermissionRequests.current != nil { openForRequest() }
+            if configuration.page.sitePermissionRequests.current != nil {
+                // A request that waited while the control was away opens it
+                // as it appears, which keeps what shows the control out.
+                openForRequest()
+                configuration.presentationChanged(presentationBinding.wrappedValue)
+            }
             takeRequest()
         }
         .onDisappear {
             presence.isOnScreen = false
-            guard isPresented else { return }
-            presentationBinding.wrappedValue = false
+            if isPresented {
+                presentationBinding.wrappedValue = false
+            } else if presentationBinding.wrappedValue {
+                // Open only for a waiting request, which stays for the page's
+                // next control.
+                configuration.presentationChanged(false)
+            }
         }
         .onChange(of: BrowserSpaceRuntimeAssignment(space: configuration.space)) {
             // The stationary address field survives a Space change; its old
