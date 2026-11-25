@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "picture-in-picture-keyboard-and-late-entry",
+      "category": "fixed",
+      "message": "Use the Picture in Picture controls with the keyboard or VoiceOver. Chromium keeps captions from videos inside shadow DOM and docks videos that arrive late after you return to their tab.",
+      "platforms": ["mac"]
+    }
+  ]
+}

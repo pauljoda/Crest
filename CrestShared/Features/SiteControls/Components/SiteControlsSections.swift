@@ -372,6 +372,10 @@ struct SiteControlsValueRows: View {
                     model.open(.permissions)
                 }
                 .accessibilityIdentifier("site-control-permissions")
+                #if os(macOS)
+                    SiteControlsRow("Site Settings", symbol: "gearshape", value: nil) { model.open(.siteSettings) }
+                        .accessibilityIdentifier("site-control-site-settings")
+                #endif
             }
             if let engines = model.platform.engineChoice {
                 SiteControlsEngineRow(choice: engines)

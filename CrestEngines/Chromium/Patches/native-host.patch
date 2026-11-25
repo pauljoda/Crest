@@ -294,7 +294,7 @@
        "//ash/constants",
 --- a/chrome/browser/BUILD.gn
 +++ b/chrome/browser/BUILD.gn
-@@ -4658,6 +4658,74 @@
+@@ -4658,6 +4658,82 @@
    sources = []
  }
  
@@ -304,6 +304,7 @@
 +  # //chrome:dependencies links it into the framework beside it.
 +  source_set("crest_host") {
 +    sources = [
++      "ui/crest/crest_video_picture_in_picture.mm",
 +      "ui/crest/crest_browser_window.h",
 +      "ui/crest/crest_browser_window.mm",
 +      "ui/crest/crest_chrome_hooks.h",
@@ -354,7 +355,14 @@
 +      "//media/mojo/mojom",
 +      "//services/audio/public/mojom",
 +      "//services/media_session/public/mojom",
++      "//cc",
++      "//components/viz/common",
++      "//content/public/browser",
++      "//ui/accelerated_widget_mac",
 +      "//ui/base/mojom:ui_base_types",
++      "//ui/compositor",
++      "//ui/display",
++      "//ui/gfx",
 +    ]
 +
 +    # A method missing from a protocol the Swift UI calls must fail the
@@ -1016,7 +1024,7 @@
  void ChromeContentBrowserClient::CreateThrottlesForCommitWithoutUrlLoader(
 --- a/chrome/browser/ui/browser_web_contents_delegate/browser_web_contents_delegate.cc
 +++ b/chrome/browser/ui/browser_web_contents_delegate/browser_web_contents_delegate.cc
-@@ -118,6 +118,7 @@
+@@ -120,6 +120,7 @@
  #endif
  
  #if BUILDFLAG(IS_MAC)
@@ -1024,7 +1032,18 @@
  #include "ui/display/display.h"
  #include "ui/display/screen.h"
  #include "ui/display/types/display_constants.h"
-@@ -526,9 +527,10 @@
+@@ -339,6 +340,10 @@
+ content::PictureInPictureResult
+ BrowserWebContentsDelegate::EnterPictureInPicture(
+     content::WebContents* web_contents) {
++#if BUILDFLAG(IS_MAC)
++  if (crest::IsEnabled() && !crest::SupportsSystemVideoPictureInPicture())
++    return content::PictureInPictureResult::kNotSupported;
++#endif
+   return PictureInPictureWindowManager::GetInstance()
+       ->EnterVideoPictureInPicture(web_contents);
+ }
+@@ -565,9 +570,10 @@
  
  content::WebContents* BrowserWebContentsDelegate::OpenURLFromTab(
      content::WebContents* source,
@@ -1036,7 +1055,7 @@
    TRACE_EVENT1("navigation", "BrowserWebContentsDelegate::OpenURLFromTab",
                 "source", source);
  #if DCHECK_IS_ON()
-@@ -541,6 +543,10 @@
+@@ -580,6 +586,10 @@
      return window->OpenURLFromTab(source, params,
                                    std::move(navigation_handle_callback));
    }
@@ -1047,7 +1066,7 @@
  
    // If the source is already split, navigate the other pane instead of
    // creating a new tab. Return |source| so that WebContentsImpl::OpenURL()
-@@ -765,6 +771,16 @@
+@@ -820,6 +830,16 @@
    unload_controller_->CloseContents(source);
  }
  
@@ -1064,7 +1083,7 @@
  void BrowserWebContentsDelegate::SetContentsBounds(content::WebContents* source,
                                                     const gfx::Rect& bounds) {
    if ((browser_->GetType() == BrowserWindowInterface::Type::TYPE_NORMAL)) {
-@@ -788,6 +804,14 @@
+@@ -843,6 +863,14 @@
  
  void BrowserWebContentsDelegate::UpdateTargetURL(content::WebContents* source,
                                                   const GURL& url) {
@@ -1079,7 +1098,7 @@
    std::vector<StatusBubble*> status_bubbles =
        browser_ui_controller_->GetStatusBubbles();
    for (StatusBubble* status_bubble : status_bubbles) {
-@@ -1105,6 +1129,9 @@
+@@ -1160,6 +1188,9 @@
  content::JavaScriptDialogManager*
  BrowserWebContentsDelegate::GetJavaScriptDialogManager(
      content::WebContents* source) {
@@ -2123,40 +2142,29 @@
  
    // A WebContentsModalDialogManager is necessary to show the Dialog. A manager
    // may not be available during the shutdown process of the WebContents, which
---- a/chrome/browser/ui/views/overlay/video_overlay_window_views.h
-+++ b/chrome/browser/ui/views/overlay/video_overlay_window_views.h
-@@ -119,6 +119,7 @@
-   gfx::Size GetMinimumSize() const override;
-   gfx::Size GetMaximumSize() const override;
-   void OnNativeWidgetMove() override;
-+  void OnNativeWidgetUserDragEnded() override;
-   void OnNativeWidgetDestroying() override;
-   void OnNativeWidgetDestroyed() override;
-   void OnNativeWidgetAddedToCompositor() override;
 --- a/chrome/browser/ui/views/overlay/video_overlay_window_views.cc
 +++ b/chrome/browser/ui/views/overlay/video_overlay_window_views.cc
-@@ -24,6 +24,7 @@
+@@ -24,6 +24,9 @@
  #include "chrome/browser/picture_in_picture/video_overlay_window.h"
  #include "chrome/browser/profiles/profile.h"
  #include "chrome/browser/ui/browser_init_state.h"
++#if BUILDFLAG(IS_MAC)
 +#include "chrome/browser/ui/crest/crest_chrome_hooks.h"
++#endif
  #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
  #include "chrome/browser/ui/browser_window/public/global_browser_collection.h"
  #include "chrome/browser/ui/color/chrome_color_id.h"
-@@ -590,6 +591,13 @@
-   views::Widget::OnNativeWidgetMove();
+@@ -423,6 +426,10 @@
+ // static
+ std::unique_ptr<content::VideoOverlayWindow> CreateVideoOverlayWindow(
+     content::VideoPictureInPictureWindowController* controller) {
++#if BUILDFLAG(IS_MAC)
++  if (crest::IsEnabled())
++    return crest::CreateSystemVideoPictureInPicture(controller);
++#endif
+   return VideoOverlayWindowViews::Create(controller);
  }
  
-+void VideoOverlayWindowViews::OnNativeWidgetUserDragEnded() {
-+  views::Widget::OnNativeWidgetUserDragEnded();
-+#if BUILDFLAG(IS_MAC)
-+  crest::SnapPictureInPictureWindow(this);
-+#endif
-+}
-+
- void VideoOverlayWindowViews::OnNativeWidgetSizeChanged(
-     const gfx::Size& new_size) {
-   // Hide the controls when the window is being resized. The controls will
 --- a/third_party/blink/public/platform/media/key_system_config_selector.h
 +++ b/third_party/blink/public/platform/media/key_system_config_selector.h
 @@ -42,6 +42,10 @@
@@ -3653,3 +3661,78 @@
    if (origin.opaque() &&
        base::FeatureList::IsEnabled(
            password_manager::features::kPasswordBlockOpaqueOrigins)) {
+--- a/content/public/browser/video_picture_in_picture_window_controller.h
++++ b/content/public/browser/video_picture_in_picture_window_controller.h
+@@ -15,11 +15,17 @@
+ #include "ui/gfx/geometry/rect.h"
+ 
+ namespace content {
++class RenderFrameHost;
+ class VideoOverlayWindow;
++class WebContents;
+ 
+ class VideoPictureInPictureWindowController
+     : public PictureInPictureWindowController {
+  public:
++  // Returns the frame containing the active Video Picture-in-Picture session.
++  static CONTENT_EXPORT RenderFrameHost* GetSourceFrame(
++      WebContents* web_contents);
++
+   virtual VideoOverlayWindow* GetWindowForTesting() = 0;
+   virtual void UpdateLayerBounds() = 0;
+   virtual bool IsPlayerActive() = 0;
+--- a/content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.h
++++ b/content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.h
+@@ -93,6 +93,7 @@
+   std::optional<gfx::Rect> GetWindowBoundsInScreen() override;
+ 
+   std::optional<url::Origin> GetOrigin() override;
++  RenderFrameHost* GetSourceFrame();
+ 
+   // Called by the MediaSessionImpl when the MediaSessionInfo changes.
+   void MediaSessionInfoChanged(
+--- a/content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.cc
++++ b/content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.cc
+@@ -32,6 +32,14 @@
+     WebContents* web_contents) {
+   return VideoPictureInPictureWindowControllerImpl::GetOrCreateForWebContents(
+       web_contents);
++}
++
++// static
++RenderFrameHost* VideoPictureInPictureWindowController::GetSourceFrame(
++    WebContents* web_contents) {
++  auto* controller =
++      VideoPictureInPictureWindowControllerImpl::FromWebContents(web_contents);
++  return controller ? controller->GetSourceFrame() : nullptr;
+ }
+ 
+ VideoPictureInPictureWindowControllerImpl::
+@@ -184,15 +192,19 @@
+ 
+ std::optional<url::Origin>
+ VideoPictureInPictureWindowControllerImpl::GetOrigin() {
++  auto* frame = GetSourceFrame();
++  if (!frame) {
++    return std::nullopt;
++  }
++  return frame->GetLastCommittedOrigin();
++}
++
++RenderFrameHost* VideoPictureInPictureWindowControllerImpl::GetSourceFrame() {
+   if (!active_session_ || !active_session_->player_id().has_value()) {
+-    return std::nullopt;
+-  }
+-  RenderFrameHost* rfh =
+-      RenderFrameHost::FromID(active_session_->player_id()->frame_routing_id);
+-  if (!rfh) {
+-    return std::nullopt;
+-  }
+-  return rfh->GetLastCommittedOrigin();
++    return nullptr;
++  }
++  return RenderFrameHost::FromID(
++      active_session_->player_id()->frame_routing_id);
+ }
+ 
+ void VideoPictureInPictureWindowControllerImpl::UpdatePlaybackState() {

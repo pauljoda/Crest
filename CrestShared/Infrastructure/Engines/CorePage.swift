@@ -234,6 +234,13 @@ final class CorePage {
         }
     }
 
+    // MARK: - Actions - Picture in Picture
+
+    func returnPictureInPictureToSource() {
+        guard !isReleased, let core else { return }
+        _ = try? core.send(FocusPictureInPictureSource(pageID: id))
+    }
+
     // MARK: - Actions - Reports
 
     /// Reports what the page's engine saw it do, through that engine. `icon`
