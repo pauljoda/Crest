@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "download-progress-ring-and-quick-window-card",
+      "category": "improved",
+      "message": "The downloads button wears a ring that fills while a download runs. On Mac, a download started in a Quick Window shows its progress in a card in the window's corner, which says when it's done and shows the file in Finder when you click it. Thanks to @athousanddetails."
+    }
+  ]
+}

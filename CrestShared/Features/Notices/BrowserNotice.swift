@@ -30,6 +30,10 @@ struct BrowserNotice: Equatable, Hashable {
         systemImage: "arrow.down.circle"
     )
 
+    /// The symbol a finished download is shown with, in the window's notice
+    /// and in a Quick Window's download card.
+    static let downloadFinishedSymbol = "checkmark.circle.fill"
+
     // MARK: - Variables
 
     let message: String
@@ -53,7 +57,7 @@ struct BrowserNotice: Equatable, Hashable {
     static func downloadFinished(_ filename: String) -> BrowserNotice {
         BrowserNotice(
             message: String(localized: "Downloaded \(filename)"),
-            systemImage: "checkmark.circle.fill"
+            systemImage: downloadFinishedSymbol
         )
     }
 

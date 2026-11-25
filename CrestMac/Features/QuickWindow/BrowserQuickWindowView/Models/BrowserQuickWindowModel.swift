@@ -14,6 +14,9 @@ final class BrowserQuickWindowModel {
     /// window closes, keeping nothing of it.
     private(set) var wasClosedByPage = false
     let activityClock: BrowserTransientActivityClock
+    /// The downloads started on the window's page, shown as cards in its
+    /// corner, since a Quick Window has no sidebar for them to fly to.
+    let downloadTray = BrowserMacDownloadTrayState()
     /// Whether the window may close when the person asks: the core asks the
     /// page it shows first, since the page goes with it.
     @ObservationIgnored private(set) lazy var closeGate = BrowserWindowCloseGate(core: browser.core) { [weak self] in
@@ -53,6 +56,7 @@ final class BrowserQuickWindowModel {
         activityClock = BrowserTransientActivityClock()
         browser.core.engines.observeRecords(self) { [weak self] in self?.recordActivity(after: $0) }
         browser.core.followClosedTransientPages(self) { [weak self] in self?.pageClosed($0) }
+        browser.core.followStartedDownloads(self) { [weak self] in self?.downloadStarted($0) }
     }
 
     init(
@@ -253,6 +257,12 @@ final class BrowserQuickWindowModel {
         if outcome != .adoptedLivePage { pageLease?.release() }
         pages.select()
         return true
+    }
+
+    /// A download started on this Quick Window's page, which shows its card.
+    private func downloadStarted(_ started: DownloadStarted) {
+        guard isCurrentRequest, pageLease?.pageID == started.pageID else { return }
+        downloadTray.show(started.downloadID)
     }
 
     /// The core closed this Quick Window's page, which closes the window.
