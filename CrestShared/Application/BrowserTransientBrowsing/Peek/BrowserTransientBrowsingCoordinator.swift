@@ -38,7 +38,8 @@ final class BrowserTransientBrowsingCoordinator {
 
     func stagePeek(_ request: BrowserPeekRequest) {
         peeks.removeAll {
-            $0.phase == .staged || $0.request.sourceTabID == request.sourceTabID || $0.request.id == request.id
+            $0.phase == .staged || $0.request.id == request.id
+                || ($0.request.assignment == request.assignment && $0.request.sourceTabID == request.sourceTabID)
         }
         peeks.append(PeekPresentation(request: request, phase: .staged))
         quickWindowRequest = nil

@@ -26,8 +26,10 @@ public sealed record PageOffered(Guid OfferId, Guid ProfileId, Guid? SourcePageI
     /// - A Quick Window's or Peek's page keeps the other pages it opens. The engine
     ///   closes the offered page, and the page that opened it loads its web
     ///   address, as a popup there does on every engine.
-    /// - A tab's page opens a tab after its own, in its Space and window,
-    ///   which going back from its first entry closes back to.
+    /// - A tab's page opens a tab after its own, in the Space and window
+    ///   showing it, which going back from its first entry closes back to.
+    ///   A pinned tab a group shares keeps one page for the group, so the
+    ///   Space its window shows takes what it opens while it shows that page.
     /// - Any other page joins the window that holds it: the Space its engine
     ///   window was reserved for, or else the Space the window shows, after
     ///   the tab the window shows there.
@@ -66,9 +68,9 @@ public sealed record PageOffered(Guid OfferId, Guid ProfileId, Guid? SourcePageI
         } else {
             return false;
         }
-        if (pages.Device.Attached(workspaceId) is not { } workspace || Hostable(workspace, spaceId) is not { } space
-            || space.ProfileId != ProfileId)
-            return false;
+        if (pages.Device.Attached(workspaceId) is not { } workspace) return false;
+        var space = source is not null ? OpenerSpace(pages.Device, workspace, source) : Hostable(workspace, spaceId);
+        if (space is null || space.ProfileId != ProfileId) return false;
         var tabId = pages.Ids.Next();
         try {
             workspace.Handle(new OpenTab(workspaceId, windowId, space.Id, tabId,
@@ -94,8 +96,8 @@ public sealed record PageOffered(Guid OfferId, Guid ProfileId, Guid? SourcePageI
     /// `source`'s Space and window, gives it the offered page, and answers
     /// whether the Space took it.
     private bool AdoptedAsWindow(Pages pages, Engine engine, Page source, PageTurn turn) {
-        if (pages.Device.Attached(source.WorkspaceId) is not { } workspace || Hostable(workspace, source.SpaceId) is not { } space
-            || space.ProfileId != ProfileId)
+        if (pages.Device.Attached(source.WorkspaceId) is not { } workspace
+            || OpenerSpace(pages.Device, workspace, source) is not { } space || space.ProfileId != ProfileId)
             return false;
         var page = new Page(pages.Ids.Next(), engine, space.ProfileId, source.WorkspaceId, space.Id, tabId: null, source.WindowId,
             TransientPresentation.QuickWindow, openedByPage: true);
@@ -119,6 +121,19 @@ public sealed record PageOffered(Guid OfferId, Guid ProfileId, Guid? SourcePageI
             return;
         pages.Update(source, turn.Changes, () => source.Load(Url));
         turn.Issue(source.Engine, new LoadPage(source.Id, Url));
+    }
+
+    /// The Space that takes what the tab page `source` opens: the one its
+    /// window shows while that Space shows `source` on screen, which differs
+    /// from the page's own Space only for a pinned tab its group shares, and
+    /// otherwise the page's own Space. Null where a rule refuses it.
+    private static SpaceState? OpenerSpace(Device device, NativeSessionAuthority workspace, Page source) {
+        if (Hostable(workspace, source.SpaceId) is not { } owner) return null;
+        if (source.TabId is { } tabId && device.Snapshot(source.WorkspaceId, source.WindowId) is { } window
+            && window.ShownSpaceId != owner.Id && Hostable(workspace, window.ShownSpaceId) is { } shown
+            && shown.ProfileId == source.ProfileId && window.OnScreen(workspace.Current).Contains(tabId))
+            return shown;
+        return owner;
     }
 
     /// The Space a page may live in, as `Pages.Hosting` decides, or null where

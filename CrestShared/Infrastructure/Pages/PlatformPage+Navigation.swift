@@ -1,6 +1,22 @@
 import Foundation
 
 extension BrowserPlatformPage {
+    /// The context the page's links open in. A pinned tab a group shares
+    /// keeps one resident page for every Space of the group, so a link
+    /// followed in it opens in the Space the page's window shows, even when
+    /// another Space opened the page first.
+    var linkNavigationContext: BrowserPageNavigationContext? {
+        guard var context = navigationContext, let owner = host, let space = owner.browser.shownSpace,
+            space.id != context.spaceID, owner.presentedTabIDs.contains(context.tabID),
+            owner.host.page(
+                matching: BrowserTabRuntimeAssignment(
+                    tabID: context.tabID, spaceID: space.id, profileID: space.profileID)
+            ) === self
+        else { return navigationContext }
+        context.spaceAssignment = BrowserSpaceRuntimeAssignment(space: space)
+        return context
+    }
+
     /// Steps back through the page's history as the core keeps it, first
     /// leaving a failed navigation the page shows.
     func goBack() {

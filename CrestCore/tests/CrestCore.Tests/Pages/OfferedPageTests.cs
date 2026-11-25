@@ -32,6 +32,46 @@ public sealed partial class BrowserContractsTests {
         changes.OfType<WindowChanged>().Last(change => change.Window.Id == window).Window.ShownTabs
             .SingleOrDefault(shown => shown.SpaceId == space)?.TabId;
 
+    /// A pinned tab a group shares keeps one page, which the Space its window
+    /// shows uses: what the page opens goes to that Space while it shows the
+    /// page, and to the page's own Space once the window shows another.
+    [Fact]
+    public void ASharedPinsPageOpensTabsAndQuickWindowsInTheSpaceShowingIt() {
+        var (work, client, personal, profile, pin) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        var session = SessionOf(
+            SpaceOf(work, profile, "Work", tabs: [TabOf(pin, placement: "pinned")]),
+            Joined(SpaceOf(client, Guid.NewGuid(), "Client"), work, profile, at: 100),
+            SpaceOf(personal, Guid.NewGuid(), "Personal"));
+        var (app, engine, binding, workspace, window) = PageHost(session);
+        using var disposal = app;
+        var source = Guid.NewGuid();
+        app.Send(new ShowTab(window, work, pin));
+        app.Send(new OpenPage(source, workspace, work, pin, window));
+        app.Report(engine, new PageCreated(source));
+        app.Send(new ShowSpace(window, client));
+        app.Send(new ShowTab(window, client, pin));
+        app.Drain();
+
+        var tabOffer = Guid.NewGuid();
+        app.Report(engine, new PageOffered(tabOffer, profile, source, WindowId: null, SpaceId: null,
+            "https://tab.example/", Foreground: false));
+        var tab = Assert.Single(app.Drain().OfType<OfferedPageAdopted>());
+        Assert.Equal((window, client), (tab.WindowId, tab.SpaceId));
+        Assert.Contains(CurrentTabs(app, workspace, client), item => item.Id == tab.TabId);
+        Assert.DoesNotContain(CurrentTabs(app, workspace, work), item => item.Id == tab.TabId);
+
+        app.Report(engine, new PageOffered(Guid.NewGuid(), profile, source, WindowId: null, SpaceId: work,
+            "https://popup.example/", Foreground: true));
+        var popup = Assert.Single(app.Drain().OfType<OfferedWindowAdopted>());
+        Assert.Equal((window, client, source), (popup.WindowId, popup.SpaceId, popup.SourcePageId));
+
+        app.Send(new ShowSpace(window, personal));
+        app.Report(engine, new PageOffered(Guid.NewGuid(), profile, source, WindowId: null, SpaceId: null,
+            "https://background.example/", Foreground: false));
+        var background = Assert.Single(app.Drain().OfType<OfferedPageAdopted>());
+        Assert.Equal((window, work), (background.WindowId, background.SpaceId));
+    }
+
     [Fact]
     public void NoSpaceTakesAnOfferedPageItMayNotHost() {
         var session = GuardedSession(withOpenSecondSpace: true);
