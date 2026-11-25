@@ -94,7 +94,8 @@ struct TidyTopicFinder: Sendable {
 
     /// The topics among `candidates`, each holding two or more of them in
     /// sidebar order. Every other tab stays loose. Throws the model's error
-    /// when naming fails.
+    /// when naming fails, or `CancellationError` once cancelled, checked
+    /// before each call to the model.
     func topics(for candidates: [TidyTabCandidate]) async throws -> [TidyTopic] {
         // Copies of one page group as one, so they never make a Group of
         // their own, and join their page's Group together.
@@ -123,11 +124,14 @@ struct TidyTopicFinder: Sendable {
         }
         var names: [String] = []
         for start in stride(from: 0, to: groups.count, by: Self.maximumNamedGroupCount) {
+            try Task.checkCancellation()
             let batch = start..<min(start + Self.maximumNamedGroupCount, groups.count)
             names += try await self.names(for: Array(groups[batch]), meaning: Array(groupVectors[batch]))
         }
+        try Task.checkCancellation()
         if candidates.count <= Self.maximumVerifiedTabCount {
             (groups, names) = await Self.verified(groups, names: names)
+            try Task.checkCancellation()
         }
         return Self.topics(groups: groups, names: names, copies: copiesByDescription, inOrderOf: candidates)
     }
@@ -233,6 +237,7 @@ struct TidyTopicFinder: Sendable {
         }
         let unnamed = groups.indices.filter { matched[$0].isEmpty }
         guard !isRetry, !unnamed.isEmpty else { return matched }
+        try Task.checkCancellation()
         let retried = try await self.names(
             for: unnamed.map { groups[$0] }, meaning: unnamed.map { groupVectors[$0] }, isRetry: true)
         for (index, name) in zip(unnamed, retried) { matched[index] = name }
@@ -267,6 +272,7 @@ struct TidyTopicFinder: Sendable {
             let picks = await withTaskGroup(of: (UUID, String?).self) { taskGroup in
                 for (_, candidate) in checks {
                     taskGroup.addTask {
+                        guard !Task.isCancelled else { return (candidate.tabID, nil) }
                         let pick = try? await LanguageModelSession(instructions: instructions)
                             .respond(to: candidate.modelDescription, schema: schema, options: options)
                             .content.value(String.self)

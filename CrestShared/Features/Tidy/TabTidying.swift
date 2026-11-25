@@ -56,8 +56,8 @@ final class TabTidying {
     /// loaded.
     var isReady: Bool { isOn && Self.isModelAvailable && wordTable.embedder != nil }
 
-    /// The Spaces a Tidy is under way in.
-    private(set) var tidyingSpaceIDs: Set<UUID> = []
+    /// The Tidy under way in each Space, which turning Tidy off cancels.
+    private var runs: [UUID: Task<Void, Never>] = [:]
 
     /// Counts the changes to the app preferences that hold Tidy's setting and
     /// to Apple Intelligence's availability, each counted the moment it
@@ -100,6 +100,7 @@ final class TabTidying {
             Task { @MainActor [weak self] in self?.keepInStep() }
         }
         if !isOn {
+            for run in runs.values { run.cancel() }
             descriptions.forgetAll()
             wordTable.remove()
         } else if canRun {
@@ -166,6 +167,11 @@ final class TabTidying {
 
     // MARK: - Actions - Tidying
 
+    /// Whether a Tidy is under way in the Space `spaceID`.
+    func isTidying(in spaceID: UUID) -> Bool {
+        runs[spaceID] != nil
+    }
+
     /// Whether the last Tidy in the Space `spaceID` failed in the last few
     /// seconds, which the Tidy control says.
     func hasFailed(in spaceID: UUID) -> Bool {
@@ -173,24 +179,28 @@ final class TabTidying {
     }
 
     /// Runs `tidy` for the Space `spaceID` unless a Tidy is already under way
-    /// there, and marks the Space failed for a few seconds when it throws.
+    /// there, and marks the Space failed for a few seconds when it throws. A
+    /// run cancelled because Tidy was turned off ends without failing.
     func run(in spaceID: UUID, _ tidy: @escaping @MainActor () async throws -> Void) {
-        guard !tidyingSpaceIDs.contains(spaceID) else { return }
-        tidyingSpaceIDs.insert(spaceID)
+        guard runs[spaceID] == nil else { return }
         failures[spaceID] = nil
-        Task {
+        runs[spaceID] = Task {
+            var failed = false
             do {
                 try await tidy()
-                tidyingSpaceIDs.remove(spaceID)
             } catch {
-                DiagnosticLog.tidy.error("Tidy couldn't sort tabs: \(TidyTabDescriptions.loggedName(of: error))")
-                tidyingSpaceIDs.remove(spaceID)
-                let failure = UUID()
-                failures[spaceID] = failure
-                try? await Task.sleep(for: .seconds(4))
-                // A later run's failure keeps its own few seconds.
-                if failures[spaceID] == failure { failures[spaceID] = nil }
+                failed = !Task.isCancelled
+                if failed {
+                    DiagnosticLog.tidy.error("Tidy couldn't sort tabs: \(TidyTabDescriptions.loggedName(of: error))")
+                }
             }
+            runs[spaceID] = nil
+            guard failed else { return }
+            let failure = UUID()
+            failures[spaceID] = failure
+            try? await Task.sleep(for: .seconds(4))
+            // A later run's failure keeps its own few seconds.
+            if failures[spaceID] == failure { failures[spaceID] = nil }
         }
     }
 

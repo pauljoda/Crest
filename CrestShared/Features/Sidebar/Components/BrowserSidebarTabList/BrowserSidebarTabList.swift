@@ -52,7 +52,7 @@ private struct BrowserCurrentTabsSeam: View {
             clearOthers: { _ = context.tabActions.clearCurrentTabs(keepingShownTab: true) },
             clearAll: { _ = context.tabActions.clearCurrentTabs(keepingShownTab: false) },
             canTidy: context.tabActions.canTidy,
-            isTidying: TabTidying.shared.tidyingSpaceIDs.contains(context.space.id),
+            isTidying: TabTidying.shared.isTidying(in: context.space.id),
             tidyFailed: TabTidying.shared.hasFailed(in: context.space.id),
             tidy: { context.tabActions.startTidying() },
             prepareTidy: { TabTidying.shared.prewarm() }
