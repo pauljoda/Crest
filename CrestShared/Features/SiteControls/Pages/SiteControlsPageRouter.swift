@@ -13,6 +13,39 @@ struct SiteControlsPageRouter<ExtensionsPage: View>: View {
         case .connection: SiteControlsConnectionPage(model: model)
         case .blocking: SiteControlsBlockingPage(model: model)
         case .permissions: SiteControlsPermissionsPage(model: model)
+        case .siteSettings:
+            SiteControlsPageSection {
+                SiteControlsRowLabel(title: Text("Automatic Picture in Picture"), symbol: "pip") {
+                    Menu {
+                        Button("Use App Settings", systemImage: "gearshape") {
+                            model.setDecision(.ask, for: .automaticPictureInPicture)
+                        }
+                        Button("Block", systemImage: "nosign") {
+                            model.setDecision(.denyPersistently, for: .automaticPictureInPicture)
+                        }
+                        .crestMenuActionLabelStyle()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(
+                                model.blocksAutomaticPictureInPicture
+                                    ? LocalizedStringKey("Blocked") : LocalizedStringKey("Use App Settings")
+                            )
+                            Image(systemName: "chevron.up.chevron.down")
+                                .imageScale(.small)
+                        }
+                        .foregroundStyle(.secondary)
+                    }
+                    .menuStyle(.button)
+                    .menuIndicator(.hidden)
+                    .buttonStyle(.plain)
+                    .fixedSize()
+                    .accessibilityLabel("Automatic Picture in Picture")
+                    .accessibilityValue(
+                        model.blocksAutomaticPictureInPicture ? Text("Blocked") : Text("Use App Settings")
+                    )
+                    .accessibilityIdentifier("site-automatic-picture-in-picture")
+                }
+            }
         case .extensions: extensionsPage()
         case .siteData: SiteControlsSiteDataPage(model: model)
         case .downloads: SiteControlsDownloadsPage(model: model)

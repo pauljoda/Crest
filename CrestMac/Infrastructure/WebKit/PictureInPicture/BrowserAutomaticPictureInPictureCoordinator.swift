@@ -12,17 +12,25 @@ protocol BrowserAutomaticPictureInPictureClient: AnyObject {
 /// Automatic requests never displace another Crest or system PiP session.
 @MainActor
 final class BrowserAutomaticPictureInPictureCoordinator {
+    struct Trigger: Sendable {
+        static let tabSwitch = Self(preference: \.automaticallyEntersPictureInPicture)
+        static let appSwitch = Self(preference: \.floatsVideoOnAppSwitch)
+        static let desktopSwitch = Self(preference: \.floatsVideoOnDesktopSwitch)
+
+        fileprivate let preference: KeyPath<AppPreferences, Bool> & Sendable
+    }
+
     static let shared = BrowserAutomaticPictureInPictureCoordinator()
 
-    private let isEnabled: @MainActor () -> Bool
+    private let isEnabled: @MainActor (Trigger) -> Bool
     private let isSystemOccupied: @MainActor () -> Bool
     private let clients = NSHashTable<AnyObject>.weakObjects()
     private weak var pendingClient: (any BrowserAutomaticPictureInPictureClient)?
     private var reservation: UUID?
 
     init(
-        isEnabled: @escaping @MainActor () -> Bool = {
-            BrowserAppPreferenceStore.shared.automaticallyEntersPictureInPicture
+        isEnabled: @escaping @MainActor (Trigger) -> Bool = {
+            BrowserAppPreferenceStore.shared.preferences[keyPath: $0.preference]
         },
         isSystemOccupied: @escaping @MainActor () -> Bool = { BrowserDesktopPictureInPictureAccess.isSystemOccupied() }
     ) {
@@ -34,8 +42,8 @@ final class BrowserAutomaticPictureInPictureCoordinator {
         clients.add(client)
     }
 
-    func request(from client: any BrowserAutomaticPictureInPictureClient) {
-        guard isEnabled(), client.canAutomaticallyEnterPictureInPicture,
+    func request(from client: any BrowserAutomaticPictureInPictureClient, for trigger: Trigger) {
+        guard isEnabled(trigger), client.canAutomaticallyEnterPictureInPicture,
             pendingClient == nil,
             !clients.allObjects.contains(where: {
                 ($0 as? any BrowserAutomaticPictureInPictureClient)?.isPictureInPictureActive == true

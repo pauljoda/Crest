@@ -116,6 +116,7 @@
         private let page: EnginePage
         private let coordinator: BrowserAutomaticPictureInPictureCoordinator
         private var completion: (@MainActor (Bool) -> Void)?
+        private var reconcileLateEntry: (@MainActor () -> Void)?
         private var check: Task<Void, Never>?
 
         var isPictureInPictureActive: Bool { page.mediaActivity.contains(.pictureInPicture) }
@@ -131,10 +132,13 @@
             coordinator.register(self)
         }
 
-        func leaveTab() {
-            coordinator.request(from: self)
+        func requestAutomaticEntry(for trigger: BrowserAutomaticPictureInPictureCoordinator.Trigger) {
+            coordinator.request(from: self, for: trigger)
         }
-        func returnToTab() { coordinator.cancel(self) }
+        func returnToTab(reconcileLateEntry: @escaping @MainActor () -> Void) {
+            // An entry already sent to Chromium's renderer cannot be withdrawn.
+            if completion != nil { self.reconcileLateEntry = reconcileLateEntry }
+        }
 
         func beginAutomaticPictureInPicture(completion: @escaping @MainActor (Bool) -> Void) {
             guard page.enterPictureInPicture() else {
@@ -152,15 +156,20 @@
                 guard let self else { return }
                 DiagnosticLog.pages.notice(
                     "Chromium page \(self.page.id) floats in Picture in Picture: \(self.isPictureInPictureActive)")
-                self.completion?(self.isPictureInPictureActive)
+                let entered = self.isPictureInPictureActive
+                let reconcile = self.reconcileLateEntry
+                self.reconcileLateEntry = nil
+                self.completion?(entered)
                 self.completion = nil
                 self.check = nil
+                if entered { reconcile?() }
             }
         }
 
         func cancelAutomaticPictureInPicture() {
             check?.cancel()
             check = nil
+            reconcileLateEntry = nil
             completion?(false)
             completion = nil
         }

@@ -272,10 +272,6 @@ tear-off placement geometry, drag geometry and default-browser prompt cadence.
 - A Crest popups UI beyond the blocked-popup relay and Site Controls.
 - A Crest presentation for JavaScript alerts beyond the shared dialog
   presenter.
-- System Picture in Picture on Chromium. Chromium's video PiP uses its own
-  Views window; a system PiP needs a video-frame bridge from Chromium's video
-  surface. Do not use macOS's private PIP framework without a separate product
-  decision.
 
 ## Ownership decision guide
 

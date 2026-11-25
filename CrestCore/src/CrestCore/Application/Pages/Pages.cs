@@ -351,7 +351,10 @@ internal sealed class Pages(Device device, Engines engines, IClock clock, IIdSou
     /// Quick Window or a Peek owns the page, so one that floats while its
     /// Space is locked is asked to end each time the core looks.
     internal void EndPictureInPicture(Page page, bool shownAgain, Action<Engine, EngineCommand> issue) {
-        if (page.ShowsPictureInPicture && (shownAgain || Shown(page) is null)) issue(page.Engine, new ExitPictureInPicture(page.Id));
+        if (!page.ShowsPictureInPicture) return;
+        if (Shown(page) is null || shownAgain && (device.PersistentPreferences()
+            ?? device.Attached(page.WorkspaceId)?.Current.AppPreferences ?? AppPreferences.Default).RedocksVideoOnFocus)
+            issue(page.Engine, new ExitPictureInPicture(page.Id));
     }
 
     /// The tabs of `workspaceId` whose page is loaded in some window: one

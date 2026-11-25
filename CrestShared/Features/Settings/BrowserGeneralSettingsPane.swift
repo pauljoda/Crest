@@ -55,12 +55,12 @@ struct BrowserGeneralSettingsPane: View {
             #if os(macOS)
                 Section {
                     BrowserSpellCheckingToggle()
-                    BrowserPictureInPictureToggle()
                 } header: {
                     Text("Webpages")
                 } footer: {
                     CrestFormFootnote("Spelling changes apply after Crest restarts.")
                 }
+                BrowserPictureInPictureSettingsSection()
                 BrowserDeveloperToolbarSettingsSection()
             #endif
         }
