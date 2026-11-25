@@ -7,12 +7,6 @@
     /// page.
     @MainActor
     final class ChromiumPageAdapter: BrowserPageEngineAdapter {
-        // MARK: - Static Variables
-
-        /// How long automatic Picture in Picture gives the renderer to float a
-        /// video before it reads whether one floats.
-        fileprivate static let automaticPictureInPictureCheckDelay: Duration = .milliseconds(600)
-
         // MARK: - Variables
 
         let native: ChromiumNativePage
@@ -113,6 +107,14 @@
     private final class ChromiumPictureInPicturePageController:
         BrowserPagePictureInPictureController, BrowserAutomaticPictureInPictureClient
     {
+        // MARK: - Static Variables
+
+        private static let initialEntryCheckDelay: Duration = .milliseconds(600)
+        private static let lateEntryCheckInterval: Duration = .milliseconds(100)
+        private static let entryTimeout: Duration = .seconds(2)
+
+        // MARK: - Variables
+
         private let page: EnginePage
         private let coordinator: BrowserAutomaticPictureInPictureCoordinator
         private var completion: (@MainActor (Bool) -> Void)?
@@ -126,11 +128,15 @@
             return activity.contains(.playing) && !activity.contains(.pictureInPicture)
         }
 
+        // MARK: - Initializers
+
         init(page: EnginePage, coordinator: BrowserAutomaticPictureInPictureCoordinator = .shared) {
             self.page = page
             self.coordinator = coordinator
             coordinator.register(self)
         }
+
+        // MARK: - Actions - Picture in Picture
 
         func requestAutomaticEntry(for trigger: BrowserAutomaticPictureInPictureCoordinator.Trigger) {
             coordinator.request(from: self, for: trigger)
@@ -148,30 +154,42 @@
             }
             self.completion = completion
             check = Task { @MainActor [weak self] in
-                // Media Session sends the request to the renderer. Check its
-                // resulting browser state before releasing the reservation.
-                do { try await Task.sleep(for: ChromiumPageAdapter.automaticPictureInPictureCheckDelay) } catch {
-                    return
+                // Keep the reservation and any redock request while the
+                // renderer can still complete automatic entry.
+                let clock = ContinuousClock()
+                let deadline = clock.now + Self.entryTimeout
+                var nextCheck = clock.now + Self.initialEntryCheckDelay
+                while true {
+                    do { try await clock.sleep(until: nextCheck) } catch { return }
+                    guard let self else { return }
+                    let entered = isPictureInPictureActive
+                    if entered || clock.now >= deadline {
+                        finishAutomaticEntry(entered)
+                        return
+                    }
+                    nextCheck = min(clock.now + Self.lateEntryCheckInterval, deadline)
                 }
-                guard let self else { return }
-                DiagnosticLog.pages.notice(
-                    "Chromium page \(self.page.id) floats in Picture in Picture: \(self.isPictureInPictureActive)")
-                let entered = self.isPictureInPictureActive
-                let reconcile = self.reconcileLateEntry
-                self.reconcileLateEntry = nil
-                self.completion?(entered)
-                self.completion = nil
-                self.check = nil
-                if entered { reconcile?() }
             }
+        }
+
+        private func finishAutomaticEntry(_ entered: Bool) {
+            DiagnosticLog.pages.notice("Chromium page \(page.id) floats in Picture in Picture: \(entered)")
+            let reconcile = reconcileLateEntry
+            reconcileLateEntry = nil
+            let complete = completion
+            completion = nil
+            check = nil
+            complete?(entered)
+            if entered { reconcile?() }
         }
 
         func cancelAutomaticPictureInPicture() {
             check?.cancel()
             check = nil
             reconcileLateEntry = nil
-            completion?(false)
+            let complete = completion
             completion = nil
+            complete?(false)
         }
 
         func invalidate() {

@@ -1180,7 +1180,8 @@ final class BrowserPagePool:
     private func reconcileLatePictureInPictureEntry(_ page: BrowserPage, tabID: UUID) {
         guard BrowserAppPreferenceStore.shared.redocksVideoOnFocus else { return }
         page.pictureInPicture?.returnToTab { [weak self, weak page] in
-            guard let self, let page, presentedPage(for: tabID) === page, NSApp.isActive,
+            guard let self, let page, BrowserAppPreferenceStore.shared.redocksVideoOnFocus,
+                presentedPage(for: tabID) === page, NSApp.isActive, presentationWindow?.isKeyWindow == true,
                 presentationWindow?.isOnActiveSpace == true
             else { return }
             page.corePage.returnPictureInPictureToSource()

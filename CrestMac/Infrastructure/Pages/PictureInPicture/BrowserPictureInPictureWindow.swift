@@ -59,15 +59,15 @@ final class BrowserPictureInPictureWindow: NSPanel {
         override func hitTest(_ point: NSPoint) -> NSView? {
             let local = convert(point, from: superview)
             guard bounds.contains(local) else { return nil }
-            if let controls, !controls.isHidden, controls.frame.contains(local) {
+            if let controls, controls.alphaValue > 0, controls.frame.contains(local) {
                 return controls.hitTest(local) ?? controls
             }
             return self
         }
 
         override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-        override func mouseEntered(with event: NSEvent) { player?.showsControls(true) }
-        override func mouseExited(with event: NSEvent) { player?.showsControls(false) }
+        override func mouseEntered(with event: NSEvent) { player?.setPointerInside(true) }
+        override func mouseExited(with event: NSEvent) { player?.setPointerInside(false) }
         override func mouseDown(with event: NSEvent) {
             player?.beginDrag(at: convert(event.locationInWindow, from: nil), time: event.timestamp)
         }
@@ -92,6 +92,7 @@ final class BrowserPictureInPictureWindow: NSPanel {
     private var drag: Drag?
     private var destination: CGRect
     private var isPresenting = false
+    private var pointerIsInside = false
     var onPlayback: (Bool) -> Void = { _ in }
     var onRestore: () -> Void = {}
     var onClose: () -> Void = {}
@@ -135,7 +136,7 @@ final class BrowserPictureInPictureWindow: NSPanel {
         hidesOnDeactivate = false
         acceptsMouseMovedEvents = true
         level = .floating
-        collectionBehavior = [.canJoinAllSpaces, .ignoresCycle, .canJoinAllApplications]
+        collectionBehavior = [.canJoinAllSpaces, .participatesInCycle, .canJoinAllApplications]
         isMovable = false
         isOpaque = false
         backgroundColor = .clear
@@ -159,7 +160,7 @@ final class BrowserPictureInPictureWindow: NSPanel {
             y: surface.bounds.height - sizeOfControls.height - Self.inset,
             width: sizeOfControls.width, height: sizeOfControls.height)
         controls.autoresizingMask = [.minXMargin, .maxXMargin, .minYMargin]
-        controls.isHidden = true
+        controls.alphaValue = 0
         surface.addSubview(controls)
         surface.controls = controls
         self.controls = controls
@@ -179,6 +180,7 @@ final class BrowserPictureInPictureWindow: NSPanel {
         videoContainer.addSubview(view)
         view.frame = videoContainer.bounds
         view.autoresizingMask = [.width, .height]
+        NSApp.addWindowsItem(self, title: title, filename: false)
         orderFrontRegardless()
 
         DispatchQueue.main.async { [weak self] in
@@ -190,11 +192,12 @@ final class BrowserPictureInPictureWindow: NSPanel {
                 setFrame(destination, display: true, animate: true)
                 isPresenting = false
             }
-            showsControls(frame.contains(NSEvent.mouseLocation))
+            setPointerInside(frame.contains(NSEvent.mouseLocation))
         }
     }
 
     func dismiss() {
+        NSApp.removeWindowsItem(self)
         orderOut(nil)
         video?.removeFromSuperview()
         video = nil
@@ -222,8 +225,24 @@ final class BrowserPictureInPictureWindow: NSPanel {
             close: { [weak self] in self?.onClose() })
     }
 
-    private func showsControls(_ visible: Bool) {
-        controls?.isHidden = !visible
+    override func becomeKey() {
+        super.becomeKey()
+        updateControlVisibility()
+        recalculateKeyViewLoop()
+    }
+
+    override func resignKey() {
+        super.resignKey()
+        updateControlVisibility()
+    }
+
+    private func setPointerInside(_ inside: Bool) {
+        pointerIsInside = inside
+        updateControlVisibility()
+    }
+
+    private func updateControlVisibility() {
+        controls?.alphaValue = pointerIsInside || isKeyWindow ? 1 : 0
     }
 
     // MARK: - Actions - Pointer

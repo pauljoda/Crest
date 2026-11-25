@@ -126,7 +126,10 @@ namespace {
 // of the PiP element in its own document, including for a cross-origin frame.
 constexpr char16_t kReadActiveCaptionCues[] = uR"JS(
   (() => {
-    const video = document.pictureInPictureElement;
+    // Each tree retargets the PiP element to its nearest shadow host.
+    let video = document.pictureInPictureElement;
+    while (video && !(video instanceof HTMLVideoElement))
+      video = video.shadowRoot?.pictureInPictureElement;
     if (!video) return '';
     const cues = [];
     let remaining = 1024;
