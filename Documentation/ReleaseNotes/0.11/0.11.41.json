@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "palette-sites-before-search",
+      "category": "new",
+      "message": "A new Sites before search setting lets the command palette open a site you've visited while you type one word, and search once you add a space."
+    }
+  ]
+}

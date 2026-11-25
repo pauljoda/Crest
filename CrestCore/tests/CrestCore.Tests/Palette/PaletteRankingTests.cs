@@ -143,6 +143,25 @@ public sealed partial class BrowserContractsTests {
         Assert.Equal("http://localhost:3000", Rows(Asking(window, "localhost:3000"))[0].Address);
     }
 
+    /// With sites before search, one word leads with a known site even one
+    /// only history holds, the search follows it, and a space after the
+    /// word searches first again.
+    [Fact]
+    public void SitesBeforeSearchLetAWordLeadWithAKnownSiteUntilASpaceFollowsIt() {
+        var (session, space, shown) = RankingSpace();
+        session["appPreferences"] = new JsonObject { ["palette"] = new JsonObject { ["prefersSitesOverSearch"] = true } };
+        using var device = new TestDevice(session);
+        var window = device.Open(space, (space, shown));
+        IReadOnlyList<PaletteRow> Rows(string text) => [.. device.Query(Asking(window, text)).Groups.SelectMany(group => group.Rows)];
+
+        var word = Rows("weather");
+        Assert.Equal((PaletteRowKind.History, "Weather Forecast"), (word[0].Kind, word[0].Title));
+        Assert.Equal(PaletteRowKind.Search, word[1].Kind);
+        Assert.Equal((PaletteRowKind.History, "Tech Digest"), (Rows("tech")[0].Kind, Rows("tech")[0].Title));
+        Assert.Equal(PaletteRowKind.Search, Rows("weather ")[0].Kind);
+        Assert.Equal(PaletteRowKind.Search, Rows("crest browser")[0].Kind);
+    }
+
     [Fact]
     public void StoredPalettePreferencesNameEveryKindOnceAndKeepWhatTheyCannotRead() {
         var stored = JsonNode.Parse("""

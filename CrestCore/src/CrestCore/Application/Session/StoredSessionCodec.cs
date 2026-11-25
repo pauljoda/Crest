@@ -143,6 +143,7 @@ internal static partial class StoredSessionCodec {
         public const string SavedTitleUrl = "savedTitleURL";
         public const string SavedUrl = "savedURL";
         public const string SearchesSitesWithTab = "searchesSitesWithTab";
+        public const string PrefersSitesOverSearch = "prefersSitesOverSearch";
         public const string SearchFollowsDefault = "searchFollowsDefault";
         public const string SearchSuggestionsEnabled = "searchSuggestionsEnabled";
         public const string SearchUrlTemplate = "searchURLTemplate";

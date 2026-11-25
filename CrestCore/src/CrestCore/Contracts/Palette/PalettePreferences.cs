@@ -18,10 +18,11 @@ public sealed record PaletteSourceChoice(PaletteSource Source, bool IsEnabled, i
 /// kinds it offers, in what order and how many rows each shows, whether one
 /// best row leads, whether an open tab outranks history for the same site,
 /// whether it completes addresses inline, learns from the rows a person picks,
-/// searches a site when Tab follows its shortcut, and says why a row is there.
+/// searches a site when Tab follows its shortcut, says why a row is there, and
+/// whether a site the person knows leads one typed word ahead of the search.
 public sealed record PalettePreferences(PaletteLayout Layout, IReadOnlyList<PaletteSourceChoice> Sources, bool ShowsTopHit,
     bool PrefersOpenTabs, bool CompletesInline, bool LearnsChoices, bool SearchesSitesWithTab, bool ShowsReasons,
-    SearchProviderSpaceTrigger ProviderSpaceTrigger) {
+    SearchProviderSpaceTrigger ProviderSpaceTrigger, bool PrefersSitesOverSearch) {
     #region Static Variables
 
     /// The most rows a person may have one kind show.
@@ -34,7 +35,7 @@ public sealed record PalettePreferences(PaletteLayout Layout, IReadOnlyList<Pale
     /// each on or off as `PaletteSource.IsEnabledByDefault` says.
     public static PalettePreferences Default { get; } = new(PaletteLayout.Sections,
         [.. PaletteSource.All.Select(source => new PaletteSourceChoice(source, source.IsEnabledByDefault, Limit: null))], ShowsTopHit: true, PrefersOpenTabs: true, CompletesInline: true, LearnsChoices: true, SearchesSitesWithTab: true,
-        ShowsReasons: false, ProviderSpaceTrigger: SearchProviderSpaceTrigger.PrefixedShortcut);
+        ShowsReasons: false, ProviderSpaceTrigger: SearchProviderSpaceTrigger.PrefixedShortcut, PrefersSitesOverSearch: false);
 
     #endregion
 
@@ -131,12 +132,13 @@ public sealed record PalettePreferences(PaletteLayout Layout, IReadOnlyList<Pale
         && LearnsChoices == other.LearnsChoices
         && SearchesSitesWithTab == other.SearchesSitesWithTab
         && ProviderSpaceTrigger == other.ProviderSpaceTrigger
-        && ShowsReasons == other.ShowsReasons;
+        && ShowsReasons == other.ShowsReasons
+        && PrefersSitesOverSearch == other.PrefersSitesOverSearch;
 
     public override int GetHashCode() =>
         HashCode.Combine(
             HashCode.Combine(Layout, Sources.Count, ShowsTopHit, PrefersOpenTabs, CompletesInline, LearnsChoices, SearchesSitesWithTab, ShowsReasons),
-            ProviderSpaceTrigger);
+            ProviderSpaceTrigger, PrefersSitesOverSearch);
 
     #endregion
 }

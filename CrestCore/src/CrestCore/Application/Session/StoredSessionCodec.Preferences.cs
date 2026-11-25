@@ -210,7 +210,8 @@ internal static partial class StoredSessionCodec {
             value.ContainsKey(Key.ProviderSpaceTrigger)
                 ? SearchProviderSpaceTrigger.Named(TolerantText(value[Key.ProviderSpaceTrigger])) ?? defaults.ProviderSpaceTrigger
                 : (TolerantFlag(value[Key.SearchesSitesWithTab]) ?? defaults.SearchesSitesWithTab)
-                    ? SearchProviderSpaceTrigger.PrefixedShortcut : SearchProviderSpaceTrigger.Off).Restored();
+                    ? SearchProviderSpaceTrigger.PrefixedShortcut : SearchProviderSpaceTrigger.Off,
+            TolerantFlag(value[Key.PrefersSitesOverSearch]) ?? defaults.PrefersSitesOverSearch).Restored();
     }
 
     private static JsonNode Encode(PaletteSourceChoice choice) {
@@ -228,7 +229,8 @@ internal static partial class StoredSessionCodec {
         [Key.LearnsChoices] = preferences.LearnsChoices,
         [Key.SearchesSitesWithTab] = preferences.SearchesSitesWithTab,
         [Key.ProviderSpaceTrigger] = preferences.ProviderSpaceTrigger.Name,
-        [Key.ShowsReasons] = preferences.ShowsReasons
+        [Key.ShowsReasons] = preferences.ShowsReasons,
+        [Key.PrefersSitesOverSearch] = preferences.PrefersSitesOverSearch
     };
 
     /// The values the native settings stored before the core owned them, each

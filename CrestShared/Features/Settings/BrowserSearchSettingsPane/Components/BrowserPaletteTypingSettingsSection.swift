@@ -10,6 +10,11 @@ struct BrowserPaletteTypingSettingsSection: View {
 
     var body: some View {
         Section {
+            Toggle(isOn: $preferences.palette.prefersSitesOverSearch) {
+                Text("Sites before search")
+                Text("Type a space after a word to search it.")
+            }
+            .accessibilityIdentifier("palette-prefers-sites")
             Toggle("Complete addresses inline", isOn: $preferences.palette.completesInline)
                 .accessibilityIdentifier("palette-completes-inline")
             Toggle("Learn from my choices", isOn: $preferences.palette.learnsChoices)

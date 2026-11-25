@@ -17,7 +17,8 @@ internal sealed record PaletteLeading(PaletteQuery Query, AddressMatch? Completi
 /// One way a row comes to lead the palette as its best match, so Return runs
 /// it. The rules are asked in order and the first that names a row leads:
 /// a calculation, the address the field completes, what the person picked at
-/// least twice for this text, then a strongly used place whose title or
+/// least twice for this text, any known site a word starts when the person
+/// puts sites before search, then a strongly used place whose title or
 /// address starts with the text. A word that names no address leads only
 /// with a place it names: a site the field completes, as the tab that shows
 /// it, or a tab whose title, the site name its title ends with, or the page
@@ -63,6 +64,15 @@ internal sealed class PaletteLeadRule {
             ? learned with { Row = learned.Row with { Reason = PaletteReason.Learned } }
             : null);
 
+    /// For a person who puts sites before search, the strongest place whose
+    /// title or site starts with a word that names no address, whether a tab
+    /// or only history holds it, so the site leads and the search follows.
+    /// A space after the word ends the name, and the search leads again.
+    public static readonly PaletteLeadRule KnownSite = new((context, leading) =>
+        leading.Completes && leading.Searches && context.Preferences.PrefersSitesOverSearch
+            ? leading.Ranked.Where(entry => entry.Place is not null && Starts(entry.Row, leading.Query.Text)).MaxBy(entry => entry.Score)
+            : null);
+
     /// The strongest row that may lead, once two letters are typed and the
     /// person shows a Top Hit; for a word that names no address, only a tab,
     /// once three letters are typed.
@@ -72,7 +82,7 @@ internal sealed class PaletteLeadRule {
             : null);
 
     /// The rules, in the order the palette asks them.
-    public static IReadOnlyList<PaletteLeadRule> All { get; } = [Calculation, Completion, Habit, StrongPlace];
+    public static IReadOnlyList<PaletteLeadRule> All { get; } = [Calculation, Completion, Habit, KnownSite, StrongPlace];
 
     #endregion
 
@@ -92,6 +102,13 @@ internal sealed class PaletteLeadRule {
 
     /// The row this rule makes lead, or null when it names none.
     public PaletteCandidate? Leads(PaletteContext context, PaletteLeading leading) => leads(context, leading);
+
+    /// Whether `row`'s title, or its site without `www.`, starts with `text`.
+    private static bool Starts(PaletteRow row, string text) {
+        if (row.Title.StartsWith(text, StringComparison.CurrentCultureIgnoreCase)) return true;
+        return row.Address is { } address && Uri.TryCreate(address, UriKind.Absolute, out var url)
+            && PaletteMemory.WithoutWww(url.Host).StartsWith(text, StringComparison.OrdinalIgnoreCase);
+    }
 
     /// The row the first rule that names one makes lead, or null when none does.
     public static PaletteCandidate? First(PaletteContext context, PaletteLeading leading) =>
