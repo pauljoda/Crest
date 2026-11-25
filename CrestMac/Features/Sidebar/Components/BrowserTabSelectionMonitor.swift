@@ -113,10 +113,8 @@ struct BrowserTabSelectionMonitor: View {
         func handle(_ event: NSEvent) -> NSEvent? {
             guard let eventWindow = window, event.window === eventWindow else { return event }
             if event.type == .leftMouseDragged || event.type == .leftMouseUp {
-                let local = convert(event.locationInWindow, from: nil)
-                let global = CGPoint(x: globalFrame.minX + local.x, y: globalFrame.minY + local.y)
                 sidebarInteraction?.sidebarReorderState.forwardPointerContinuation(
-                    at: global, released: event.type == .leftMouseUp, eventTimestamp: event.timestamp)
+                    at: globalPoint(of: event), released: event.type == .leftMouseUp, eventTimestamp: event.timestamp)
                 if event.type == .leftMouseDragged { return event }
             }
             guard let browser, let sidebarInteraction, let spaceAccess, let assignment,
@@ -148,8 +146,9 @@ struct BrowserTabSelectionMonitor: View {
                 return event
             }
             guard let window,
-                let id = BrowserNativeTabSelectionTarget.TargetView.item(
-                    at: event.locationInWindow, in: window, browser: browser, assignment: assignment)
+                let id = BrowserTabSelectionTargets.shared.item(
+                    at: globalPoint(of: event), browser: browser, assignment: assignment,
+                    visibleFrame: sidebarInteraction.sidebarReorderState.scrollRegionFrame(for:))
             else {
                 selection.clear()
                 return event
@@ -174,6 +173,13 @@ struct BrowserTabSelectionMonitor: View {
             // set. The activation button collapses it only after a plain click.
             if !selection.contains(id) { selection.click(id, units: units) }
             return event
+        }
+
+        /// Where `event` happened in SwiftUI's global space of this window,
+        /// the space sidebar geometry registers in.
+        private func globalPoint(of event: NSEvent) -> CGPoint {
+            let local = convert(event.locationInWindow, from: nil)
+            return CGPoint(x: globalFrame.minX + local.x, y: globalFrame.minY + local.y)
         }
 
         private func handleKey(_ event: NSEvent, browser: BrowserStore) -> NSEvent? {

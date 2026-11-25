@@ -24,7 +24,7 @@ struct BrowserSidebarSplitGroupHeader: View {
                     icon
                     TextField("Split View Name", text: interaction.draftTitle)
                         .textFieldStyle(.plain)
-                        .focused(interaction.isTitleFocused)
+                        .browserSidebarRenameFocus(commit: interaction.commitTitle)
                         .submitLabel(.done)
                         .onSubmit(interaction.commitTitle)
                         .onKeyPress(.escape) {
@@ -93,11 +93,6 @@ struct BrowserSidebarSplitGroupHeader: View {
                     .onAppear {
                         configuration.sidebarInteraction.sidebarReorderState.yieldToCompetingInteraction()
                     }
-            }
-        }
-        .onChange(of: interaction.isTitleFocused.wrappedValue) { _, focused in
-            if !focused, interaction.isRenaming {
-                interaction.commitTitle()
             }
         }
     }

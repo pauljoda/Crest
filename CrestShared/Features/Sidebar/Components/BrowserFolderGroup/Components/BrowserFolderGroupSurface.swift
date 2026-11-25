@@ -114,14 +114,6 @@ struct BrowserFolderGroupSurface: View {
             dismissHeldCard()
             interaction.beginTitleEditingIfNeeded()
         }
-        .onChange(of: interaction.isTitleFocused.wrappedValue) { _, focused in
-            if !focused,
-                interaction.editingFolderRequest.wrappedValue
-                    == configuration.folderRuntimeAssignment
-            {
-                interaction.commitTitle()
-            }
-        }
     }
 
     /// The folder's menu, in the system's menu or behind its card's "…".

@@ -22,6 +22,11 @@ struct BrowserSidebarTabActivationButton: View {
     let iconCustomization: BrowserIconCustomizationPresentation
     let select: () -> Void
 
+    /// Whether the row has shown its icon picker, whose anchor then stays
+    /// for as long as the row does, so the picker closes as it opened. A row
+    /// that never shows the picker never makes it.
+    @State private var keepsIconPicker = false
+
     var body: some View {
         Button(action: select) {
             BrowserSidebarTabLabel(
@@ -41,15 +46,18 @@ struct BrowserSidebarTabActivationButton: View {
             )
         #endif
         .overlay(alignment: .leading) {
-            Color.clear
-                .frame(
-                    width: metrics.faviconSlot?.width ?? 18,
-                    height: metrics.faviconSlot?.glyphSize ?? 18
-                )
-                .padding(.leading, leadingInset)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-                .browserIconCustomizationPopover(iconCustomization, arrowEdge: iconPickerArrowEdge)
+            if keepsIconPicker || iconCustomization.isPresented.wrappedValue {
+                Color.clear
+                    .frame(
+                        width: metrics.faviconSlot?.width ?? 18,
+                        height: metrics.faviconSlot?.glyphSize ?? 18
+                    )
+                    .padding(.leading, leadingInset)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+                    .browserIconCustomizationPopover(iconCustomization, arrowEdge: iconPickerArrowEdge)
+                    .onAppear { keepsIconPicker = true }
+            }
         }
         .accessibilityLabel(tab.shownTitle(in: isLoaded ? core?.state : nil))
         .accessibilityValue(BrowserChromeAccessibility.tabValue(isLoaded: isLoaded))

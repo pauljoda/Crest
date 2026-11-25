@@ -168,7 +168,6 @@ struct BrowserSplitGroupRuntimeAssignment: Equatable, Sendable {
 struct BrowserSidebarSplitGroupRowInteractionContext {
     let isRenaming: Bool
     let draftTitle: Binding<String>
-    let isTitleFocused: FocusState<Bool>.Binding
     let isChoosingIcon: Binding<Bool>
     let isChoosingTint: Binding<Bool>
     let tint: Binding<BrandColor>

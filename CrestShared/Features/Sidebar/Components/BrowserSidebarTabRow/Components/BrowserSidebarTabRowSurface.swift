@@ -119,11 +119,6 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
                     isEnabled: configuration.capabilities.supportsOrganization
                 ) { organizationMenu }
             )
-            .onChange(of: interaction.isTitleFocused.wrappedValue) { _, focused in
-                if !focused, interaction.isRenaming {
-                    interaction.commitTitle()
-                }
-            }
     }
 
     /// Opening the menu ends any drag the same row had started. The lift and

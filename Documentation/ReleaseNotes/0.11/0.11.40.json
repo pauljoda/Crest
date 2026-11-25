@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-scrolls-smoothly-with-many-tabs",
+      "category": "improved",
+      "message": "The sidebar scrolls smoothly with hundreds or thousands of tabs, and tab icons no longer pop in as rows scroll into view.",
+      "platforms": ["mac"]
+    }
+  ]
+}

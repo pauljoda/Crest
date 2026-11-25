@@ -61,7 +61,6 @@ struct BrowserFolderGroup: View {
     #else
         @State private var collapsedTabVisibility = BrowserCollapsedFolderTabVisibilityState()
     #endif
-    @FocusState private var isTitleFocused: Bool
 
     /// Whether what the folder holds waits for its turn now.
     private var isHoldingContents: Bool {
@@ -108,7 +107,6 @@ struct BrowserFolderGroup: View {
             isConfirmingDeletion: deletionPresentation,
             collapsedTabVisibility: Binding(
                 get: { collapsedTabVisibility }, set: { collapsedTabVisibility = $0 }),
-            isTitleFocused: $isTitleFocused,
             folderColor: folderColorBinding,
             beginCreatingChild: beginCreatingChild,
             beginRenaming: beginRenaming,
@@ -334,14 +332,8 @@ struct BrowserFolderGroup: View {
             isDeferredAssignmentAvailable(
                 configuration.folderRuntimeAssignment
             )
-        else {
-            isTitleFocused = false
-            return
-        }
+        else { return }
         draftTitle = folder.title
-        Task { @MainActor in
-            isTitleFocused = true
-        }
     }
 
     private func commitTitle() {
@@ -455,7 +447,6 @@ struct BrowserFolderGroup: View {
             !isDeferredAssignmentAvailable(request)
         {
             sidebarInteraction.editingFolderRequest = nil
-            isTitleFocused = false
         }
         if let request = iconRequest,
             !isDeferredAssignmentAvailable(request)

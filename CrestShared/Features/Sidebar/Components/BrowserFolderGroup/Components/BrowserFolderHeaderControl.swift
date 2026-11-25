@@ -151,10 +151,7 @@ struct BrowserFolderHeaderControl: View {
         TextField(folder.kind.namePrompt, text: interaction.draftTitle, selection: $nameSelection)
             .textFieldStyle(.plain)
             .modifier(BrowserFolderNameFieldFont(kind: folder.kind))
-            .focused(interaction.isTitleFocused)
-            .onChange(of: interaction.isTitleFocused.wrappedValue) { _, focused in
-                if focused { selectWholeName() }
-            }
+            .browserSidebarRenameFocus(commit: interaction.commitTitle, focused: selectWholeName)
             .submitLabel(.done)
             .onSubmit(interaction.commitTitle)
             .onKeyPress(.escape) {

@@ -228,6 +228,10 @@ final class BrowserSidebarReorderState {
         if isDragging { resolveTarget() }
     }
 
+    /// Where the scroll viewport `id` names shows its rows, the part of them
+    /// a click can reach.
+    func scrollRegionFrame(for id: UUID) -> CGRect? { geometry.scrollRegions[id] }
+
     func scrollableContentDidMove(in id: UUID, by offsetY: CGFloat) {
         guard isDragging, offsetY != 0 else { return }
         geometry.scrollableContentDidMove(in: id, by: offsetY)
