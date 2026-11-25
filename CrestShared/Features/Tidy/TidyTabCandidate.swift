@@ -7,18 +7,18 @@ import Foundation
 struct TidyTabCandidate: Equatable, Sendable {
     // MARK: - Static Variables
 
-    /// News, social, video, weather and sports sites, whose front pages are
-    /// not part of anything the person is working on.
-    private static let frontPageHosts = try! NSRegularExpression(
-        pattern:
-            "^(www\\.)?(nytimes|cnn|bbc|reuters|washingtonpost|theguardian|npr|news\\.ycombinator|reddit|x|twitter"
-            + "|facebook|instagram|linkedin|youtube|twitch|tiktok|espn|nba|nfl|weather|accuweather|news\\.google)\\.")
-    /// Chat, music, mail and calendar apps, whose front pages are tools rather
-    /// than topics.
-    private static let appHosts = try! NSRegularExpression(
-        pattern:
-            "^(www\\.)?(discord|slack|open\\.spotify|music\\.apple|music\\.youtube|mail\\.google|outlook\\.live"
-            + "|calendar\\.google|web\\.whatsapp|messenger)\\.")
+    /// The domains of news, social, video, weather and sports sites, whose
+    /// front pages are not part of anything the person is working on, and of
+    /// chat, music, mail and calendar apps, whose front pages are tools rather
+    /// than topics. A host matches a domain or any of its subdomains.
+    private static let looseFrontPageDomains: Set<String> = [
+        "nytimes.com", "cnn.com", "bbc.com", "bbc.co.uk", "reuters.com", "washingtonpost.com", "theguardian.com",
+        "npr.org", "news.ycombinator.com", "reddit.com", "x.com", "twitter.com", "facebook.com", "instagram.com",
+        "linkedin.com", "youtube.com", "twitch.tv", "tiktok.com", "espn.com", "nba.com", "nfl.com", "weather.com",
+        "accuweather.com", "news.google.com", "discord.com", "slack.com", "open.spotify.com", "music.apple.com",
+        "mail.google.com", "outlook.live.com", "calendar.google.com", "web.whatsapp.com", "messenger.com",
+    ]
+    /// The paths of a site's front page, its sign-in page and the like.
     private static let frontPagePaths: Set<String> = [
         "", "home", "feed", "news", "us", "uk", "world", "en", "explore", "trending", "latest", "login", "signin",
         "app", "browse", "mail", "mail/u/0", "calendar", "calendar/u/0/r",
@@ -60,14 +60,17 @@ struct TidyTabCandidate: Equatable, Sendable {
     /// How many path components deep the page is; a site's root is 0.
     var pathDepth: Int { path.split(separator: "/").count }
 
+    /// A site's front page, its sign-in page or the like, by its path.
+    var isFrontPage: Bool {
+        Self.frontPagePaths.contains(path.trimmingCharacters(in: CharacterSet(charactersIn: "/")).lowercased())
+    }
+
     /// The front page of a news, social, video or weather site, or of a chat,
     /// mail, music or calendar app. Such a tab stays loose.
     var isLooseSiteFrontPage: Bool {
-        let range = NSRange(location: 0, length: (host as NSString).length)
-        let normalizedPath = path.trimmingCharacters(in: CharacterSet(charactersIn: "/")).lowercased()
-        return Self.frontPagePaths.contains(normalizedPath)
-            && (Self.frontPageHosts.firstMatch(in: host, range: range) != nil
-                || Self.appHosts.firstMatch(in: host, range: range) != nil)
+        let host = host.lowercased()
+        return isFrontPage
+            && Self.looseFrontPageDomains.contains { host == $0 || host.hasSuffix(".\($0)") }
     }
 
     /// A site's root or one level down, or a sign-in page: the tabs whose

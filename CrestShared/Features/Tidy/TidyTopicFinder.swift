@@ -46,7 +46,7 @@ struct TidyTopicFinder: Sendable {
         options: [.caseInsensitive])
 
     /// Always pick the likeliest answer, so the same tabs tidy the same way.
-    private static let options = GenerationOptions(sampling: .greedy)
+    private static let options = GenerationOptions(samplingMode: .greedy)
 
     /// The most of a title the naming prompt shows, so a Space of long titles
     /// still fits the model's context.
@@ -133,9 +133,9 @@ struct TidyTopicFinder: Sendable {
     }
 
     /// News, social and app home pages pair up by kind, not by anything the
-    /// person is working on.
+    /// person is working on. An article one level down is no home page.
     private static func isOnlyFrontPagesOfDifferentSites(_ group: [TidyTabCandidate]) -> Bool {
-        group.allSatisfy { $0.pathDepth <= 1 } && Set(group.map(\.host)).count == group.count
+        group.allSatisfy(\.isFrontPage) && Set(group.map(\.host)).count == group.count
     }
 
     /// `name` cut at a word to `maximumGroupNameLength`, or at that length
@@ -184,7 +184,7 @@ struct TidyTopicFinder: Sendable {
         }.joined(separator: "\n")
         // A few words a line, with room to spare: a cap that cut a name short
         // would leave its group unnamed.
-        let namingOptions = GenerationOptions(sampling: .greedy, maximumResponseTokens: 64 + 24 * groups.count)
+        let namingOptions = GenerationOptions(samplingMode: .greedy, maximumResponseTokens: 64 + 24 * groups.count)
         let text = try await LanguageModelSession(model: Self.namingModel, instructions: Self.namingInstructions)
             .respond(to: prompt, options: namingOptions).content
         let lines = Self.runTogetherNames.stringByReplacingMatches(
@@ -203,6 +203,8 @@ struct TidyTopicFinder: Sendable {
                 in: named, range: NSRange(named.startIndex..., in: named), withTemplate: "")
             let name = String(unlabeled.prefix { !":,(;\u{FF1A}\u{FF0C}\u{FF08}\u{FF1B}".contains($0) })
                 .trimmingCharacters(in: CharacterSet(charactersIn: "\"*. "))
+            // A line with no name leaves its group to the retry.
+            guard !name.isEmpty else { continue }
             if namesByNumber[number] == nil { namesByNumber[number] = name }
             if match.range(at: 1).location != NSNotFound, labeledNamesByNumber[number] == nil {
                 labeledNamesByNumber[number] = name

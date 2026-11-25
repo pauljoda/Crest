@@ -6,6 +6,25 @@ import Foundation
 /// and one `F32` matrix with a row per word.
 struct TidyTabEmbedderTableInvalid: Error {}
 
+/// The JSON header of the table's safetensors file, as far as Tidy reads it:
+/// the one tensor, `embeddings`, with its element type, its rows and columns,
+/// and where its bytes start and end after the header.
+private struct TidyTabEmbedderHeader: Decodable {
+    struct Tensor: Decodable {
+        let dtype: String
+        let shape: [Int]
+        let dataOffsets: [Int]
+
+        enum CodingKeys: String, CodingKey {
+            case dtype
+            case shape
+            case dataOffsets = "data_offsets"
+        }
+    }
+
+    let embeddings: Tensor
+}
+
 /// Turns a tab's text into a meaning vector with a static word-vector table,
 /// potion-base-8M by Minish Lab: BERT's tokenizer splits the text into word
 /// pieces, and the vector is the unit-length mean of their rows. No neural
@@ -32,21 +51,25 @@ struct TidyTabEmbedder: Sendable {
         for (row, wordPiece) in wordPieces.enumerated() where !wordPiece.isEmpty {
             rowsByWordPiece[String(wordPiece)] = row
         }
-        guard let unknownRow = rowsByWordPiece["[UNK]"] else { throw TidyTabEmbedderTableInvalid() }
+        guard let unknownRow = rowsByWordPiece["[UNK]"], let highestRow = rowsByWordPiece.values.max() else {
+            throw TidyTabEmbedderTableInvalid()
+        }
 
         let file = try Data(contentsOf: matrixURL, options: .alwaysMapped)
         guard file.count > 8,
             let headerLength = Int(
                 exactly: file.prefix(8).withUnsafeBytes { $0.loadUnaligned(as: UInt64.self).littleEndian }),
-            headerLength <= file.count - 8,
-            let header = try JSONSerialization.jsonObject(with: file.subdata(in: 8..<(8 + headerLength)))
-                as? [String: Any],
-            let embeddings = header["embeddings"] as? [String: Any], embeddings["dtype"] as? String == "F32",
-            let shape = embeddings["shape"] as? [Int], shape.count == 2, shape[1] > 0,
-            shape[0] == wordPieces.count - 1
-                || shape[0] == wordPieces.count,
-            let offsets = embeddings["data_offsets"] as? [Int], offsets.count == 2, offsets[0] >= 0,
-            offsets[1] >= offsets[0],
+            headerLength <= file.count - 8
+        else { throw TidyTabEmbedderTableInvalid() }
+        let tensor = try JSONDecoder().decode(
+            TidyTabEmbedderHeader.self, from: file.subdata(in: 8..<(8 + headerLength))
+        ).embeddings
+        let (shape, offsets) = (tensor.shape, tensor.dataOffsets)
+        // Every word piece needs its own row; only a trailing empty line may
+        // go without one.
+        guard tensor.dtype == "F32", shape.count == 2, shape[1] > 0, highestRow < shape[0],
+            shape[0] <= wordPieces.count,
+            offsets.count == 2, offsets[0] >= 0, offsets[1] >= offsets[0],
             case (let cells, let cellsOverflow) = shape[0].multipliedReportingOverflow(by: shape[1]), !cellsOverflow,
             case (let bytes, let bytesOverflow) = cells.multipliedReportingOverflow(by: MemoryLayout<Float>.size),
             !bytesOverflow, offsets[1] - offsets[0] == bytes,

@@ -53,7 +53,7 @@ private struct BrowserCurrentTabsSeam: View {
             clearAll: { _ = context.tabActions.clearCurrentTabs(keepingShownTab: false) },
             canTidy: context.tabActions.canTidy,
             isTidying: TabTidying.shared.tidyingSpaceIDs.contains(context.space.id),
-            tidyFailed: TabTidying.shared.failedSpaceIDs.contains(context.space.id),
+            tidyFailed: TabTidying.shared.hasFailed(in: context.space.id),
             tidy: { context.tabActions.startTidying() },
             prepareTidy: { TabTidying.shared.prewarm() }
         )
@@ -93,7 +93,9 @@ private struct BrowserTidyBackgroundWork: View {
             ? TabTidying.candidates(in: context.space, of: context.browser) : []
         Color.clear
             .task(id: candidates.map(\.modelDescription)) {
-                tidying.describe(candidates)
+                tidying.describe(candidates, in: context.space.id) {
+                    [spaceAccess = context.spaceAccess, space = context.space] in !spaceAccess.isLocked(space)
+                }
             }
     }
 }

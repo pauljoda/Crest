@@ -104,21 +104,22 @@ struct BrowserSidebarTabActions {
     /// Files the Space's loose open tabs into Groups by topic, with Apple's
     /// on-device model. Throws when the Space stops being the selected,
     /// unlocked one, when the model fails, or when the core refuses because
-    /// the tabs changed meanwhile. Does nothing when Tidy was turned off or
-    /// Apple Intelligence went away meanwhile, and a tab whose page changed
-    /// meanwhile stays loose.
+    /// the tabs changed meanwhile. Does nothing when Tidy was turned off
+    /// meanwhile, even if it is on again, or Apple Intelligence went away, and
+    /// a tab whose page changed meanwhile stays loose.
     func tidyCurrentTabs() async throws {
         guard let space = browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) else {
             throw TidySpaceNoLongerShown()
         }
         let tidying = TabTidying.shared
+        let generation = tidying.generation
         let candidates = TabTidying.candidates(in: space, of: browser)
         let topics = try await tidying.topics(for: candidates)
         guard let shown = browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) else {
             throw TidySpaceNoLongerShown()
         }
         let unchanged = TabTidying.topics(topics, unchangedSince: candidates, in: shown, of: browser)
-        guard tidying.isReady, !unchanged.isEmpty else { return }
+        guard tidying.isReady, tidying.generation == generation, !unchanged.isEmpty else { return }
         try browser.tidySessionTabs(into: unchanged, in: assignment.spaceID)
         syncPagesAfterMutation()
     }

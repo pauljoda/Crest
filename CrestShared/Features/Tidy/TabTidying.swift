@@ -58,9 +58,13 @@ final class TabTidying {
     /// The Spaces a Tidy is under way in.
     private(set) var tidyingSpaceIDs: Set<UUID> = []
 
-    /// The Spaces whose last Tidy failed, for a few seconds after, which the
-    /// Tidy control says.
-    private(set) var failedSpaceIDs: Set<UUID> = []
+    /// Counts the times Tidy was turned off, so a Tidy that began before it
+    /// files nothing after, even once Tidy is on again.
+    private(set) var generation = 0
+
+    /// The Spaces whose last Tidy failed, each with a mark for that run, for a
+    /// few seconds after.
+    private var failures: [UUID: UUID] = [:]
 
     // MARK: - Initializers
 
@@ -87,6 +91,7 @@ final class TabTidying {
             Task { @MainActor [weak self] in self?.keepInStep() }
         }
         if !isOn {
+            generation += 1
             descriptions.forgetAll()
             wordTable.remove()
         } else if canRun {
@@ -127,11 +132,16 @@ final class TabTidying {
 
     // MARK: - Actions - Describing
 
-    /// Has the model describe `candidates` in the background while Tidy is
-    /// on and can run, ahead of tabs asked for earlier.
-    func describe(_ candidates: [TidyTabCandidate]) {
-        guard isOn, Self.isModelAvailable, candidates.count >= Self.minimumDescribedTabCount else { return }
-        descriptions.describe(candidates)
+    /// Has the model describe `candidates`, the loose tabs of the Space
+    /// `spaceID`, in the background while Tidy is on and can run and the
+    /// Space holds enough of them, ahead of other Spaces' tabs. Fewer, or
+    /// none, withdraw the Space's earlier request. `mayDescribe` is asked
+    /// before each tab, so none is described once the Space locks.
+    func describe(
+        _ candidates: [TidyTabCandidate], in spaceID: UUID, while mayDescribe: @escaping @MainActor () -> Bool
+    ) {
+        let wanted = isOn && Self.isModelAvailable && candidates.count >= Self.minimumDescribedTabCount
+        descriptions.describe(wanted ? candidates : [], in: spaceID, while: mayDescribe)
     }
 
     /// Forgets every keyphrase, which describe what the person browsed, as
@@ -148,12 +158,18 @@ final class TabTidying {
 
     // MARK: - Actions - Tidying
 
+    /// Whether the last Tidy in the Space `spaceID` failed in the last few
+    /// seconds, which the Tidy control says.
+    func hasFailed(in spaceID: UUID) -> Bool {
+        failures[spaceID] != nil
+    }
+
     /// Runs `tidy` for the Space `spaceID` unless a Tidy is already under way
     /// there, and marks the Space failed for a few seconds when it throws.
     func run(in spaceID: UUID, _ tidy: @escaping @MainActor () async throws -> Void) {
         guard !tidyingSpaceIDs.contains(spaceID) else { return }
         tidyingSpaceIDs.insert(spaceID)
-        failedSpaceIDs.remove(spaceID)
+        failures[spaceID] = nil
         Task {
             do {
                 try await tidy()
@@ -161,9 +177,11 @@ final class TabTidying {
             } catch {
                 DiagnosticLog.tidy.error("Tidy couldn't sort tabs: \(TidyTabDescriptions.loggedName(of: error))")
                 tidyingSpaceIDs.remove(spaceID)
-                failedSpaceIDs.insert(spaceID)
+                let failure = UUID()
+                failures[spaceID] = failure
                 try? await Task.sleep(for: .seconds(4))
-                failedSpaceIDs.remove(spaceID)
+                // A later run's failure keeps its own few seconds.
+                if failures[spaceID] == failure { failures[spaceID] = nil }
             }
         }
     }
