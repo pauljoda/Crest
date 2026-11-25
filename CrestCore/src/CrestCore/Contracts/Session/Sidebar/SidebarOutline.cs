@@ -201,6 +201,29 @@ public sealed record SidebarOutline(IReadOnlyList<SidebarList> Lists) {
         return Walk(isSectionExpanded, id => !collapsed.Contains(id));
     }
 
+    /// <summary>The tabs of <paramref name="tabs"/>, the tabs this outline lists, that a
+    /// person sees: those <see cref="Shown"/> answers, the Start Pages, which have no row,
+    /// and the <paramref name="keptRows"/> a collapsed folder keeps on screen while their
+    /// section shows its rows.</summary>
+    public HashSet<Guid> Visible(IReadOnlyList<TabState> tabs, IReadOnlyList<FolderState> folders,
+        Func<TabPlacement, bool> isSectionExpanded, IReadOnlySet<Guid>? keptRows = null) {
+        ArgumentNullException.ThrowIfNull(tabs);
+        var shown = Shown(folders, isSectionExpanded).ToHashSet();
+        return [.. tabs.Where(tab => tab.IsStartPage || shown.Contains(tab.Id)
+            || keptRows?.Contains(tab.Id) == true && isSectionExpanded(tab.Placement)).Select(tab => tab.Id)];
+    }
+
+    /// <summary>The tab a Space with <paramref name="tabs"/>, the tabs this outline lists,
+    /// falls back to: by <see cref="TabPlacement.Fallback"/>, in the Space's tab order, among
+    /// the tabs <see cref="Visible"/> answers. Null when none is visible, so a tab hidden
+    /// inside a collapsed folder or section is never chosen.</summary>
+    public Guid? FallbackTab(IReadOnlyList<TabState> tabs, IReadOnlyList<FolderState> folders,
+        Func<TabPlacement, bool> isSectionExpanded, IReadOnlySet<Guid>? keptRows = null) {
+        var visible = Visible(tabs, folders, isSectionExpanded, keptRows);
+        TabState[] candidates = [.. tabs.Where(tab => visible.Contains(tab.Id))];
+        return TabPlacement.Fallback([.. candidates.Select(tab => tab.Placement)]) is { } index ? candidates[index].Id : null;
+    }
+
     /// <summary>The rows a person steps through, in the order the sidebar shows them: each
     /// tab and split row of the sections <paramref name="isSectionExpanded"/> answers for,
     /// skipping the inside of every folder of <paramref name="folders"/> that is collapsed.

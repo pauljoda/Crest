@@ -5358,6 +5358,12 @@ struct KeepPageLoaded: Intent, SessionIntent, Equatable, Sendable {
     let keeps: Bool
 }
 
+struct KeepSidebarRows: Intent, WindowIntent, Equatable, Sendable {
+    let windowID: UUID
+    let spaceID: UUID
+    let tabIDs: [UUID]
+}
+
 struct KeepTabsLoaded: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID

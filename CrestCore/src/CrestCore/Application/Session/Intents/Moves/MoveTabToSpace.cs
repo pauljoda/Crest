@@ -33,7 +33,7 @@ public sealed record MoveTabToSpace(Guid WorkspaceId, Guid WindowId, Guid SpaceI
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId));
         var shownThere = followUp.Window?.Tab(destination.Id);
         var fallback = followUp.FallbackAfterDismissing(space.Id, TabId,
-            space.Tabs.Select(tab => tab.Id).Where(id => id != TabId).ToHashSet());
+            space.Tabs.Select(tab => tab.Id).Where(id => id != TabId).ToHashSet(), followUp.Visible(space));
         var shown = edited.TransferTo(receiving, TabId, followUp.Window?.Tab(space.Id), fallback, Placement,
             FolderId, BeforeTabId, afterSelection: false, shownThere, turn.Now);
         if (follows) {
@@ -42,6 +42,7 @@ public sealed record MoveTabToSpace(Guid WorkspaceId, Guid WindowId, Guid SpaceI
         }
         edited.PruneSplitMetadata();
         receiving.PruneSplitMetadata();
+        if (followUp.Window?.Tab(space.Id) == TabId) shown = followUp.AfterShownLeft(edited.Capture(space), shown);
         followUp.ShowTab(space.Id, shown).ShowTab(destination.Id, shownThere);
         if (follows) followUp.ShowSpace(destination.Id);
         return new(turn.Basis.Replacing(edited.Capture(space), receiving.Capture(destination)),

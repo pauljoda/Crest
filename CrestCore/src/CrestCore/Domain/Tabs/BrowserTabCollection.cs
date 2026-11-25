@@ -27,6 +27,10 @@ public sealed partial class BrowserTabCollection {
     public IReadOnlyList<ArchivedTabState> Archive => archive.AsReadOnly();
     public IReadOnlyList<TabState> TabStates => [.. tabs.Select(tab => tab.State)];
 
+    /// Whether the Space's sidebar shows a section's rows; every section unless
+    /// restored from a Space.
+    private Func<TabPlacement, bool> showsSection = _ => true;
+
     #endregion
 
     #region Actions - Persistence
@@ -34,7 +38,9 @@ public sealed partial class BrowserTabCollection {
     /// The Space's organization for one edit.
     public static BrowserTabCollection Restore(SpaceState space) {
         ArgumentNullException.ThrowIfNull(space);
-        return Restore(space.Tabs, space.Folders, space.SplitGroups);
+        var collection = Restore(space.Tabs, space.Folders, space.SplitGroups);
+        collection.showsSection = space.Shows;
+        return collection;
     }
 
     /// The Space after the edit: its organization replaced and the tabs the
@@ -71,9 +77,12 @@ public sealed partial class BrowserTabCollection {
         return index < 0 ? tabs.Count : index;
     }
 
-    /// The tab a Space selects once its selection is gone.
-    private Guid? FallbackSelection() =>
-        TabPlacement.Fallback([.. tabs.Select(tab => tab.Placement)]) is { } index ? tabs[index].Id : null;
+    /// The tab a Space selects once its selection is gone: one its sidebar
+    /// shows, `keptRows` included, or none; see `SidebarOutline.FallbackTab`.
+    private Guid? FallbackSelection(IReadOnlySet<Guid>? keptRows = null) {
+        var states = TabStates;
+        return SidebarOutline.Of(states, folders).FallbackTab(states, folders, showsSection, keptRows);
+    }
 
     #endregion
 

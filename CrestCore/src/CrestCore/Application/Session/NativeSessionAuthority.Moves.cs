@@ -74,12 +74,13 @@ public sealed partial class NativeSessionAuthority {
         var edited = BrowserTabCollection.Restore(space);
         var receivingTabs = BrowserTabCollection.Restore(there);
         var fallback = leaving.FallbackAfterDismissing(space.Id, intent.TabId,
-            space.Tabs.Select(tab => tab.Id).Where(id => id != intent.TabId).ToHashSet());
+            space.Tabs.Select(tab => tab.Id).Where(id => id != intent.TabId).ToHashSet(), leaving.Visible(space));
         var shown = edited.TransferTo(receivingTabs, intent.TabId, leaving.Window?.Tab(space.Id), fallback, TabPlacement.Current,
             requestedFolder: null, before: null, afterSelection: true, arriving.Window?.Tab(there.Id), now);
         receivingTabs.Tab(intent.TabId).Activate(now);
         edited.PruneSplitMetadata();
         receivingTabs.PruneSplitMetadata();
+        if (leaving.Window?.Tab(space.Id) == intent.TabId) shown = leaving.AfterShownLeft(edited.Capture(space), shown);
         leaving.ShowTab(space.Id, shown);
         arriving.ShowTab(there.Id, intent.TabId).ShowSpace(there.Id);
         var next = basis.Replacing(edited.Capture(space)).ClearingEmptiedFolders(basis);

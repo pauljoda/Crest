@@ -27,7 +27,7 @@ public sealed record MoveTabsToSpace(Guid WorkspaceId, Guid WindowId, Guid Space
         var (shown, shownThere) = batch.Edited.MoveSelected(batch.Selected, receiving, batch.Shown, batch.Fallback(),
             batch.FollowUp.Window?.Tab(destination.Id), follows, turn.Now);
         receiving.PruneSplitMetadata();
-        batch.FollowUp.ShowTab(batch.Space.Id, shown).ShowTab(destination.Id, shownThere);
+        batch.FollowUp.ShowTab(batch.Space.Id, batch.Next(shown)).ShowTab(destination.Id, shownThere);
         if (follows) batch.FollowUp.ShowSpace(destination.Id);
         return batch.Result(turn.Basis, SyncStaging.Batch, alsoEdited: receiving.Capture(destination));
     }

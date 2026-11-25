@@ -1,3 +1,5 @@
+using CrestCore.Contracts;
+
 namespace CrestCore.Application;
 
 /// What a session command chose for the window that issued it to show next:
@@ -53,23 +55,38 @@ internal sealed class WindowFollowUp(Window? window) {
     }
 
     /// The tab to show in `spaceId` after `tabId` leaves it: see
-    /// `Window.DismissalFallback`. Only a window that shows `tabId` there has
-    /// one, and the dismissal is remembered for when the command commits.
-    public Guid? FallbackAfterDismissing(Guid spaceId, Guid tabId, IReadOnlySet<Guid> available) {
+    /// `Window.DismissalFallback`, among `available` and, when given, only the
+    /// `visible` tabs. Only a window that shows `tabId` there has one, and the
+    /// dismissal is remembered for when the command commits.
+    public Guid? FallbackAfterDismissing(Guid spaceId, Guid tabId, IReadOnlySet<Guid> available,
+        IReadOnlySet<Guid>? visible = null) {
         if (Window is not { } shown || shown.Tab(spaceId) != tabId) return null;
         Dismiss(spaceId, tabId);
-        return shown.DismissalFallback(spaceId, tabId, available);
+        return shown.DismissalFallback(spaceId, tabId, Among(available, visible));
     }
 
     /// The tab to show in `spaceId` after the tabs `tabIds` leave it together:
     /// see `Window.DismissalFallback`. Only a window that shows one of them
     /// there has one, and every one of them is remembered as dismissed for
     /// when the command commits, so none stays in the window's history.
-    public Guid? FallbackAfterDismissing(Guid spaceId, IReadOnlySet<Guid> tabIds, IReadOnlySet<Guid> available) {
+    public Guid? FallbackAfterDismissing(Guid spaceId, IReadOnlySet<Guid> tabIds, IReadOnlySet<Guid> available,
+        IReadOnlySet<Guid>? visible = null) {
         if (Window is not { } shown || shown.Tab(spaceId) is not { } tabId || !tabIds.Contains(tabId)) return null;
         foreach (var id in tabIds) Dismiss(spaceId, id);
-        return shown.DismissalFallback(spaceId, tabIds, available);
+        return shown.DismissalFallback(spaceId, tabIds, Among(available, visible));
     }
+
+    /// The tabs the window's sidebar shows in `space`, with the rows its
+    /// collapsed folders keep on screen; see `SpaceState.Visible`.
+    public IReadOnlySet<Guid> Visible(SpaceState space) => space.Visible(Window?.KeptRows(space.Id));
+
+    /// The tab the window shows in `after`, the Space once an edit took away
+    /// the tab it showed there: `next` when the edit chose one, else the
+    /// Space's fallback tab among those its sidebar shows, or none.
+    public Guid? AfterShownLeft(SpaceState after, Guid? next) => next ?? after.FallbackTab(Window?.KeptRows(after.Id));
+
+    private static IReadOnlySet<Guid> Among(IReadOnlySet<Guid> available, IReadOnlySet<Guid>? visible) =>
+        visible is null ? available : available.Where(visible.Contains).ToHashSet();
 
     #endregion
 }

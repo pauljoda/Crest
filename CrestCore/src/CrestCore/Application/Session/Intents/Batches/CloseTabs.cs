@@ -12,7 +12,8 @@ public sealed record CloseTabs(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Ta
 
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         var batch = workspace.Selecting(turn.Basis, WindowId, SpaceId, Selection);
-        batch.FollowUp.ShowTab(batch.Space.Id, batch.Edited.CloseSelected(batch.Selected, batch.Shown, batch.Fallback(), turn.Now));
+        batch.FollowUp.ShowTab(batch.Space.Id,
+            batch.Next(batch.Edited.CloseSelected(batch.Selected, batch.Shown, batch.Fallback(), turn.Now)));
         return batch.Result(turn.Basis, SyncStaging.Batch);
     }
 

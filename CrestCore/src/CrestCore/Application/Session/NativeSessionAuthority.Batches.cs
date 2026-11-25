@@ -19,12 +19,21 @@ public sealed partial class NativeSessionAuthority {
 
         #region Actions - Following
 
+        /// Whether the edit takes away the tab the window shows.
+        public bool TakesShown => Shown is { } shown && Selected.Holds(shown);
+
         /// The tab the window shows once the edit takes its shown tab away: the
-        /// one it showed before, among the tabs the selection leaves; null when
-        /// the shown tab stays or nothing qualifies.
-        public Guid? Fallback() => Shown is { } shown && Selected.Holds(shown)
-            ? FollowUp.FallbackAfterDismissing(Space.Id, shown, Space.Tabs.Select(tab => tab.Id).Where(id => !Selected.Holds(id)).ToHashSet())
+        /// one it showed before, among the tabs the selection leaves that its
+        /// sidebar shows; null when the shown tab stays or nothing qualifies.
+        public Guid? Fallback() => TakesShown && Shown is { } shown
+            ? FollowUp.FallbackAfterDismissing(Space.Id, shown, Space.Tabs.Select(tab => tab.Id).Where(id => !Selected.Holds(id)).ToHashSet(),
+                FollowUp.Visible(Space))
             : null;
+
+        /// The tab the window shows in the Space after the edit chose
+        /// `chosen`: once the edit took its shown tab away and chose none, the
+        /// tab the Space falls back to among those its sidebar shows.
+        public Guid? Next(Guid? chosen) => TakesShown ? FollowUp.AfterShownLeft(Edited.Capture(Space), chosen) : chosen;
 
         /// The session with the edited organization, staged as `staging`, with
         /// what the window shows next and what the edit did that the states

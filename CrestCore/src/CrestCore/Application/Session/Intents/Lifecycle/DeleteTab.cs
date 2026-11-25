@@ -4,8 +4,8 @@ using CrestCore.Domain;
 namespace CrestCore.Contracts;
 
 /// Deletes a tab from any section and keeps it in the archive as an open tab.
-/// The window that asked returns to the tab it showed before, or to the tab
-/// its Space falls back to.
+/// The window that asked returns to the tab it showed before while its sidebar
+/// shows it, or to the tab its Space falls back to among those it shows.
 public sealed record DeleteTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid TabId) : SessionIntent(WorkspaceId) {
     #region Actions - Session
 
@@ -16,9 +16,10 @@ public sealed record DeleteTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Gu
         var edited = BrowserTabCollection.Restore(space);
         _ = edited.Tab(TabId);
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId));
-        var fallback = followUp.FallbackAfterDismissing(space.Id, TabId, space.Tabs.Select(tab => tab.Id).ToHashSet());
+        var fallback = followUp.FallbackAfterDismissing(space.Id, TabId, space.Tabs.Select(tab => tab.Id).ToHashSet(),
+            followUp.Visible(space));
         var selected = edited.DismissTabs([TabId], followUp.Window?.Tab(space.Id), fallback, turn.Now, ArchiveReason.Deleted,
-            ensureSelection: true);
+            ensureSelection: true, keptRows: followUp.Window?.KeptRows(space.Id));
         edited.PruneSplitMetadata();
         followUp.ShowTab(space.Id, selected);
         return new(turn.Basis.Replacing(edited.Capture(space)), SyncStaging.Deletion, followUp);

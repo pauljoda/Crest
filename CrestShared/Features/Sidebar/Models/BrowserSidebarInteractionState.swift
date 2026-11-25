@@ -16,6 +16,10 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
     @ObservationIgnored weak var sidebarSpaceAccess: BrowserSpaceAccessController?
     @ObservationIgnored private var collapsedFolders: [BrowserFolderRuntimeAssignment: BrowserSidebarFolderVisibility] =
         [:]
+    /// The window whose core record learns which rows collapsed folders keep.
+    @ObservationIgnored private weak var browser: BrowserStore?
+    /// The kept rows last reported to the core, by Space.
+    @ObservationIgnored private var reportedKeptRows: [UUID: Set<UUID>] = [:]
     /// The saved tabs whose delete control waits after the sidebar unloaded
     /// them, each with the hold that last began. They belong to the window,
     /// not to a row, which the sidebar can build anew as its tab unloads.
@@ -25,6 +29,7 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
     static func connected(to browser: BrowserStore) -> BrowserSidebarInteractionState {
         if let existing = browser.interactionObserver as? BrowserSidebarInteractionState { return existing }
         let interaction = BrowserSidebarInteractionState()
+        interaction.browser = browser
         browser.interactionObserver = interaction
         return interaction
     }
@@ -96,6 +101,7 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
             loadedFolderTabIDs: loadedFolderTabIDs)
         visibility.wasExpanded = isExpanded
         if next != visibility.state { visibility.state = next }
+        reportKeptRows(in: assignment.spaceID)
     }
 
     /// Starts renaming the folder `folderID` of `space` where the sidebar draws
@@ -117,6 +123,7 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
             isExpanded: isExpanded, selectedTabID: selectedTabID, folderTabIDs: folderTabIDs,
             residentFolderTabIDs: residentFolderTabIDs)
         if next != visibility.state { visibility.state = next }
+        reportKeptRows(in: assignment.spaceID)
     }
 
     /// Forgets the kept rows of folders none of `spaces` holds any longer.
@@ -131,10 +138,28 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
 
     private func prune(keeping kept: [BrowserFolderRuntimeAssignment]) {
         let valid = Set(kept)
+        var spaces: Set<UUID> = []
         for assignment in Array(collapsedFolders.keys) where !valid.contains(assignment) {
             let removed = collapsedFolders.removeValue(forKey: assignment)
             removed?.state = BrowserCollapsedFolderTabVisibilityState()
+            spaces.insert(assignment.spaceID)
         }
+        for spaceID in spaces { reportKeptRows(in: spaceID) }
+    }
+
+    /// Reports to the core the tabs the collapsed folders of `spaceID` keep
+    /// on screen, when they differ from what it last reported.
+    private func reportKeptRows(in spaceID: UUID) {
+        guard let browser else { return }
+        let space = browser.spaceModel(spaceID)
+        var kept: Set<UUID> = []
+        for (assignment, visibility) in collapsedFolders where assignment.spaceID == spaceID {
+            guard !visibility.state.keptTabIDs.isEmpty, let space else { continue }
+            kept.formUnion(visibility.state.keptTabIDs.intersection(space.tabIDs(inFolder: assignment.folderID)))
+        }
+        guard reportedKeptRows[spaceID, default: []] != kept else { return }
+        reportedKeptRows[spaceID] = kept
+        browser.keepSidebarRows(in: spaceID, tabIDs: kept)
     }
 
     // MARK: - Actions - Delete hold

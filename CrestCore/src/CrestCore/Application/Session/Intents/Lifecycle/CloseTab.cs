@@ -8,7 +8,9 @@ namespace CrestCore.Contracts;
 /// its saved address when the app's preferences say so for its section. A window that showed
 /// the tab shows `ReturnTabId` next while the Space holds it, as a tab going
 /// back past its first page returns to the tab that opened it, and otherwise
-/// returns to the tab it showed before. Refused with `LastStartPage` for the
+/// returns to the tab it showed before. Once an open tab closes, either one
+/// must be a tab its sidebar shows, else the window shows the tab its Space
+/// falls back to among those it shows. Refused with `LastStartPage` for the
 /// Start Page when it is its Space's only tab, which leaves only the window
 /// to close.
 public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid TabId, Guid? ReturnTabId = null)
@@ -47,21 +49,25 @@ public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Gui
                 SavedImages = restoresImage ? [new(tab.Id, TabSavedImageChange.Restore, tab.State.SavedFaviconUrl)] : null
             };
         } else {
-            var fallback = Fallback(followUp, space.Id, space.Tabs.Select(candidate => candidate.Id).ToHashSet());
+            var fallback = Fallback(followUp, space.Id, space.Tabs.Select(candidate => candidate.Id).ToHashSet(),
+                followUp.Visible(space));
             selected = edited.DismissTabs([tab.Id], shown, fallback, turn.Now, ArchiveReason.Closed, ensureSelection: false);
             edited.PruneSplitMetadata();
+            if (shown == tab.Id) selected = followUp.AfterShownLeft(edited.Capture(space), selected);
         }
         followUp.ShowTab(space.Id, selected);
         return new(turn.Basis.Replacing(edited.Capture(space)), SyncStaging.Creation, followUp, events);
     }
 
     /// The tab a window that showed the closed tab shows next among
-    /// `available`: `ReturnTabId` when it is one, or else the one the window
-    /// showed before. None for a window that did not show it.
-    private Guid? Fallback(WindowFollowUp followUp, Guid spaceId, IReadOnlySet<Guid> available) {
-        var before = followUp.FallbackAfterDismissing(spaceId, TabId, available);
+    /// `available` and, when given, only the `visible` tabs: `ReturnTabId`
+    /// when it is one, or else the one the window showed before. None for a
+    /// window that did not show it.
+    private Guid? Fallback(WindowFollowUp followUp, Guid spaceId, IReadOnlySet<Guid> available,
+        IReadOnlySet<Guid>? visible = null) {
+        var before = followUp.FallbackAfterDismissing(spaceId, TabId, available, visible);
         return followUp.Window?.Tab(spaceId) == TabId && ReturnTabId is { } returning && returning != TabId
-            && available.Contains(returning)
+            && available.Contains(returning) && visible?.Contains(returning) != false
                 ? returning
                 : before;
     }

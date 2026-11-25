@@ -39,11 +39,13 @@ public sealed record MoveFolderToSpace(Guid WorkspaceId, Guid WindowId, Guid Spa
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId));
         var shown = followUp.Window?.Tab(space.Id);
         var fallback = shown is { } active && moving.Contains(active)
-            ? followUp.FallbackAfterDismissing(space.Id, active, space.Tabs.Select(tab => tab.Id).Where(id => !moving.Contains(id)).ToHashSet())
+            ? followUp.FallbackAfterDismissing(space.Id, active, space.Tabs.Select(tab => tab.Id).Where(id => !moving.Contains(id)).ToHashSet(),
+                followUp.Visible(space))
             : null;
         var (next, moved) = edited.TransferFolderTo(receiving, FolderId, shown, fallback, turn.Ids, turn.Now);
         edited.PruneSplitMetadata();
         receiving.PruneSplitMetadata();
+        if (shown is { } left && moving.Contains(left)) next = followUp.AfterShownLeft(edited.Capture(space), next);
         followUp.ShowTab(space.Id, next);
         if (workspace.FollowsMovedTabs && moved.Count > 0) {
             var followed = shown is { } showed && moving.Contains(showed) ? showed : moved[0];

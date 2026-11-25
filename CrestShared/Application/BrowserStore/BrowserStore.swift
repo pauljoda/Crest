@@ -210,6 +210,14 @@ final class BrowserStore {
         sendWindowIntent(ResizeSplitColumns(windowID: windowID, groupID: groupID, shares: fractions))
     }
 
+    /// Tells the core which tabs this window's sidebar keeps on screen inside
+    /// the collapsed folders of `spaceID`, so a tab it falls back to may be
+    /// one of them.
+    func keepSidebarRows(in spaceID: UUID, tabIDs: Set<UUID>) {
+        let ordered = tabIDs.sorted { $0.uuidString < $1.uuidString }
+        _ = try? core.send(KeepSidebarRows(windowID: windowID, spaceID: spaceID, tabIDs: ordered))
+    }
+
     /// Runs one intent about this window. What it changed, including a tab
     /// use the core recorded, reaches the read model through the core's
     /// changes. Answers false when a rule refused it.

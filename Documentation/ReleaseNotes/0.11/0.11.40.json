@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "pick-visible-fallback-tab",
+      "category": "fixed",
+      "message": "When the last open tab closes or you clear all tabs, Crest goes to a tab you can see in the sidebar, or to the Space's background, never to a hidden tab."
+    }
+  ]
+}

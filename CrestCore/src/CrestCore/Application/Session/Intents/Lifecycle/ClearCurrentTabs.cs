@@ -6,7 +6,8 @@ namespace CrestCore.Contracts;
 /// Archives the open tabs of a Space and keeps its saved and pinned tabs. With
 /// `KeepsShownTab`, the open tab the window that asked shows there stays too,
 /// with the rest of its split. The window that asked shows the tab it showed
-/// there when that tab stays, or the one its Space falls back to. Refused with
+/// there when that tab stays, or the one its Space falls back to among the
+/// tabs its sidebar shows. Refused with
 /// `NoCurrentTabs` when the Space has no open tab to archive.
 public sealed record ClearCurrentTabs(Guid WorkspaceId, Guid WindowId, Guid SpaceId, bool KeepsShownTab = false)
     : SessionIntent(WorkspaceId) {
@@ -22,7 +23,8 @@ public sealed record ClearCurrentTabs(Guid WorkspaceId, Guid WindowId, Guid Spac
         var shown = followUp.Window?.Tab(space.Id);
         var open = Cleared(edited, shown, KeepsShownTab);
         if (open.Length == 0) throw new Rejected(new NoCurrentTabs(space.Id));
-        var selected = edited.DismissTabs(open, shown, null, turn.Now, ArchiveReason.Closed, ensureSelection: true);
+        var selected = edited.DismissTabs(open, shown, null, turn.Now, ArchiveReason.Closed, ensureSelection: true,
+            keptRows: followUp.Window?.KeptRows(space.Id));
         edited.PruneSplitMetadata();
         followUp.ShowTab(space.Id, selected);
         return new(turn.Basis.Replacing(edited.Capture(space)), SyncStaging.Creation, followUp);

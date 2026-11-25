@@ -99,9 +99,10 @@ public sealed partial class BrowserTabCollection {
     /// answers the tab the Space shows next. A deletion archives each tab as
     /// an open tab. Refused with `UnknownTab` for a tab the Space does not
     /// hold, and with `CurrentTabsOnly` for a saved or pinned tab unless it is
-    /// a deletion.
+    /// a deletion. With `ensureSelection`, a Space left without a selection
+    /// falls back to a tab its sidebar shows, `keptRows` included.
     public Guid? DismissTabs(IReadOnlyCollection<Guid> requested, Guid? selected, Guid? fallback,
-        DateTimeOffset now, ArchiveReason reason, bool ensureSelection) {
+        DateTimeOffset now, ArchiveReason reason, bool ensureSelection, IReadOnlySet<Guid>? keptRows = null) {
         bool deleting = reason.IsExplicitDeletion;
         var removing = requested.ToHashSet();
         foreach (var id in removing) _ = Tab(id);
@@ -119,7 +120,7 @@ public sealed partial class BrowserTabCollection {
         if (selected is { } current && removing.Contains(current))
             selected = fallback is { } candidate && tabs.Any(t => t.Id == candidate) ? candidate : null;
         if (ensureSelection && (selected is null || !tabs.Any(t => t.Id == selected)))
-            selected = FallbackSelection();
+            selected = FallbackSelection(keptRows);
         NormalizeSplits(now);
         return selected;
     }

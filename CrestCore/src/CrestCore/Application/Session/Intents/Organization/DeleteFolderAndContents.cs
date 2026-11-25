@@ -20,10 +20,13 @@ public sealed record DeleteFolderAndContents(Guid WorkspaceId, Guid WindowId, Gu
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId));
         var shown = followUp.Window?.Tab(space.Id);
         var fallback = shown is { } active && deleting.Contains(active)
-            ? followUp.FallbackAfterDismissing(space.Id, active, space.Tabs.Select(tab => tab.Id).Where(id => !deleting.Contains(id)).ToHashSet())
+            ? followUp.FallbackAfterDismissing(space.Id, active, space.Tabs.Select(tab => tab.Id).Where(id => !deleting.Contains(id)).ToHashSet(),
+                followUp.Visible(space))
             : null;
-        followUp.ShowTab(space.Id, edited.DeleteFolderAndContents(FolderId, shown, fallback, turn.Now));
+        var next = edited.DeleteFolderAndContents(FolderId, shown, fallback, turn.Now);
         edited.PruneSplitMetadata();
+        if (shown is { } removed && deleting.Contains(removed)) next = followUp.AfterShownLeft(edited.Capture(space), next);
+        followUp.ShowTab(space.Id, next);
         return new(turn.Basis.Replacing(edited.Capture(space)), SyncStaging.BatchDeletion, followUp);
     }
 

@@ -24,6 +24,9 @@ internal sealed class Window {
     private readonly HashSet<(Guid SpaceId, Guid TabId)> unseen;
     /// The tabs in `recent`, by Space, that another window took over.
     private readonly HashSet<(Guid SpaceId, Guid TabId)> departed;
+    /// The tabs each Space's sidebar keeps on screen inside its collapsed
+    /// folders, as the platform reports them. Kept in memory only.
+    private readonly Dictionary<Guid, HashSet<Guid>> keptRows;
 
     public Guid Id { get; }
     public Guid WorkspaceId { get; }
@@ -40,7 +43,8 @@ internal sealed class Window {
 
     private Window(Guid id, Guid workspaceId, bool saved, Guid shownSpaceId, Dictionary<Guid, Guid?> tabs,
         Dictionary<Guid, IReadOnlyList<double>> shares, Dictionary<Guid, List<Guid>> recent,
-        HashSet<(Guid SpaceId, Guid TabId)> unseen, HashSet<(Guid SpaceId, Guid TabId)> departed) {
+        HashSet<(Guid SpaceId, Guid TabId)> unseen, HashSet<(Guid SpaceId, Guid TabId)> departed,
+        Dictionary<Guid, HashSet<Guid>> keptRows) {
         Id = id;
         WorkspaceId = workspaceId;
         Saved = saved;
@@ -50,16 +54,17 @@ internal sealed class Window {
         this.recent = recent;
         this.unseen = unseen;
         this.departed = departed;
+        this.keptRows = keptRows;
     }
 
     /// A window that shows what `record` kept.
     public static Window Restoring(SavedWindow record, Guid workspaceId) => new(record.Id, workspaceId, saved: true,
         record.ShownSpaceId, record.Tabs.ToDictionary(tab => tab.SpaceId, tab => tab.TabId),
-        record.Shares.ToDictionary(group => group.GroupId, group => group.Shares), [], [], []);
+        record.Shares.ToDictionary(group => group.GroupId, group => group.Shares), [], [], [], []);
 
     /// A window that starts as `other` shows, without its split columns.
     public static Window Copying(Window other, Guid id, bool saved) =>
-        new(id, other.WorkspaceId, saved, other.ShownSpaceId, new(other.tabs), [], [], [], []);
+        new(id, other.WorkspaceId, saved, other.ShownSpaceId, new(other.tabs), [], [], [], [], []);
 
     /// A window on `session`'s launch Space: its default Space unless that is
     /// being deleted, else the first Space. `legacyTabs` are the tabs an older
@@ -69,7 +74,7 @@ internal sealed class Window {
         var launch = LaunchSpace(session);
         var window = new Window(id, workspaceId, saved, launch?.Id ?? Guid.Empty,
             legacyTabs.Where(entry => session.ViewedSpace(entry.Key) is { } space && Contains(space, entry.Value))
-                .ToDictionary(entry => entry.Key, entry => (Guid?)entry.Value), [], [], [], []);
+                .ToDictionary(entry => entry.Key, entry => (Guid?)entry.Value), [], [], [], [], []);
         if (launch is not null) window.ShowSpace(launch);
         return window;
     }
@@ -123,7 +128,8 @@ internal sealed class Window {
 
     /// A copy a command reads while the device keeps editing the window.
     public Window Snapshot() => new(Id, WorkspaceId, Saved, ShownSpaceId, new(tabs), new(shares),
-        recent.ToDictionary(entry => entry.Key, entry => new List<Guid>(entry.Value)), [.. unseen], [.. departed]);
+        recent.ToDictionary(entry => entry.Key, entry => new List<Guid>(entry.Value)), [.. unseen], [.. departed],
+        keptRows.ToDictionary(entry => entry.Key, entry => new HashSet<Guid>(entry.Value)));
 
     #endregion
 
@@ -200,11 +206,25 @@ internal sealed class Window {
             .MaxBy(tab => tab.LastActivatedAt) is { } last ? new(space.Id, Cards(space, last.Id).TabIds, last.Id) : null;
     }
 
+    /// The tabs the window's sidebar keeps on screen inside the collapsed
+    /// folders of `spaceId`, or none.
+    public IReadOnlySet<Guid> KeptRows(Guid spaceId) =>
+        keptRows.TryGetValue(spaceId, out var kept) ? kept : new HashSet<Guid>();
+
+    /// Records the tabs the window's sidebar keeps on screen inside the
+    /// collapsed folders of `spaceId`, in place of what it reported before.
+    public void KeepRows(Guid spaceId, IEnumerable<Guid> tabIds) {
+        HashSet<Guid> kept = [.. tabIds];
+        if (kept.Count == 0) keptRows.Remove(spaceId);
+        else keptRows[spaceId] = kept;
+    }
+
     /// Shows `space`, on the tab the window showed there while it still
-    /// exists, else on the Space's fallback tab.
+    /// exists, else on the Space's fallback tab among the tabs its sidebar
+    /// shows.
     public void ShowSpace(SpaceState space) {
         ShownSpaceId = space.Id;
-        if (!Contains(space, tabs.GetValueOrDefault(space.Id))) tabs[space.Id] = FallbackTab(space);
+        if (!Contains(space, tabs.GetValueOrDefault(space.Id))) tabs[space.Id] = space.FallbackTab(KeptRows(space.Id));
         Remember(space.Id);
     }
 
@@ -301,6 +321,8 @@ internal sealed class Window {
             if (!spaces.TryGetValue(spaceId, out var space)) recent.Remove(spaceId);
             else history.RemoveAll(tabId => !Contains(space, tabId));
         }
+        foreach (var spaceId in keptRows.Keys.ToArray())
+            if (!spaces.ContainsKey(spaceId)) keptRows.Remove(spaceId);
         foreach (var spaceId in tabs.Keys) Remember(spaceId);
     }
 
@@ -329,11 +351,6 @@ internal sealed class Window {
     #endregion
 
     #region Actions - Rules
-
-    /// The tab a Space shows when no window chose one: the first open tab,
-    /// else the first pinned one, else the first tab.
-    public static Guid? FallbackTab(SpaceState space) =>
-        TabPlacement.Fallback([.. space.Tabs.Select(tab => tab.Placement)]) is { } index ? space.Tabs[index].Id : null;
 
     /// Shares that describe a split's columns, normalized to sum to one, or
     /// null: there must be at least one and no more than a split holds, each a

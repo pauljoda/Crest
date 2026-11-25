@@ -114,6 +114,17 @@ public sealed record SpaceState(
     /// <see cref="SidebarOutline.Stops"/>.</summary>
     public IReadOnlyList<SidebarRow> Stops() => Sidebar.Stops(Folders, Shows);
 
+    /// <summary>The tabs a person sees in the Space's sidebar, with the
+    /// <paramref name="keptRows"/> a window's collapsed folders keep on screen; see
+    /// <see cref="SidebarOutline.Visible"/>.</summary>
+    public IReadOnlySet<Guid> Visible(IReadOnlySet<Guid>? keptRows = null) => Sidebar.Visible(Tabs, Folders, Shows, keptRows);
+
+    /// <summary>The tab the Space shows when no window chose one: the first open tab, else
+    /// the first pinned one, else the first saved one, of those its sidebar shows, with the
+    /// <paramref name="keptRows"/> a window's collapsed folders keep on screen, and its Start
+    /// Pages; see <see cref="SidebarOutline.FallbackTab"/>.</summary>
+    public Guid? FallbackTab(IReadOnlySet<Guid>? keptRows = null) => Sidebar.FallbackTab(Tabs, Folders, Shows, keptRows);
+
     /// <summary>The tab one step in <paramref name="direction"/> from the shown tab shows,
     /// or null; see <see cref="SidebarOutline.Step"/>.</summary>
     public Guid? Step(Guid shownTabId, AdjacentDirection direction) => Sidebar.Step(shownTabId, direction, Folders, Shows);
