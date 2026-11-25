@@ -173,11 +173,12 @@ struct TidyTopicFinder: Sendable {
     // MARK: - Actions - Naming
 
     /// A name for each group, from a plain-text call that sees each group's
-    /// six most typical titles and hosts. A name goes to the group its number
-    /// gives only when every group's number has one; otherwise the model left
-    /// groups out or renumbered them, so each of its names goes to the group
-    /// whose meaning vector in `groupVectors` it matches best, and the groups
-    /// left unnamed get one more call. A group still without a name gets "".
+    /// six most typical titles and hosts. When every number the model wrote is
+    /// one of the groups', each name goes to the group its number gives;
+    /// otherwise the model renumbered them, so each of its names goes to the
+    /// group whose meaning vector in `groupVectors` it matches best. The
+    /// groups left unnamed get one more call. A group still without a name
+    /// gets "".
     private func names(
         for groups: [[TidyTabCandidate]], meaning groupVectors: [[Float]], isRetry: Bool = false
     ) async throws -> [String] {
@@ -215,11 +216,17 @@ struct TidyTopicFinder: Sendable {
             }
         }
         namesByNumber.merge(labeledNamesByNumber) { _, labeled in labeled }
-        guard !groups.indices.allSatisfy({ namesByNumber[$0 + 1] != nil }) else {
-            return groups.indices.map { namesByNumber[$0 + 1] ?? "" }
-        }
+        let matched =
+            namesByNumber.keys.allSatisfy({ groups.indices.contains($0 - 1) })
+            ? groups.indices.map { namesByNumber[$0 + 1] ?? "" }
+            : matchedByMeaning(namesByNumber.sorted { $0.key < $1.key }.map(\.value), to: groupVectors)
+        return try await retryingUnnamed(matched, of: groups, meaning: groupVectors, isRetry: isRetry)
+    }
 
-        let names = namesByNumber.sorted { $0.key < $1.key }.map(\.value)
+    /// Each of `names` given to the group whose meaning vector in
+    /// `groupVectors` it matches best, the closest pairs first, and "" for a
+    /// group no name fits.
+    private func matchedByMeaning(_ names: [String], to groupVectors: [[Float]]) -> [String] {
         let matches = names.indices.flatMap { nameIndex in
             let nameVector = embedder.vector(for: names[nameIndex])
             return groupVectors.indices.map { groupIndex in
@@ -229,12 +236,21 @@ struct TidyTopicFinder: Sendable {
                 )
             }
         }.sorted { $0.similarity > $1.similarity }
-        var matched = groups.map { _ in "" }
+        var matched = groupVectors.map { _ in "" }
         var usedNames: Set<Int> = []
         for match in matches where !usedNames.contains(match.name) && matched[match.group].isEmpty {
             usedNames.insert(match.name)
             matched[match.group] = names[match.name]
         }
+        return matched
+    }
+
+    /// `matched` with the groups it left unnamed named by one more call,
+    /// unless this is that call.
+    private func retryingUnnamed(
+        _ matched: [String], of groups: [[TidyTabCandidate]], meaning groupVectors: [[Float]], isRetry: Bool
+    ) async throws -> [String] {
+        var matched = matched
         let unnamed = groups.indices.filter { matched[$0].isEmpty }
         guard !isRetry, !unnamed.isEmpty else { return matched }
         try Task.checkCancellation()

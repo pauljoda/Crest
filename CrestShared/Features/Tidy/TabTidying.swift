@@ -49,8 +49,16 @@ final class TabTidying {
     private let descriptions = TidyTabDescriptions()
     @ObservationIgnored private var preferences: BrowserAppPreferenceStore?
 
-    /// Whether the person turned Tidy on.
-    var isOn: Bool { (preferences ?? .shared).offersTabTidying }
+    /// Whether the person turned Tidy on. Turning it off stops a Tidy under
+    /// way, forgets every keyphrase and deletes the word table at once, before
+    /// the setting is written, so no later change can hide it.
+    var isOn: Bool {
+        get { (preferences ?? .shared).offersTabTidying }
+        set {
+            if !newValue { stopAll() }
+            (preferences ?? .shared).offersTabTidying = newValue
+        }
+    }
 
     /// Whether Tidy is on, the on-device model can run, and the word table is
     /// loaded.
@@ -100,14 +108,21 @@ final class TabTidying {
             Task { @MainActor [weak self] in self?.keepInStep() }
         }
         if !isOn {
-            for run in runs.values { run.cancel() }
-            descriptions.forgetAll()
-            wordTable.remove()
+            stopAll()
         } else if canRun {
             wordTable.load()
         } else {
             descriptions.stopDescribing()
         }
+    }
+
+    /// Stops every Tidy under way, so none files anything after, forgets
+    /// every keyphrase and deletes the word table, as Tidy turned off does.
+    private func stopAll() {
+        settingChanges.withLock { $0 += 1 }
+        for run in runs.values { run.cancel() }
+        descriptions.forgetAll()
+        wordTable.remove()
     }
 
     // MARK: - Actions - Candidates

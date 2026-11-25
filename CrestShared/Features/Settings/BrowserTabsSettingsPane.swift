@@ -16,7 +16,7 @@ struct BrowserTabsSettingsPane: View {
                 BrowserSplitFocusSettingsSection()
                 BrowserRecentTabsSettingsSection()
             #endif
-            BrowserTidySettingsSection(preferences: appPreferences)
+            BrowserTidySettingsSection()
             if let sidebarWidgets {
                 BrowserSidebarWidgetSettingsSection(runtime: sidebarWidgets)
             }
