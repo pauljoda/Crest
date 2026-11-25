@@ -52,6 +52,20 @@ public sealed class DownloadPolicyTests {
         Assert.Empty(Assess("holiday.jpg", "image/png", related: false).Reasons);
     }
 
+    /// File hosts serve installers as a generic download type, which names no
+    /// type the filename could disagree with, so a clicked installer is not
+    /// asked about for it, while one no click started still is.
+    [Theory]
+    [InlineData("application/octet-stream")]
+    [InlineData("BINARY/OCTET-STREAM")]
+    [InlineData("application/force-download")]
+    public void AGenericDeclaredTypeIsNoMismatch(string mime) {
+        var assessment = Assess("Installer.dmg", mime, extensionRunsCode: true, related: false);
+        Assert.Equal([DownloadRiskReason.ExecutableOrInstaller], assessment.Reasons);
+        Assert.False(assessment.RequiresConfirmation(isUserInitiated: true));
+        Assert.True(assessment.RequiresConfirmation(isUserInitiated: false));
+    }
+
     [Theory]
     [InlineData("grantForSession", "allow")]
     [InlineData("grantPersistently", "allow")]
