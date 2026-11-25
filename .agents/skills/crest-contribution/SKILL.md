@@ -225,6 +225,8 @@ type you touch. The rules that matter most:
 - **Release notes are user outcomes.** An entry says what changed for the
   person using Crest, never a commit subject, implementation detail, issue ID
   or test description.
+- **Credit contributors.** An entry for a change that includes a community
+  pull request's code ends with `Thanks to <Name> (@<GitHub login>).`
 - **Minimal native copy.** User-facing strings are short and read like the
   platform. No eyebrow labels, subtitles or explanatory text for what the UI
   already shows. Strings go through `String(localized:)` and the catalog.

@@ -51,6 +51,9 @@ has the details.
   public release notes.
 - Write public entry messages as concise user-facing outcomes rather than
   commit subjects, implementation details, issue IDs, or test descriptions.
+- When a change includes a community contribution, from a pull request's
+  author or co-author, end its public entry, and its line in the release
+  write-up, with `Thanks to <Name> (@<GitHub login>).`
 - Never reuse, change, move, or delete an existing entry. Stage the version's
   notes file with the task-owned files before running
   `Scripts/check-version.sh --fix-commit`.

@@ -63,7 +63,7 @@
       "Saved, pinned, reopened and imported tabs whose address holds characters such as { or [ return to the exact page they were saved at, instead of a broken search.",
       "An address you type or paste in the command palette opens at the #section you gave it, even on a page you've visited before.",
       {
-        "text": "Pages opening in dark mode go straight from the loading screen to the page, without a flash of white in between.",
+        "text": "Pages opening in dark mode go straight from the loading screen to the page, without a flash of white in between. Thanks to Matt Van Horn (@mvanhorn).",
         "platforms": ["mac"]
       },
       "Crest no longer crashes when a page closes while it's loading another site, on Mac in WebKit and on iPhone and iPad.",
