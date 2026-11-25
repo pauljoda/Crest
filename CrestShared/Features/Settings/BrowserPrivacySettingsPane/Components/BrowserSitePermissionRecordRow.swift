@@ -24,7 +24,7 @@ struct BrowserSitePermissionRecordRow: View {
 
             Menu(record.decision.title) {
                 Group {
-                    if !record.permission.isAskedBySystem {
+                    if !record.permission.isAskedBySystem && record.permission != .automaticPictureInPicture {
                         Button("Allow", systemImage: "checkmark.circle") {
                             set(.grantPersistently)
                         }
@@ -34,7 +34,8 @@ struct BrowserSitePermissionRecordRow: View {
                     }
                     Divider()
                     Button(
-                        "Ask Again",
+                        record.permission == .automaticPictureInPicture
+                            ? LocalizedStringKey("Use App Settings") : LocalizedStringKey("Ask Again"),
                         systemImage: "arrow.counterclockwise",
                         role: .destructive
                     ) {

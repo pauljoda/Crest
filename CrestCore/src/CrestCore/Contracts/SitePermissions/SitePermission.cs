@@ -36,10 +36,15 @@ public sealed class SitePermission {
     public static readonly SitePermission ScreenSharing = new(name: "screenSharing", title: "Screen Sharing",
         symbol: "rectangle.inset.filled.and.person.filled", requestTitle: "Wants to share your screen",
         question: "Share your screen?", isAskedBySystem: true, platforms: [DevicePlatform.Desktop]);
+    // Crest starts this presentation automatically according to its app settings.
+    public static readonly SitePermission AutomaticPictureInPicture = new(name: "automaticPictureInPicture",
+        title: "Automatic Picture in Picture", symbol: "pip", requestTitle: "Automatic Picture in Picture",
+        question: "Float video automatically?", askTitle: "Use App Settings", askChoiceTitle: "Use App Settings",
+        platforms: [DevicePlatform.Desktop]);
 
     public static IReadOnlyList<SitePermission> All { get; } =
         [Camera, Microphone, CameraAndMicrophone, Location, Notifications, Popups, AutomaticDownloads, ExternalApplications,
-            ScreenSharing];
+            ScreenSharing, AutomaticPictureInPicture];
 
     #endregion
 

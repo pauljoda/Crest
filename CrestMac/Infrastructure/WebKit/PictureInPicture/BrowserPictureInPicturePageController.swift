@@ -56,7 +56,9 @@ final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureCo
         BrowserPictureInPictureContentBridge.shared.register(self, webView: webView)
     }
 
-    func leaveTab() { coordinator.request(from: self) }
+    func requestAutomaticEntry(for trigger: BrowserAutomaticPictureInPictureCoordinator.Trigger) {
+        coordinator.request(from: self, for: trigger)
+    }
 
     private func residencyProtectionMayHaveChanged() {
         guard protectsPageResidency != reportedResidencyProtection else { return }
@@ -64,7 +66,7 @@ final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureCo
         residencyProtectionChanged?()
     }
 
-    func returnToTab() {
+    func returnToTab(reconcileLateEntry: @escaping @MainActor () -> Void) {
         coordinator.cancel(self)
         refreshCandidates()
     }
@@ -185,7 +187,7 @@ final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureCo
         timeout = nil
         let callback = completion
         completion = nil
-        if !succeeded { automaticRequest = nil }
+        automaticRequest = nil
         callback?(succeeded)
     }
 }

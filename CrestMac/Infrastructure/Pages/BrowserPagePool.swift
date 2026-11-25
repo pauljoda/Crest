@@ -1108,7 +1108,9 @@ final class BrowserPagePool:
         prepareFocusTransition(to: tabID.flatMap { tabRuntimes[$0]?.page })
         requestAutomaticPictureInPicture(forDeparturesBefore: presentedTabIDs)
         for arrivingTabID in presentedTabIDs where !self.presentedTabIDs.contains(arrivingTabID) {
-            tabRuntimes[arrivingTabID]?.page.pictureInPicture?.returnToTab()
+            if let page = tabRuntimes[arrivingTabID]?.page {
+                reconcileLatePictureInPictureEntry(page, tabID: arrivingTabID)
+            }
         }
         activeTabID = tabID
         self.presentedTabIDs = presentedTabIDs
@@ -1125,7 +1127,9 @@ final class BrowserPagePool:
         where requested.insert(tabID).inserted
             && !runtimeStore.isPresented(tabID, outside: windowID)
         {
-            guard let page = tabRuntimes[tabID]?.page, let pictureInPicture = page.pictureInPicture else { continue }
+            guard let page = tabRuntimes[tabID]?.page, let pictureInPicture = page.pictureInPicture,
+                allowsAutomaticPictureInPicture(page)
+            else { continue }
             // Floating the video ends its full screen. With the sidebar
             // reveal on, a full-screen page keeps it while the window shows a
             // Space the page does not serve, and takes over again when the
@@ -1139,8 +1143,56 @@ final class BrowserPagePool:
             }
             DiagnosticLog.pages.notice(
                 "Tab \(tabID) leaves window \(windowID); its video may float in Picture in Picture")
-            pictureInPicture.leaveTab()
+            pictureInPicture.requestAutomaticEntry(for: .tabSwitch)
         }
+    }
+
+    /// The focused card gets first chance to float. Other cards qualify only
+    /// while their live view belongs to this window.
+    func requestAutomaticPictureInPicture(
+        for trigger: BrowserAutomaticPictureInPictureCoordinator.Trigger,
+        access: BrowserSpaceAccessController
+    ) {
+        guard isWindowOpen, let focused = activeTabID, browser.shownTab?.id == focused,
+            let shown = browser.shownSpace, !access.isLocked(shown)
+        else { return }
+        let cards = [focused] + presentedTabIDs.filter { $0 != focused }
+        for tabID in cards {
+            guard let page = presentedPage(for: tabID),
+                let source = browser.spaceModel(page.spaceID), !access.isLocked(source),
+                !browser.family.activeSpaceDeletions.contains(source.id),
+                host.serves(page, tabID: tabID, spaceID: shown.id, profileID: shown.profileID),
+                allowsAutomaticPictureInPicture(page)
+            else { continue }
+            page.pictureInPicture?.requestAutomaticEntry(for: trigger)
+        }
+    }
+
+    func returnPictureInPictureToVisibleSources() {
+        for tabID in presentedTabIDs {
+            guard let page = presentedPage(for: tabID), page.pictureInPicture?.protectsPageResidency == true
+            else { continue }
+            reconcileLatePictureInPictureEntry(page, tabID: tabID)
+            page.corePage.returnPictureInPictureToSource()
+        }
+    }
+
+    private func reconcileLatePictureInPictureEntry(_ page: BrowserPage, tabID: UUID) {
+        guard BrowserAppPreferenceStore.shared.redocksVideoOnFocus else { return }
+        page.pictureInPicture?.returnToTab { [weak self, weak page] in
+            guard let self, let page, BrowserAppPreferenceStore.shared.redocksVideoOnFocus,
+                presentedPage(for: tabID) === page, NSApp.isActive, presentationWindow?.isKeyWindow == true,
+                presentationWindow?.isOnActiveSpace == true
+            else { return }
+            page.corePage.returnPictureInPictureToSource()
+        }
+    }
+
+    private func allowsAutomaticPictureInPicture(_ page: BrowserPage) -> Bool {
+        guard let origin = page.live.displayURL.flatMap(SiteOrigin.init(url:)) else { return true }
+        return page.permissionCenter.decision(
+            for: .automaticPictureInPicture, origin: origin, in: page.spaceID
+        ).verdict != .deny
     }
 
     private func prepareFocusTransition(to destination: BrowserPage?) {

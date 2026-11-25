@@ -79,6 +79,36 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void PictureInPictureSwitchPreferencesPersistIndependentlyOfTheTabSwitch() {
+        var session = SavedSession().Document["session"]!;
+        session["appPreferences"] = new JsonObject { ["automaticallyEntersPictureInPicture"] = false };
+        byte[] saved;
+        using (var device = new TestDevice(session)) {
+            var preferences = device.Authority.Current.AppPreferences!;
+            Assert.False(preferences.AutomaticallyEntersPictureInPicture);
+            Assert.False(preferences.FloatsVideoOnAppSwitch);
+            Assert.False(preferences.FloatsVideoOnDesktopSwitch);
+            Assert.True(preferences.RedocksVideoOnFocus);
+
+            var appSwitch = preferences with { FloatsVideoOnAppSwitch = true };
+            device.Send(new SetAppPreferences(device.Workspace, appSwitch));
+            Assert.Equal(appSwitch, device.Authority.Current.AppPreferences);
+
+            var desktopSwitch = appSwitch with { FloatsVideoOnDesktopSwitch = true, RedocksVideoOnFocus = false };
+            device.Send(new SetAppPreferences(device.Workspace, desktopSwitch));
+            Assert.Equal(desktopSwitch, device.Authority.Current.AppPreferences);
+            saved = device.Authority.Checkpoint().Read("core");
+        }
+
+        using var relaunched = new TestDevice(JsonNode.Parse(saved)!);
+        var restored = relaunched.Authority.Current.AppPreferences!;
+        Assert.False(restored.AutomaticallyEntersPictureInPicture);
+        Assert.True(restored.FloatsVideoOnAppSwitch);
+        Assert.True(restored.FloatsVideoOnDesktopSwitch);
+        Assert.False(restored.RedocksVideoOnFocus);
+    }
+
+    [Fact]
     public void CloudReplacementNeverCarriesOrReplacesAppPreferences() {
         var fixture = SavedSession(); var session = fixture.Document["session"]!.AsObject();
         session["appPreferences"] = new JsonObject { ["startupBehavior"] = "lastActiveTab", ["futureChoice"] = 3 };

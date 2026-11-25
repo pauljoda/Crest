@@ -21,7 +21,8 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
     SavedTabClosePolicy PinnedTabClose, SavedTabClosePolicy SavedTabClose, bool SavedTabFaviconReturnsToSavedUrl,
     bool UnloadedSavedTabsStay, bool SplitFocusFollowsMouse, bool AutomaticallyShowsDeveloperToolbar, bool ShowsRecentTabs,
     NewTabPosition NewTabPosition, bool NewTabsJoinFolder,
-    PalettePreferences Palette, bool OffersTabTidying = false) {
+    PalettePreferences Palette, bool FloatsVideoOnAppSwitch, bool FloatsVideoOnDesktopSwitch,
+    bool RedocksVideoOnFocus, bool OffersTabTidying = false) {
     #region Static Variables
 
     /// The documented defaults for a person who never chose, which a platform
@@ -32,7 +33,8 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
         SavedTabFaviconReturnsToSavedUrl: false, UnloadedSavedTabsStay: true,
         SplitFocusFollowsMouse: false,
         AutomaticallyShowsDeveloperToolbar: true, ShowsRecentTabs: true, NewTabPosition.Top, NewTabsJoinFolder: false,
-        PalettePreferences.Default, OffersTabTidying: false);
+        PalettePreferences.Default, FloatsVideoOnAppSwitch: false, FloatsVideoOnDesktopSwitch: false,
+        RedocksVideoOnFocus: true, OffersTabTidying: false);
 
     #endregion
 
@@ -74,13 +76,17 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
         && NewTabPosition == other.NewTabPosition
         && NewTabsJoinFolder == other.NewTabsJoinFolder
         && Palette.Equals(other.Palette)
+        && FloatsVideoOnAppSwitch == other.FloatsVideoOnAppSwitch
+        && FloatsVideoOnDesktopSwitch == other.FloatsVideoOnDesktopSwitch
+        && RedocksVideoOnFocus == other.RedocksVideoOnFocus
         && OffersTabTidying == other.OffersTabTidying;
 
     public override int GetHashCode() => HashCode.Combine(Startup, OffersTranslation, AutomaticallyTranslates,
         TranslationRules.Count, ChecksSpelling, AutomaticallyEntersPictureInPicture,
         HashCode.Combine(PinnedTabClose, SavedTabClose, OffersTabTidying),
         HashCode.Combine(SavedTabFaviconReturnsToSavedUrl, UnloadedSavedTabsStay, SplitFocusFollowsMouse,
-            AutomaticallyShowsDeveloperToolbar, ShowsRecentTabs, NewTabPosition, NewTabsJoinFolder, Palette));
+            AutomaticallyShowsDeveloperToolbar, ShowsRecentTabs, NewTabPosition, NewTabsJoinFolder,
+            HashCode.Combine(Palette, FloatsVideoOnAppSwitch, FloatsVideoOnDesktopSwitch, RedocksVideoOnFocus)));
 
     #endregion
 }

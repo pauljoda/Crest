@@ -1,9 +1,16 @@
 {
   "entries": [
     {
-      "id": "tidy-sorts-open-tabs-into-groups",
-      "category": "new",
-      "message": "Tidy sorts a Space's loose open tabs into Groups named for their topic, using Apple Intelligence on the device. Turn it on in Settings › Tabs, then press Tidy above the open tabs once six or more are loose. Running it again adds to the Groups it made, and its Groups sync like any other. Thanks to Ali Karbassi (@karbassi)."
+      "id": "shared-mac-picture-in-picture-player",
+      "category": "improved",
+      "message": "Picture in Picture works the same in WebKit and Chromium. Drag the player anywhere, flick it toward a corner, or resize it from an edge.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "automatic-picture-in-picture-focus-and-site-settings",
+      "category": "improved",
+      "message": "Choose when videos float or return to their tabs, and turn off automatic Picture in Picture for individual sites.",
+      "platforms": ["mac"]
     }
   ]
 }

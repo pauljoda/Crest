@@ -16,6 +16,7 @@ final class BrowserMacApplication {
     let chrome: BrowserChromeState
     let transientBrowsing: BrowserTransientBrowsingCoordinator
     let windowCoordinator: BrowserMacWindowCoordinator
+    private let pictureInPictureActivity: BrowserMacPictureInPictureActivity
     let privateBrowser: BrowserStore
     let privatePages: BrowserPagePool
     let privateChrome: BrowserChromeState
@@ -91,6 +92,7 @@ final class BrowserMacApplication {
         reviewPersistenceID: String = "core-native-ui-review"
     ) throws {
         self.siteControlAnchor = siteControlAnchor
+        _ = BrowserPictureInPicturePresenter.installed
         #if CREST_REVIEW_BUILD
             // Naming the review's isolation under a test run would open the
             // review app's own session, credentials and website data stores.
@@ -281,9 +283,15 @@ final class BrowserMacApplication {
             )
         )
         self.transientBrowsing = transientBrowsing
-        self.windowCoordinator = BrowserMacWindowCoordinator(
+        let windowCoordinator = BrowserMacWindowCoordinator(
             browser: browser, pages: pages, spaceAccess: spaceAccess, windowLayouts: windowLayouts,
             utilityDefaults: utilityDefaults)
+        self.windowCoordinator = windowCoordinator
+        pictureInPictureActivity = BrowserMacPictureInPictureActivity(spaceAccess: spaceAccess) {
+            [weak privatePages, weak windowCoordinator] window in
+            if let privatePages, privatePages.presentationWindow === window { return privatePages }
+            return windowCoordinator?.openWindowPages.first { $0.presentationWindow === window }
+        }
         self.privateBrowser = privateBrowser
         // A private window keeps nothing past its session, and its Space is
         // new each time it opens, so its lists choice stays in memory.

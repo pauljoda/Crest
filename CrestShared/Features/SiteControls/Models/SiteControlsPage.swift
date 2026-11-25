@@ -12,6 +12,7 @@ struct SiteControlsPage: Hashable, Sendable {
         case connection
         case blocking
         case permissions
+        case siteSettings
         case extensions
         case siteData
         case downloads
@@ -25,6 +26,7 @@ struct SiteControlsPage: Hashable, Sendable {
     static let connection = SiteControlsPage(.connection, title: "Connection")
     static let blocking = SiteControlsPage(.blocking, title: "Ads and Trackers")
     static let permissions = SiteControlsPage(.permissions, title: "Permissions")
+    static let siteSettings = SiteControlsPage(.siteSettings, title: "Site Settings")
     static let extensions = SiteControlsPage(.extensions, title: "Extensions", isAboutSite: false)
     static let siteData = SiteControlsPage(.siteData, title: "Site Data")
     static let downloads = SiteControlsPage(.downloads, title: "Downloads", isAboutSite: false)

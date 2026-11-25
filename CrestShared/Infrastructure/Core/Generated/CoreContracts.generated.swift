@@ -2546,6 +2546,9 @@ struct AppPreferences: Equatable, Sendable {
             showsReasons: false,
             providerSpaceTrigger: SearchProviderSpaceTrigger.prefixedShortcut
         ),
+        floatsVideoOnAppSwitch: false,
+        floatsVideoOnDesktopSwitch: false,
+        redocksVideoOnFocus: true,
         offersTabTidying: false
     )
 
@@ -2565,6 +2568,9 @@ struct AppPreferences: Equatable, Sendable {
     var newTabPosition: NewTabPosition
     var newTabsJoinFolder: Bool
     var palette: PalettePreferences
+    var floatsVideoOnAppSwitch: Bool
+    var floatsVideoOnDesktopSwitch: Bool
+    var redocksVideoOnFocus: Bool
     var offersTabTidying: Bool
 }
 
@@ -4713,6 +4719,10 @@ struct FinishUnlockingSpace: Intent, SpaceAccessIntent, Equatable, Sendable {
 struct FirstInstallSession: Query, Equatable, Sendable {
     typealias Answer = SessionState
 
+}
+
+struct FocusPictureInPictureSource: Intent, PageIntent, Equatable, Sendable {
+    let pageID: UUID
 }
 
 struct FolderAlreadyExists: Equatable, Sendable {
@@ -26331,6 +26341,21 @@ struct SitePermission: Hashable, Sendable {
         components: [],
         platforms: [DevicePlatform.desktop]
     )
+    static let automaticPictureInPicture = SitePermission(
+        tag: 9,
+        name: "automaticPictureInPicture",
+        title: LocalizedStringResource("Automatic Picture in Picture"),
+        symbol: "pip",
+        requestTitle: LocalizedStringResource("Automatic Picture in Picture"),
+        question: LocalizedStringResource("Float video automatically?"),
+        askTitle: LocalizedStringResource("Use App Settings"),
+        askChoiceTitle: LocalizedStringResource("Use App Settings"),
+        isMedia: false,
+        isEngineEnforced: false,
+        isAskedBySystem: false,
+        components: [],
+        platforms: [DevicePlatform.desktop]
+    )
 
     static let all: [SitePermission] = [
         camera,
@@ -26341,7 +26366,8 @@ struct SitePermission: Hashable, Sendable {
         popups,
         automaticDownloads,
         externalApplications,
-        screenSharing
+        screenSharing,
+        automaticPictureInPicture
     ]
 
     static func named(_ name: String?) -> SitePermission? {

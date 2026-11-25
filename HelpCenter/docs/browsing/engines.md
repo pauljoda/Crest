@@ -66,7 +66,7 @@ Extensions installed in earlier versions do not carry over. Install them again f
 | Save Web Archive | `.mhtml` file | `.webarchive` file |
 | Inspect a page | Chromium DevTools | Web Inspector |
 
-Tabs, Spaces, Split View, Peek, Crest Passwords, site permissions, Picture in Picture and downloads are available in both. Their engine controls can differ; Chromium downloads also offer pause and resume. See [Translate, read, and use page tools](./page-tools.md) and [Downloads](../privacy/history-archive-and-downloads.md#downloads) for details.
+Tabs, Spaces, Split View, Peek, Crest Passwords, site permissions, Picture in Picture and downloads are available in both. Crest uses the same Picture in Picture player for video from both engines. Chromium downloads also offer pause and resume. See [Translate, read, and use page tools](./page-tools.md) and [Downloads](../privacy/history-archive-and-downloads.md#downloads) for details.
 
 ## Current Chromium limits
 

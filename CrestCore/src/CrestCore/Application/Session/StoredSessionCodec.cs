@@ -34,6 +34,7 @@ internal static partial class StoredSessionCodec {
         public const string ArchivedAt = "archivedAt";
         public const string ArchivedTabs = "archivedTabs";
         public const string AutomaticallyEntersPictureInPicture = "automaticallyEntersPictureInPicture";
+        public const string RedocksVideoOnFocus = "redocksVideoOnFocus";
         public const string AutomaticallyShowsDeveloperToolbar = "automaticallyShowsDeveloperToolbar";
         public const string AutomaticallyTranslates = "automaticallyTranslates";
         public const string Backplate = "backplate";
@@ -75,6 +76,8 @@ internal static partial class StoredSessionCodec {
         public const string FieldDivision = "fieldDivision";
         public const string Finish = "finish";
         public const string FirstVisitedAt = "firstVisitedAt";
+        public const string FloatsVideoOnAppSwitch = "floatsVideoOnAppSwitch";
+        public const string FloatsVideoOnDesktopSwitch = "floatsVideoOnDesktopSwitch";
         public const string FolderColorIntensity = "folderColorIntensity";
         public const string FolderId = "folderID";
         public const string Folders = "folders";

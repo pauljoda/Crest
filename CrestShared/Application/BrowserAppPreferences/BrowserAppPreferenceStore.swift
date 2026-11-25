@@ -54,6 +54,21 @@ final class BrowserAppPreferenceStore {
         }
     }
 
+    var floatsVideoOnAppSwitch: Bool {
+        get { preferences.floatsVideoOnAppSwitch }
+        set { set { $0.floatsVideoOnAppSwitch = newValue } }
+    }
+
+    var floatsVideoOnDesktopSwitch: Bool {
+        get { preferences.floatsVideoOnDesktopSwitch }
+        set { set { $0.floatsVideoOnDesktopSwitch = newValue } }
+    }
+
+    var redocksVideoOnFocus: Bool {
+        get { preferences.redocksVideoOnFocus }
+        set { set { $0.redocksVideoOnFocus = newValue } }
+    }
+
     /// Where a pinned tab returns when closing puts its page away.
     var pinnedTabClosePolicy: SavedTabClosePolicy {
         get { preferences.pinnedTabClose }

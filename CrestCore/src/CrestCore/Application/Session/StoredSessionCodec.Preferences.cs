@@ -163,12 +163,14 @@ internal static partial class StoredSessionCodec {
             NewTabPosition.Named(TolerantText(value[Key.NewTabPosition])) ?? defaults.NewTabPosition,
             TolerantFlag(value[Key.NewTabsJoinFolder]) ?? defaults.NewTabsJoinFolder,
             DecodePalettePreferences(value[Key.Palette]),
+            TolerantFlag(value[Key.FloatsVideoOnAppSwitch]) ?? defaults.FloatsVideoOnAppSwitch,
+            TolerantFlag(value[Key.FloatsVideoOnDesktopSwitch]) ?? defaults.FloatsVideoOnDesktopSwitch,
+            TolerantFlag(value[Key.RedocksVideoOnFocus]) ?? defaults.RedocksVideoOnFocus,
             TolerantFlag(value[Key.OffersTabTidying]) ?? defaults.OffersTabTidying);
     }
 
-    /// The app-wide preferences. The palette's and Tidy's are written only once
-    /// they differ from the defaults, so a release that never stored them
-    /// reads its own document back unchanged.
+    /// The app-wide preferences. Store newer optional preferences only when
+    /// they differ from the defaults, preserving older session documents.
     internal static JsonObject Encode(AppPreferences preferences) {
         var value = new JsonObject {
             [Key.StartupBehavior] = preferences.Startup.Name,
@@ -189,6 +191,9 @@ internal static partial class StoredSessionCodec {
         };
         if (preferences.OffersTabTidying) value[Key.OffersTabTidying] = true;
         if (!preferences.Palette.Equals(PalettePreferences.Default)) value[Key.Palette] = Encode(preferences.Palette);
+        if (preferences.FloatsVideoOnAppSwitch) value[Key.FloatsVideoOnAppSwitch] = true;
+        if (preferences.FloatsVideoOnDesktopSwitch) value[Key.FloatsVideoOnDesktopSwitch] = true;
+        if (!preferences.RedocksVideoOnFocus) value[Key.RedocksVideoOnFocus] = false;
         return value;
     }
 
