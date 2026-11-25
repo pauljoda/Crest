@@ -6,40 +6,47 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.11.2</title>
-            <pubDate>Tue, 24 Nov 2026 20:29:11 +0000</pubDate>
+            <title>0.11.40</title>
+            <pubDate>Wed, 25 Nov 2026 19:42:14 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1707</sparkle:version>
-            <sparkle:shortVersionString>0.11.2</sparkle:shortVersionString>
+            <sparkle:version>1716</sparkle:version>
+            <sparkle:shortVersionString>0.11.40</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+Showing the 12 most recent highlights from 24 user-facing changes.
+
 ### New
 
-- Give any Space color an exact hex code, or pick it with the system color picker.
-- Crest 0.11 has a new look, with a new mark and app icons, warm paper, Crest blue and the Allo typeface. It brings Site Controls to Mac, iPhone and iPad, a new setup, Space looks made from a template, colors and an icon, Chromium 158, and Crest for Mac on Intel Macs and macOS 15 Sequoia.
+- Passwords can make one-time codes. Set one up from the site's QR code, a pasted key or link, an image, or the iPhone camera, and Crest offers the live code in the code field, across split fields too.
+- Crest fills addresses and payment cards into whole forms, menus included, and offers to save new ones you send. They're shared by every Space, and a card fills only after Touch ID or your device password.
+- On sites that ask for your email or username first, choosing an account fills its password on the next page as soon as it appears.
+- Settings › Autofill › Passwords has Add Password, for a password you type in yourself, with a strong password one click away.
 
 ### Improved
 
-- Setup lies on Crest's navy in light and dark mode, on Mac, iPhone and iPad.
-- A Space's appearance starts with templates, each a full set of icon and colors, then the colors and the icon to refine it, with Undo when a template replaces colors you chose.
-- More Customization for a Space opens as its own page, with the crest's colors at the top.
+- When a password manager extension handles passwords in a Space, Crest leaves passwords and codes to it and says so once. Addresses and cards still fill.
+- The engine's own password, payment and address settings pages open Settings › Autofill instead.
+- Clicking anywhere on the page outside the field closes Crest's passwords popup.
+- Saved passwords show each site's own icon in Settings and in the popup, fetched once from the site itself when Crest hasn't seen it yet.
+- The sidebar scrolls smoothly with hundreds or thousands of tabs, and tab icons no longer pop in as rows scroll into view.
 
 ### Fixed
 
-- Choosing a crest, symbol or emoji as a Space's icon keeps the Space's colors.
-- Chromium is updated to 158.0.8127.89 with upstream security and compatibility fixes.
+- Logins saved for an IP address written another way, such as 127.1, fill again.
+- On Chromium pages, only Crest offers to save and fill passwords, even if the engine's own password setting was turned back on.
+- On Chromium pages, suggestions point at sign-in fields inside a frame from another site, and follow the page as it scrolls.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[Release notes](https://crestbrowser.com/releases/mac/nightly/0.11.2/) · [View all changes](https://github.com/crest-browser/Crest/compare/752ce0495c2fa7d640a7c0cb7fbc06834d4dd676...59f6d549259747b314b5f7a82d7123c1e90b85d9) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/nightly-0.11.2-2026-11-24-1707-r707.1/Installer-Crest-0.11.2-nightly-2026-11-24-59f6d54.dmg)
+[Release notes](https://crestbrowser.com/releases/mac/nightly/0.11.40/) · [View all changes](https://github.com/crest-browser/Crest/compare/59f6d549259747b314b5f7a82d7123c1e90b85d9...b36496c6e5af334e76040f119fccec656d87b969) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/nightly-0.11.40-2026-11-25-1716-r716.1/Installer-Crest-0.11.40-nightly-2026-11-25-b36496c.dmg)
 
 [Browse Nightly releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/crest-browser/Crest/releases/download/nightly-0.11.2-2026-11-24-1707-r707.1/Installer-Crest-0.11.2-nightly-2026-11-24-59f6d54.dmg" length="410438124" type="application/octet-stream" sparkle:edSignature="TmxC7u8ChwdObiciETB6SQINnRSNvh2IjBqQE9clOIrt1aSrfpr4PThdiezuCRz0en0oZnqs1lZ4+pq+xM2uDQ=="/>
+            <enclosure url="https://github.com/crest-browser/Crest/releases/download/nightly-0.11.40-2026-11-25-1716-r716.1/Installer-Crest-0.11.40-nightly-2026-11-25-b36496c.dmg" length="413292014" type="application/octet-stream" sparkle:edSignature="ugnfilpk22oHM3R3CrQFXrukCWjzC2+w5T8rb+2ZHo6yLpqpdBR0+Qafv1gpHkLw/0HnIo0SX0qCZw8RZU0FCQ=="/>
         </item>
         <item>
             <title>0.11.0</title>
@@ -238,6 +245,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 38j5bYAi3N+NM31l0+8MXhkGfB7dpyPcWKbn2gTfCmYKbijyhYbnsVhBhHyYQwGsPFi2m/gWVq+fUxPGW6YVCA==
-length: 22137
+edSignature: bkqfVh4c+pI6LHw98uKA/1WFzefGjDT/eD9/IqqcFllsxIyxMsgdtjtcg/1GDFoKWBMigAjlwhBhyyMmJ4beBg==
+length: 22934
 -->

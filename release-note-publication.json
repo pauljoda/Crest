@@ -3,6 +3,6 @@
   "channels": {
     "stable": "crest-0-11-new-look",
     "development": "sidebar-scrolls-smoothly-with-many-tabs",
-    "nightly": "chromium-upstream-158-0-8127-89-bd1501dcdda5"
+    "nightly": "sidebar-scrolls-smoothly-with-many-tabs"
   }
 }
