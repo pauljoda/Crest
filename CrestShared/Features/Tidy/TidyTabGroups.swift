@@ -4,7 +4,8 @@ import Foundation
 /// centered on their mean, merged by average linkage over cosine distance, and
 /// cut at whichever height from 0.60 to 1.00 gives the best silhouette. Two
 /// vectors are compared as they are, since centering two always sets them
-/// opposite. Only groups of two or more tabs are kept.
+/// opposite, and so are vectors all alike, which center to nothing. Only
+/// groups of two or more tabs are kept.
 struct TidyTabGroups {
     // MARK: - Static Variables
 
@@ -27,8 +28,12 @@ struct TidyTabGroups {
         for vector in vectors {
             for index in 0..<dimension { mean[index] += vector[index] / Float(vectors.count) }
         }
-        let centered = vectors.map { vector in
+        var centered = vectors.map { vector in
             TidyTabEmbedder.unitLength(vectors.count > 2 ? (0..<dimension).map { vector[$0] - mean[$0] } : vector)
+        }
+        // Vectors all alike center to nothing; compare them as they are.
+        if centered.allSatisfy({ $0.allSatisfy { abs($0) < 1e-6 } }) {
+            centered = vectors.map(TidyTabEmbedder.unitLength)
         }
         distances = centered.map { first in
             centered.map { second in

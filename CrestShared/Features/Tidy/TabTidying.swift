@@ -1,6 +1,7 @@
 import Foundation
 import FoundationModels
 import Observation
+import os
 
 // MARK: - Types
 
@@ -58,9 +59,14 @@ final class TabTidying {
     /// The Spaces a Tidy is under way in.
     private(set) var tidyingSpaceIDs: Set<UUID> = []
 
-    /// Counts the times Tidy was turned off, so a Tidy that began before it
-    /// files nothing after, even once Tidy is on again.
-    private(set) var generation = 0
+    /// Counts the changes to the app preferences that hold Tidy's setting and
+    /// to Apple Intelligence's availability, each counted the moment it
+    /// happens, so a Tidy that began before Tidy was turned off files nothing
+    /// after, even once Tidy is on again.
+    private nonisolated let settingChanges = OSAllocatedUnfairLock(initialState: 0)
+
+    /// The count of `settingChanges`, which a Tidy compares when it ends.
+    var generation: Int { settingChanges.withLock { $0 } }
 
     /// The Spaces whose last Tidy failed, each with a mark for that run, for a
     /// few seconds after.
@@ -87,11 +93,13 @@ final class TabTidying {
     private func keepInStep() {
         let (isOn, canRun) = withObservationTracking {
             (self.isOn, Self.isModelAvailable)
-        } onChange: { [weak self] in
+        } onChange: { [weak self, settingChanges = self.settingChanges] in
+            // Counted now, not when the task runs, so turning Tidy off and on
+            // again before then still stops a Tidy under way.
+            settingChanges.withLock { $0 += 1 }
             Task { @MainActor [weak self] in self?.keepInStep() }
         }
         if !isOn {
-            generation += 1
             descriptions.forgetAll()
             wordTable.remove()
         } else if canRun {
