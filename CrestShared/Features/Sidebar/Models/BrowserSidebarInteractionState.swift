@@ -148,14 +148,37 @@ final class BrowserSidebarInteractionState: BrowserStoreInteractionObserving {
     }
 
     /// Reports to the core the tabs the collapsed folders of `spaceID` keep
-    /// on screen, when they differ from what it last reported.
+    /// on screen, when they differ from what it last reported. Only the
+    /// outermost collapsed folder on a path keeps rows: a folder inside it
+    /// shows the way to the rows that folder keeps, not rows of its own.
     private func reportKeptRows(in spaceID: UUID) {
         guard let browser else { return }
-        let space = browser.spaceModel(spaceID)
         var kept: Set<UUID> = []
-        for (assignment, visibility) in collapsedFolders where assignment.spaceID == spaceID {
-            guard !visibility.state.keptTabIDs.isEmpty, let space else { continue }
-            kept.formUnion(visibility.state.keptTabIDs.intersection(space.tabIDs(inFolder: assignment.folderID)))
+        if let space = browser.spaceModel(spaceID) {
+            func keep(_ list: SidebarListModel, keeping folderKept: Set<UUID>) {
+                for row in list.rows {
+                    if row.kind.opensList {
+                        keep(space.sidebar.inside(row.id), keeping: folderKept)
+                    } else if !folderKept.isDisjoint(with: row.members) {
+                        kept.formUnion(row.members)
+                    }
+                }
+            }
+            func walk(_ list: SidebarListModel) {
+                for row in list.rows where row.kind.opensList {
+                    guard space.folders.model(row.id)?.isCollapsed == true else {
+                        walk(space.sidebar.inside(row.id))
+                        continue
+                    }
+                    let assignment = BrowserFolderRuntimeAssignment(
+                        folderID: row.id, spaceID: space.id, profileID: space.profileID)
+                    guard let folderKept = collapsedFolders[assignment]?.state.keptTabIDs, !folderKept.isEmpty
+                    else { continue }
+                    keep(space.sidebar.inside(row.id), keeping: folderKept)
+                }
+            }
+            walk(space.sidebar.section(.saved))
+            walk(space.sidebar.section(.current))
         }
         guard reportedKeptRows[spaceID, default: []] != kept else { return }
         reportedKeptRows[spaceID] = kept

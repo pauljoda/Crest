@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "kept-rows-follow-the-drawn-sidebar",
+      "category": "internal",
+      "message": "A window reports only the rows its sidebar draws inside collapsed folders, and a closed window reports none."
+    }
+  ]
+}

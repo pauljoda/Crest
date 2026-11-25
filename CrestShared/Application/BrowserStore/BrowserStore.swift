@@ -214,6 +214,8 @@ final class BrowserStore {
     /// the collapsed folders of `spaceID`, so a tab it falls back to may be
     /// one of them.
     func keepSidebarRows(in spaceID: UUID, tabIDs: Set<UUID>) {
+        // A window opened again under this identity reports its own rows.
+        guard !isClosed else { return }
         let ordered = tabIDs.sorted { $0.uuidString < $1.uuidString }
         _ = try? core.send(KeepSidebarRows(windowID: windowID, spaceID: spaceID, tabIDs: ordered))
     }
