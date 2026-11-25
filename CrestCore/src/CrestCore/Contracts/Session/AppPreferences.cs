@@ -10,7 +10,8 @@ namespace CrestCore.Contracts;
 /// View focus follows the pointer, whether local pages open with the developer
 /// toolbar, whether holding a Most Recent Tab shortcut shows the recent tabs,
 /// where among the open tabs a new tab opens and whether one opened from a tab
-/// in a folder opens in that folder instead, how the command palette ranks
+/// in a folder opens in that folder instead, whether quitting from the
+/// keyboard or the Quit menu item asks first, how the command palette ranks
 /// and arranges what it offers, and whether the sidebar offers Tidy, which a
 /// person turns on themselves. Translation rules are in
 /// ordinal order of their source language. They stay on this device and never
@@ -20,7 +21,7 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
     IReadOnlyList<TranslationRule> TranslationRules, bool ChecksSpelling, bool AutomaticallyEntersPictureInPicture,
     SavedTabClosePolicy PinnedTabClose, SavedTabClosePolicy SavedTabClose, bool SavedTabFaviconReturnsToSavedUrl,
     bool UnloadedSavedTabsStay, bool SplitFocusFollowsMouse, bool AutomaticallyShowsDeveloperToolbar, bool ShowsRecentTabs,
-    NewTabPosition NewTabPosition, bool NewTabsJoinFolder,
+    NewTabPosition NewTabPosition, bool NewTabsJoinFolder, bool ConfirmsQuit,
     PalettePreferences Palette, bool FloatsVideoOnAppSwitch, bool FloatsVideoOnDesktopSwitch,
     bool RedocksVideoOnFocus, bool OffersTabTidying = false) {
     #region Static Variables
@@ -33,7 +34,7 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
         SavedTabFaviconReturnsToSavedUrl: false, UnloadedSavedTabsStay: true,
         SplitFocusFollowsMouse: false,
         AutomaticallyShowsDeveloperToolbar: true, ShowsRecentTabs: true, NewTabPosition.Top, NewTabsJoinFolder: false,
-        PalettePreferences.Default, FloatsVideoOnAppSwitch: false, FloatsVideoOnDesktopSwitch: false,
+        ConfirmsQuit: false, PalettePreferences.Default, FloatsVideoOnAppSwitch: false, FloatsVideoOnDesktopSwitch: false,
         RedocksVideoOnFocus: true, OffersTabTidying: false);
 
     #endregion
@@ -75,6 +76,7 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
         && ShowsRecentTabs == other.ShowsRecentTabs
         && NewTabPosition == other.NewTabPosition
         && NewTabsJoinFolder == other.NewTabsJoinFolder
+        && ConfirmsQuit == other.ConfirmsQuit
         && Palette.Equals(other.Palette)
         && FloatsVideoOnAppSwitch == other.FloatsVideoOnAppSwitch
         && FloatsVideoOnDesktopSwitch == other.FloatsVideoOnDesktopSwitch
@@ -86,7 +88,8 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
         HashCode.Combine(PinnedTabClose, SavedTabClose, OffersTabTidying),
         HashCode.Combine(SavedTabFaviconReturnsToSavedUrl, UnloadedSavedTabsStay, SplitFocusFollowsMouse,
             AutomaticallyShowsDeveloperToolbar, ShowsRecentTabs, NewTabPosition, NewTabsJoinFolder,
-            HashCode.Combine(Palette, FloatsVideoOnAppSwitch, FloatsVideoOnDesktopSwitch, RedocksVideoOnFocus)));
+            HashCode.Combine(ConfirmsQuit, Palette, FloatsVideoOnAppSwitch, FloatsVideoOnDesktopSwitch,
+                RedocksVideoOnFocus)));
 
     #endregion
 }

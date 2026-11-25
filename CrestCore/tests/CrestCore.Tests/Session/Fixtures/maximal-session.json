@@ -755,6 +755,7 @@
     "showsRecentTabs" : false,
     "newTabPosition" : "bottom",
     "newTabsJoinFolder" : true,
+    "confirmsQuit" : true,
     "pinnedTabsAfterClosing" : "resumeLastLocation",
     "savedTabsAfterClosing" : "returnToSavedURL",
     "translationRules" : {

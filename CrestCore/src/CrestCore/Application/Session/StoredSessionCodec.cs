@@ -53,6 +53,7 @@ internal static partial class StoredSessionCodec {
         public const string ColorGradients = "colorGradients";
         public const string Colors = "colors";
         public const string CompletesInline = "completesInline";
+        public const string ConfirmsQuit = "confirmsQuit";
         public const string ContentBlockingPolicy = "contentBlockingPolicy";
         public const string CredentialPreferences = "credentialPreferences";
         public const string NeverSavedSites = "neverSavedSites";

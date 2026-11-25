@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "ask-before-quitting",
+      "category": "new",
+      "message": "Turn on Ask before quitting in Settings › General, and Command-Q or Quit Crest asks first, with Don't ask again to stop asking. Thanks to Mael Bigay (@mTxBeN).",
+      "platforms": ["mac"]
+    }
+  ]
+}

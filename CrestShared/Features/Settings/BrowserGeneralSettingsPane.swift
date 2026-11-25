@@ -84,6 +84,11 @@ struct BrowserGeneralSettingsPane: View {
                 BrowserPictureInPictureSettingsSection(previewSpace: pictureInPicturePreviewSpace)
                     .id(BrowserSettingsDestinationRequest.Section.pictureInPicture)
                 BrowserDeveloperToolbarSettingsSection()
+
+                Section("Quitting") {
+                    Toggle("Ask before quitting", isOn: $appPreferences.confirmsQuit)
+                        .accessibilityIdentifier("ask-before-quitting")
+                }
             #endif
         }
     }

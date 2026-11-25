@@ -5,6 +5,8 @@ import AppKit
 /// it: the engine that owns the process quits itself, and AppKit replies to
 /// its own termination request. Nothing else ends the process before the
 /// core's storage worker wrote the newest revision or its stager staged it.
+/// A quit the person asks for from the keyboard or the Quit menu item can ask
+/// them first.
 @MainActor
 final class BrowserMacQuit {
     // MARK: - Variables
@@ -15,6 +17,8 @@ final class BrowserMacQuit {
     private(set) var isQuitting = false
     /// The quit was allowed and handed to its entry point to finish.
     private var hasFinished = false
+    /// The sheet asking whether to quit, while it shows.
+    private var confirmation: NSAlert?
 
     // MARK: - Initializers
 
@@ -24,6 +28,40 @@ final class BrowserMacQuit {
     }
 
     // MARK: - Actions - Quitting
+
+    /// Quits for the person, who asked from the keyboard or the Quit menu
+    /// item: when they chose to be asked, a sheet over the window in front
+    /// asks first, and Don't Ask Again with Quit stops it asking. The app's
+    /// own termination then runs `request` as any quit does; the system's
+    /// quits, such as logging out or an update, never ask.
+    func confirmPersonsQuit() {
+        guard !isQuitting, confirmation == nil else { return }
+        let preferences = BrowserAppPreferenceStore.shared
+        guard preferences.confirmsQuit else {
+            NSApp.terminate(nil)
+            return
+        }
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Quit Crest?")
+        alert.addButton(withTitle: String(localized: "Quit"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        alert.showsSuppressionButton = true
+        alert.suppressionButton?.title = String(localized: "Don’t ask again")
+        confirmation = alert
+        let answer: @MainActor (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            self?.confirmation = nil
+            guard response == .alertFirstButtonReturn else { return }
+            if alert.suppressionButton?.state == .on { preferences.confirmsQuit = false }
+            NSApp.terminate(nil)
+        }
+        guard let window = NSApp.keyWindow ?? NSApp.mainWindow else {
+            answer(alert.runModal())
+            return
+        }
+        alert.beginSheetModal(for: window) { response in
+            MainActor.assumeIsolated { answer(response) }
+        }
+    }
 
     /// Asks to quit, which `finish` completes with whether it may: on a later
     /// turn of the main actor, once the core asked every page and the person

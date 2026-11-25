@@ -163,6 +163,16 @@ final class BrowserMacShell {
         }
     }
 
+    /// A quit the person asked for from the keyboard or the Quit menu item,
+    /// which may ask them first. Before the launch finished it quits at once.
+    func confirmPersonsQuit() {
+        guard let running else {
+            NSApp.terminate(nil)
+            return
+        }
+        running.quit.confirmPersonsQuit()
+    }
+
     /// A Dock click or `Open` with no Crest window. An open window comes
     /// forward; with none, setup does while it holds the launch back, and
     /// otherwise the window the core names opens. Answers false when the shell

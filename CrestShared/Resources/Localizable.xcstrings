@@ -2719,6 +2719,9 @@
         }
       }
     },
+    "Ask before quitting" : {
+
+    },
     "Ask where to save" : {
 
     },
@@ -5853,6 +5856,9 @@
 
     },
     "Don’t Allow" : {
+
+    },
+    "Don’t ask again" : {
 
     },
     "Don’t ask again until it disconnects" : {
@@ -11045,6 +11051,12 @@
       }
     },
     "Quit Crest" : {
+
+    },
+    "Quit Crest?" : {
+
+    },
+    "Quitting" : {
 
     },
     "Radial" : {

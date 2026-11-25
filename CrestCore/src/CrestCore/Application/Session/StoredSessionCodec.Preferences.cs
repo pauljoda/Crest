@@ -162,6 +162,7 @@ internal static partial class StoredSessionCodec {
             TolerantFlag(value[Key.ShowsRecentTabs]) ?? defaults.ShowsRecentTabs,
             NewTabPosition.Named(TolerantText(value[Key.NewTabPosition])) ?? defaults.NewTabPosition,
             TolerantFlag(value[Key.NewTabsJoinFolder]) ?? defaults.NewTabsJoinFolder,
+            TolerantFlag(value[Key.ConfirmsQuit]) ?? defaults.ConfirmsQuit,
             DecodePalettePreferences(value[Key.Palette]),
             TolerantFlag(value[Key.FloatsVideoOnAppSwitch]) ?? defaults.FloatsVideoOnAppSwitch,
             TolerantFlag(value[Key.FloatsVideoOnDesktopSwitch]) ?? defaults.FloatsVideoOnDesktopSwitch,
@@ -189,6 +190,7 @@ internal static partial class StoredSessionCodec {
             [Key.NewTabPosition] = preferences.NewTabPosition.Name,
             [Key.NewTabsJoinFolder] = preferences.NewTabsJoinFolder
         };
+        if (preferences.ConfirmsQuit) value[Key.ConfirmsQuit] = true;
         if (preferences.OffersTabTidying) value[Key.OffersTabTidying] = true;
         if (!preferences.Palette.Equals(PalettePreferences.Default)) value[Key.Palette] = Encode(preferences.Palette);
         if (preferences.FloatsVideoOnAppSwitch) value[Key.FloatsVideoOnAppSwitch] = true;

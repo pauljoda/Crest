@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x6e, 0x8a, 0xc8, 0xd6, 0xb3, 0xcc, 0xb8, 0x2e, 0xb8, 0xff, 0x30, 0x8d, 0xc9, 0xea, 0xca, 0x51, 0xbf, 0x81, 0x43, 0xc9, 0xc9, 0x65, 0x07, 0xd5, 0xf7, 0xdb, 0x4b, 0x01, 0xfb, 0x02, 0x0d, 0x05
+        0x3d, 0xc2, 0x1e, 0xc5, 0xcc, 0xf8, 0x61, 0x52, 0x27, 0x1a, 0xbe, 0xb1, 0x7d, 0x5c, 0x50, 0xb9, 0x10, 0xd8, 0xa3, 0xa1, 0x2c, 0xd0, 0xc2, 0x06, 0xcd, 0x0b, 0x78, 0x71, 0xa7, 0xf0, 0x9b, 0x8a
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -3452,12 +3452,13 @@ extension AppPreferences {
         let showsRecentTabs = try reader.readBool()
         let newTabPosition = try NewTabPosition(from: &reader)
         let newTabsJoinFolder = try reader.readBool()
+        let confirmsQuit = try reader.readBool()
         let palette = try PalettePreferences(from: &reader)
         let floatsVideoOnAppSwitch = try reader.readBool()
         let floatsVideoOnDesktopSwitch = try reader.readBool()
         let redocksVideoOnFocus = try reader.readBool()
         let offersTabTidying = try reader.readBool()
-        self.init(startup: startup, offersTranslation: offersTranslation, automaticallyTranslates: automaticallyTranslates, translationRules: translationRules, checksSpelling: checksSpelling, automaticallyEntersPictureInPicture: automaticallyEntersPictureInPicture, pinnedTabClose: pinnedTabClose, savedTabClose: savedTabClose, savedTabFaviconReturnsToSavedURL: savedTabFaviconReturnsToSavedURL, unloadedSavedTabsStay: unloadedSavedTabsStay, splitFocusFollowsMouse: splitFocusFollowsMouse, automaticallyShowsDeveloperToolbar: automaticallyShowsDeveloperToolbar, showsRecentTabs: showsRecentTabs, newTabPosition: newTabPosition, newTabsJoinFolder: newTabsJoinFolder, palette: palette, floatsVideoOnAppSwitch: floatsVideoOnAppSwitch, floatsVideoOnDesktopSwitch: floatsVideoOnDesktopSwitch, redocksVideoOnFocus: redocksVideoOnFocus, offersTabTidying: offersTabTidying)
+        self.init(startup: startup, offersTranslation: offersTranslation, automaticallyTranslates: automaticallyTranslates, translationRules: translationRules, checksSpelling: checksSpelling, automaticallyEntersPictureInPicture: automaticallyEntersPictureInPicture, pinnedTabClose: pinnedTabClose, savedTabClose: savedTabClose, savedTabFaviconReturnsToSavedURL: savedTabFaviconReturnsToSavedURL, unloadedSavedTabsStay: unloadedSavedTabsStay, splitFocusFollowsMouse: splitFocusFollowsMouse, automaticallyShowsDeveloperToolbar: automaticallyShowsDeveloperToolbar, showsRecentTabs: showsRecentTabs, newTabPosition: newTabPosition, newTabsJoinFolder: newTabsJoinFolder, confirmsQuit: confirmsQuit, palette: palette, floatsVideoOnAppSwitch: floatsVideoOnAppSwitch, floatsVideoOnDesktopSwitch: floatsVideoOnDesktopSwitch, redocksVideoOnFocus: redocksVideoOnFocus, offersTabTidying: offersTabTidying)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -3479,6 +3480,7 @@ extension AppPreferences {
         writer.writeBool(showsRecentTabs)
         newTabPosition.encode(into: &writer)
         writer.writeBool(newTabsJoinFolder)
+        writer.writeBool(confirmsQuit)
         palette.encode(into: &writer)
         writer.writeBool(floatsVideoOnAppSwitch)
         writer.writeBool(floatsVideoOnDesktopSwitch)
