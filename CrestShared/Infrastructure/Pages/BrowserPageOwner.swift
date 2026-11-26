@@ -91,6 +91,24 @@ extension BrowserPageOwner {
             opened, as: BrowserPageTab(tab, images: browser.core.state.favicons), in: space, shows: adopted.shows)
         if !adopted.shows { browser.interactionObserver?.browserDidOpenBackgroundTab() }
     }
+
+    /// Tells the window's sidebar about each tab a command of this window
+    /// opened while it is open, in the Space it shows: the opened tab it
+    /// shows, or else the last one opened. A tab opened in another Space is
+    /// not revealed when that Space appears later.
+    func followOpenedTabs() {
+        browser.core.followOpenedTabs(self) { [weak self] in self?.tabsOpened($0) }
+    }
+
+    private func tabsOpened(_ opened: TabsOpened) {
+        guard browser.isOpen(as: opened.windowID), opened.workspaceID == browser.window.workspaceID,
+            let window = browser.windowModel
+        else { return }
+        let here = opened.tabs.filter { $0.spaceID == window.shownSpaceID }
+        let shown = window.shownTabID(in: window.shownSpaceID)
+        guard let tab = here.last(where: { $0.tabID == shown }) ?? here.last else { return }
+        browser.interactionObserver?.browserDidOpenTab(tab.tabID, in: tab.spaceID)
+    }
 }
 
 // MARK: - Reconciliation

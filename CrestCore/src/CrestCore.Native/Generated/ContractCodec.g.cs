@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xe9, 0x6f, 0xa0, 0xa3, 0x3b, 0x90, 0xe9, 0xc8, 0xe7, 0xde, 0x46, 0x2e, 0x14, 0xd0, 0x1a, 0x8d, 0x42, 0x44, 0x8a, 0x57, 0x72, 0x6c, 0x51, 0x14, 0x7d, 0x96, 0x32, 0x05, 0x49, 0x8e, 0x76, 0x8c
+        0x95, 0x40, 0x29, 0x08, 0x37, 0x8f, 0xc4, 0x85, 0xdc, 0xc5, 0x43, 0xe1, 0x0a, 0xe2, 0xbf, 0x86, 0x38, 0xbc, 0x17, 0xbd, 0xdc, 0x2e, 0xb4, 0x26, 0xb8, 0xc3, 0xfa, 0xdf, 0x6c, 0xb5, 0x2f, 0x91
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -1566,16 +1566,17 @@ public static class ContractCodec {
             case 63: return ReadTabSavedImageChanged(reader);
             case 64: return ReadTabsChanged(reader);
             case 65: return ReadTabsImported(reader);
-            case 66: return ReadTransientPageClosed(reader);
-            case 67: return ReadTransientPagePromoted(reader);
-            case 68: return ReadWebsiteDataRead(reader);
-            case 69: return ReadWindowBroughtForward(reader);
-            case 70: return ReadWindowChanged(reader);
-            case 71: return ReadWindowClosed(reader);
-            case 72: return ReadWindowRecordsAdopted(reader);
-            case 73: return ReadWorkspaceChanged(reader);
-            case 74: return ReadWorkspaceClosed(reader);
-            case 75: return ReadWorkspaceOpened(reader);
+            case 66: return ReadTabsOpened(reader);
+            case 67: return ReadTransientPageClosed(reader);
+            case 68: return ReadTransientPagePromoted(reader);
+            case 69: return ReadWebsiteDataRead(reader);
+            case 70: return ReadWindowBroughtForward(reader);
+            case 71: return ReadWindowChanged(reader);
+            case 72: return ReadWindowClosed(reader);
+            case 73: return ReadWindowRecordsAdopted(reader);
+            case 74: return ReadWorkspaceChanged(reader);
+            case 75: return ReadWorkspaceClosed(reader);
+            case 76: return ReadWorkspaceOpened(reader);
             default: throw new WireFormatException($"Unknown Change tag {tag}.");
         }
     }
@@ -1848,44 +1849,48 @@ public static class ContractCodec {
                 writer.WriteTag(65);
                 WriteTabsImported(writer, member);
                 break;
-            case TransientPageClosed member:
+            case TabsOpened member:
                 writer.WriteTag(66);
+                WriteTabsOpened(writer, member);
+                break;
+            case TransientPageClosed member:
+                writer.WriteTag(67);
                 WriteTransientPageClosed(writer, member);
                 break;
             case TransientPagePromoted member:
-                writer.WriteTag(67);
+                writer.WriteTag(68);
                 WriteTransientPagePromoted(writer, member);
                 break;
             case WebsiteDataRead member:
-                writer.WriteTag(68);
+                writer.WriteTag(69);
                 WriteWebsiteDataRead(writer, member);
                 break;
             case WindowBroughtForward member:
-                writer.WriteTag(69);
+                writer.WriteTag(70);
                 WriteWindowBroughtForward(writer, member);
                 break;
             case WindowChanged member:
-                writer.WriteTag(70);
+                writer.WriteTag(71);
                 WriteWindowChanged(writer, member);
                 break;
             case WindowClosed member:
-                writer.WriteTag(71);
+                writer.WriteTag(72);
                 WriteWindowClosed(writer, member);
                 break;
             case WindowRecordsAdopted member:
-                writer.WriteTag(72);
+                writer.WriteTag(73);
                 WriteWindowRecordsAdopted(writer, member);
                 break;
             case WorkspaceChanged member:
-                writer.WriteTag(73);
+                writer.WriteTag(74);
                 WriteWorkspaceChanged(writer, member);
                 break;
             case WorkspaceClosed member:
-                writer.WriteTag(74);
+                writer.WriteTag(75);
                 WriteWorkspaceClosed(writer, member);
                 break;
             case WorkspaceOpened member:
-                writer.WriteTag(75);
+                writer.WriteTag(76);
                 WriteWorkspaceOpened(writer, member);
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(value), value.GetType().Name, "Not a contract Change.");
@@ -14863,6 +14868,20 @@ public static class ContractCodec {
         }
     }
 
+    public static OpenedTab ReadOpenedTab(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new OpenedTab(
+            reader.ReadGuid(),
+            reader.ReadGuid());
+    }
+
+    public static void WriteOpenedTab(WireWriter writer, OpenedTab value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.SpaceId);
+        writer.WriteGuid(value.TabId);
+    }
+
     public static OpenedWindowSelected ReadOpenedWindowSelected(WireReader reader) {
         ArgumentNullException.ThrowIfNull(reader);
         return new OpenedWindowSelected(
@@ -22342,6 +22361,25 @@ public static class ContractCodec {
         writer.WriteCount(value.Tabs.Count);
         foreach (var itemTabs in value.Tabs) {
             WriteImportedTab(writer, itemTabs);
+        }
+    }
+
+    public static TabsOpened ReadTabsOpened(WireReader reader) {
+        ArgumentNullException.ThrowIfNull(reader);
+        return new TabsOpened(
+            reader.ReadGuid(),
+            reader.ReadGuid(),
+            reader.ReadList(() => ReadOpenedTab(reader)));
+    }
+
+    public static void WriteTabsOpened(WireWriter writer, TabsOpened value) {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(value);
+        writer.WriteGuid(value.WorkspaceId);
+        writer.WriteGuid(value.WindowId);
+        writer.WriteCount(value.Tabs.Count);
+        foreach (var itemTabs in value.Tabs) {
+            WriteOpenedTab(writer, itemTabs);
         }
     }
 

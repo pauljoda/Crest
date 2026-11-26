@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-reveals-opened-tab",
+      "category": "new",
+      "platforms": ["mac"],
+      "message": "The sidebar scrolls to show a tab you open when it lands out of view, such as a link opened in the background. Thanks to Bruno Mengaldo (@brnom)."
+    }
+  ]
+}

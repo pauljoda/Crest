@@ -110,6 +110,9 @@ final class CrestCore {
     /// Who hears each page an engine opened by itself that the core adopted
     /// for a tab, once its batch is applied.
     private let adoptionFollowers = Followers<OfferedPageAdopted>()
+    /// Who hears each set of tabs a window's command opened, once its batch
+    /// is applied.
+    private let openedTabFollowers = Followers<TabsOpened>()
     /// Who hears each window the core brings to the front, once its batch is
     /// applied.
     private let broughtForwardFollowers = Followers<WindowBroughtForward>()
@@ -396,6 +399,7 @@ final class CrestCore {
         if !batch.movedPages.isEmpty { engines.pagesMoved(batch.movedPages) }
         if !batch.rehostedPages.isEmpty { rehostFollowers.send(batch.rehostedPages) }
         if !batch.adoptedPages.isEmpty { adoptionFollowers.send(batch.adoptedPages) }
+        if !batch.openedTabs.isEmpty { openedTabFollowers.send(batch.openedTabs) }
         if !batch.broughtForward.isEmpty { broughtForwardFollowers.send(batch.broughtForward) }
         if !batch.adoptedWindows.isEmpty { windowAdoptionFollowers.send(batch.adoptedWindows) }
         if !batch.closedTransientPages.isEmpty { transientCloseFollowers.send(batch.closedTransientPages) }
@@ -489,6 +493,13 @@ final class CrestCore {
         _ owner: AnyObject, _ handler: @escaping @MainActor (TransientPageClosed) -> Void
     ) {
         transientCloseFollowers.follow(owner, handler)
+    }
+
+    /// Calls `handler` with each set of tabs a window's command opened, once
+    /// its batch is applied, so that window can bring one into view. The
+    /// registration lasts as long as `owner`.
+    func followOpenedTabs(_ owner: AnyObject, _ handler: @escaping @MainActor (TabsOpened) -> Void) {
+        openedTabFollowers.follow(owner, handler)
     }
 
     /// Calls `handler` with each window the core brings to the front, once its
