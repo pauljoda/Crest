@@ -3,6 +3,9 @@
     {
       "id": "smooth-settings-scrolling-and-chrome-transitions",
       "category": "improved",
+      "platforms": [
+        "mac"
+      ],
       "message": "Scrolling in Settings and switching between the top bar and sidebar address bar, opening the command palette, hiding or docking the sidebar, and showing Recent Tabs now animate smoothly at up to 120 fps."
     },
     {

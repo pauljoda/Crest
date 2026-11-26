@@ -689,6 +689,9 @@ private struct BrowserSidebarRecycledTabSlot: View, @MainActor Equatable {
                     animatesShift ? CrestMotion.dragSource.unlessReducingMotion(reduceMotion) : nil,
                     value: dragShift
                 )
+                .transaction(value: item.id) { transaction in
+                    transaction.animation = nil
+                }
                 .offset(y: baseY)
         }
     }

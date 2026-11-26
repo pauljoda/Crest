@@ -20,6 +20,7 @@ final class BrowserPictureInPictureWindow: NSPanel {
         let start: CGPoint
         let horizontalEdge: CGFloat
         let verticalEdge: CGFloat
+        var didResize = false
         var samples: [PointerSample] = []
 
         var resizes: Bool { horizontalEdge != 0 || verticalEdge != 0 }
@@ -542,6 +543,8 @@ final class BrowserPictureInPictureWindow: NSPanel {
         let dx = mouse.x - drag.start.x
         let dy = mouse.y - drag.start.y
         if drag.resizes {
+            drag.didResize = true
+            self.drag = drag
             let delta = Self.resizeWidthDelta(
                 dx: dx, dy: dy, horizontalEdge: drag.horizontalEdge, verticalEdge: drag.verticalEdge, aspect: aspect)
             let rect = Self.resized(
@@ -566,7 +569,7 @@ final class BrowserPictureInPictureWindow: NSPanel {
             updateControlVisibility()
         }
         if drag.resizes {
-            if pendingAspectReconcile {
+            if pendingAspectReconcile || !drag.didResize {
                 pendingAspectReconcile = false
                 let reconciled = Self.resized(
                     frame, to: frame.width, in: drag.visibleFrame,
@@ -662,17 +665,11 @@ final class BrowserPictureInPictureWindow: NSPanel {
         let anchoredMaximum = min(availableWidth, (availableHeight - border) * aspect + border)
         let maximum = max(border + 1, min(screenMaximum, anchoredMaximum))
         let minimum = min(Self.minimumWidth, maximum)
+        let alignedMaximum = max(minimum, floor(maximum * scale) / scale)
+        let alignedMinimum = min(alignedMaximum, ceil(minimum * scale) / scale)
 
-        let rawWidth = min(max(minimum, width), maximum)
-        let alignedWidth: CGFloat
-        if rawWidth >= maximum {
-            alignedWidth = max(minimum, floor(maximum * scale) / scale)
-        } else if rawWidth <= minimum {
-            alignedWidth = ceil(minimum * scale) / scale
-        } else {
-            alignedWidth = round(rawWidth * scale) / scale
-        }
-        let w = min(max(minimum, alignedWidth), maximum)
+        let rawWidth = min(max(alignedMinimum, width), alignedMaximum)
+        let w = min(max(alignedMinimum, round(rawWidth * scale) / scale), alignedMaximum)
         let rawHeight = (w - border) / aspect + border
         let h = min(availableHeight, max(1, floor(rawHeight * scale + 0.5) / scale))
 

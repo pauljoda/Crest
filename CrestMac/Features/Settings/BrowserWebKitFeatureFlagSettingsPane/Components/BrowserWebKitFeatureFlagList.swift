@@ -565,9 +565,16 @@ private final class FeatureFlagRowCell: NSTableCellView {
     static func preferredHeight(for flag: BrowserWebKitFeatureFlag, textWidth: CGFloat) -> CGFloat {
         var height: CGFloat = 52
         if !flag.details.isEmpty {
-            let approxCharsPerLine = max(16, Int(textWidth / 6.2))
-            let estimatedLines = max(1, (flag.details.count + approxCharsPerLine - 1) / approxCharsPerLine)
-            height += CGFloat(estimatedLines) * 15 + 4
+            let attributed = NSAttributedString(string: flag.details, attributes: Self.detailsAttributes)
+            let framesetter = CTFramesetterCreateWithAttributedString(attributed)
+            let measured = CTFramesetterSuggestFrameSizeWithConstraints(
+                framesetter,
+                CFRange(location: 0, length: 0),
+                nil,
+                CGSize(width: max(80, textWidth), height: .greatestFiniteMagnitude),
+                nil
+            )
+            height += max(14, ceil(measured.height))
         }
         return max(52, height)
     }
