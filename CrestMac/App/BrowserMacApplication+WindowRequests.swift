@@ -77,22 +77,23 @@ extension BrowserMacApplication {
             pools.first { $0.presentationWindow === window }?.windowID
         }
         let preferredWindowIDs = [source?.host?.windowID, sourceWindowID].compactMap { $0 }
-        guard
-            let host = preferredWindowIDs.lazy.compactMap(hostWindow).first
-                ?? stackedWindowIDs.lazy.compactMap(hostWindow).first,
-            let space = host.browser.shownSpace
-        else { return }
-        host.settings.present(
-            BrowserSettingsDestinationRequest(
-                destination: .general, section: .pictureInPicture,
-                pictureInPicturePreviewSpace: source.map {
-                    BrowserSpaceRuntimeAssignment(spaceID: $0.spaceID, profileID: $0.profileID)
-                }),
-            assignment: BrowserSpaceRuntimeAssignment(space: space))
-        host.browser.openSettings()
-        host.pages.select()
-        NSApp.activate()
-        host.pages.presentationWindow?.makeKeyAndOrderFront(nil)
+        for id in preferredWindowIDs + stackedWindowIDs {
+            guard let host = hostWindow(id), let window = host.pages.presentationWindow,
+                let space = host.browser.shownSpace
+            else { continue }
+            host.settings.present(
+                BrowserSettingsDestinationRequest(
+                    destination: .general, section: .pictureInPicture,
+                    pictureInPicturePreviewSpace: source.map {
+                        BrowserSpaceRuntimeAssignment(spaceID: $0.spaceID, profileID: $0.profileID)
+                    }),
+                assignment: BrowserSpaceRuntimeAssignment(space: space))
+            host.browser.openSettings()
+            host.pages.select()
+            NSApp.activate()
+            window.makeKeyAndOrderFront(nil)
+            return
+        }
     }
 
     func openGettingStarted(in window: UUID) {
