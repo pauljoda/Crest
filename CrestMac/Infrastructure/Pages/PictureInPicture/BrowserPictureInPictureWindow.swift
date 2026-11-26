@@ -594,6 +594,7 @@ final class BrowserPictureInPictureWindow: NSPanel {
             if Self.framesNearlyEqual(frame, settled) {
                 destination = settled
                 if frame != settled { applyFrameWithoutActions(settled) }
+                refreshVideoSurface()
             } else {
                 animateFrame(to: settled, duration: Self.settleDuration) { [weak self] in
                     self?.refreshVideoSurface()

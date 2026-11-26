@@ -415,13 +415,17 @@ private struct BrowserSidebarRecycledTabRun: View {
         let dragAnimation = CrestMotion.dragSource.unlessReducingMotion(reduceMotion)
 
         ZStack(alignment: .top) {
-            if let gapY {
-                BrowserSidebarReorderGap(height: projection.gapHeight)
-                    .environment(\.sidebarLayerDepth, items.first?.depth ?? 0)
-                    .offset(y: gapY)
-                    .animation(dragAnimation, value: gapY)
-                    .animation(dragAnimation, value: projection.gapHeight)
+            ZStack(alignment: .top) {
+                if let gapY {
+                    BrowserSidebarReorderGap(height: projection.gapHeight)
+                        .environment(\.sidebarLayerDepth, items.first?.depth ?? 0)
+                        .offset(y: gapY)
+                        .transition(.opacity)
+                        .animation(dragAnimation, value: gapY)
+                        .animation(dragAnimation, value: projection.gapHeight)
+                }
             }
+            .animation(dragAnimation, value: gapY != nil)
             ForEach(0..<effectivePool, id: \.self) { slot in
                 if let itemIndex = assignment.slots[slot] {
                     let baseY = CGFloat(itemIndex) * rowStride

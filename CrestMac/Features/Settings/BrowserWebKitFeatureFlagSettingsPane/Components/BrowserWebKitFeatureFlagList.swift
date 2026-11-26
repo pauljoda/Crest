@@ -99,6 +99,7 @@ private struct BrowserWebKitFeatureFlagTableView: NSViewRepresentable {
         private var overrides: [String: BrowserWebKitFeatureFlagOverride] = [:]
         private var setOverride: @MainActor (BrowserWebKitFeatureFlagOverride?, BrowserWebKitFeatureFlag) -> Void
         private var cachedWidthBucket = 0
+        private var cachedTableWidth: CGFloat = 520
         private var cachedHeights: [String: CGFloat] = [:]
         private var frameObserver: NSObjectProtocol?
 
@@ -109,7 +110,8 @@ private struct BrowserWebKitFeatureFlagTableView: NSViewRepresentable {
         func attach(to tableView: NSTableView) {
             detach()
             self.tableView = tableView
-            cachedWidthBucket = widthBucket(for: tableView)
+            cachedTableWidth = max(320, tableView.bounds.width)
+            cachedWidthBucket = widthBucket(for: cachedTableWidth)
             tableView.postsFrameChangedNotifications = true
             frameObserver = NotificationCenter.default.addObserver(
                 forName: NSView.frameDidChangeNotification,
@@ -129,13 +131,15 @@ private struct BrowserWebKitFeatureFlagTableView: NSViewRepresentable {
             }
         }
 
-        private func widthBucket(for tableView: NSTableView) -> Int {
-            Int((max(320, tableView.bounds.width) / 16).rounded())
+        private func widthBucket(for width: CGFloat) -> Int {
+            Int((width / 16).rounded())
         }
 
         private func handleTableFrameChange() {
             guard let tableView else { return }
-            let nextBucket = widthBucket(for: tableView)
+            let nextWidth = max(320, tableView.bounds.width)
+            cachedTableWidth = nextWidth
+            let nextBucket = widthBucket(for: nextWidth)
             guard nextBucket != cachedWidthBucket else { return }
             cachedWidthBucket = nextBucket
             cachedHeights.removeAll(keepingCapacity: true)
@@ -201,11 +205,10 @@ private struct BrowserWebKitFeatureFlagTableView: NSViewRepresentable {
             case .header:
                 return Self.headerHeight
             case .flag(let flag, _):
-                let tableWidth = max(320, tableView.bounds.width)
                 if let cached = cachedHeights[flag.key] {
                     return cached
                 }
-                let textWidth = max(120, tableWidth - FeatureFlagRowCell.buttonWidth - 36)
+                let textWidth = max(120, cachedTableWidth - FeatureFlagRowCell.buttonWidth - 36)
                 let computed = FeatureFlagRowCell.preferredHeight(for: flag, textWidth: textWidth)
                 cachedHeights[flag.key] = computed
                 return computed
