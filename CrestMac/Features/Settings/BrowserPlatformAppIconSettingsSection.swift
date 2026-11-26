@@ -27,7 +27,10 @@ struct BrowserPlatformAppIconSettingsSection: View {
             .padding(.vertical, 8)
         }
         .onAppear {
-            appearanceObserver = BrowserMacAppIconAppearanceObserver { appearanceRevision += 1 }
+            appearanceObserver = BrowserMacAppIconAppearanceObserver {
+                BrowserMacAppIconAssets.invalidateSystemAppearanceCache()
+                appearanceRevision += 1
+            }
         }
         .onDisappear {
             appearanceObserver?.stop()
@@ -52,7 +55,7 @@ struct BrowserPlatformAppIconSettingsSection: View {
             VStack(spacing: 6) {
                 Image(
                     nsImage: name.isEmpty
-                        ? NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath)
+                        ? BrowserMacAppIconAssets.defaultIcon(in: .main)
                         : BrowserMacAppIconAssets.image(named: name, in: .main) ?? NSImage()
                 )
                 .resizable().scaledToFit()

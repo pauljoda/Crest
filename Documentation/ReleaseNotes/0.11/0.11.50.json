@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "smooth-settings-scrolling-and-chrome-transitions",
+      "category": "improved",
+      "message": "Scrolling in Settings and switching between the top bar and sidebar address bar, opening the command palette, hiding or docking the sidebar, and showing Recent Tabs now animate smoothly at up to 120 fps."
+    },
+    {
+      "id": "pip-edge-clamped-smooth-resize",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "Picture in Picture no longer jumps or pushes away from display edges while resizing, and flies cleanly into place without blocking input."
+    }
+  ]
+}

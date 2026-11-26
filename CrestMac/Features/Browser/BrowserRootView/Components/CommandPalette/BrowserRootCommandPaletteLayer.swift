@@ -18,49 +18,50 @@ struct BrowserRootCommandPaletteLayer: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    @ViewBuilder
     var body: some View {
-        if let mode = model.chrome.commandPaletteMode,
-            model.isCommandPaletteShown
-        {
-            BrowserCommandPalette(
-                browser: model.browser,
-                space: paletteSpace,
-                selectedTabID: model.browser.shownTab?.id,
-                initialQuery: mode.initialQuery,
-                commands: model.paletteRegistry(
-                    windows: windows, layoutDirection: layoutDirection, shortcuts: shortcuts,
-                    settings: spaceSettingsPresentation),
-                isSourceAvailable: model.isPaletteSourceAvailable,
-                selectTab: model.selectPaletteTab,
-                openURL: { source, url, opening in
-                    model.openPaletteURL(url, mode: mode, from: source, opening: opening, windows: windows)
-                },
-                dismiss: model.chrome.dismissCommandPalette,
-                presentation: fieldFrame == nil ? .overlay : .dropping,
-                morphNamespace: commandSurfaceNamespace,
-                overlayContentInsets: contentInsets,
-                fieldFrame: fieldFrame,
-                destination: model.emptySelectionPaletteActions,
-                openings: BrowserCommandPaletteOpening.all,
-                readPasteboard: { NSPasteboard.general.string(forType: .string) }
-            )
-            .id(
-                BrowserCommandPalettePresentationIdentity(
-                    mode: mode,
+        let isShown = model.isCommandPaletteShown
+        ZStack {
+            if let mode = model.chrome.commandPaletteMode, isShown {
+                BrowserCommandPalette(
+                    browser: model.browser,
                     space: paletteSpace,
-                    source: model.selectedTabAssignment
+                    selectedTabID: model.browser.shownTab?.id,
+                    initialQuery: mode.initialQuery,
+                    commands: model.paletteRegistry(
+                        windows: windows, layoutDirection: layoutDirection, shortcuts: shortcuts,
+                        settings: spaceSettingsPresentation),
+                    isSourceAvailable: model.isPaletteSourceAvailable,
+                    selectTab: model.selectPaletteTab,
+                    openURL: { source, url, opening in
+                        model.openPaletteURL(url, mode: mode, from: source, opening: opening, windows: windows)
+                    },
+                    dismiss: model.chrome.dismissCommandPalette,
+                    presentation: fieldFrame == nil ? .overlay : .dropping,
+                    morphNamespace: commandSurfaceNamespace,
+                    overlayContentInsets: contentInsets,
+                    fieldFrame: fieldFrame,
+                    destination: model.emptySelectionPaletteActions,
+                    openings: BrowserCommandPaletteOpening.all,
+                    readPasteboard: BrowserPasteboardStringCache.currentString,
+                    loadsInitialAnswerSynchronously: fieldFrame != nil
                 )
-            )
-            // The same scheme as the address field it grows out of.
-            .environment(\.colorScheme, paletteColorScheme)
-            .transition(.browserCommandPaletteOverlay)
-            .zIndex(BrowserRootMetrics.commandPaletteZIndex)
-        } else if BrowserCommandSurfaceMorph.animatesCommandPalette(reduceMotion: reduceMotion),
-            model.paletteFieldIsCard, let fieldFrame, let paletteSpace
-        {
-            fieldAnchor(fieldFrame, spaceID: paletteSpace.id)
+                .id(
+                    BrowserCommandPalettePresentationIdentity(
+                        mode: mode,
+                        space: paletteSpace,
+                        source: model.selectedTabAssignment
+                    )
+                )
+                // The same scheme as the address field it grows out of.
+                .environment(\.colorScheme, paletteColorScheme)
+                .transition(.browserCommandPaletteOverlay)
+                .zIndex(BrowserRootMetrics.commandPaletteZIndex)
+            }
         }
+        .animation(
+            BrowserCommandSurfaceMorph.commandPaletteAnimation(reduceMotion: reduceMotion),
+            value: isShown
+        )
     }
 
     /// The field the palette drops out of while the address bar is on top, in
@@ -69,33 +70,6 @@ struct BrowserRootCommandPaletteLayer: View {
     /// the shown tab.
     private var fieldFrame: CGRect? {
         model.paletteFieldFrame?.offsetBy(dx: -fieldOrigin.x, dy: -fieldOrigin.y)
-    }
-
-    /// A split card's field frame, carrying the palette's identity while the
-    /// palette is closed.
-    ///
-    /// The field itself lives in its card's own hosting view, out of reach of
-    /// this layer's namespace, so a clear stand-in over the same frame holds
-    /// the identity in its place, as the window's own field does. Removing it in
-    /// the transaction that inserts the palette grows the palette out of the
-    /// field, and putting it back as the palette leaves shrinks it in again.
-    private func fieldAnchor(_ frame: CGRect, spaceID: UUID) -> some View {
-        GeometryReader { proxy in
-            let placement = BrowserChromeAppearance.placementFrame(
-                for: frame, in: proxy.size.width, direction: layoutDirection)
-            Color.clear
-                .frame(width: frame.width, height: frame.height)
-                .matchedGeometryEffect(
-                    id: BrowserCommandSurfaceMorph.commandPalette(spaceID: spaceID),
-                    in: commandSurfaceNamespace,
-                    properties: .frame,
-                    anchor: .center,
-                    isSource: true
-                )
-                .position(x: placement.midX, y: placement.midY)
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 
     /// The palette's scheme: the material color's, over the Space it searches.
@@ -107,5 +81,24 @@ struct BrowserRootCommandPaletteLayer: View {
     /// The Space the window shows, unless it is being deleted.
     private var paletteSpace: SpaceModel? {
         model.browser.shownSpace
+    }
+}
+
+/// Caches the pasteboard string by `changeCount` so opening the command
+/// palette skips repeated `pboard` IPC when the clipboard has not changed.
+@MainActor
+enum BrowserPasteboardStringCache {
+    private static var lastChangeCount = Int.min
+    private static var lastString: String?
+
+    static func currentString() -> String? {
+        let pasteboard = NSPasteboard.general
+        let count = pasteboard.changeCount
+        if count == lastChangeCount {
+            return lastString
+        }
+        lastChangeCount = count
+        lastString = pasteboard.string(forType: .string)
+        return lastString
     }
 }

@@ -32,15 +32,6 @@ struct BrowserCommandPaletteCard: View {
     /// Whether the card has arrived, rather than growing in or shrinking away.
     private var isSettled: Bool { transitionPhase.isIdentity }
 
-    /// The edge the query row sits on, which shows first as the card grows.
-    private var queryEdge: UnitPoint { presentation.listsUpward ? .bottom : .top }
-    private var queryAlignment: Alignment { presentation.listsUpward ? .bottom : .top }
-
-    /// The identity the card shares with its Space's address field.
-    private var morph: BrowserCommandSurfaceMorph? {
-        model.space.map { .commandPalette(spaceID: $0.id) }
-    }
-
     var body: some View {
         surface
             .accessibilityElement(children: .contain)
@@ -49,47 +40,25 @@ struct BrowserCommandPaletteCard: View {
 
     @ViewBuilder
     private var surface: some View {
-        if let morphNamespace, let morph, let restingWidth,
-            BrowserCommandSurfaceMorph.animatesCommandPalette(reduceMotion: reduceMotion)
-        {
-            contents
-                .frame(width: restingWidth)
-                .animation(contentsAnimation) {
-                    $0.opacity(isSettled ? 1 : 0)
-                        .scaleEffect(
-                            isSettled ? 1 : BrowserCommandPaletteMetrics.morphContentScale,
-                            anchor: queryEdge
-                        )
-                }
-                // Takes whatever frame the morph proposes. The resting
-                // contents overflow it from the query row's edge.
-                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: queryAlignment)
-                .modifier(BrowserCommandPaletteShellMaterial(shape: morphingShape))
-                .clipShape(morphingShape)
-                .modifier(BrowserCommandPaletteCardEdge(cornerRadius: morphingCornerRadius))
-                .modifier(BrowserSearchProviderGlow(color: model.activeProvider?.color, shape: morphingShape))
-                .animation(surfaceAnimation) {
-                    $0.opacity(isSettled ? 1 : 0)
-                }
-                .matchedGeometryEffect(
-                    id: morph,
-                    in: morphNamespace,
-                    properties: .frame,
-                    anchor: .center,
-                    isSource: true
-                )
-                // At rest the card is exactly its contents' size; only the
-                // morph proposes another.
-                .fixedSize()
-        } else {
-            contents
-                .frame(maxWidth: BrowserCommandPaletteMetrics.maximumCardWidth)
-                .modifier(BrowserCommandPaletteShellMaterial(shape: restingShape))
-                .clipShape(restingShape)
-                .modifier(BrowserCommandPaletteCardEdge(cornerRadius: presentation.cornerRadius))
-                .modifier(BrowserSearchProviderGlow(color: model.activeProvider?.color, shape: restingShape))
-                .opacity(isSettled ? 1 : 0)
-        }
+        let animates =
+            morphNamespace != nil && restingWidth != nil
+            && BrowserCommandSurfaceMorph.animatesCommandPalette(reduceMotion: reduceMotion)
+        let travelOffset: CGFloat =
+            if !animates || isSettled {
+                0
+            } else if presentation.listsUpward {
+                12
+            } else {
+                -12
+            }
+        contents
+            .frame(maxWidth: restingWidth ?? BrowserCommandPaletteMetrics.maximumCardWidth)
+            .modifier(BrowserCommandPaletteShellMaterial(shape: restingShape))
+            .clipShape(restingShape)
+            .modifier(BrowserCommandPaletteCardEdge(cornerRadius: presentation.cornerRadius))
+            .modifier(BrowserSearchProviderGlow(color: model.activeProvider?.color, shape: restingShape))
+            .offset(y: travelOffset)
+            .opacity(isSettled ? 1 : 0)
     }
 
     /// The field, the provider chips while what is typed names some, and the
@@ -170,31 +139,7 @@ struct BrowserCommandPaletteCard: View {
         return max(0, maximumResultAreaHeight - chips - grownField)
     }
 
-    /// The card's own outline at rest, and the field's while the card is
-    /// growing out of it or shrinking back, animated with the frame.
-    private var morphingShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: morphingCornerRadius, style: .continuous)
-    }
-
-    private var morphingCornerRadius: CGFloat {
-        isSettled ? presentation.cornerRadius : BrowserDeviceAppearanceStore.shared.sidebarCornerRadius
-    }
-
     private var restingShape: RoundedRectangle {
         RoundedRectangle(cornerRadius: presentation.cornerRadius, style: .continuous)
-    }
-
-    /// The contents appear once the frame has nearly settled, and clear
-    /// before it starts to shrink.
-    private var contentsAnimation: Animation? {
-        let fade = isSettled ? BrowserCommandSurfaceMorph.trailingFade : BrowserCommandSurfaceMorph.leadingFade
-        return fade.unlessReducingMotion(reduceMotion)
-    }
-
-    /// The card's surface takes over from the field as the frame leaves it,
-    /// and hands back to the field as the frame lands on it.
-    private var surfaceAnimation: Animation? {
-        let fade = isSettled ? BrowserCommandSurfaceMorph.leadingFade : BrowserCommandSurfaceMorph.trailingFade
-        return fade.unlessReducingMotion(reduceMotion)
     }
 }

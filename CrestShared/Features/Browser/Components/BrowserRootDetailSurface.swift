@@ -15,6 +15,7 @@ import SwiftUI
 struct BrowserRootDetailSurface<Content: View>: View {
     @Environment(\.browserWindowCornerRadius) private var windowCornerRadius
     @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let adjoinsLeadingSidebar: Bool
     let usesBorderlessFrame: Bool
     let isStartPage: Bool
@@ -33,6 +34,11 @@ struct BrowserRootDetailSurface<Content: View>: View {
     var topSection: CGFloat = 0
     let content: Content
 
+    /// GPU-composited vertical offset used when `topSection` changes so the
+    /// page card glides smoothly without resizing its full-window compositing
+    /// group, shadow mask, and content subtree on every animation frame.
+    @State private var topSectionSlideOffset: CGFloat = 0
+
     private var appearance: BrowserChromeAppearance { .device(windowCornerRadius: windowCornerRadius) }
 
     var body: some View {
@@ -40,7 +46,9 @@ struct BrowserRootDetailSurface<Content: View>: View {
             usesBorderlessFrame
             ? EdgeInsets()
             : frameInsets(appearance.pageInsets(docked: adjoinsLeadingSidebar, direction: layoutDirection))
-        insets.top = max(insets.top, topSection)
+        let baseTop = insets.top
+        insets.top = max(baseTop, topSection)
+        let effectiveTop = insets.top
         return BrowserRootContentSurface(
             cornerRadius: usesBorderlessFrame
                 ? 0
@@ -59,6 +67,26 @@ struct BrowserRootDetailSurface<Content: View>: View {
             showsBoundary: !usesBorderlessFrame
         ) {
             content
+        }
+        .transaction(value: topSection) { transaction in
+            transaction.animation = nil
+        }
+        .offset(y: topSectionSlideOffset)
+        .clipped()
+        .onChange(of: effectiveTop) { oldTop, newTop in
+            let delta = oldTop - newTop
+            guard abs(delta) > 0.5, !reduceMotion else {
+                topSectionSlideOffset = 0
+                return
+            }
+            var instant = Transaction()
+            instant.disablesAnimations = true
+            withTransaction(instant) {
+                topSectionSlideOffset = delta
+            }
+            withAnimation(CrestMotion.chrome) {
+                topSectionSlideOffset = 0
+            }
         }
         .modifier(BrowserPlatformObservedTapModifier { handleWebContentInteraction() })
     }

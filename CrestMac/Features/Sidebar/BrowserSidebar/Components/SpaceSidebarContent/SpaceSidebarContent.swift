@@ -69,8 +69,6 @@ struct SpaceSidebarContent: View {
                 }
             }
         }
-        // The extensions move into the page cards' bars and the list moves up.
-        .animation(CrestMotion.chrome.unlessReducingMotion(reduceMotion), value: addressBarPlacement)
         .onChange(of: utilitySurface != nil) { _, isPresented in
             // The utility surface replaces every browsing input host.
             if isPresented { sidebarInteraction.cancel() }

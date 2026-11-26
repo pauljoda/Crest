@@ -18,7 +18,7 @@ struct BrowserUtilitySearchToolbar: View {
     var body: some View {
         HStack(spacing: 6) {
             // As tall as the address field it stands in for.
-            CrestSearchField(
+            let field = CrestSearchField(
                 text: $searchText, isFocused: $isSearchFocused, height: BrowserChromeLayout.addressHeight
             ) {
                 TextField(String(localized: surface.searchPrompt), text: $searchText)
@@ -29,13 +29,19 @@ struct BrowserUtilitySearchToolbar: View {
                 focusSearchIfRequested()
             }
             .onDisappear { isMounted = false }
-            .matchedGeometryEffect(
-                id: morph,
-                in: morphNamespace,
-                properties: .frame,
-                anchor: .center,
-                isSource: true
-            )
+
+            #if os(macOS)
+                field
+            #else
+                field
+                    .matchedGeometryEffect(
+                        id: morph,
+                        in: morphNamespace,
+                        properties: .frame,
+                        anchor: .center,
+                        isSource: true
+                    )
+            #endif
 
             BrowserUtilityFilterMenu(
                 surface: surface,

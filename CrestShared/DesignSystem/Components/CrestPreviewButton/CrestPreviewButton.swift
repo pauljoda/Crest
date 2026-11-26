@@ -14,8 +14,15 @@ struct CrestPreviewButton<Preview: View>: View {
     /// The size the preview is laid out at before it is scaled into the face.
     let previewSize: CGSize
     var faceSize: CGFloat = CrestPreviewButtonMetrics.regularFace
+    /// Optional cache key for static previews. When supplied, the preview is
+    /// rendered once into a backing bitmap at display scale and reused across
+    /// scroll frames until the key or display scale changes.
+    var snapshotKey: AnyHashable? = nil
     let action: () -> Void
     @ViewBuilder let preview: () -> Preview
+
+    @Environment(\.displayScale) private var displayScale
+    @Environment(\.colorScheme) private var colorScheme
 
     // MARK: - Actions - Drawing
 
@@ -28,9 +35,7 @@ struct CrestPreviewButton<Preview: View>: View {
             Color.clear
                 .frame(width: inner, height: inner)
                 .overlay {
-                    preview()
-                        .frame(width: previewSize.width, height: previewSize.height)
-                        .scaleEffect(scale)
+                    previewSurface(inner: inner, scale: scale)
                 }
                 .clipShape(.rect(cornerRadius: CrestPreviewButtonMetrics.previewCornerRadius, style: .continuous))
                 .allowsHitTesting(false)
@@ -39,6 +44,79 @@ struct CrestPreviewButton<Preview: View>: View {
         .buttonStyle(CrestPreviewButtonStyle(title: title, isSelected: isSelected, faceSize: faceSize))
         .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private func previewSurface(inner: CGFloat, scale: CGFloat) -> some View {
+        if let snapshotKey,
+            let image = CrestPreviewSnapshotCache.image(
+                key: snapshotKey,
+                colorScheme: colorScheme,
+                innerSize: inner,
+                previewSize: previewSize,
+                scale: scale,
+                displayScale: displayScale,
+                preview: preview
+            )
+        {
+            Image(decorative: image, scale: displayScale)
+                .resizable()
+                .frame(width: inner, height: inner)
+        } else {
+            preview()
+                .frame(width: previewSize.width, height: previewSize.height)
+                .scaleEffect(scale)
+        }
+    }
+}
+
+/// Caches rasterized `CGImage` snapshots of static preview cards so scrolling
+/// Settings never re-composites nested miniature browser window hierarchies.
+@MainActor
+private enum CrestPreviewSnapshotCache {
+    private struct CacheKey: Hashable {
+        let contentKey: AnyHashable
+        let colorScheme: ColorScheme
+        let widthBucket: Int
+        let heightBucket: Int
+        let scaleBucket: Int
+    }
+
+    private static var images: [CacheKey: CGImage] = [:]
+
+    static func image<Preview: View>(
+        key: AnyHashable,
+        colorScheme: ColorScheme,
+        innerSize: CGFloat,
+        previewSize: CGSize,
+        scale: CGFloat,
+        displayScale: CGFloat,
+        preview: () -> Preview
+    ) -> CGImage? {
+        let cacheKey = CacheKey(
+            contentKey: key,
+            colorScheme: colorScheme,
+            widthBucket: Int((innerSize * 2).rounded()),
+            heightBucket: Int((previewSize.width * 2).rounded()),
+            scaleBucket: Int((displayScale * 10).rounded())
+        )
+        if let cached = images[cacheKey] { return cached }
+        let content = Color.clear
+            .frame(width: innerSize, height: innerSize)
+            .overlay {
+                preview()
+                    .frame(width: previewSize.width, height: previewSize.height)
+                    .scaleEffect(scale)
+            }
+            .clipped()
+            .environment(\.colorScheme, colorScheme)
+        let renderer = ImageRenderer(content: content)
+        renderer.scale = max(1, displayScale)
+        renderer.proposedSize = ProposedViewSize(width: innerSize, height: innerSize)
+        guard let cgImage = renderer.cgImage else { return nil }
+        if images.count >= 48 { images.removeAll(keepingCapacity: true) }
+        images[cacheKey] = cgImage
+        return cgImage
     }
 }
 

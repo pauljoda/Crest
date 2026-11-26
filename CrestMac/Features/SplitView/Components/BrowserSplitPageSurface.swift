@@ -90,12 +90,11 @@ struct BrowserSplitPageSurface: View {
                     pages: model.pages,
                     spaceAccess: model.spaceAccess,
                     tabPromotionNamespace: tabPromotionNamespace,
-                    startPageFocusRequest:
-                        model.chrome.startPageFocusRequest,
-                    isCommandPalettePresented:
-                        model.chrome.isCommandPalettePresented,
-                    commands: model.paletteRegistry(
-                        windows: windows, layoutDirection: layoutDirection, shortcuts: shortcuts),
+                    chrome: model.chrome,
+                    makeCommands: {
+                        model.paletteRegistry(
+                            windows: windows, layoutDirection: layoutDirection, shortcuts: shortcuts)
+                    },
                     cardFrames: cardFrames,
                     focusesOnHover: { focusesOnHover(member.id, at: $0) },
                     isCoveredByChrome: { isCoveredByChrome($0) },

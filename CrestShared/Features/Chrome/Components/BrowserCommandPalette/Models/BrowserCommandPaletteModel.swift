@@ -193,7 +193,8 @@ final class BrowserCommandPaletteModel {
         dismiss: @escaping () -> Void,
         destination: (any BrowserPaletteDestination)? = nil,
         openings: [BrowserCommandPaletteOpening] = [.here],
-        readPasteboard: () -> String? = { nil }
+        readPasteboard: () -> String? = { nil },
+        loadsInitialAnswerSynchronously: Bool = true
     ) {
         self.browser = browser
         self.space = space
@@ -211,9 +212,11 @@ final class BrowserCommandPaletteModel {
         self.openings = openings
         openedWith = initialQuery
         pasteboard = BrowserAppPreferenceStore.shared.preferences.palette.offers(.pasteAndGo) ? readPasteboard() : nil
-        // The palette opens with its rows: the resting answer is quick to
-        // rank, so it is asked for on the main thread.
-        if let answer = try? browser.core.query(question(for: initialQuery)) { show(answer, for: sequence) }
+        if loadsInitialAnswerSynchronously {
+            if let answer = try? browser.core.query(question(for: initialQuery)) { show(answer, for: sequence) }
+        } else {
+            requestAnswer()
+        }
     }
 
     // MARK: - Actions - Completion

@@ -30,9 +30,14 @@ struct BrowserSidebarLoadedContent: View {
     @Environment(\.spacePagerPresentation) private var inheritedPagerPresentation
     @State private var standalonePagerPresentation = SpacePagerPresentation()
     @State private var sidebarBands = SpaceSidebarBands()
+    @State private var pagerSlideOffset: CGFloat = 0
 
     private var spacePagerPresentation: SpacePagerPresentation {
         inheritedPagerPresentation ?? standalonePagerPresentation
+    }
+
+    private var addressBarPlacement: BrowserAddressBarPlacement {
+        BrowserDeviceAppearanceStore.shared.addressBarPlacement
     }
 
     var body: some View {
@@ -51,9 +56,12 @@ struct BrowserSidebarLoadedContent: View {
             )
             .onGeometryChange(for: CGFloat.self) {
                 $0.size.height
-            } action: {
+            } action: { newHeight in
                 // The pager already reaches the glow's outset up under the chrome.
-                spacePagerPresentation.gestureTopInset = max(0, $0 - BrowserTabSelectionGlow.outset)
+                let nextInset = max(0, newHeight - BrowserTabSelectionGlow.outset)
+                if abs(spacePagerPresentation.gestureTopInset - nextInset) >= 0.5 {
+                    spacePagerPresentation.gestureTopInset = nextInset
+                }
             }
             // Above the pager, so a selected pin's glow slides under the
             // address field.
@@ -73,6 +81,30 @@ struct BrowserSidebarLoadedContent: View {
                 .coordinateSpace(.named(SpaceSidebarBands.page))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Keep the native AppKit pager out of per-frame layout resizes when
+            // the address bar moves; glide it on the GPU via `pagerSlideOffset`.
+            .transaction(value: addressBarPlacement) { transaction in
+                transaction.animation = nil
+            }
+            .offset(y: pagerSlideOffset)
+            .onChange(of: addressBarPlacement) { oldPlacement, newPlacement in
+                guard oldPlacement != newPlacement, !reduceMotion else {
+                    pagerSlideOffset = 0
+                    return
+                }
+                // Slide from the previous chrome bottom to the new one on the GPU.
+                let delta: CGFloat =
+                    newPlacement.showsBarInPageCards
+                    ? BrowserChromeLayout.addressHeight : -BrowserChromeLayout.addressHeight
+                var instant = Transaction()
+                instant.disablesAnimations = true
+                withTransaction(instant) {
+                    pagerSlideOffset = delta
+                }
+                withAnimation(CrestMotion.chrome) {
+                    pagerSlideOffset = 0
+                }
+            }
             .clipped()
             // The native Space pages clip at their own bounds, so the pager
             // reaches the glow's outset up under the chrome and each page
@@ -109,12 +141,6 @@ struct BrowserSidebarLoadedContent: View {
                 SpaceForegroundBlend(
                     spaces: context.availableSpaces, selectedSpaceID: context.browser.selectedSpaceID))
         }
-        // The address and navigation fade out as the page cards take them, and
-        // the Space's list moves up into their place, or back down.
-        .animation(
-            CrestMotion.chrome.unlessReducingMotion(reduceMotion),
-            value: BrowserDeviceAppearanceStore.shared.addressBarPlacement
-        )
         .environment(\.spacePagerPresentation, spacePagerPresentation)
         .environment(\.spaceSidebarBands, sidebarBands)
         .accessibilityElement(children: .contain)

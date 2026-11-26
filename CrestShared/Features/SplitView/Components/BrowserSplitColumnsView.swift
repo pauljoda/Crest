@@ -90,15 +90,40 @@ struct BrowserSplitColumnsView<Member: Identifiable, Content: View, Panel: View>
     @Environment(\.layoutDirection) private var layoutDirection
     @State private var panelWidthTransaction = BrowserSplitPanelWidthTransaction()
     @State private var cardIdentities = BrowserSplitCardIdentities()
+    @State private var topSectionSlideOffset: CGFloat = 0
 
     private var appearance: BrowserChromeAppearance { .device(windowCornerRadius: windowCornerRadius) }
 
     var body: some View {
         let cards = cardIdentities.cards(for: members.map(\.id))
+        let currentRowInsets = rowInsets
         GeometryReader { proxy in
             columns(containerWidth: proxy.size.width, cards: cards)
         }
-        .padding(rowInsets)
+        .padding(currentRowInsets)
+        // Snap the lone-card top-section layout change once and glide on the
+        // GPU so moving the address bar never resizes the page card, its
+        // compositing group, or live web/Settings content on every frame.
+        .transaction(value: loneCardTopSection) { transaction in
+            transaction.animation = nil
+        }
+        .offset(y: topSectionSlideOffset)
+        .clipped()
+        .onChange(of: currentRowInsets.top) { oldTop, newTop in
+            let delta = oldTop - newTop
+            guard abs(delta) > 0.5, !reduceMotion else {
+                topSectionSlideOffset = 0
+                return
+            }
+            var instant = Transaction()
+            instant.disablesAnimations = true
+            withTransaction(instant) {
+                topSectionSlideOffset = delta
+            }
+            withAnimation(CrestMotion.chrome) {
+                topSectionSlideOffset = 0
+            }
+        }
         // A card joining, leaving or moving settles with the row's motion; a
         // tab switch, which shows another page alone or trades a lone page for
         // cards it shares nothing with, lands at once, as it does outside a

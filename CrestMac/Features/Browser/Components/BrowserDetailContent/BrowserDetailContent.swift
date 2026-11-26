@@ -12,10 +12,13 @@ struct BrowserDetailContent: View {
     let pages: BrowserPagePool
     let spaceAccess: BrowserSpaceAccessController
     let tabPromotionNamespace: Namespace.ID
-    let startPageFocusRequest: Int
-    let isCommandPalettePresented: Bool
-    /// The window's commands, for the Start Page's palette.
-    let commands: BrowserCommandPaletteCommandRegistry
+    var startPageFocusRequest: Int = 0
+    var isCommandPalettePresented: Bool = false
+    var commands: BrowserCommandPaletteCommandRegistry? = nil
+    /// Observed only inside `BrowserStartPageContent` so toggling the overlay
+    /// command palette never rebuilds non-Start-Page content surfaces.
+    var chrome: BrowserChromeState? = nil
+    var makeCommands: (() -> BrowserCommandPaletteCommandRegistry)? = nil
 
     var body: some View {
         if let tab, let space, !spaceAccess.isLocked(space), pages.isMirroringPage(for: tab.id) {
@@ -48,7 +51,9 @@ struct BrowserDetailContent: View {
                 tabPromotionNamespace: tabPromotionNamespace,
                 focusRequest: startPageFocusRequest,
                 isCommandPalettePresented: isCommandPalettePresented,
-                commands: commands
+                commands: commands,
+                chrome: chrome,
+                makeCommands: makeCommands
             )
         case .livePage, .navigationFailure, .processFailure:
             BrowserLivePageContent(
