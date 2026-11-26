@@ -47,6 +47,7 @@
 </script>
 
 <script lang="ts">
+  import { presentationPickup } from "../motion";
   import {
     DiscardStagedLink,
     MovePage,
@@ -221,11 +222,15 @@
   // by its page, leaves at once.
   let peek = $state.raw<Peek | null>(null);
   let peekAnimates = $state(true);
+  let peekExitPickup = 0;
+  let returningPeek = $state.raw<Peek | null>(null);
   const releasing = new Set<string>();
-  const closePeek = (animated: boolean, releases = true) => {
+  const closePeek = (animated: boolean, releases = true, pickup = 0) => {
     const current = peek;
     if (!current) return;
     peekAnimates = animated;
+    peekExitPickup = pickup;
+    if (animated) returningPeek = current;
     if (releases) {
       if (animated) releasing.add(current.pageId);
       else void session.core.send(ReleasePage({ pageId: current.pageId, keepsState: false })).catch(() => {});
@@ -235,6 +240,7 @@
     requestAnimationFrame(focusShownPage);
   };
   const releaseAfterExit = (pageId: string) => {
+    if (returningPeek?.pageId === pageId) returningPeek = null;
     if (releasing.delete(pageId)) void session.core.send(ReleasePage({ pageId, keepsState: false })).catch(() => {});
   };
   /** How a Peek that goes leaves, which the window says as it closes it. */
@@ -242,6 +248,7 @@
     get animates() {
       return peekAnimates;
     },
+    get pickup() { return peekExitPickup; },
     onComplete: releaseAfterExit,
   };
   let openingPeek = 0;
@@ -332,6 +339,9 @@
     });
   });
   const showsPeek = $derived(peek !== null && peek.sourceTabId === shownTabId);
+  // Restoring the toolbar changes the overlay's viewport. Keep it out of the
+  // departing card's way until the spring lands in its source tab.
+  const peekCoversToolbar = $derived(showsPeek || (returningPeek !== null && returningPeek.sourceTabId === shownTabId));
 
   // The window's commands act on what it shows now, from the keys the core
   // binds them to on this device, for the commands the window can run now.
@@ -426,8 +436,8 @@
     if (!palette) return;
     palette.close();
     palette = null;
-    // The page takes the keyboard back once the palette's field is gone.
-    requestAnimationFrame(focusShownPage);
+    // A palette reopened before the next frame keeps its query focused.
+    requestAnimationFrame(() => { if (!palette) focusShownPage(); });
   };
   /** Copies an answer a palette gives, such as the calculator's. */
   const copyAnswer = (text: string) => {
@@ -497,7 +507,7 @@
     handlers.openLocation = toggle("editLocation");
     handlers.toggleSidebar = () => {
       dismissPalette();
-      sidebarMorph.current?.toggle();
+      sidebarMorph.current?.toggleFromShortcut();
     };
     handlers.openPalette = () => startPageTakesNewTab() || open("newTab");
     handlers.editLocation = () => open("editLocation");
@@ -534,8 +544,9 @@
     // window holds while one shows, closes it too.
     const peekShown = () => !!peek && peek.sourceTabId === shown().tab?.id;
     const closeTab = handlers.closeTabOrWindow;
-    handlers.closeTabOrWindow = () => (peekShown() ? closePeek(true) : closeTab?.());
-    handlers.closePeek = () => peekShown() && closePeek(true);
+    const closePeekFromKeyboard = () => closePeek(true, true, presentationPickup.peekShortcut);
+    handlers.closeTabOrWindow = () => (peekShown() ? closePeekFromKeyboard() : closeTab?.());
+    handlers.closePeek = () => peekShown() && closePeekFromKeyboard();
     // Most Recent Tab holds the switcher open while its keys are held, as
     // the Mac's does where the person shows recent tabs while switching and
     // the keys hold a modifier; otherwise it goes straight to the tab.
@@ -776,6 +787,7 @@
     class={`browser-window ${shell ? "with-title-bar" : ""} ${readsLight(space.settings.look) ? "reads-light" : "reads-dark"} sidebar-${sidebar}${cornerless ? " cornerless" : ""}`}
     class:paper-selection={paperSelection.current} class:tint-selected-pins={tintSelectedPins.current} class:dim-unloaded={dimUnloaded.current}
     class:top-address={topAddress} class:sidebar-right={sidebarOnRight.current}
+    style:--sidebar-hover-pickup={sidebarMotionFactor() ? `${presentationPickup.pointer}ms` : "0ms"}
     style:--window-inset="{windowBorder.current + pageSeam}px" style:--sidebar-gap="{pageSeam}px"
     style:--page-seam="{pageSeam}px" style:--page-corner="{pageCorner}px"
     style:--chrome-accent={customChromeAccent.current || css(primaryColor(space.settings.look))}
@@ -808,7 +820,7 @@
     <SpaceContentStrip {spaces} liveId={space.id} shownPins={shownPins(spaces, space.id, shownTabs, pages)} embedsPages={!!shell}
       onRest={focusShownPage}>
       {#snippet toolbar()}
-        {#if topAddress && cards.tabIds.length < 2 && !showsPeek}
+        {#if topAddress && cards.tabIds.length < 2 && !peekCoversToolbar}
           <div class="page-address-toolbar" role="group" aria-label="Address bar" inert={shownSpaceLocked}>
             {@render pageBar(space, shownTabId, page, true, true)}
           </div>

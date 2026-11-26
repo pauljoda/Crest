@@ -101,7 +101,7 @@ swift Scripts/desktop-parity.swift capture NATIVE_PID SVELTE_PID sidebar "$HOME/
 open "$HOME/Movies/Crest Sidebar/index.html"
 ```
 
-Choose `sidebar`, `palette`, or `settings`. The viewer steps through the two
+Choose `sidebar`, `palette`, `settings`, or `escape`. The viewer steps through the two
 captures against elapsed time from their respective shortcuts. It shows the
 last frame each window actually presented by that time, sampled up to 120 Hz
 at one pixel per layout point. Switch to the pixel difference view to see
@@ -118,6 +118,14 @@ last argument specifies how many milliseconds to capture after the input.
 
 ```sh
 swift Scripts/desktop-parity.swift capture-click NATIVE_PID SVELTE_PID NATIVE_X,NATIVE_Y SVELTE_X,SVELTE_Y "$HOME/Movies/Crest Peek" 1200
+```
+
+To compare pointer-driven motion, provide a start and destination for each window.
+The recorder rests the pointer at the start before recording the move. For example,
+with both sidebars collapsed on the left, this records their edge reveal.
+
+```sh
+swift Scripts/desktop-parity.swift capture-hover NATIVE_PID SVELTE_PID 700,500 2,500 700,500 2,500 "$HOME/Movies/Crest Edge Reveal" 1000
 ```
 
 Use this mode to compare shared controls, layout and motion. Web pages in the

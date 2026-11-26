@@ -7,7 +7,7 @@
   import { brandColor, usePaletteVersion } from "./palette-view";
   import ProviderIcon from "./ProviderIcon.svelte";
 
-  let { model, embedded, takesFocus = true }: { model: PaletteModel; embedded: boolean; takesFocus?: boolean } = $props();
+  let { model, embedded, inline = false, takesFocus = true }: { model: PaletteModel; embedded: boolean; inline?: boolean; takesFocus?: boolean } = $props();
 
   let input = $state<HTMLInputElement>();
   let composing = false;
@@ -202,7 +202,7 @@
 {/snippet}
 
 <div class="palette-field">
-  <SymbolIcon name="magnifyingglass" size={19} class="palette-glyph" />
+  {#if !inline}<SymbolIcon name="magnifyingglass" size={19} class="palette-glyph" />{/if}
   {#if provider}
     {@render providerPill(provider, () => model.leaveScope())}
   {/if}
@@ -251,7 +251,7 @@
     {/if}
   </div>
   {@render offer()}
-  {#if !embedded}
+  {#if !embedded && !inline}
     <button type="button" class="palette-close" title="Close" aria-label="Close" onclick={() => model.host.dismiss()}>
       <SymbolIcon name="xmark" size={14} />
     </button>

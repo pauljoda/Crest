@@ -49,6 +49,7 @@
   export interface SidebarMorph {
     /** The sidebar's toggle, as Ctrl+S and its own button: hides a docked sidebar, and docks a floating or collapsed one. */
     toggle(): void;
+    toggleFromShortcut(): void;
   }
 
   /**
@@ -108,7 +109,7 @@
 
   import { portal } from "../attachments";
   import { isMenuOpen } from "../menus";
-  import { reducesMotion } from "../motion";
+  import { presentationPickup, reducesMotion } from "../motion";
   import { sidebarOnRight, fullscreenSidebarReveal, sidebarMotionFactor, sidebarRevealDelay, sidebarRevealWidth, sidebarSlide } from "../appearance.svelte";
   import { tabPreview } from "./preview-state.svelte";
   import { useShellFrame } from "./WindowControls.svelte";
@@ -173,9 +174,15 @@
   // Where the pointer rested as the strip appeared, until it moves.
   let resting: Point | null = null;
   let running: Morph | null = null;
+  let shortcutPickup: ReturnType<typeof setTimeout> | undefined;
+  const cancelShortcut = () => {
+    clearTimeout(shortcutPickup);
+    shortcutPickup = undefined;
+  };
   let cardsHeld: (() => void) | null = null;
   let liveResize: (() => void) | null = null;
   $effect(() => () => {
+    cancelShortcut();
     clearTimeout(reveal);
     clearTimeout(letGo);
     if (running) cancelAnimationFrame(running.frame);
@@ -253,6 +260,7 @@
         if (!outside) return;
         outside = false;
         returned = performance.now();
+        if (!onCard()) retreat();
       };
       const leftWindow = (event: MouseEvent) => {
         const through = leftThroughLeadingEdge(pointer, { x: event.clientX, y: event.clientY }, sidebarOnRight.current);
@@ -271,12 +279,15 @@
       const root = document.documentElement;
       document.addEventListener("mousemove", moved, true);
       root.addEventListener("mouseleave", leftWindow);
-      const stopFrame = transport?.subscribeFrame(() => {
-        if (transport.frame.active) return;
+      const lostFocus = () => {
+        if (isActive()) return;
         outside = false;
         retreat();
-      });
+      };
+      const stopFrame = transport?.subscribeFrame(lostFocus);
+      if (!transport) window.addEventListener("blur", lostFocus);
       return () => {
+        if (!transport) window.removeEventListener("blur", lostFocus);
         document.removeEventListener("mousemove", moved, true);
         root.removeEventListener("mouseleave", leftWindow);
         stopFrame?.();
@@ -395,6 +406,8 @@
     // slide of their own, or partway through another morph.
     const fromRows = rows.getBoundingClientRect();
     const fromPage = leading(page.getBoundingClientRect());
+    const interrupted = running !== null;
+    const wasDocked = presentation === "docked";
     stop();
     const revision = morphRevision;
     holdTransitions(true);
@@ -423,25 +436,22 @@
     const reaches = natural.width + gap - windowInset;
     const pageWide = during === "docked" ? -reaches : 0;
     const pageBeside = during === "docked" ? 0 : reaches;
-    // A drawer going away hands the page the window's inset at once, as the
-    // Mac's does when its sidebar leaves the column: the page steps out by
-    // the difference and keeps that much more room beside the sidebar on
-    // the way. One coming in keeps the docked gap throughout.
-    const lead = kind === "drawer" && final === "collapsed" ? windowInset - gap : 0;
+    // The native column changes its frame inset with visibility. A fresh
+    // drawer presents that new inset before the sidebar begins travelling.
+    // Reversals start at the page's current on-screen position.
+    const insetChange = kind === "drawer" && !interrupted
+      ? (wasDocked ? windowInset - gap : gap - windowInset) : 0;
     // A drawer goes until the sidebar is past the window's edge, or comes
     // into its seat; a card settles where its presentation lays it out.
     const to: Offsets = kind === "drawer" && final === "collapsed"
       ? { x: -trailing(natural), y: 0, page: pageWide }
       : { x: 0, y: 0, page: (pageEnd ?? (final === "docked" ? "beside" : "wide")) === "beside" ? pageBeside : pageWide };
-    // A drawer's page keeps its edge beside the sidebar's, within its own
-    // reach; beneath a card, the page moves on the card's spring.
-    const pageAt = (x: number, fraction: number) => kind === "drawer"
-      ? Math.min(pageBeside + lead, Math.max(pageWide, x + lead))
-      : from.page + (to.page - from.page) * fraction;
-    const offsetsAt = (fraction: number): Offsets => {
-      const x = devicePixels(from.x + (to.x - from.x) * fraction);
-      return { x, y: devicePixels(from.y + (to.y - from.y) * fraction), page: devicePixels(pageAt(x, fraction)) };
-    };
+    const startPage = from.page + insetChange;
+    const offsetsAt = (fraction: number): Offsets => ({
+      x: devicePixels(from.x + (to.x - from.x) * fraction),
+      y: devicePixels(from.y + (to.y - from.y) * fraction),
+      page: devicePixels(startPage + (to.page - startPage) * fraction),
+    });
     setOffsets(offsetsAt(0), shadowBase);
     const duration = spring.visualDuration * sidebarMotionFactor();
     if (duration === 0) {
@@ -472,12 +482,12 @@
     };
     morph.frame = requestAnimationFrame(step);
   };
-  const hide = () => {
+  const hide = (keepHovered = true) => {
     if (reducesMotion() || sidebarSlide.current === 0) {
-      place(keepsCard() ? "floating" : "collapsed");
+      place(keepHovered && keepsCard() ? "floating" : "collapsed");
       return;
     }
-    if (keepsCard()) begin({ kind: "card", during: "floating", final: "floating", spring: tokens.sidebarDrawer, dress: "in" });
+    if (keepHovered && keepsCard()) begin({ kind: "card", during: "floating", final: "floating", spring: tokens.sidebarDrawer, dress: "in" });
     else begin({ kind: "drawer", during: "docked", final: "collapsed", spring: tokens.sidebarDrawer });
   };
   const dock = () => {
@@ -502,7 +512,28 @@
   const target = () => running?.final ?? presentation;
   $effect(() => {
     const handle = morph;
-    handle.current = { toggle: () => (target() === "docked" ? hide() : dock()) };
+    handle.current = {
+      toggle() {
+        cancelShortcut();
+        if (target() === "docked") hide();
+        else dock();
+      },
+      toggleFromShortcut() {
+        // A second shortcut during pickup cancels the first. Once moving,
+        // a reversal takes over immediately from the current frame.
+        if (shortcutPickup !== undefined) { cancelShortcut(); return; }
+        const hides = target() === "docked";
+        const apply = () => {
+          shortcutPickup = undefined;
+          if (hides) hide(false);
+          else dock();
+        };
+        if (running || reducesMotion() || sidebarSlide.current === 0) apply();
+        // AppKit dispatch and the first SwiftUI layout precede visible travel.
+        // Only the keyboard drawer has this pickup. Pointer tracking stays live.
+        else shortcutPickup = setTimeout(apply, presentationPickup.drawerShortcut);
+      },
+    };
     return () => {
       handle.current = null;
     };

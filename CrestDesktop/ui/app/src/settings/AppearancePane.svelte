@@ -2,7 +2,7 @@
   import { LinkBehavior } from "@crest/contracts";
 
   import {
-    addressPlacement, animateSpacePages, colorMode, customChromeAccent, darkSpaceDimming, dimUnloaded, fullscreenSidebarReveal, paperOpacity, paperSelection, pinLayout, previewFolders, previewTabs,
+    addressPlacement, animateCommandPalette, animateSpacePages, colorMode, customChromeAccent, darkSpaceDimming, dimUnloaded, fullscreenSidebarReveal, paperOpacity, paperSelection, pinLayout, previewFolders, previewTabs,
     sidebarOnRight, sidebarRevealDelay, sidebarRevealWidth, sidebarSlide, sidebarSpacing, spacingChoices, stretchPins, tabSize,
     spaceIconDisplay, spaceIconSizing, spaceIconScale, tintSelectedPins, websitePinColors, windowBorder,
   } from "../appearance.svelte";
@@ -29,10 +29,11 @@
   const links = useLinkPreferences(() => session);
 </script>
 
-<Group title="Address bar" onReset={addressPlacement.current === "sidebar" ? null : () => addressPlacement.set("sidebar")}>
+<Group title="Address bar" onReset={resetGroup(addressPlacement, animateCommandPalette)}>
   <LayoutChoice label="Address bar" value={addressPlacement.current}
     choices={[{ value: "sidebar", label: "Sidebar" }, { value: "top", label: "Top" }]}
     choose={addressPlacement.set} />
+  <Toggle title="Animate into command palette" checked={animateCommandPalette.current} defaultValue={true} onChange={animateCommandPalette.set} />
 </Group>
 <Group title="Space icons" onReset={spaceIconDisplay.current === "icons" ? null : () => spaceIconDisplay.set("icons")}>
   <LayoutChoice label="Space icons" value={spaceIconDisplay.current} switcher

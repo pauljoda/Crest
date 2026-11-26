@@ -26,6 +26,7 @@
   export interface PeekExit {
     /** Whether the Peek goes back into its link, rather than at once, as one kept as a tab does. */
     readonly animates: boolean;
+    readonly pickup: number;
     readonly onComplete: (pageId: string) => void;
   }
 
@@ -35,14 +36,15 @@
     return { pose: { opacity: 0 }, timing: snaps() ? { duration: 0 } : tokens.floatingPane };
   }
 
-  function scrimExit(animated: boolean) {
-    return { pose: { opacity: 0 }, timing: animated && !snaps() ? tokens.floatingPane : { duration: 0 } };
+  function scrimExit(exit?: PeekExit) {
+    const timing = (exit?.animates ?? true) && !snaps() ? { ...tokens.floatingPane, delay: (exit?.pickup ?? 0) / 1000 } : { duration: 0 };
+    return { pose: { opacity: 0 }, timing };
   }
 
   // BrowserTransientMotion samples the spring for twice its perceptual duration.
   // On the return journey the opacity falls linearly over 92% of that duration.
-  function moveStack(node: Element, returning: boolean, animated = true): TransitionConfig {
-    if (!animated || snaps()) return { duration: 0 };
+  function moveStack(node: Element, returning: boolean, exit?: PeekExit): TransitionConfig {
+    if (exit?.animates === false || snaps()) return { duration: 0 };
     const length = peekTime.current;
     const spring = springCurve({ type: "spring", visualDuration: length / 1000, bounce: 0.16 });
     const style = getComputedStyle(node);
@@ -50,6 +52,7 @@
     const to = returning ? 0.005 : 1;
     const opacity = Number(style.opacity);
     return {
+      delay: exit?.pickup ?? 0,
       duration: length * 2,
       css: t => {
         const elapsed = (returning ? 1 - t : t) * length * 2;
@@ -60,7 +63,7 @@
     };
   }
   const stackEntrance = (node: Element) => moveStack(node, false);
-  const stackExit = (node: Element, animated: boolean) => moveStack(node, true, animated);
+  const stackExit = (node: Element, exit?: PeekExit) => moveStack(node, true, exit);
 
   function sourceTitle(session: Session, peek: Peek): string {
     if (!peek.sourcePageId) return "Settings";
@@ -115,7 +118,8 @@
 
   // The Peek's page, embedded once the engine has it and taking the keyboard as it comes.
   let content = $state<string | null>(null);
-  let element = $state<HTMLEmbedElement>();
+  let element = $state<HTMLEmbedElement | HTMLIFrameElement>();
+  let loadedFrame = $state<HTMLIFrameElement>();
   const live = $derived(page?.phase.name === "live");
   $effect(() => {
     const pageId = peek.pageId;
@@ -133,27 +137,25 @@
   });
   // It comes in unseen and fades in once the page has committed something,
   // from wherever its fade stands.
-  let reveal: Animation | null = null;
+
   $effect(() => {
     const embed = element;
-    const shown = committed;
-    if (!embed) return;
-    const from = reveal ? Number(getComputedStyle(embed).opacity) : 0;
-    reveal?.cancel();
+    if (!embed || !committed || (embed instanceof HTMLIFrameElement && loadedFrame !== embed)) return;
     const reduce = reducesMotion();
     const { duration, delay, css: easing } = timed({ duration: 0.12, ease: "easeOut", delay: 0.034 });
-    reveal = embed.animate([{ opacity: from }, { opacity: shown ? 1 : 0 }],
+    const reveal = embed.animate([{ opacity: 0 }, { opacity: 1 }],
       { duration: reduce ? 0 : duration, delay: reduce ? 0 : delay, easing, fill: "both" });
+    return () => reveal.cancel();
   });
 </script>
 
 <div class={`peek-layer${hidden ? " hidden" : ""}`} inert={hidden} aria-hidden={hidden || undefined}>
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class="peek-scrim" style:background={links.current?.dimsPageBehindPeek === false ? "transparent" : undefined} aria-hidden="true" onclick={onClose}
-    in:presence={scrimEntrance()} out:presence={scrimExit(exit?.animates ?? true)}></div>
+    in:presence={scrimEntrance()} out:presence={scrimExit(exit)}></div>
   <div class="peek-stack" role="dialog" aria-label={`Peek from ${(useCoreVersion(session), sourceTitle(session, peek))}`}
     style:--peek-share={peekSize.current / 100}
-    in:stackEntrance out:stackExit={exit?.animates ?? true}>
+    in:stackEntrance out:stackExit={exit}>
     <div class="peek-bar">
       <button class="peek-close" aria-label="Close Peek" title="Close Peek (Esc or Ctrl+W)" onclick={onClose}>
         <SymbolIcon name="xmark" size={18} strokeWidth={2.4} />
@@ -187,7 +189,10 @@
         <embed bind:this={element} class="page-frame" type="application/x-chromium-surface-embed" data-content-id={content}
           tabindex={-1} />
       {:else if !session.shell && framed}
-        <iframe class="page-frame" sandbox="allow-forms allow-scripts" src={framed} title="Peek"></iframe>
+        {#key framed}
+          <iframe bind:this={element} class="page-frame" sandbox="allow-forms allow-scripts" src={framed} title="Peek"
+            onload={event => { if (event.currentTarget instanceof HTMLIFrameElement) loadedFrame = event.currentTarget; }}></iframe>
+        {/key}
       {/if}
     </div>
   </div>

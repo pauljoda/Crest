@@ -48,6 +48,7 @@ export const useReadsDark = () => colorMode.current === "system" ? systemDark.cu
 export const customChromeAccent = preference<string>("chrome-accent", "", text => /^#[0-9a-f]{6}$/i.test(text) ? text : "");
 export const sidebarOnRight = toggle("sidebar-on-right", false);
 export const addressPlacement = preference<"sidebar" | "top">("address-bar-placement", "sidebar", text => text === "top" ? "top" : "sidebar");
+export const animateCommandPalette = toggle("animate-command-palette", true);
 export const windowBorder = range("window-border-width", 8, 0, 10, 1);
 export const spaceIconDisplay = preference<"icons" | "dots">("space-icons", "icons", text => text === "dots" ? "dots" : "icons");
 export const spaceIconSizing = preference<"automatic" | "manual">("spaceIconSizing", "automatic", text => text === "manual" ? "manual" : "automatic");

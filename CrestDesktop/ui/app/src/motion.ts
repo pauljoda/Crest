@@ -2,6 +2,10 @@ import { springCurve, springEasing, type Spring } from "@crest/design";
 import { prefersReducedMotion } from "svelte/motion";
 import type { TransitionConfig } from "svelte/transition";
 
+// Time from a settled input to the first native presentation transaction, in milliseconds.
+// The web compositor starts its own spring after this handoff; commands keep taking input.
+export const presentationPickup = { drawerShortcut: 65, pointer: 28, tabPreview: 65, palette: 65, dropdown: 125, peekShortcut: 16 } as const;
+
 /**
  * Crest's motion in Svelte: the design tokens' springs and curves as
  * transitions for what comes and goes, and as timings for the animations the

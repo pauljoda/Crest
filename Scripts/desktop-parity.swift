@@ -11,10 +11,11 @@ struct ComparisonError: LocalizedError {
 }
 
 enum Gesture: String {
-    case sidebar, palette, settings
+    case sidebar, palette, settings, escape
 
     var key: CGKeyCode {
         switch self {
+        case .escape: 53
         case .sidebar: 1  // S
         case .palette: 37  // L
         case .settings: 43  // comma
@@ -25,17 +26,37 @@ enum Gesture: String {
 enum CaptureInput {
     case shortcut(Gesture)
     case click(CGPoint)
+    case hover(from: CGPoint, to: CGPoint)
+
+    var pointerStart: CGPoint? {
+        switch self {
+        case .shortcut: nil
+        case .click(let point), .hover(let point, _): point
+        }
+    }
+
+    var preparation: Duration {
+        if case .hover = self { return .milliseconds(1500) }
+        return .milliseconds(250)
+    }
 
     /// Coordinates are layout points measured from the captured content's upper left.
-    func events(content: CGRect, windowsKeys: Bool) throws -> (CGEvent, CGEvent) {
+    func events(content: CGRect, windowsKeys: Bool) throws -> (CGEvent, CGEvent?) {
         switch self {
         case .shortcut(let gesture):
             guard let down = CGEvent(keyboardEventSource: nil, virtualKey: gesture.key, keyDown: true),
                 let up = CGEvent(keyboardEventSource: nil, virtualKey: gesture.key, keyDown: false)
             else { throw ComparisonError(message: "Could not create the comparison shortcut.") }
-            down.flags = windowsKeys ? .maskControl : .maskCommand
+            down.flags = gesture == .escape ? [] : (windowsKeys ? .maskControl : .maskCommand)
             up.flags = down.flags
             return (down, up)
+        case .hover(_, let point):
+            let location = CGPoint(x: content.minX + point.x, y: content.minY + point.y)
+            guard content.contains(location),
+                let move = CGEvent(
+                    mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: location, mouseButton: .left)
+            else { throw ComparisonError(message: "Hover coordinates must lie inside the captured content.") }
+            return (move, nil)
         case .click(let point):
             let location = CGPoint(x: content.minX + point.x, y: content.minY + point.y)
             guard content.contains(location),
@@ -50,12 +71,12 @@ enum CaptureInput {
         }
     }
 
-    static func point(_ argument: String) throws -> CaptureInput {
+    static func point(_ argument: String) throws -> CGPoint {
         let parts = argument.split(separator: ",", omittingEmptySubsequences: false)
         guard parts.count == 2, let x = Double(parts[0]), let y = Double(parts[1]), x.isFinite, y.isFinite else {
-            throw ComparisonError(message: "Specify a click position as X,Y in layout points.")
+            throw ComparisonError(message: "Specify a pointer position as X,Y in layout points.")
         }
-        return .click(CGPoint(x: x, y: y))
+        return CGPoint(x: x, y: y)
     }
 }
 
@@ -194,37 +215,48 @@ func capture(pid: pid_t, input: CaptureInput, windowsKeys: Bool, folder: URL, du
     let contentFrame = viewport.offsetBy(dx: window.frame.minX, dy: window.frame.minY)
     let (down, up) = try input.events(content: contentFrame, windowsKeys: windowsKeys)
     let originalPointer = CGEvent(source: nil)?.location
-    if case .click = input {
-        CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: down.location, mouseButton: .left)?
+    let startPoint = input.pointerStart.map { CGPoint(x: contentFrame.minX + $0.x, y: contentFrame.minY + $0.y) }
+    func checkPointer(_ point: CGPoint) throws {
+        var hit: AXUIElement?
+        var hitPID: pid_t = 0
+        guard contentFrame.contains(point),
+            AXUIElementCopyElementAtPosition(AXUIElementCreateSystemWide(), Float(point.x), Float(point.y), &hit)
+                == .success,
+            let hit, AXUIElementGetPid(hit, &hitPID) == .success, hitPID == pid
+        else { throw ComparisonError(message: "The pointer position must be inside the uncovered comparison window.") }
+    }
+    if let startPoint {
+        try checkPointer(startPoint)
+        CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: startPoint, mouseButton: .left)?
             .post(tap: .cghidEventTap)
     }
     defer {
-        if case .click = input, let originalPointer, CGEvent(source: nil)?.location == down.location {
+        if let startPoint, let originalPointer, let pointer = CGEvent(source: nil)?.location,
+            pointer == startPoint || pointer == down.location
+        {
             CGWarpMouseCursorPosition(originalPointer)
         }
     }
+    try await Task.sleep(for: input.preparation)
     try await stream.startCapture()
-    try await Task.sleep(for: .milliseconds(250))
-    if case .click = input {
-        var hit: AXUIElement?
-        var hitPID: pid_t = 0
-        let result = AXUIElementCopyElementAtPosition(
-            AXUIElementCreateSystemWide(), Float(down.location.x), Float(down.location.y), &hit)
-        guard result == .success,
-            let hit, AXUIElementGetPid(hit, &hitPID) == .success, hitPID == pid
-        else {
+    try await Task.sleep(for: .milliseconds(100))
+    if startPoint != nil {
+        do {
+            guard app.isActive else { throw ComparisonError(message: "The comparison window lost focus.") }
+            try checkPointer(down.location)
+        } catch {
             try await stream.stopCapture()
-            throw ComparisonError(message: "The requested click is covered by another window.")
+            throw error
         }
     }
     let start = CMClockGetTime(CMClockGetHostTimeClock()).seconds
     switch input {
     case .shortcut:
         down.postToPid(pid)
-        up.postToPid(pid)
-    case .click:
+        up?.postToPid(pid)
+    case .click, .hover:
         down.post(tap: .cghidEventTap)
-        up.post(tap: .cghidEventTap)
+        up?.post(tap: .cghidEventTap)
     }
     try await Task.sleep(for: .milliseconds(duration))
     try await stream.stopCapture()
@@ -234,7 +266,7 @@ func capture(pid: pid_t, input: CaptureInput, windowsKeys: Bool, folder: URL, du
     }
     let shown = [before] + frames.filter { $0.time > start }
     guard shown.count > 1 else {
-        throw ComparisonError(message: "No new frames arrived after the shortcut for PID \(pid).")
+        throw ComparisonError(message: "No new frames arrived after the input for PID \(pid).")
     }
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false)
     for (index, frame) in shown.enumerated() {
@@ -277,12 +309,13 @@ do {
                 try await Task.sleep(for: .milliseconds(250))
             }
         }
-    } else if arguments[0] == "capture" || arguments[0] == "capture-click" {
+    } else if ["capture", "capture-click", "capture-hover"].contains(arguments[0]) {
         let clicks = arguments[0] == "capture-click"
-        let outputIndex = clicks ? 5 : 4
+        let hover = arguments[0] == "capture-hover"
+        let outputIndex = hover ? 7 : (clicks ? 5 : 4)
         guard arguments.count == outputIndex + 1 || arguments.count == outputIndex + 2 else {
             throw ComparisonError(
-                message: "Pass a gesture or two X,Y positions, a new folder and optionally the duration in ms.")
+                message: "Pass the gesture or pointer positions, a new folder and optionally the duration in ms.")
         }
         let duration = arguments.count == outputIndex + 2 ? Int(arguments[outputIndex + 1]) : 750
         guard let duration, (100...2500).contains(duration) else {
@@ -290,11 +323,16 @@ do {
         }
         let inputs: (CaptureInput, CaptureInput)
         if clicks {
-            inputs = try (.point(arguments[3]), .point(arguments[4]))
+            inputs = try (.click(CaptureInput.point(arguments[3])), .click(CaptureInput.point(arguments[4])))
+        } else if hover {
+            inputs = try (
+                .hover(from: CaptureInput.point(arguments[3]), to: CaptureInput.point(arguments[4])),
+                .hover(from: CaptureInput.point(arguments[5]), to: CaptureInput.point(arguments[6]))
+            )
         } else if let gesture = Gesture(rawValue: arguments[3]) {
             inputs = (.shortcut(gesture), .shortcut(gesture))
         } else {
-            throw ComparisonError(message: "Choose sidebar, palette or settings.")
+            throw ComparisonError(message: "Choose sidebar, palette, settings or escape.")
         }
         guard CGPreflightScreenCaptureAccess() else {
             throw ComparisonError(message: "Recording needs macOS Screen Recording access for this terminal.")

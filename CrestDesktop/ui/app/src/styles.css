@@ -824,6 +824,10 @@ button {
   pointer-events: auto;
 }
 
+.peek-card .page-frame {
+  opacity: 0;
+}
+
 /* The card's edge lies over its page. */
 .peek-card::after {
   content: "";
@@ -902,12 +906,12 @@ button {
   isolation: isolate;
   /* Out over the page on the Mac's spring for it, and back on its retreat's
      (D02). */
-  transition: transform calc(var(--crest-sidebar-reveal-duration) * var(--sidebar-motion-factor, 1)) var(--crest-sidebar-reveal-easing);
+  transition: transform calc(var(--crest-sidebar-reveal-duration) * var(--sidebar-motion-factor, 1)) var(--crest-sidebar-reveal-easing) var(--sidebar-hover-pickup);
 }
 
 .sidebar-slot.collapsed {
   transform: translateX(calc(-100% - 21px));
-  transition: transform calc(var(--crest-sidebar-retreat-duration) * var(--sidebar-motion-factor, 1)) var(--crest-sidebar-retreat-easing);
+  transition: transform calc(var(--crest-sidebar-retreat-duration) * var(--sidebar-motion-factor, 1)) var(--crest-sidebar-retreat-easing) var(--sidebar-hover-pickup);
 }
 
 /* The floating card's shadow, beside the card rather than on it, since the
@@ -926,15 +930,15 @@ button {
   pointer-events: none;
   -webkit-app-region: initial;
   will-change: transform, opacity;
-  transition: transform calc(var(--crest-sidebar-reveal-duration) * var(--sidebar-motion-factor, 1)) var(--crest-sidebar-reveal-easing),
-    opacity calc(var(--crest-sidebar-reveal-duration) * var(--sidebar-motion-factor, 1)) ease-out;
+  transition: transform calc(var(--crest-sidebar-reveal-duration) * var(--sidebar-motion-factor, 1)) var(--crest-sidebar-reveal-easing) var(--sidebar-hover-pickup),
+    opacity calc(var(--crest-sidebar-reveal-duration) * var(--sidebar-motion-factor, 1)) ease-out var(--sidebar-hover-pickup);
 }
 
 .sidebar-card-shadow.collapsed {
   transform: translateX(calc(-100% - 21px));
   opacity: 0;
-  transition: transform calc(var(--crest-sidebar-retreat-duration) * var(--sidebar-motion-factor, 1)) var(--crest-sidebar-retreat-easing),
-    opacity calc(var(--crest-sidebar-retreat-duration) * var(--sidebar-motion-factor, 1)) ease-out;
+  transition: transform calc(var(--crest-sidebar-retreat-duration) * var(--sidebar-motion-factor, 1)) var(--crest-sidebar-retreat-easing) var(--sidebar-hover-pickup),
+    opacity calc(var(--crest-sidebar-retreat-duration) * var(--sidebar-motion-factor, 1)) ease-out var(--sidebar-hover-pickup);
 }
 
 /* Leaving its seat, the sidebar becomes the card where it stands: the card's
@@ -1123,7 +1127,8 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .sidebar-slot.floating,
   .sidebar-slot.collapsed,
-  .sidebar-card-shadow {
+  .sidebar-card-shadow,
+  .sidebar-card-shadow.collapsed {
     transition: none;
   }
 }
@@ -1309,13 +1314,13 @@ button {
   color: rgb(var(--primary-rgb) / 0.85);
   /* Back as the palette that grew out of it lands on it, as the Mac's
      hand-off's trailing fade: the frame's travel less the fade. */
-  transition: box-shadow 100ms ease-in-out, opacity 120ms ease-out 90ms;
+  transition: box-shadow 100ms ease-in-out, opacity var(--palette-handoff-fade, 120ms) ease-out var(--palette-field-return, 90ms);
 }
 
 /* Handed off to the palette growing out of it, as the frame leaves it. */
 .address-field.handed-off {
   opacity: 0;
-  transition: box-shadow 100ms ease-in-out, opacity 120ms ease-out;
+  transition: box-shadow 100ms ease-in-out, opacity var(--palette-handoff-fade, 120ms) ease-out var(--palette-field-leave, 0ms);
 }
 
 .address-field:has(.address-summary:focus-visible) {
@@ -3746,6 +3751,7 @@ embed.page-frame {
   --pal-accent: rgb(var(--crest-accent-dark));
   --pal-accent-text: rgb(var(--crest-accent-text-dark));
   --pal-surface: rgb(44 44 44 / 0.40);
+  --overlay-material: rgb(40 40 40 / 0.78);
   --pal-ink: rgb(255 255 255 / 0.92);
   --pal-secondary: rgb(255 255 255 / 0.55);
   --pal-primary: 255 255 255;
@@ -3757,6 +3763,7 @@ embed.page-frame {
   --pal-accent: rgb(var(--crest-accent-light));
   --pal-accent-text: rgb(var(--crest-accent-text-light));
   --pal-surface: rgb(248 248 250 / 0.88);
+  --overlay-material: var(--pal-surface);
   --pal-ink: rgb(0 0 0 / 0.86);
   --pal-secondary: rgb(0 0 0 / 0.5);
   --pal-primary: 0 0 0;
@@ -3800,8 +3807,7 @@ embed.page-frame {
 
 /* The overlay's card holds its glass apart from its contents, so the glass
    can grow out of the address field while the contents keep their layout
-   and show through its frame (palette-morph.ts). The glass that moves has no
-   blur; the resting one, blur and all, comes in over it once it settles. */
+   and show through its frame (palette-morph.ts). */
 .palette-layer .palette-card {
   position: relative;
   isolation: isolate;
@@ -3816,21 +3822,32 @@ embed.page-frame {
   inset: 0;
   z-index: -1;
   border-radius: inherit;
-  background: var(--pal-surface);
+  background: var(--overlay-material);
   box-shadow: inset 0 0 0 0.5px var(--pal-edge), 0 18px 50px rgb(0 0 0 / 0.28);
-}
-
-.palette-glass.resting {
   backdrop-filter: blur(40px);
-}
-
-.palette-glass.moving {
-  visibility: hidden;
   transform-origin: 0 0;
 }
 
-.palette-card.morphing > .palette-glass.moving {
-  visibility: visible;
+.palette-layer.dropping .palette-scrim {
+  background: transparent;
+}
+
+.palette-layer .palette-card.dropping {
+  position: absolute;
+  border-radius: var(--address-radius);
+}
+
+.dropping .palette-field {
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.dropping .palette-input {
+  height: 22px;
+}
+
+.dropping .palette-input :is(input, .palette-mirror, .palette-suffix) {
+  font-size: 13px;
 }
 
 .palette-reveal,
@@ -3848,12 +3865,6 @@ embed.page-frame {
 
 .palette-contents {
   transform-origin: 50% 0;
-}
-
-/* Waiting to fade in as the card grows, the contents but the query field,
-   which keeps the keyboard, are not drawn (palette-morph.ts). */
-.palette-contents.waiting > :not(.palette-field) {
-  visibility: hidden;
 }
 
 .palette-field {
@@ -4096,7 +4107,7 @@ embed.page-frame {
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .browser-window.reads-light, .space-content-page.reads-light { --pal-surface: rgb(44 44 44); }
+  .browser-window.reads-light, .space-content-page.reads-light { --pal-surface: rgb(44 44 44); --overlay-material: var(--pal-surface); }
   .browser-window.reads-dark, .space-content-page.reads-dark { --pal-surface: rgb(248 248 250); }
 }
 

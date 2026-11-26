@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "desktop-motion-and-field-placement",
+      "category": "internal",
+      "message": "The desktop alpha follows native sidebar and tab preview motion, opens the command palette from the active address field, and reveals Peek content when its page is ready."
+    },
+    {
+      "id": "desktop-pointer-frame-comparisons",
+      "category": "internal",
+      "message": "Desktop frame comparisons can record pointer movement and Escape alongside clicks and shortcuts."
+    }
+  ]
+}
