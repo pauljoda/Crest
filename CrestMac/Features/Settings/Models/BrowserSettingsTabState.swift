@@ -18,6 +18,8 @@ final class BrowserSettingsTabState {
     var draggedSpaceID: UUID?
     let sidebarScroll = BrowserNativeScrollState()
     private(set) var consumedRouteRevision = 0
+    var requestedSection: BrowserSettingsDestinationRequest.Section?
+    var pictureInPicturePreviewSpace: BrowserSpaceRuntimeAssignment?
     @ObservationIgnored private var scrollStates: [String: BrowserNativeScrollState] = [:]
     @ObservationIgnored private var shortcuts: BrowserShortcutSettingsModel?
 
@@ -55,6 +57,8 @@ final class BrowserSettingsTabState {
         guard revision > consumedRouteRevision else { return }
         consumedRouteRevision = revision
         if let searchText { navigation.searchText = searchText }
+        requestedSection = nil
+        pictureInPicturePreviewSpace = nil
         request.apply(to: self, spaceID: spaceID)
     }
 }

@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 
 /// What the shell and the engine adapter ask of a window by its identity in
 /// the core, which runs the same store, page and window operations Crest's own
@@ -69,6 +69,27 @@ extension BrowserMacApplication {
         host.settings.present(destination, assignment: space)
         host.browser.openSettings()
         host.pages.select()
+    }
+
+    func openPictureInPictureSettings(from source: BrowserPage?, in sourceWindow: NSWindow?) {
+        let pools = [privatePages] + windowCoordinator.openWindowPages
+        let sourceWindowID = sourceWindow.flatMap { window in
+            pools.first { $0.presentationWindow === window }?.windowID
+        }
+        guard let windowID = sourceWindowID ?? source?.host?.windowID ?? stackedWindowIDs.first,
+            let host = hostWindow(windowID), let space = host.browser.shownSpace
+        else { return }
+        host.settings.present(
+            BrowserSettingsDestinationRequest(
+                destination: .general, section: .pictureInPicture,
+                pictureInPicturePreviewSpace: source.map {
+                    BrowserSpaceRuntimeAssignment(spaceID: $0.spaceID, profileID: $0.profileID)
+                }),
+            assignment: BrowserSpaceRuntimeAssignment(space: space))
+        host.browser.openSettings()
+        host.pages.select()
+        NSApp.activate()
+        host.pages.presentationWindow?.makeKeyAndOrderFront(nil)
     }
 
     func openGettingStarted(in window: UUID) {

@@ -8,7 +8,13 @@ import ObjectiveC.runtime
 final class BrowserPictureInPicturePresenter {
     // MARK: - Types
 
+    private enum PresentationEngine {
+        case webKit
+        case chromium
+    }
+
     private struct Presentation {
+        let engine: PresentationEngine
         let presenter: NSViewController
         let source: NSViewController
         let window: BrowserPictureInPictureWindow
@@ -24,9 +30,31 @@ final class BrowserPictureInPicturePresenter {
     private let managed = NSHashTable<NSViewController>.weakObjects()
     private let playback = NSMapTable<NSViewController, NSNumber>.weakToStrongObjects()
     private var active: Presentation?
+    private weak var sourcePage: BrowserPage?
+    private var findSourcePage: (NSView) -> BrowserPage? = { _ in nil }
+    private var openSettings: (BrowserPage?, NSWindow?) -> Void = { _, _ in }
     private var restingFrame: NSRect?
 
     private var delegateSelector: Selector { NSSelectorFromString("delegate") }
+
+    // MARK: - Actions - App
+
+    static func configure(
+        findSourcePage: @escaping (NSView) -> BrowserPage?,
+        openSettings: @escaping (BrowserPage?, NSWindow?) -> Void
+    ) {
+        shared.findSourcePage = findSourcePage
+        shared.openSettings = openSettings
+    }
+
+    static func webKitEntered(from page: BrowserPage) {
+        guard shared.active?.engine == .webKit, shared.sourcePage == nil else { return }
+        shared.bindSource(page)
+    }
+
+    static func refreshVideoSurface() {
+        shared.active?.window.refreshVideoSurface()
+    }
 
     // MARK: - Actions - Framework
 
@@ -57,8 +85,8 @@ final class BrowserPictureInPicturePresenter {
                     return
                 }
                 MainActor.assumeIsolated {
-                    if presentsBrowserVideo(on: presenter) {
-                        show(source, on: presenter)
+                    if let engine = presentationEngine(for: presenter) {
+                        show(source, on: presenter, engine: engine)
                     } else {
                         originalEntry(presenter, present, source)
                     }
@@ -128,18 +156,19 @@ final class BrowserPictureInPicturePresenter {
 
     // MARK: - Actions - Presentation
 
-    private func presentsBrowserVideo(on presenter: NSViewController) -> Bool {
-        guard let delegate = delegate(of: presenter) else { return false }
-        // OS releases have used both names for WebKit's video presenter.
-        return [
-            "CrestPictureInPictureDelegate", "WebVideoPresentationInterfaceMacObjC",
-            "WebVideoFullscreenInterfaceMacObjC",
-        ].contains { name in
-            NSClassFromString(name).map { delegate.isKind(of: $0) } == true
+    private func presentationEngine(for presenter: NSViewController) -> PresentationEngine? {
+        guard let delegate = delegate(of: presenter) else { return nil }
+        if let type = NSClassFromString("CrestPictureInPictureDelegate"), delegate.isKind(of: type) {
+            return .chromium
         }
+        // OS releases have used both names for WebKit's video presenter.
+        let names = ["WebVideoPresentationInterfaceMacObjC", "WebVideoFullscreenInterfaceMacObjC"]
+        return names.contains { name in
+            NSClassFromString(name).map { delegate.isKind(of: $0) } == true
+        } ? .webKit : nil
     }
 
-    private func show(_ source: NSViewController, on presenter: NSViewController) {
+    private func show(_ source: NSViewController, on presenter: NSViewController, engine: PresentationEngine) {
         if active?.presenter === presenter, active?.source === source { return }
         if let previous = active { stop(previous) }
         managed.add(presenter)
@@ -152,8 +181,16 @@ final class BrowserPictureInPicturePresenter {
         let window = BrowserPictureInPictureWindow(
             videoSize: aspect, restingFrame: restingFrame, sourceScreen: inlineWindow?.screen,
             isPlaying: playback.object(forKey: presenter)?.boolValue ?? false)
-        let presentation = Presentation(presenter: presenter, source: source, window: window)
+        let presentation = Presentation(engine: engine, presenter: presenter, source: source, window: window)
         active = presentation
+        if engine == .chromium {
+            let pageSelector = NSSelectorFromString("crestPictureInPicturePageView")
+            if view.responds(to: pageSelector),
+                let pageView = view.perform(pageSelector)?.takeUnretainedValue() as? NSView
+            {
+                bindSource(findSourcePage(pageView))
+            }
+        }
 
         window.onClose = { [weak self, weak window] in
             guard let self, let active, active.window === window else { return }
@@ -163,6 +200,10 @@ final class BrowserPictureInPicturePresenter {
             guard let self, let active, active.window === window else { return }
             if shouldClose(active) { finish(active) }
         }
+        window.onSettings = { [weak self, weak window, weak inlineWindow] in
+            guard let self, let window, active?.window === window else { return }
+            openSettings(sourcePage, inlineWindow)
+        }
         window.onPlayback = { [weak self, weak window] playing in
             guard let self, let active, active.window === window else { return }
             call(playing ? "pipActionPlay:" : "pipActionPause:", on: active)
@@ -170,6 +211,15 @@ final class BrowserPictureInPicturePresenter {
         // WebKit checks the supplied container is below the presenter's view.
         presenter.view = window.videoContainer
         window.present(view, from: inline)
+    }
+
+    private func bindSource(_ page: BrowserPage?) {
+        sourcePage = page
+        let space = page.flatMap {
+            $0.host?.browser.spaceModel(
+                matching: BrowserSpaceRuntimeAssignment(spaceID: $0.spaceID, profileID: $0.profileID))
+        }
+        active?.window.setSourceSpace(space)
     }
 
     private func dismissIfManaged(_ source: NSViewController, on presenter: NSViewController) -> Bool {
@@ -190,6 +240,7 @@ final class BrowserPictureInPicturePresenter {
 
     private func finish(_ presentation: Presentation) {
         active = nil
+        sourcePage = nil
         restingFrame = presentation.window.restingFrame
         presentation.window.dismiss()
         // The engine transitions to exiting after its dismiss call returns.

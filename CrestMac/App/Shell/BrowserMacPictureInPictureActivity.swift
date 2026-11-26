@@ -22,6 +22,8 @@ final class BrowserMacPictureInPictureActivity: NSObject {
             self, selector: #selector(appWillResignActive), name: NSApplication.willResignActiveNotification,
             object: nil)
         center.addObserver(
+            self, selector: #selector(appDidResignActive), name: NSApplication.didResignActiveNotification, object: nil)
+        center.addObserver(
             self, selector: #selector(appDidBecomeActive), name: NSApplication.didBecomeActiveNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(
             self, selector: #selector(desktopDidChange), name: NSWorkspace.activeSpaceDidChangeNotification,
@@ -46,7 +48,12 @@ final class BrowserMacPictureInPictureActivity: NSObject {
         request(from: window, for: .appSwitch) { $0.isOnActiveSpace && !NSApp.isActive }
     }
 
+    @objc private func appDidResignActive() {
+        BrowserPictureInPicturePresenter.refreshVideoSurface()
+    }
+
     @objc private func desktopDidChange() {
+        BrowserPictureInPicturePresenter.refreshVideoSurface()
         checkDesktopDeparture()
         if NSApp.isActive, let window = NSApp.keyWindow, window.isOnActiveSpace, pagesForWindow(window) != nil {
             focusedWindow = window
@@ -55,6 +62,7 @@ final class BrowserMacPictureInPictureActivity: NSObject {
     }
 
     @objc private func appDidBecomeActive() {
+        BrowserPictureInPicturePresenter.refreshVideoSurface()
         if let window = NSApp.keyWindow ?? focusedWindow { returnToSource(in: window) }
     }
 

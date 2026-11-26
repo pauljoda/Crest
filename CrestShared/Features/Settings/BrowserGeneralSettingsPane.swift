@@ -6,6 +6,9 @@ struct BrowserGeneralSettingsPane: View {
     let spaceAccess: BrowserSpaceAccessController
 
     @Bindable private var appPreferences = BrowserAppPreferenceStore.shared
+    #if os(macOS)
+        @Environment(\.browserSettingsTabState) private var tabState
+    #endif
     #if os(iOS)
         @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
     #endif
@@ -16,6 +19,24 @@ struct BrowserGeneralSettingsPane: View {
     }
 
     var body: some View {
+        #if os(macOS)
+            ScrollViewReader { proxy in
+                form
+                    .task(id: tabState?.consumedRouteRevision) {
+                        guard let tabState, let section = tabState.requestedSection else { return }
+                        // The settings form restores its previous offset when it mounts.
+                        await Task.yield()
+                        guard !Task.isCancelled, tabState.requestedSection == section else { return }
+                        proxy.scrollTo(section, anchor: .top)
+                        tabState.requestedSection = nil
+                    }
+            }
+        #else
+            form
+        #endif
+    }
+
+    private var form: some View {
         BrowserSettingsPane(.general) {
             BrowserDefaultBrowserSection()
 
@@ -60,11 +81,23 @@ struct BrowserGeneralSettingsPane: View {
                 } footer: {
                     CrestFormFootnote("Spelling changes apply after Crest restarts.")
                 }
-                BrowserPictureInPictureSettingsSection()
+                BrowserPictureInPictureSettingsSection(previewSpace: pictureInPicturePreviewSpace)
+                    .id(BrowserSettingsDestinationRequest.Section.pictureInPicture)
                 BrowserDeveloperToolbarSettingsSection()
             #endif
         }
     }
+
+    #if os(macOS)
+        private var pictureInPicturePreviewSpace: SpaceModel? {
+            if let source = tabState?.pictureInPicturePreviewSpace,
+                let space = browser.spaceModel(matching: source), !spaceAccess.isLocked(space)
+            {
+                return space
+            }
+            return browser.shownSpace
+        }
+    #endif
 
     #if os(iOS)
         // MARK: - Startup
