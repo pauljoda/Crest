@@ -51,7 +51,7 @@
     DiscardStagedLink,
     MovePage,
     NativeView,
-    Navigate,
+    LoadAddress,
     OpenTab,
     OpenPage,
     PagePresentation,
@@ -69,12 +69,12 @@
     WireReader,
   } from "@crest/contracts";
   import { CoreRejection } from "@crest/core-client";
-  import { untrack } from "svelte";
+  import { tick, untrack } from "svelte";
 
   import type { Session } from "../boot";
-  import { primaryColor, readsLight } from "../branding";
+  import { css, primaryColor, readsLight } from "../branding";
   import { Browsing } from "../browsing";
-  import { openPaletteEvent, spaceEditing, windowCommands } from "../commands";
+  import { openPalette, openPaletteEvent, spaceEditing, windowCommands } from "../commands";
   import { useDownloads } from "../downloads.svelte";
   import { opensExternal } from "../external-opening";
   import { copiedNotice, notices } from "../notices";
@@ -96,6 +96,8 @@
   import SpaceAccessView from "../spaces/SpaceAccessView.svelte";
   import { requestSettings } from "../settings/SettingsView.svelte";
   import { coreState, useCoreVersion } from "../use-core";
+  import ChromeButton from "./ChromeButton.svelte";
+  import PageAddress from "./Sidebar/PageAddress.svelte";
   import NavigationButtons from "./NavigationButtons.svelte";
   import Notices from "./Notices.svelte";
   import { blockedPopups } from "./blocked-popups";
@@ -103,14 +105,17 @@
   import PageColumns, { type ColumnCard } from "./PageColumns.svelte";
   import { usePagePresentation } from "./page-presentation.svelte";
   import { pageTools, usePageTools } from "./page-tools";
+  import { sampleAddress, setSamplePeek } from "./peek-sample";
   import PeekLayer, { type Peek, type PeekExit } from "./PeekLayer.svelte";
   import DownloadFlights from "./DownloadFlights.svelte";
-  import TabPreviewLayer, { showsTabPreviews } from "./TabPreview.svelte";
   import DownloadApproval from "./prompts/DownloadApproval.svelte";
   import ExtensionReviewLayer from "./prompts/ExtensionReview.svelte";
   import { downloadApproval, permissionPrompt } from "./prompts/prompt-text";
   import { Sidebar } from "./Sidebar";
-  import { sidebarSlide } from "./sidebar-slide.svelte";
+  import {
+    addressPlacement, customChromeAccent, dimUnloaded, paperOpacity, paperSelection, pinGap, sidebarMotionFactor, sidebarOnRight,
+    sidebarSpacing, tabContentScale, tabScale, tintSelectedPins, windowBorder,
+  } from "../appearance.svelte";
   import { captureSidebar, initialSidebarIsPresented, initialSidebarWidth } from "./sidebar-layout";
   import { type SelectionKey, selectionTakes } from "./sidebar-selection";
   import SidebarDialogLayer, { type SidebarDialog } from "./SidebarDialogs.svelte";
@@ -229,50 +234,64 @@
     // The keyboard goes back to the page beneath.
     requestAnimationFrame(focusShownPage);
   };
-  const letPeeksGo = () => {
-    for (const pageId of releasing) void session.core.send(ReleasePage({ pageId, keepsState: false })).catch(() => {});
-    releasing.clear();
+  const releaseAfterExit = (pageId: string) => {
+    if (releasing.delete(pageId)) void session.core.send(ReleasePage({ pageId, keepsState: false })).catch(() => {});
   };
   /** How a Peek that goes leaves, which the window says as it closes it. */
   const peekExit: PeekExit = {
     get animates() {
       return peekAnimates;
     },
-    onComplete: letPeeksGo,
+    onComplete: releaseAfterExit,
   };
-  const openPeek = async (request: PeekRequested) => {
-    const source = session.core.state.pages.get(request.pageId);
-    // The pages the window's cards show, which a link followed in opens a Peek over.
-    if (!source?.tabId || !livePageIds.has(source.id)) return;
-    const { stagedLinkId } = request;
-    const discard = () => stagedLinkId
-      && void session.core.send(DiscardStagedLink({ sourcePageId: source.id, stagedLinkId })).catch(() => {});
+  let openingPeek = 0;
+  const sourceAvailable = (spaceId: string, tabId: string) => spaces.some(candidate =>
+    candidate.id === spaceId && !isLocked(session.core, candidate) && candidate.tabs.some(tab => tab.id === tabId));
+  const presentPeek = async (spaceId: string, sourceTabId: string, sourcePageId: string | null, url: string, stagedLinkId: string | null) => {
+    const attempt = ++openingPeek;
+    const discard = () => sourcePageId && stagedLinkId
+      && void session.core.send(DiscardStagedLink({ sourcePageId, stagedLinkId })).catch(() => {});
     // A link followed while a Peek is open takes its place.
     closePeek(false);
     const pageId = crypto.randomUUID();
     try {
       await session.core.send(OpenPage({
-        pageId, workspaceId: session.workspaceId, spaceId: source.spaceId, tabId: null, windowId: session.windowId,
-        transient: TransientPresentation.peek, openerPageId: source.id,
+        pageId, workspaceId: session.workspaceId, spaceId, tabId: null, windowId: session.windowId,
+        transient: TransientPresentation.peek, openerPageId: sourcePageId,
       }));
     } catch {
       discard();
       return;
     }
     // The page's first load runs the link the source page staged, keeping its referrer and security.
-    if (stagedLinkId) {
+    if (sourcePageId && stagedLinkId) {
       try {
-        await session.core.send(StageLink({ pageId, sourcePageId: source.id, stagedLinkId, url: request.url }));
+        await session.core.send(StageLink({ pageId, sourcePageId, stagedLinkId, url }));
       } catch {
         discard();
         void session.core.send(ReleasePage({ pageId, keepsState: false })).catch(() => {});
         return;
       }
     }
+    if (attempt !== openingPeek || !sourceAvailable(spaceId, sourceTabId)) {
+      void session.core.send(ReleasePage({ pageId, keepsState: false })).catch(() => {});
+      return;
+    }
     peekAnimates = true;
-    peek = { pageId, sourcePageId: source.id, sourceTabId: source.tabId, spaceId: source.spaceId, url: request.url };
-    void session.core.send(Navigate({ pageId, input: request.url })).catch(() => {});
+    peek = { pageId, sourcePageId, sourceTabId, spaceId, url };
+    void session.core.send(LoadAddress({ pageId, url })).catch(() => {});
   };
+  const openPeek = (request: PeekRequested) => {
+    const source = session.core.state.pages.get(request.pageId);
+    if (source?.tabId && livePageIds.has(source.id)) {
+      void presentPeek(source.spaceId, source.tabId, source.id, request.url, request.stagedLinkId);
+    }
+  };
+  setSamplePeek(() => {
+    if (space && tab?.nativeView === NativeView.settings && !isLocked(session.core, space)) {
+      void presentPeek(space.id, tab.id, null, sampleAddress, null);
+    }
+  });
   // Open In keeps the Peek's page as a tab of a Space, which the window then
   // shows: the tab takes the live page where it can, or loads it afresh.
   // The new tab opens no page of its own until it has taken the Peek's.
@@ -302,7 +321,7 @@
   // A Peek whose page closed itself, or whose link's tab left, goes at once.
   const peekOutcome = $derived(peek ? coreState(session).transientOutcomes.get(peek.pageId) : undefined);
   const peekPageGone = $derived(peek ? !coreState(session).pages.has(peek.pageId) : false);
-  const peekSourceGone = $derived(peek ? !spaces.some((candidate) => candidate.tabs.some((other) => other.id === peek!.sourceTabId)) : false);
+  const peekSourceGone = $derived((useCoreVersion(session), peek ? !sourceAvailable(peek.spaceId, peek.sourceTabId) : false));
   $effect(() => {
     const outcome = peekOutcome;
     const pageGone = peekPageGone;
@@ -493,7 +512,7 @@
       const tabId = existing?.id ?? crypto.randomUUID();
       if (page) {
         // A Space's own pages are its Space's.
-        requestSettings(tabId, ["spaces", "passwords", "extensions", "appearance"].includes(page)
+        requestSettings(tabId, ["spaces", "extensions", "appearance"].includes(page)
           ? { kind: "space", spaceId: target.id, tab: page === "extensions" || page === "appearance" ? page : undefined }
           : { kind: "page", name: page as SettingsPageName });
       }
@@ -671,6 +690,11 @@
 
   // The page card's corner follows the window's, which a maximized or full-screen window has none of.
   const cornerless = $derived(useWindowIsCornerless(session.shell));
+  const pageSeam = $derived(windowBorder.current * 1.5 / windowBorder.fallback);
+  const pageCorner = $derived(windowBorder.current === 0 ? 0 : Math.max(0, (cornerless ? 13 : 16 - windowBorder.current) - pageSeam));
+  const shownSpaceLocked = $derived((useCoreVersion(session), !!space && isLocked(session.core, space)));
+  const topAddress = $derived(addressPlacement.current === "top");
+
   const isPrivate = $derived(workspace?.kind.isPrivate ?? false);
   const livePageIds = $derived(new Set(cards.tabIds.flatMap((tabId) => {
     const shownPage = pagesByTab.get(tabId);
@@ -718,10 +742,29 @@
       const editing = (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) && !active.closest(".page-column");
       if (!workspace?.appPreferences.splitFocusFollowsMouse || palette || editing) return;
     }
-    void session.core.send(ShowTab({ windowId: session.windowId, spaceId: space.id, tabId }))
-      .then(() => byPointer && requestAnimationFrame(focusShownPage));
+    return session.core.send(ShowTab({ windowId: session.windowId, spaceId: space.id, tabId }))
+      .then(() => { if (byPointer) requestAnimationFrame(focusShownPage); });
+  };
+  const editCardLocation = async (tabId: string) => {
+    await focusCard(tabId, false);
+    await tick();
+    if (shownTabId === tabId) openPalette("editLocation");
   };
 </script>
+
+{#snippet pageBar(barSpace: SpaceState, barTab: string | null, barPage: PageState | null, focused: boolean, leading: boolean)}
+  {#if leading && sidebar !== "docked"}
+    <ChromeButton symbol={sidebarOnRight.current ? "sidebar.right" : "sidebar.left"} label="Dock Sidebar"
+      className="page-bar-dock" onClick={() => sidebarMorph.current?.toggle()} />
+  {/if}
+  <NavigationButtons {browsing} page={barPage} />
+  <div class="page-address-host address-area">
+    <PageAddress {session} {browsing} space={barSpace} page={barPage} {focused}
+      tabUrl={barSpace.tabs.find(candidate => candidate.id === barTab)?.url ?? ""}
+      permission={focused ? permissionPrompt(coreState(session), barPage?.id ?? null) : null}
+      activate={barTab ? () => void editCardLocation(barTab) : undefined} />
+  </div>
+{/snippet}
 
 {#if !space}
   <div class="window-loading"></div>
@@ -731,7 +774,16 @@
   {@const shell = session.shell}
   <div bind:this={windowRoot}
     class={`browser-window ${shell ? "with-title-bar" : ""} ${readsLight(space.settings.look) ? "reads-light" : "reads-dark"} sidebar-${sidebar}${cornerless ? " cornerless" : ""}`}
-    style:--sidebar-width="{sidebarWidth}px" style:--sidebar-motion-factor={sidebarSlide.factor}>
+    class:paper-selection={paperSelection.current} class:tint-selected-pins={tintSelectedPins.current} class:dim-unloaded={dimUnloaded.current}
+    class:top-address={topAddress} class:sidebar-right={sidebarOnRight.current}
+    style:--window-inset="{windowBorder.current + pageSeam}px" style:--sidebar-gap="{pageSeam}px"
+    style:--page-seam="{pageSeam}px" style:--page-corner="{pageCorner}px"
+    style:--chrome-accent={customChromeAccent.current || css(primaryColor(space.settings.look))}
+    style:--custom-chrome-accent={customChromeAccent.current || undefined}
+    style:--selected-tab-fill={customChromeAccent.current ? "color-mix(in srgb, var(--chrome-accent) 18%, var(--surface-selected))" : undefined}
+    style:--selected-paper-opacity={paperOpacity.current / 100}
+    style:--tab-scale={tabScale()} style:--tab-content-scale={tabContentScale()} style:--pin-spacing="{pinGap()}px"
+    style:--sidebar-spacing={sidebarSpacing.current} style:--sidebar-width="{sidebarWidth}px" style:--sidebar-motion-factor={sidebarMotionFactor()}>
     <SpaceBanner {spaces} spaceId={space.id} />
     <SidebarSlot presentation={sidebar} onPresentation={(next) => (sidebar = next)} morph={sidebarMorph} width={sidebarWidth}
       onResize={(width) => (sidebarWidth = width)} onResizeEnded={commitSidebarWidth} spaceId={space.id} {spaces} {shell} {edgeHost}>
@@ -744,7 +796,8 @@
         {shownTabs}
         {page}
         {pagesByTab}
-        showsNavigation={!shell}
+        previews={{ pictures, enabled: sidebar !== "collapsed" && !palette && !switcher && !dialog }}
+        addressInSidebar={!topAddress} showsNavigation={!shell && !topAddress}
         permission={permissionPrompt(coreState(session), page?.id ?? null)}
         downloads={shell ? downloads : null}
         onDialog={(next) => (dialog = next)}
@@ -754,6 +807,13 @@
     </SidebarSlot>
     <SpaceContentStrip {spaces} liveId={space.id} shownPins={shownPins(spaces, space.id, shownTabs, pages)} embedsPages={!!shell}
       onRest={focusShownPage}>
+      {#snippet toolbar()}
+        {#if topAddress && cards.tabIds.length < 2 && !showsPeek}
+          <div class="page-address-toolbar" role="group" aria-label="Address bar" inert={shownSpaceLocked}>
+            {@render pageBar(space, shownTabId, page, true, true)}
+          </div>
+        {/if}
+      {/snippet}
       {#snippet render(candidate: SpaceState, live: boolean)}
         <!-- Another Space's cards are its preview in passing, still, as the Mac's. -->
         {@const rowCards = live ? cards : spaceCards(window, candidate.id, shownTabs.get(candidate.id) ?? null)}
@@ -787,6 +847,13 @@
               : Promise.resolve())}
           >
             {#snippet renderCard(tabId: string, card: ColumnCard)}
+              {#if topAddress && rowCards.tabIds.length > 1}
+                {@const cardPage = pages.find(candidate => candidate.tabId === tabId) ?? null}
+                <div class="page-address-toolbar split-address-toolbar" role="group"
+                  aria-label={`Page bar for ${candidate.tabs.find(tab => tab.id === tabId)?.displayTitle ?? "page"}`}>
+                  {@render pageBar(candidate, tabId, cardPage, live && card.focused, tabId === rowCards.tabIds[0])}
+                </div>
+              {/if}
               <SpaceCard {host} space={candidate} {tabId} {pages} passive={!live} {card} />
             {/snippet}
             {@render overlay()}
@@ -805,9 +872,6 @@
       <CommandPalette model={palette} bindings={bindings ?? []} tabs={space.tabs} />
     {/if}
     <DownloadFlights downloads={coreState(session).downloads} profileId={space.profileId} shows={palette === null && !!shell} />
-    <TabPreviewLayer {session} tabs={new Map(space.tabs.map((candidate) => [candidate.id, candidate]))}
-      {pagesByTab} {pictures}
-      enabled={sidebar !== "collapsed" && palette === null && switcher === null && (useCoreVersion(session), showsTabPreviews())} />
     {#if switcher}
       {#key switcher.key}
         <RecentTabSwitcher {session} {spaces} {pagesByTab} {pictures}
@@ -838,7 +902,7 @@
          the stretch that moves the window. -->
     {#if shell}
       <TitleBar {shell}>
-        <NavigationButtons {browsing} {page} />
+        {#if !topAddress}<NavigationButtons {browsing} {page} />{/if}
       </TitleBar>
     {/if}
   </div>

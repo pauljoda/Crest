@@ -46,19 +46,21 @@ export function addressPresentation(text: string): { domain: string; route: stri
   return { domain: url.port ? `${host}:${url.port}` : host, route: route || null };
 }
 
-/** How many tabs a folder holds, in it and in the folders inside it, as the Mac's header counts them. */
-export function folderTabCount(space: SpaceState, folderId: string): number {
-  const inside = new Set([folderId]);
-  for (let grew = true; grew;) {
-    grew = false;
-    for (const folder of space.folders) {
-      if (folder.parentId !== null && inside.has(folder.parentId) && !inside.has(folder.id)) {
-        inside.add(folder.id);
-        grew = true;
-      }
+/** Tabs in a folder, including nested folders and splits, in the core's sidebar order. */
+export function folderTabIds(space: SpaceState, folderId: string): string[] {
+  const lists = new Map(space.sidebar.lists.map(list => [list.folderId, list.rows]));
+  const visited = new Set<string>();
+  const ids: string[] = [];
+  function walk(id: string) {
+    if (visited.has(id)) return;
+    visited.add(id);
+    for (const row of lists.get(id) ?? []) {
+      if (row.kind.opensList) walk(row.id);
+      else ids.push(...row.members);
     }
   }
-  return space.tabs.filter((tab) => tab.folderId !== null && inside.has(tab.folderId)).length;
+  walk(folderId);
+  return ids;
 }
 
 /** Where a row stands inside the folders and splits that hold it (`rowPlacement`), as its style attribute. */

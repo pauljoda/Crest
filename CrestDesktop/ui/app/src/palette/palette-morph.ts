@@ -44,9 +44,11 @@ function reducesMotion(): boolean {
   return matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-/** The address field of the sidebar the window shows, while it is on screen, which the card grows out of. */
+/** The visible field that hands its frame to the palette, including the focused card of a split. */
 function addressField(): HTMLElement | null {
-  const field = document.querySelector<HTMLElement>(".sidebar-slot:not(.collapsed) .address-field");
+  const field = document.querySelector<HTMLElement>(".space-content-page:not([inert]) .page-column.focused .split-address-toolbar .address-field")
+    ?? document.querySelector<HTMLElement>(".page-address-toolbar:not(.split-address-toolbar):not([inert]) .address-field")
+    ?? document.querySelector<HTMLElement>(".sidebar-slot:not(.collapsed) .address-field");
   if (!field) return null;
   const frame = field.getBoundingClientRect();
   const inWindow = frame.width > 0 && frame.right > 0 && frame.left < innerWidth && frame.bottom > 0 && frame.top < innerHeight;

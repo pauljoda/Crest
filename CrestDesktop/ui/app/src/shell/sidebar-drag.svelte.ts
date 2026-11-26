@@ -1,3 +1,4 @@
+import { sidebarSpacing } from "../appearance.svelte";
 import {
   CanSend,
   DropAroundTab,
@@ -169,7 +170,7 @@ function roomFor(item: LiftItem, page: Element | null | undefined, height: numbe
   let room = 0;
   for (const id of carried.tabIds) {
     const row = page.querySelector<HTMLElement>(`[data-row="${id}"], [data-before-tab="${id}"]`);
-    if (row && row.offsetParent !== null && !row.closest(".pinned-grid")) room += row.offsetHeight + 2;
+    if (row && row.offsetParent !== null && !row.closest(".pinned-grid")) room += row.offsetHeight + 2 * sidebarSpacing.current;
   }
   for (const id of carried.folderIds) room += folderSlot(id);
   return room || height + 2;

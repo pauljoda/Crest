@@ -1,7 +1,9 @@
 <script lang="ts" module>
-  import { motion as tokens } from "@crest/design";
+  import { motion as tokens, springCurve } from "@crest/design";
   import type { TransitionConfig } from "svelte/transition";
 
+  import { peekSize, peekTime } from "../appearance.svelte";
+  import { useLinkPreferences } from "../settings/preferences.svelte";
   import type { Session } from "../boot";
   import { presence, reducesMotion, timed } from "../motion";
 
@@ -9,7 +11,7 @@
   export interface Peek {
     /** The Peek's own page, transient until it is kept as a tab. */
     readonly pageId: string;
-    readonly sourcePageId: string;
+    readonly sourcePageId: string | null;
     readonly sourceTabId: string;
     /** The Space the link was followed in, which Open In keeps the page in. */
     readonly spaceId: string;
@@ -24,61 +26,44 @@
   export interface PeekExit {
     /** Whether the Peek goes back into its link, rather than at once, as one kept as a tab does. */
     readonly animates: boolean;
-    readonly onComplete: () => void;
+    readonly onComplete: (pageId: string) => void;
   }
 
-  /**
-   * The Mac's spring for a Peek coming out of its link and going back into it,
-   * at its Peek animation time's default, 240 ms (BrowserPeekPace).
-   */
-  const peekSpring = { type: "spring", visualDuration: 0.24, bounce: 0.16 } as const;
+  function snaps() { return reducesMotion() || peekTime.current === 0; }
 
-  /** The scrim fading in as the Peek comes, at once under Reduce Motion. */
   function scrimEntrance() {
-    return { pose: { opacity: 0 }, timing: reducesMotion() ? { duration: 0 } : tokens.floatingPane };
+    return { pose: { opacity: 0 }, timing: snaps() ? { duration: 0 } : tokens.floatingPane };
   }
 
   function scrimExit(animated: boolean) {
-    return { pose: { opacity: 0 }, timing: animated && !reducesMotion() ? tokens.floatingPane : { duration: 0 } };
+    return { pose: { opacity: 0 }, timing: animated && !snaps() ? tokens.floatingPane : { duration: 0 } };
   }
 
-  /**
-   * The card coming out of its link: a whole transform, which runs on the
-   * compositor, so the page loading beneath doesn't hold it up.
-   */
-  function stackEntrance() {
-    return { pose: { scale: 0.08 }, timing: reducesMotion() ? { duration: 0 } : peekSpring, reduced: {} };
-  }
-
-  /**
-   * Going back into the link, unless the Peek was kept as a tab, which leaves
-   * at once: the card shrinks to nothing as it fades, gone by just over half
-   * its way back. The scale follows the Peek's spring and the fade its own
-   * curve, each from where the card stands as it starts to go.
-   */
-  function stackExit(node: Element, { animated }: { animated: boolean }): TransitionConfig {
-    if (!animated || reducesMotion()) return presence(node, { pose: { opacity: 0 }, timing: { duration: 0 } });
-    const spring = timed(peekSpring);
-    const fade = timed({ duration: 0.22, ease: "easeOut" });
-    const duration = Math.max(spring.duration, fade.duration);
+  // BrowserTransientMotion samples the spring for twice its perceptual duration.
+  // On the return journey the opacity falls linearly over 92% of that duration.
+  function moveStack(node: Element, returning: boolean, animated = true): TransitionConfig {
+    if (!animated || snaps()) return { duration: 0 };
+    const length = peekTime.current;
+    const spring = springCurve({ type: "spring", visualDuration: length / 1000, bounce: 0.16 });
     const style = getComputedStyle(node);
-    const scale = style.transform === "none" ? 1 : new DOMMatrixReadOnly(style.transform).a;
+    const from = returning ? (style.transform === "none" ? 1 : new DOMMatrixReadOnly(style.transform).a) : 0.08;
+    const to = returning ? 0.005 : 1;
     const opacity = Number(style.opacity);
-    let start: number | null = null;
     return {
-      duration,
-      css: (t) => {
-        // Svelte runs a going element's time from where any coming in had reached down to none.
-        start ??= t;
-        const elapsed = (start > 0 ? (start - t) / start : 1) * duration;
-        const moved = spring.easing(Math.min(elapsed / spring.duration, 1));
-        const faded = fade.easing(Math.min(elapsed / fade.duration, 1));
-        return `transform: scale(${scale + (0.005 - scale) * moved}); opacity: ${opacity * (1 - faded)}`;
+      duration: length * 2,
+      css: t => {
+        const elapsed = (returning ? 1 - t : t) * length * 2;
+        const scale = elapsed >= length * 2 ? to : Math.max(0.001, from + (to - from) * spring.position(elapsed / 1000));
+        const alpha = returning ? Math.max(0, 1 - elapsed / (length * 0.92)) * opacity : 1;
+        return `transform: scale(${scale}); opacity: ${alpha}`;
       },
     };
   }
+  const stackEntrance = (node: Element) => moveStack(node, false);
+  const stackExit = (node: Element, animated: boolean) => moveStack(node, true, animated);
 
   function sourceTitle(session: Session, peek: Peek): string {
+    if (!peek.sourcePageId) return "Settings";
     const source = session.core.state.pages.get(peek.sourcePageId);
     return source?.live.title || source?.live.url || "page";
   }
@@ -91,7 +76,7 @@
   import { showContextMenu } from "../menus";
   import { SpaceIdentityIcon } from "../spaces/SpaceIdentity";
   import SymbolIcon from "../SymbolIcon.svelte";
-  import { coreState, useCoreVersion } from "../use-core";
+  import { coreState, useCoreVersion, useEngineVersion } from "../use-core";
   import { pageContentId } from "./PageCard.svelte";
 
   /**
@@ -115,13 +100,18 @@
     exit?: PeekExit;
   } = $props();
 
+  const links = useLinkPreferences(() => session);
   const space = $derived(spaces.find((candidate) => candidate.id === peek.spaceId) ?? null);
   const page = $derived(coreState(session).pages.get(peek.pageId));
   // The page shows once it has committed something, a moment after, as the Mac's reveal does.
+  const framed = $derived((useEngineVersion(session), session.engine?.pages.get(peek.pageId)?.url));
   const committed = $derived(!!page?.live.url);
   const tint = $derived(space ? backgroundColor(space.settings.look) : null);
   let menu = $state<HTMLButtonElement>();
-  $effect(() => () => exit?.onComplete());
+  $effect(() => {
+    const pageId = peek.pageId;
+    return () => exit?.onComplete(pageId);
+  });
 
   // The Peek's page, embedded once the engine has it and taking the keyboard as it comes.
   let content = $state<string | null>(null);
@@ -159,10 +149,11 @@
 
 <div class={`peek-layer${hidden ? " hidden" : ""}`} inert={hidden} aria-hidden={hidden || undefined}>
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="peek-scrim" aria-hidden="true" onclick={onClose}
+  <div class="peek-scrim" style:background={links.current?.dimsPageBehindPeek === false ? "transparent" : undefined} aria-hidden="true" onclick={onClose}
     in:presence={scrimEntrance()} out:presence={scrimExit(exit?.animates ?? true)}></div>
   <div class="peek-stack" role="dialog" aria-label={`Peek from ${(useCoreVersion(session), sourceTitle(session, peek))}`}
-    in:presence={stackEntrance()} out:stackExit={{ animated: exit?.animates ?? true }}>
+    style:--peek-share={peekSize.current / 100}
+    in:stackEntrance out:stackExit={exit?.animates ?? true}>
     <div class="peek-bar">
       <button class="peek-close" aria-label="Close Peek" title="Close Peek (Esc or Ctrl+W)" onclick={onClose}>
         <SymbolIcon name="xmark" size={18} strokeWidth={2.4} />
@@ -195,6 +186,8 @@
       {#if content}
         <embed bind:this={element} class="page-frame" type="application/x-chromium-surface-embed" data-content-id={content}
           tabindex={-1} />
+      {:else if !session.shell && framed}
+        <iframe class="page-frame" sandbox="allow-forms allow-scripts" src={framed} title="Peek"></iframe>
       {/if}
     </div>
   </div>

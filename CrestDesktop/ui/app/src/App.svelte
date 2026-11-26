@@ -1,10 +1,13 @@
 <script lang="ts">
   import type { SetupEntry } from "@crest/contracts";
 
+  import { useReadsDark } from "./appearance.svelte";
   import { boot, type Session } from "./boot";
   import { setupLauncher } from "./commands";
   import SetupWindow from "./setup/SetupWindow.svelte";
   import BrowserWindow from "./shell/BrowserWindow.svelte";
+
+  $effect.pre(() => { document.documentElement.dataset.appearance = useReadsDark() ? "dark" : "light"; });
 
   const bridge = new URLSearchParams(location.search).get("bridge") ?? "ws://127.0.0.1:8787/core";
 

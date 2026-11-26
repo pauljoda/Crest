@@ -128,7 +128,7 @@
    * by `step`, or null where it can't go. A group moves whole among the
    * groups; a Sub-Space moves within its group, never before its primary.
    */
-  function movedOrder(spaces: readonly SpaceState[], spaceId: string, step: number): string[] | null {
+  export function movedOrder(spaces: readonly SpaceState[], spaceId: string, step: number): string[] | null {
     const groups: string[][] = [];
     for (const candidate of spaces) {
       const primaryId = candidate.membership?.primaryId;

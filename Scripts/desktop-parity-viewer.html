@@ -16,11 +16,22 @@
   main.compare section { display: none; }
   main.compare #difference { display: block; }
   input[type="range"] { width: min(65vw, 60rem); vertical-align: middle; }
+  fieldset { margin: .75rem 0; width: fit-content; }
+  select { max-width: 14rem; }
   output, span { font-variant-numeric: tabular-nums; }
 </style>
 <label>Elapsed time <input id="position" type="range" min="0" value="0" step="1"></label>
 <output for="position"></output>
 <label><input id="mode" type="checkbox"> Show pixel difference</label>
+<details>
+  <summary>Motion alignment</summary>
+  <fieldset>
+    <legend>First visible movement</legend>
+    <label>Native frame <select id="native"></select></label>
+    <label>Svelte frame <select id="svelte"></select></label>
+    <label><input id="align" type="checkbox"> Align these frames at 0 ms</label>
+  </fieldset>
+</details>
 <main>
 <section>
   <figure><figcaption>Native Crest · <span></span></figcaption><img alt="Native window"></figure>
@@ -30,28 +41,48 @@
 </main>
 <script>
   const times = FRAME_TIMES;
-  const timeline = [...new Set([0, ...times.native.slice(1), ...times.svelte.slice(1)])].sort((a, b) => a - b);
-  const position = document.querySelector("input");
+  const sources = ["native", "svelte"];
+  const position = document.querySelector("#position");
   const mode = document.querySelector("#mode");
-  mode.addEventListener("change", () => {
-    document.querySelector("main").classList.toggle("compare", mode.checked);
+  const align = document.querySelector("#align");
+  const starts = sources.map(source => document.getElementById(source));
+  let timeline = [];
+  let alignedTimes = [];
+  function frameLabel(source, index) {
+    return "frame " + index + " · " + times[source][index].toFixed(1) + " ms";
+  }
+  sources.forEach((source, i) => times[source].forEach((_, index) =>
+    starts[i].add(new Option(frameLabel(source, index), String(index)))));
+  function resetTimeline() {
+    alignedTimes = sources.map((source, i) => {
+      const zero = align.checked ? times[source][starts[i].selectedIndex] : 0;
+      return times[source].map(time => time - zero);
+    });
+    const steps = alignedTimes.flat().filter(time => align.checked || time > 0);
+    timeline = [...new Set([0, ...steps])].sort((a, b) => a - b);
+    position.max = timeline.length - 1;
+    position.value = timeline.indexOf(0);
     show();
-  });
-  position.max = timeline.length - 1;
+  }
   function show() {
     const time = timeline[position.valueAsNumber];
-    document.querySelector("output").value = time.toFixed(1) + " ms";
-    ["native", "svelte"].forEach((source, i) => {
-      const index = times[source].findLastIndex(frame => frame <= time);
+    document.querySelector("output").value = time.toFixed(1) + (align.checked ? " ms from motion" : " ms from input");
+    sources.forEach((source, i) => {
+      const index = Math.max(0, alignedTimes[i].findLastIndex(frame => frame <= time));
       const figure = document.querySelectorAll("figure")[i];
       const file = source + "/" + index + ".png";
       figure.querySelector("img").src = file;
       if (mode.checked) document.querySelectorAll("#difference img")[i].src = file;
-      figure.querySelector("span").textContent = "frame " + index + " · " + times[source][index].toFixed(1) + " ms";
+      figure.querySelector("span").textContent = frameLabel(source, index);
     });
   }
+  for (const control of [align, ...starts]) control.addEventListener("change", resetTimeline);
+  mode.addEventListener("change", () => {
+    document.querySelector("main").classList.toggle("compare", mode.checked);
+    show();
+  });
   position.addEventListener("input", show);
+  resetTimeline();
   position.focus();
-  show();
 </script>
 </html>

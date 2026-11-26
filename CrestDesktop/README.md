@@ -67,13 +67,30 @@ same content size, with independent practice workspaces and temporary profiles.
 Changes to Svelte appear as you edit. The Mac reference has its own bundle
 identifier. Close either app or press Control-C in the terminal to end the pair.
 Use **Sidebar slide time** in Appearance on both apps to compare the same
-speed. Both default to 160 ms and support snapping at zero.
+speed. Both default to 160 ms and support snapping at zero. Appearance also
+lets you match the light or dark scheme, Space color dimming, window border,
+sidebar edge, address bar placement, and Space switcher on both apps. With the
+address bar on top, each card in Split View has its own navigation and address
+field. Editing the address focuses that card before opening the palette.
 
 This uses the Mac development tools in `CONTRIBUTING.md`, Node 24 with npm, and
 Google Chrome in Applications. Pass `--browser "/path/to/Chromium.app"` to use
 another Chromium browser. Use `--no-build` for a repeat run after changing only
-UI source. `--native-app "/Applications/Crest.app"` compares a specific build;
-older builds use their own isolated launch fixture.
+UI source. For animation measurements, run `Scripts/compare-desktop.py --optimized`.
+This pairs an isolated Xcode Release build with a compiled Svelte bundle.
+The default native target uses WebKit. To compare the native Chromium composition,
+pass a previously built Crest-overlaid Chromium engine. The launcher compiles this
+checkout’s SwiftUI framework and signs an isolated review app in a temporary
+directory with the local Apple Development identity.
+
+```sh
+Scripts/compare-desktop.py --optimized --chromium-engine "/path/to/Chromium.app"
+```
+
+Use `--signing-identity` to select another local identity. `--optimized --no-build`
+reuses the compiled products for the selected reference. `--native-app` accepts
+a specific reference bundle that supports isolated launches. Older reference
+builds use their own isolated launch fixture.
 
 To record an interaction, use the process IDs the launcher prints and a new
 folder outside the checkout. Start both windows in the same state and leave
@@ -88,10 +105,20 @@ Choose `sidebar`, `palette`, or `settings`. The viewer steps through the two
 captures against elapsed time from their respective shortcuts. It shows the
 last frame each window actually presented by that time, sampled up to 120 Hz
 at one pixel per layout point. Switch to the pixel difference view to see
-which regions diverge at that instant. The capture excludes the host
-browser’s title bar. The
-terminal needs Accessibility access to position windows and send shortcuts,
+which regions diverge at that instant. Under **Motion alignment**, select the first
+moving frame for each window to compare travel independently of shortcut latency.
+Each frame retains its original timestamp. The capture excludes the host browser’s
+title bar. The terminal needs Accessibility access to position windows and send shortcuts,
 and Screen Recording access to record them.
+
+To record a click, use two positions measured in points from the top left of
+each window’s content, native first. For example, with Links settings open
+in both windows, use the position of each **Test Peek** button. The optional
+last argument specifies how many milliseconds to capture after the input.
+
+```sh
+swift Scripts/desktop-parity.swift capture-click NATIVE_PID SVELTE_PID NATIVE_X,NATIVE_Y SVELTE_X,SVELTE_Y "$HOME/Movies/Crest Peek" 1200
+```
 
 Use this mode to compare shared controls, layout and motion. Web pages in the
 development browser run in sandboxed frames. Windows caption buttons, embedded
@@ -388,6 +415,13 @@ where focus follows the pointer; it wears the Space's colour while there are
 several. Joining and leaving settle with the row's motion, and showing
 another tab alone lands at once. The sidebar's menus split, step and separate
 cards, and the palette offers the split commands.
+
+Rest the pointer on a folder to search its tabs by title or site, including
+tabs in nested folders. Return opens the first match. Appearance controls
+tab and folder previews separately, the sidebar’s hover area and delay, tab
+size and spacing, pin layout and the selected tab surface. Links controls Peek’s
+size, animation time and page dimming. **Test Peek** opens the same local
+sample page as native Crest.
 
 A link the core opens in Peek (`PeekRequested`, Alt-click by default) opens a
 transient page (`OpenPage` with `TransientPresentation.peek`) that loads the

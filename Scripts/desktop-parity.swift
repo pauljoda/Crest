@@ -22,6 +22,43 @@ enum Gesture: String {
     }
 }
 
+enum CaptureInput {
+    case shortcut(Gesture)
+    case click(CGPoint)
+
+    /// Coordinates are layout points measured from the captured content's upper left.
+    func events(content: CGRect, windowsKeys: Bool) throws -> (CGEvent, CGEvent) {
+        switch self {
+        case .shortcut(let gesture):
+            guard let down = CGEvent(keyboardEventSource: nil, virtualKey: gesture.key, keyDown: true),
+                let up = CGEvent(keyboardEventSource: nil, virtualKey: gesture.key, keyDown: false)
+            else { throw ComparisonError(message: "Could not create the comparison shortcut.") }
+            down.flags = windowsKeys ? .maskControl : .maskCommand
+            up.flags = down.flags
+            return (down, up)
+        case .click(let point):
+            let location = CGPoint(x: content.minX + point.x, y: content.minY + point.y)
+            guard content.contains(location),
+                let down = CGEvent(
+                    mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: location, mouseButton: .left),
+                let up = CGEvent(
+                    mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: location, mouseButton: .left)
+            else { throw ComparisonError(message: "Click coordinates must lie inside the captured content.") }
+            down.setIntegerValueField(.mouseEventClickState, value: 1)
+            up.setIntegerValueField(.mouseEventClickState, value: 1)
+            return (down, up)
+        }
+    }
+
+    static func point(_ argument: String) throws -> CaptureInput {
+        let parts = argument.split(separator: ",", omittingEmptySubsequences: false)
+        guard parts.count == 2, let x = Double(parts[0]), let y = Double(parts[1]), x.isFinite, y.isFinite else {
+            throw ComparisonError(message: "Specify a click position as X,Y in layout points.")
+        }
+        return .click(CGPoint(x: x, y: y))
+    }
+}
+
 @MainActor
 func window(of pid: pid_t, desktop: Bool) throws -> AXUIElement {
     var result: CFTypeRef?
@@ -126,7 +163,7 @@ final class WindowFrames: NSObject, SCStreamOutput {
 }
 
 @MainActor
-func capture(pid: pid_t, gesture: Gesture, windowsKeys: Bool, folder: URL) async throws -> [Double] {
+func capture(pid: pid_t, input: CaptureInput, windowsKeys: Bool, folder: URL, duration: Int) async throws -> [Double] {
     guard let app = NSRunningApplication(processIdentifier: pid), app.activate(options: []) else {
         throw ComparisonError(message: "Could not activate PID \(pid).")
     }
@@ -154,17 +191,42 @@ func capture(pid: pid_t, gesture: Gesture, windowsKeys: Bool, folder: URL) async
         filter: SCContentFilter(desktopIndependentWindow: window), configuration: configuration, delegate: nil)
     let output = WindowFrames()
     try stream.addStreamOutput(output, type: .screen, sampleHandlerQueue: output.queue)
-    guard let down = CGEvent(keyboardEventSource: nil, virtualKey: gesture.key, keyDown: true),
-        let up = CGEvent(keyboardEventSource: nil, virtualKey: gesture.key, keyDown: false)
-    else { throw ComparisonError(message: "Could not create the comparison shortcut.") }
-    down.flags = windowsKeys ? .maskControl : .maskCommand
-    up.flags = down.flags
+    let contentFrame = viewport.offsetBy(dx: window.frame.minX, dy: window.frame.minY)
+    let (down, up) = try input.events(content: contentFrame, windowsKeys: windowsKeys)
+    let originalPointer = CGEvent(source: nil)?.location
+    if case .click = input {
+        CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: down.location, mouseButton: .left)?
+            .post(tap: .cghidEventTap)
+    }
+    defer {
+        if case .click = input, let originalPointer, CGEvent(source: nil)?.location == down.location {
+            CGWarpMouseCursorPosition(originalPointer)
+        }
+    }
     try await stream.startCapture()
     try await Task.sleep(for: .milliseconds(250))
+    if case .click = input {
+        var hit: AXUIElement?
+        var hitPID: pid_t = 0
+        let result = AXUIElementCopyElementAtPosition(
+            AXUIElementCreateSystemWide(), Float(down.location.x), Float(down.location.y), &hit)
+        guard result == .success,
+            let hit, AXUIElementGetPid(hit, &hitPID) == .success, hitPID == pid
+        else {
+            try await stream.stopCapture()
+            throw ComparisonError(message: "The requested click is covered by another window.")
+        }
+    }
     let start = CMClockGetTime(CMClockGetHostTimeClock()).seconds
-    down.postToPid(pid)
-    up.postToPid(pid)
-    try await Task.sleep(for: .milliseconds(750))
+    switch input {
+    case .shortcut:
+        down.postToPid(pid)
+        up.postToPid(pid)
+    case .click:
+        down.post(tap: .cghidEventTap)
+        up.post(tap: .cghidEventTap)
+    }
+    try await Task.sleep(for: .milliseconds(duration))
     try await stream.stopCapture()
     let frames = output.queue.sync { output.frames }
     guard let before = frames.last(where: { $0.time <= start }) else {
@@ -215,19 +277,39 @@ do {
                 try await Task.sleep(for: .milliseconds(250))
             }
         }
-    } else if arguments[0] == "capture", arguments.count == 5, let gesture = Gesture(rawValue: arguments[3]) {
+    } else if arguments[0] == "capture" || arguments[0] == "capture-click" {
+        let clicks = arguments[0] == "capture-click"
+        let outputIndex = clicks ? 5 : 4
+        guard arguments.count == outputIndex + 1 || arguments.count == outputIndex + 2 else {
+            throw ComparisonError(
+                message: "Pass a gesture or two X,Y positions, a new folder and optionally the duration in ms.")
+        }
+        let duration = arguments.count == outputIndex + 2 ? Int(arguments[outputIndex + 1]) : 750
+        guard let duration, (100...2500).contains(duration) else {
+            throw ComparisonError(message: "The capture duration must be between 100 and 2500 ms.")
+        }
+        let inputs: (CaptureInput, CaptureInput)
+        if clicks {
+            inputs = try (.point(arguments[3]), .point(arguments[4]))
+        } else if let gesture = Gesture(rawValue: arguments[3]) {
+            inputs = (.shortcut(gesture), .shortcut(gesture))
+        } else {
+            throw ComparisonError(message: "Choose sidebar, palette or settings.")
+        }
         guard CGPreflightScreenCaptureAccess() else {
             throw ComparisonError(message: "Recording needs macOS Screen Recording access for this terminal.")
         }
-        let folder = URL(fileURLWithPath: arguments[4], isDirectory: true).standardizedFileURL
+        let folder = URL(fileURLWithPath: arguments[outputIndex], isDirectory: true).standardizedFileURL
         guard !FileManager.default.fileExists(atPath: folder.path) else {
             throw ComparisonError(message: "Choose a new capture folder.")
         }
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let mac = try await capture(
-            pid: native, gesture: gesture, windowsKeys: false, folder: folder.appendingPathComponent("native"))
+            pid: native, input: inputs.0, windowsKeys: false, folder: folder.appendingPathComponent("native"),
+            duration: duration)
         let ui = try await capture(
-            pid: desktop, gesture: gesture, windowsKeys: true, folder: folder.appendingPathComponent("svelte"))
+            pid: desktop, input: inputs.1, windowsKeys: true, folder: folder.appendingPathComponent("svelte"),
+            duration: duration)
         let data = try JSONEncoder().encode(["native": mac, "svelte": ui])
         let template = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent(
             "desktop-parity-viewer.html")

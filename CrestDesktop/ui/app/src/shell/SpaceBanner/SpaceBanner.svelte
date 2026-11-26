@@ -60,6 +60,7 @@
   import { untrack } from "svelte";
 
   import { useSpacePager } from "../../spaces/space-pager";
+  import { displayedBranding } from "../../branding";
   import BannerLayers from "./BannerLayers.svelte";
 
   /**
@@ -105,7 +106,7 @@
     {@const id = space.id}
     <div class="space-banner-layer" {@attach layer(id)}>
       {#if size.current}
-        <BannerLayers branding={space.settings.look} width={size.current.width} height={size.current.height} />
+        <BannerLayers branding={displayedBranding(space.settings.look)} width={size.current.width} height={size.current.height} />
       {/if}
     </div>
   {/each}

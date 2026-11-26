@@ -45,7 +45,7 @@
   pointer-events: none;
 }
 
-@media (prefers-color-scheme: dark) {
+:where(:root[data-appearance="dark"]) {
   .setup-window {
     --setup-canvas: rgb(23 34 56);
     --setup-ink: rgb(255 255 255 / 0.85);

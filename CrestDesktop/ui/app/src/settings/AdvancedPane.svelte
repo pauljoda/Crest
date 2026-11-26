@@ -4,6 +4,8 @@
   import { setupLauncher } from "../commands";
   import { Group } from "./controls";
 
+  let { onFlags }: { onFlags?: () => void } = $props();
+
   /**
    * BrowserAdvancedSettingsPane's Setup section: Crest Setup again from the
    * welcome, or its Spaces to review and change, over this window. The Mac's
@@ -21,3 +23,9 @@
     <span class="settings-row-title">Review &amp; Customize Setup…</span>
   </button>
 </Group>
+
+{#if onFlags}
+  <Group title="Engine">
+    <button type="button" class="settings-row settings-link-row settings-action-row" onclick={onFlags}>Feature Flags</button>
+  </Group>
+{/if}

@@ -1,6 +1,7 @@
 <script lang="ts" module>
   import type { SpaceState } from "@crest/contracts";
 
+  import { animateSpacePages } from "../../appearance.svelte";
   import { reducesMotion } from "../../motion";
   import {
     animateSettle, applyLeafStyle, type LeafStyle, type PagerFrame, placedIndex, spacePager, stopSettle,
@@ -8,13 +9,7 @@
 
   /** Whether pages slide when the window changes Space, as the person and the system allow; otherwise they fade. */
   function slidesPages(): boolean {
-    let animates = true;
-    try {
-      animates = localStorage.getItem("crest.appearance.animate-space-pages") !== "false";
-    } catch {
-      // The preference stays at its default.
-    }
-    return animates && !reducesMotion();
+    return animateSpacePages.current && !reducesMotion();
   }
 
   /** Where a card stands, or how opaque it is, at the pager's frame. */
@@ -172,7 +167,7 @@
    * moving between them moves no card. Where pages don't slide, the cards keep
    * their place and fade into one another instead.
    */
-  let { spaces, liveId, shownPins, embedsPages, onRest, render, children }: {
+  let { spaces, liveId, shownPins, embedsPages, onRest, render, toolbar, children }: {
     spaces: readonly SpaceState[];
     /** Whether cards embed their pages' surfaces, as inside Crest's own window. */
     embedsPages: boolean;
@@ -184,6 +179,7 @@
     onRest: () => void;
     render: Snippet<[space: SpaceState, live: boolean]>;
     /** What lies over the page area, wherever the strip stands, such as a Peek. */
+    toolbar?: Snippet;
     children?: Snippet;
   } = $props();
 
@@ -320,5 +316,6 @@
       </PlaceProvider>
     </div>
   {/each}
+  {@render toolbar?.()}
   <div class="space-content-overlay">{@render children?.()}</div>
 </div>

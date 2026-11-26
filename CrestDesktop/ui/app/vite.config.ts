@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { defineConfig, searchForWorkspaceRoot } from "vite";
 
+const peekSample = fileURLToPath(new URL("../../../CrestMac/Features/TransientBrowsing/Models/PeekSample.html", import.meta.url));
 const fonts = fileURLToPath(new URL("../../../CrestShared/Resources/Fonts", import.meta.url));
 
 /** Crest's app icons, which every Crest app shares and the Start Page shows. */
@@ -33,7 +34,7 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     host: "127.0.0.1",
-    fs: { allow: [searchForWorkspaceRoot(process.cwd()), fonts, appIcons, heraldry, searchLogos, guideLogos, artworkCredits] },
+    fs: { allow: [searchForWorkspaceRoot(process.cwd()), fonts, peekSample, appIcons, heraldry, searchLogos, guideLogos, artworkCredits] },
   },
   build: { target: "chrome130", sourcemap: true, license: { fileName: "licenses/dependencies.md" } },
 });

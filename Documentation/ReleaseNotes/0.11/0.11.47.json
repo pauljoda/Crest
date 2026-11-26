@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "desktop-shell-folder-and-appearance-parity",
+      "category": "internal",
+      "message": "The Windows alpha adds light and dark appearance, Space color dimming, searchable folder previews, a right-hand sidebar, an optional address bar above each page in Split View, Peek controls, Space ordering, and rules for opening external links."
+    },
+    {
+      "id": "optimized-desktop-motion-comparisons",
+      "category": "internal",
+      "message": "Contributors can compare optimized desktop builds with a native Chromium or WebKit reference and align a recording at the first visible movement in each app."
+    }
+  ]
+}

@@ -4,7 +4,10 @@
   import type { Session } from "../../boot";
   import type { SelectionItem } from "../sidebar-selection";
 
+  import type { PreviewState } from "../preview-state.svelte";
+
   interface TabRowProps {
+    readonly preview?: PreviewState;
     readonly session: Session;
     readonly tab: TabState;
     readonly pageId: string | null;
@@ -40,17 +43,18 @@
 </script>
 
 <script lang="ts">
+  import { tabContentScale } from "../../appearance.svelte";
   import SymbolIcon from "../../SymbolIcon.svelte";
   import { coreState } from "../../use-core";
   import { rowIconSize } from "../sidebar-layout";
-  import { previewHandlers } from "../TabPreview.svelte";
+  import { previewHandlers } from "../preview-state.svelte";
   import RenameField from "./RenameField.svelte";
   import { rowStyle } from "./sidebar-parts.svelte";
   import TabIcon from "./TabIcon.svelte";
 
   let {
     session, tab, pageId, resident, depth, inSplit, selected, renaming, row, unit, marked, held, lifted, insertsBefore, aimedAround, onPress,
-    onSelect, onClose, onMiddleClick, onContextMenu, onRenamed,
+    preview, onSelect, onClose, onMiddleClick, onContextMenu, onRenamed,
   }: TabRowProps = $props();
 
   // The surface under the shown tab, which moves between the page's rows (sidebar-parts.svelte.ts).
@@ -73,12 +77,12 @@
   onclick={renaming ? undefined : onSelect}
   onauxclick={(event) => event.button === 1 && onMiddleClick()}
   oncontextmenu={onContextMenu}
-  {...previewHandlers(tab.id)}
+  {...previewHandlers(tab.id, "tab", preview)}
 >
   {#if selected}
     <span class="row-selection"></span>
   {/if}
-  <TabIcon {session} {tab} {pageId} size={rowIconSize} />
+  <TabIcon {session} {tab} {pageId} size={rowIconSize * tabContentScale()} />
   {#if renaming}
     <RenameField initial={tab.displayTitle} placeholder="Tab Name" onDone={onRenamed} />
   {:else}

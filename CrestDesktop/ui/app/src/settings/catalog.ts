@@ -22,7 +22,7 @@ export interface SettingsDestination {
 
 export type SettingsPageName =
   | "general" | "tabs" | "search" | "lookAndFeel" | "links" | "shortcuts" | "privacy" | "adBlocking"
-  | "spaces" | "passwords" | "extensions" | "advanced" | "about";
+  | "spaces" | "featureFlags" | "extensions" | "advanced" | "about";
 
 const destination = (name: SettingsPageName, title: string, subtitle: string, symbol: string,
   color: readonly [number, number, number], searchTerms: string, navigationTitle = title): SettingsDestination =>
@@ -36,9 +36,9 @@ export const destinations: Readonly<Record<SettingsPageName, SettingsDestination
   search: destination("search", "Search", "Search engine, command palette and site searches", "magnifyingglass", brand.butter,
     "search engine Google suggestions command palette address bar results order top hit blended sections complete addresses inline autocomplete learn choices clear site searches shortcuts Tab YouTube Wikipedia scopes calculator paste and go reasons"),
   lookAndFeel: destination("lookAndFeel", "Appearance", "Window, tabs, zoom and motion", "paintpalette", brand.coral,
-    "look and feel theme page zoom percentage animation motion page cards folder preview hover tabs folders"),
+    "theme animation sidebar slide hover area delay pin layout stretch tab size spacing paper opacity website colors previews folders Super Copy"),
   links: destination("links", "Links", "Quick Window and Peek", "link", brand.sage,
-    "external apps Quick Window Peek pinned saved routing open Super Copy trackers"),
+    "Peek size animation time modifier cross-site pinned saved links dim test"),
   shortcuts: destination("shortcuts", "Shortcuts", "Keyboard commands", "keyboard", brand.butter,
     "keyboard keys commands rebind remap hotkeys navigation tabs Spaces page"),
   privacy: destination("privacy", "Privacy & Permissions", "Site access and data", "hand.raised", brand.coral,
@@ -47,13 +47,11 @@ export const destinations: Readonly<Record<SettingsPageName, SettingsDestination
     "ads trackers content blocking filter lists subscribe EasyList uBlock AdGuard my filters custom rules block element cookie notices strict balanced"),
   spaces: destination("spaces", "Spaces", "Profiles and appearance", "square.grid.2x2", brand.crestBlue,
     "profile name identity icon color appearance theme search cleanup isolation reorder browsing archive independence"),
-  passwords: destination("passwords", "Passwords", "Credentials and autofill", "key", brand.butter,
-    "credentials autofill passkeys"),
   extensions: destination("extensions", "Extensions", "Space extensions and permissions", "puzzlepiece.extension", brand.sky,
     "extensions permissions Chromium Chrome Web Store install copies Spaces"),
-  // Windows' Advanced page holds Setup alone so far: it imports and exports nothing yet.
+  featureFlags: destination("featureFlags", "Feature Flags", "Chromium features", "flag", brand.sage, "engine experimental flags"),
   advanced: destination("advanced", "Advanced", "Setup and onboarding", "switch.2", brand.coral,
-    "setup onboarding rerun welcome review customize Spaces"),
+    "setup onboarding rerun welcome review customize Spaces feature flags"),
   about: destination("about", "About", "Version, updates, and support", "info.circle", brand.sky,
     "version build updates changelog what's new feedback Reddit GitHub issues roadmap support community"),
 };
@@ -104,7 +102,7 @@ export function sidebarTint(color: readonly [number, number, number], dark: bool
 }
 
 /** Every page Settings has, as the palette's Settings Pages finds them. */
-export const settingsPages = Object.values(destinations).map((destination) => ({
+export const settingsPages = Object.values(destinations).filter(destination => destination.name !== "featureFlags").map((destination) => ({
   name: destination.name,
   title: destination.title,
   terms: `${destination.subtitle} ${destination.searchTerms}`,

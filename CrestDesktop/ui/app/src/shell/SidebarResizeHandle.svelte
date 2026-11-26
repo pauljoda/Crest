@@ -4,6 +4,7 @@
 </script>
 
 <script lang="ts">
+  import { sidebarOnRight } from "../appearance.svelte";
   import { holdLiveResize } from "./PageCard.svelte";
   import { holdPointer } from "./pointer-hold";
   import { clampedSidebarWidth, sidebarWidths } from "./sidebar-layout";
@@ -65,7 +66,7 @@
 <div
   bind:this={grip}
   class={`sidebar-resize-handle${active ? " active" : ""}${floating ? " floating" : ""}`}
-  style:left="calc({center} - {handleMetrics.hitWidth / 2}px)"
+  style:--handle-edge="calc({center} - {handleMetrics.hitWidth / 2}px)"
   style:width="{handleMetrics.hitWidth}px"
   role="separator"
   aria-orientation="vertical"
@@ -92,7 +93,7 @@
   }}
   onpointermove={(event) => {
     const begun = drag;
-    if (begun && event.pointerId === begun.pointerId) resize(begun.width + event.clientX - begun.x);
+    if (begun && event.pointerId === begun.pointerId) resize(begun.width + (event.clientX - begun.x) * (sidebarOnRight.current ? -1 : 1));
   }}
   onpointerup={finish}
   onpointercancel={finish}
@@ -101,7 +102,7 @@
     const step = event.key === "ArrowRight" ? handleMetrics.step : event.key === "ArrowLeft" ? -handleMetrics.step : 0;
     if (step === 0) return;
     event.preventDefault();
-    resize(width + step);
+    resize(width + (sidebarOnRight.current ? -step : step));
     onResizeEnded(latest);
   }}
   onmouseleave={onLeave}

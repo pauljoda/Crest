@@ -23,7 +23,7 @@
   scrollbar-gutter: stable;
 }
 
-@media (prefers-color-scheme: dark) {
+:where(:root[data-appearance="dark"]) {
   .getting-started {
     --guide-canvas: rgb(var(--crest-canvas-dark));
     --guide-surface: rgb(var(--crest-surface-dark));
@@ -257,7 +257,7 @@
   -webkit-app-region: no-drag;
 }
 
-@media (prefers-color-scheme: dark) {
+:where(:root[data-appearance="dark"]) {
   .practice-window {
     --primary-rgb: 255 255 255;
     --fg: rgb(255 255 255 / 0.9);

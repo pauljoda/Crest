@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { FolderState } from "@crest/contracts";
 
+  import { previewHandlers } from "../preview-state.svelte";
   import FolderArtwork from "../FolderArtwork.svelte";
   import { folderItem } from "../sidebar-selection";
   import RenameField from "./RenameField.svelte";
@@ -49,6 +50,7 @@
   data-location={folder.location.name}
   data-unit={folderItem(folder.id)}
   aria-selected={held}
+  {...renaming ? {} : previewHandlers(folder.id, "folder")}
   onpointerdown={onPress}
   onclick={renaming ? undefined : onToggle}
   oncontextmenu={onContextMenu}

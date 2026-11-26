@@ -71,10 +71,14 @@
 </script>
 
 <script lang="ts">
-  import type { SpaceState } from "@crest/contracts";
+  import { CreateSpace, EngineCapability, ReorderSpaces, type SpaceState } from "@crest/contracts";
   import { untrack } from "svelte";
-  import { MediaQuery } from "svelte/reactivity";
+  import { useReadsDark } from "../appearance.svelte";
 
+  import { coreState } from "../use-core";
+  import { spaceEditing } from "../commands";
+  import { send } from "./preferences.svelte";
+  import FeatureFlagsPane from "./FeatureFlagsPane.svelte";
   import AppIcon from "../shell/AppIcon.svelte";
   import type { Session } from "../boot";
   import { residentNativeTabs } from "../native-tabs";
@@ -83,7 +87,7 @@
   import { destinations, leadingRows, matches, sidebarTint, trailingRows } from "./catalog";
   import { keptScroll } from "./controls";
   import SettingsPane from "./panes.svelte";
-  import SpacePage from "./SpacePage.svelte";
+  import SpacePage, { movedOrder } from "./SpacePage.svelte";
   import "./settings.css";
 
   /**
@@ -144,8 +148,21 @@
   $effect(() => {
     if (selection.kind === "space" && !selectedSpace) untrack(() => setSelection({ kind: "page", name: "general" }));
   });
-  const darkScheme = new MediaQuery("(prefers-color-scheme: dark)");
   const rowsFor = (names: readonly SettingsPageName[]) => names.filter((name) => matches(destinations[name], search));
+  const offersFlags = $derived(!!session.shell && !!coreState(session).engines?.engines.some(
+    engine => engine.isDefault && engine.capabilities.includes(EngineCapability.featureFlags)));
+  let arranging = $state(false);
+  async function addSpace() {
+    const spaceId = crypto.randomUUID();
+    try {
+      await session.core.send(CreateSpace({workspaceId: session.workspaceId, windowId: session.windowId, spaceId}));
+      spaceEditing.open(spaceId);
+    } catch { /* The core can refuse a Space in this window. */ }
+  }
+  function moveSpace(id: string, step: number) {
+    const order = movedOrder(spaces, id, step);
+    if (order) send(session, ReorderSpaces({workspaceId: session.workspaceId, spaceIds: order}));
+  }
   const leading = $derived(rowsFor(leadingRows));
   const trailing = $derived(rowsFor(trailingRows));
   const spaceMatches = (space: SpaceState) => !search.trim() || matches(destinations.spaces, search)
@@ -156,11 +173,11 @@
 
 {#snippet pageRow(name: SettingsPageName)}
   {@const destination = destinations[name]}
-  {@const selected = selection.kind === "page" && selection.name === name}
+  {@const selected = selection.kind === "page" && (selection.name === name || (name === "advanced" && selection.name === "featureFlags"))}
   <button type="button" class={["settings-nav-row", selected && "selected"]} aria-current={selected || undefined}
     onclick={() => setSelection({ kind: "page", name })}>
-    <span class="settings-nav-symbol" style:color={sidebarTint(destination.color, darkScheme.current)}>
-      <SymbolIcon name={destination.symbol} size={15} />
+    <span class="settings-nav-symbol" style:--nav-tint={sidebarTint(destination.color, useReadsDark())}>
+      <SymbolIcon name={destination.symbol} size={18} strokeWidth={2.4} />
     </span>
     <span class="settings-nav-title">{destination.navigationTitle}</span>
   </button>
@@ -188,18 +205,32 @@
     <nav class="settings-nav">
       {#each leading as name (name)}{@render pageRow(name)}{/each}
       {#if listedSpaces.length > 0}
-        <div class="settings-nav-heading">Spaces</div>
+        <div class="settings-nav-heading"><span>Spaces</span>
+          {#if !search.trim()}
+            <button type="button" class="settings-icon-button" aria-label={arranging ? "Done arranging Spaces" : "Arrange Spaces"}
+              aria-pressed={arranging} onclick={() => (arranging = !arranging)}><SymbolIcon name={arranging ? "checkmark" : "pencil"} size={12} /></button>
+            <button type="button" class="settings-icon-button" aria-label="Add Space" onclick={addSpace}><SymbolIcon name="plus" size={12} /></button>
+          {/if}
+        </div>
         {#each listedSpaces as space (space.id)}
           {@const selected = selection.kind === "space" && selection.spaceId === space.id}
           {@const sub = space.membership?.primaryId && space.membership.primaryId !== space.id}
-          <button type="button" class={["settings-nav-row space", selected && "selected", sub && "sub"]}
-            aria-current={selected || undefined} onclick={() => setSelection({ kind: "space", spaceId: space.id })}>
-            <span class="settings-nav-symbol">
-              <SpaceIdentityIcon symbol={space.settings.symbol} branding={space.settings.look} size={18} />
-            </span>
-            <span class="settings-nav-title">{space.settings.name || "Untitled Space"}</span>
-            {#if space.settings.requiresAuthentication}<SymbolIcon name="lock.fill" size={10} class="settings-nav-lock" />{/if}
-          </button>
+          <div class="settings-space-order">
+            <button type="button" class={["settings-nav-row space", selected && "selected", sub && "sub"]}
+              aria-current={selected || undefined} onclick={() => setSelection({ kind: "space", spaceId: space.id })}>
+              <span class="settings-nav-symbol">
+                <SpaceIdentityIcon symbol={space.settings.symbol} branding={space.settings.look} size={18} />
+              </span>
+              <span class="settings-nav-title">{space.settings.name || "Untitled Space"}</span>
+              {#if space.settings.requiresAuthentication}<SymbolIcon name="lock.fill" size={10} class="settings-nav-lock" />{/if}
+            </button>
+            {#if arranging && !search.trim()}
+              <button type="button" class="settings-icon-button" aria-label={`Move ${space.settings.name} up`}
+                disabled={!movedOrder(spaces, space.id, -1)} onclick={() => moveSpace(space.id, -1)}><SymbolIcon name="arrow.up" size={12} /></button>
+              <button type="button" class="settings-icon-button" aria-label={`Move ${space.settings.name} down`}
+                disabled={!movedOrder(spaces, space.id, 1)} onclick={() => moveSpace(space.id, 1)}><SymbolIcon name="arrow.down" size={12} /></button>
+            {/if}
+          </div>
         {/each}
       {/if}
       {#if trailing.length > 0}<div class="settings-nav-gap"></div>{/if}
@@ -209,14 +240,25 @@
   <div class="settings-divider"></div>
   <main class="settings-page">
     {#if selection.kind === "page"}
-      <header class="settings-page-header"><h2>{destinations[selection.name].title}</h2></header>
+      <header class="settings-page-header">
+        {#if selection.name === "featureFlags"}
+          <button class="settings-icon-button" aria-label="Back to Advanced" onclick={() => setSelection({ kind: "page", name: "advanced" })}>
+            <SymbolIcon name="chevron.left" size={16} />
+          </button>
+        {/if}
+        <h2>{destinations[selection.name].title}</h2></header>
+      {#if selection.name === "featureFlags"}
+        <FeatureFlagsPane {session} {spaces} {shownSpace} />
+      {:else}
       {#key selection.name}
         <div class="settings-scroll" {...keptScroll(kept.scrolls, selection.name)}>
           <div class="settings-column">
-            <SettingsPane name={selection.name} {session} {spaces} {shownSpace} />
+            <SettingsPane name={selection.name} {session} {spaces} {shownSpace}
+              onFlags={offersFlags ? () => setSelection({ kind: "page", name: "featureFlags" }) : undefined} />
           </div>
         </div>
       {/key}
+      {/if}
     {:else if selectedSpace}
       <SpacePage {session} space={selectedSpace} {spaces} scrolls={kept.scrolls} tab={spaceTab}
         onOpenSpace={(spaceId) => setSelection({ kind: "space", spaceId })}

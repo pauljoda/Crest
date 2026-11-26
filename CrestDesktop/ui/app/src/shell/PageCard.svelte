@@ -75,7 +75,7 @@
   import type { PageStill } from "../spaces/page-stills";
   import { StripPlace } from "../spaces/SpaceContentStrip";
   import { useSpacePager } from "../spaces/space-pager";
-  import { useEngineVersion } from "../use-core";
+  import { coreState, useEngineVersion } from "../use-core";
   import { useCardsSnap } from "./cards-snap";
   import EmbeddedPage from "./EmbeddedPage.svelte";
   import { usePointerHeld } from "./pointer-hold";
@@ -216,8 +216,12 @@
   });
 
   /** The development browser's frames for the pages the card keeps: every live page, or its own alone. */
-  const framed = (all: boolean) => (useEngineVersion(session), [...(session.engine?.pages.values() ?? [])])
-    .filter((page) => (all || page.id === pageId) && page.url);
+  const framed = (all: boolean) => {
+    const pages = coreState(session).pages;
+    useEngineVersion(session);
+    return [...(session.engine?.pages.values() ?? [])].filter(page =>
+      page.url && (page.id === pageId || (all && !!pages.get(page.id)?.tabId)));
+  };
 </script>
 
 <!-- A page's still, at its card's size in CSS pixels, so each of its pixels lands on one of the screen's. -->

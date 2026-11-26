@@ -1,5 +1,6 @@
-import { type BrandColor, type SpaceBranding, SpaceTextColorModeKinds } from "@crest/contracts";
+import { type BrandColor, type SpaceBranding, SpaceTextColorMode, SpaceTextColorModeKinds } from "@crest/contracts";
 
+import { darkSpaceDimming, useReadsDark } from "./appearance.svelte";
 import { paintedColors } from "./spaces/space-fills";
 
 /** The tone a Space's text reads in: light text, or dark. */
@@ -40,9 +41,27 @@ export function resolvedSymbolColor(branding: SpaceBranding): BrandColor {
   return branding.symbolColor ?? primaryColor(branding);
 }
 
+/** The window's displayed palette, following SpaceBranding.appearing(in:dimming:). */
+export function displayedBranding(look: SpaceBranding): SpaceBranding {
+  const amount = useReadsDark() ? darkSpaceDimming.current / 100 : 0;
+  if (!amount) return look;
+  const colors = look.colors.colors.map(color => {
+    const high = Math.max(color.red, color.green, color.blue);
+    const low = Math.min(color.red, color.green, color.blue);
+    const brightness = Math.min(high, 0.08 + 0.04 * high);
+    const saturation = high ? 0.8 * (high - low) / high : 0;
+    const channel = (value: number) => {
+      const distance = high > low ? (high - value) / (high - low) : 0;
+      return value + (brightness * (1 - saturation * distance) - value) * amount;
+    };
+    return { red: channel(color.red), green: channel(color.green), blue: channel(color.blue), alpha: color.alpha };
+  });
+  return { ...look, colors: { colors }, readabilityFade: look.readabilityFade * (1 - amount), textColorMode: SpaceTextColorMode.automatic };
+}
+
 /** The tone the device's appearance reads in: light text over a dark window. */
 export function systemTone(): ForegroundTone {
-  return matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "dark";
+  return useReadsDark() ? "light" : "dark";
 }
 
 /**
@@ -52,6 +71,7 @@ export function systemTone(): ForegroundTone {
  */
 export function foregroundTone(branding: SpaceBranding | null | undefined, system: ForegroundTone = systemTone()): ForegroundTone {
   if (!branding) return system;
+  branding = displayedBranding(branding);
   switch (branding.textColorMode.kind) {
     case SpaceTextColorModeKinds.Light: return "light";
     case SpaceTextColorModeKinds.Dark: return "dark";

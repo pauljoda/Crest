@@ -17,7 +17,7 @@
    * edge, the window's only loading indicator. Showing another Space, its
    * parts pop out and the new Space's pop in, as the Mac's BrowserAddressSwap.
    */
-  let { space, address, site, secure, resident, loading, accent }: {
+  let { space, address, site, secure, resident, loading, accent, focused = true, activate = () => openPalette("editLocation") }: {
     /** The Space the field shows, whose change swaps its parts. */
     space: string;
     address: string;
@@ -34,6 +34,8 @@
     resident: boolean;
     loading: boolean;
     accent: string;
+    focused?: boolean;
+    activate?: () => void;
   } = $props();
 
   const shown = $derived(addressPresentation(address));
@@ -42,7 +44,7 @@
 </script>
 
 <!-- The field fades out while the palette that grew out of it is open, keeping its place. -->
-<div class={`address-field${useFieldHandedOff() ? " handed-off" : ""}${loading ? " loading" : ""}`} style:--field-accent={accent}>
+<div class={`address-field${focused && useFieldHandedOff() ? " handed-off" : ""}${loading ? " loading" : ""}`} style:--field-accent={accent}>
   <span class="address-progress" aria-hidden="true"></span>
   <AddressSwap {swap} shows={!!site || (resident && !!address)}>
     {#if site}
@@ -54,7 +56,7 @@
     {/if}
   </AddressSwap>
   <button type="button" class="address-summary" aria-label={address ? `Address, ${address}` : "Address and search"}
-    {...{ "aria-description": "Opens the command palette" }} onclick={() => openPalette("editLocation")}>
+    {...{ "aria-description": "Opens the command palette" }} onclick={activate}>
     <AddressSwap {swap} shows>
       <span class={`address-domain${address ? "" : " placeholder"}`}>{shown.domain}</span>
       {#if shown.route}

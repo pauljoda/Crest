@@ -8,6 +8,9 @@
   src: url("../../../../CrestShared/Resources/Fonts/AlloVariable.ttf") format("truetype");
 }
 
+:root[data-appearance="dark"] { color-scheme: dark; }
+:root[data-appearance="light"] { color-scheme: light; }
+
 :root {
   color-scheme: light dark;
   /* The page card as the Mac frames it: an 8-point frame and a 1.5-point
@@ -151,7 +154,7 @@ button {
   background: rgb(236 236 236);
 }
 
-@media (prefers-color-scheme: dark) {
+:where(:root[data-appearance="dark"]) {
   .space-banner-window {
     background: rgb(50 50 50);
   }
@@ -248,6 +251,48 @@ button {
   padding-top: var(--window-inset);
 }
 
+/* The address bar sits above the page even while the sidebar is tucked away. */
+.page-address-toolbar {
+  position: absolute;
+  inset: 0 var(--window-inset) auto;
+  height: 52px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-inline: 8px;
+  color: var(--fg);
+}
+
+.page-address-toolbar > button,
+.page-address-host {
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+}
+
+.page-address-host {
+  min-width: 0;
+  flex: 1 1 130px;
+  margin-inline-start: 4px;
+}
+
+.page-address-toolbar[inert] { filter: blur(6px); }
+
+.page-column:has(> .split-address-toolbar) {
+  grid-template-rows: 48px minmax(0, 1fr);
+  container-type: inline-size;
+}
+
+.split-address-toolbar {
+  position: relative;
+  inset: auto;
+  height: 48px;
+  min-width: 0;
+}
+
+.page-column:not(.focused) > .split-address-toolbar { opacity: 0.5; }
+@container (max-width: 310px) { .split-address-toolbar .page-bar-dock { display: none; } }
+
 /* The cards a window shows for a Space, side by side: a Split View's
    members, or a tab alone. Between two cards lies the page frame's gap,
    which holds the divider; each card takes its share of the rest, none
@@ -291,7 +336,7 @@ button {
   box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08), 0 8px 30px rgb(0 0 0 / 0.22);
 }
 
-@media (prefers-color-scheme: dark) {
+:where(:root[data-appearance="dark"]) {
   .page-placeholder-card {
     background: rgb(30 30 32);
     color: rgb(255 255 255 / 0.55);
@@ -632,19 +677,25 @@ button {
   box-shadow: 0 0 0 0.5px var(--prompt-border), 0 10px 30px rgb(0 0 0 / 0.22);
 }
 
-/* What lies over the page area wherever the Space strip stands: the same box
-   as a Space's cards. */
+/* What lies over the page area wherever the Space strip stands: inside the window
+   frame, including the page seam that the native Peek covers. */
 .space-content-overlay {
   position: absolute;
   inset: 0;
   z-index: 5;
   display: grid;
-  padding: 0 var(--window-inset) var(--window-inset);
+  --overlay-frame: calc(var(--window-inset) - var(--page-seam));
+  padding: 0 var(--overlay-frame) var(--overlay-frame);
   pointer-events: none;
 }
 
 .browser-window:not(.with-title-bar) .space-content-overlay {
-  padding-top: var(--window-inset);
+  padding-top: var(--overlay-frame);
+}
+
+.browser-window.top-address .space-content-page:not(:has(.page-columns.several)),
+.browser-window.top-address:has(.page-address-toolbar:not(.split-address-toolbar)) .space-content-overlay {
+  padding-top: 52px;
 }
 
 /* A Peek, as the Mac's pointer arrangement draws it: the page area dimmed,
@@ -669,7 +720,8 @@ button {
 
 .peek-stack {
   position: absolute;
-  inset: 24px;
+  inset: calc(24px + (100% - 48px - 58px) * (1 - var(--peek-share, 1)) / 2)
+    calc(24px + (100% - 48px) * (1 - var(--peek-share, 1)) / 2);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -783,7 +835,7 @@ button {
   pointer-events: none;
 }
 
-@media (prefers-color-scheme: dark) {
+:where(:root[data-appearance="dark"]) {
   .peek-close,
   .peek-destination {
     color: rgb(255 255 255 / 0.9);
@@ -990,6 +1042,7 @@ button {
 }
 
 .sidebar-retreat-zone {
+  left: var(--retreat-edge);
   position: absolute;
   z-index: 3;
   top: var(--title-bar-height, 0px);
@@ -1001,6 +1054,7 @@ button {
 /* The sidebar's edge beside the page resizes it, as the Mac's handle: a clear
    grip that shows a thin bar while it moves. It rides above a floating card. */
 .sidebar-resize-handle {
+  left: var(--handle-edge);
   position: absolute;
   z-index: 3;
   top: var(--title-bar-height, var(--window-inset));
@@ -1073,6 +1127,28 @@ button {
     transition: none;
   }
 }
+
+/* The contents keep their reading order on either side. Only the drawer, its
+   hit regions, and the grid column it gives the page change edges. */
+.browser-window.sidebar-right {
+  grid-template-columns: minmax(0, 1fr) var(--sidebar-width);
+  padding-left: var(--window-inset);
+  padding-right: 0;
+}
+
+.browser-window.sidebar-right:is(.sidebar-floating, .sidebar-collapsed) {
+  grid-template-columns: minmax(0, 1fr) 0;
+  padding-right: var(--window-inset);
+}
+
+.sidebar-right > .sidebar-slot.docked { grid-column: 2; grid-row: -2; }
+.sidebar-right > .space-content, .sidebar-right .palette-area { grid-column: 1; }
+.sidebar-right .sidebar-slot:is(.floating, .collapsed), .sidebar-right .sidebar-card-shadow { left: auto; right: 7px; }
+.sidebar-right .sidebar-slot.collapsed, .sidebar-right .sidebar-card-shadow.collapsed { transform: translateX(calc(100% + 21px)); }
+.sidebar-right .sidebar-retreat-margin { left: auto; right: calc(7px + var(--sidebar-width)); }
+.sidebar-right .sidebar-retreat-zone { left: 0; right: var(--retreat-edge); }
+.sidebar-right .sidebar-edge, .sidebar-right .sidebar-card-region { left: auto; right: 0; }
+.sidebar-right .sidebar-resize-handle { left: auto; right: var(--handle-edge); }
 
 /* Sidebar */
 .sidebar {
@@ -1398,15 +1474,21 @@ button {
 .pinned-grid {
   display: grid;
   grid-template-columns: repeat(var(--pin-columns, 4), minmax(0, 1fr));
-  gap: var(--crest-space-small);
+  gap: var(--pin-spacing, 8px);
   /* The Mac's pinnedTabsBottomInset: 6 to the Space's header, not the page's 8. */
   margin-bottom: -2px;
+}
+
+.pinned-grid.stretch { display: flex; flex-wrap: wrap; }
+.pinned-grid.stretch > :is(.pinned-tile, .pin-gap) {
+  flex: 1 1 calc((100% - (var(--pin-columns) - 1) * var(--pin-spacing, 8px)) / var(--pin-columns) - 0.1px);
+  min-width: 0;
 }
 
 .pinned-tile {
   --pin-lift: 0;
   position: relative;
-  height: 47px;
+  height: max(32px, calc(47px * var(--tab-scale, 1)));
   display: grid;
   place-items: center;
   border-radius: 13px;
@@ -1447,7 +1529,7 @@ button {
 }
 
 /* A tile whose tab holds no page is dimmed, as an unloaded row is. */
-.pinned-tile.unloaded .tab-icon {
+.dim-unloaded .pinned-tile.unloaded .tab-icon {
   opacity: 0.5;
   filter: saturate(0.3);
 }
@@ -1660,7 +1742,7 @@ button {
 .tab-section {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: calc(2px * var(--sidebar-spacing, 1));
 }
 
 /* The current tabs stand under a divider even with no saved tabs above,
@@ -1748,7 +1830,8 @@ button {
   display: flex;
   align-items: center;
   gap: 9px;
-  min-height: 40px;
+  min-height: max(24px, calc(40px * var(--tab-scale, 1)));
+  font-size: calc(13px * var(--tab-content-scale, 1));
   margin-inline: var(--row-inset, 0px);
   padding-inline: calc(9px + var(--row-indent, 0px)) 6px;
   border-radius: max(9px, calc(13px - 4px * var(--row-depth, 0)));
@@ -1768,7 +1851,7 @@ button {
 /* A group's header is its name alone, as a caption over its tabs: small,
    semibold and secondary, where a folder's artwork would start. */
 .group-row .row-title {
-  font-size: 10px;
+  font-size: calc(10px * var(--tab-content-scale, 1));
   font-weight: 600;
   color: var(--fg-secondary);
 }
@@ -1778,7 +1861,7 @@ button {
   flex: none;
   width: 28px;
   text-align: center;
-  font-size: 10px;
+  font-size: calc(10px * var(--tab-content-scale, 1));
   color: var(--fg-secondary);
 }
 
@@ -1794,9 +1877,34 @@ button {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: var(--surface-selected);
-  box-shadow: inset 0 0 0 1px var(--surface-border), 0 1px 3px rgb(0 0 0 / 0.14);
+  background: var(--selected-tab-fill, var(--surface-selected));
+  box-shadow: inset 0 0 0 1px var(--custom-chrome-accent, var(--surface-border)), 0 1px 3px rgb(0 0 0 / 0.14);
   z-index: 0;
+}
+
+/* CrestPaperSheet lets the resting surface show through the selected paper. */
+.paper-selection .tab-row.selected {
+  --fg: var(--crest-ink);
+  --fg-secondary: rgb(23 34 56 / 0.65);
+}
+.paper-selection .row-selection {
+  background: color-mix(in srgb, var(--crest-paper) calc(var(--selected-paper-opacity) * 100%), transparent);
+  box-shadow: 0 1px 2px rgb(23 34 56 / 0.16);
+}
+.paper-selection .pinned-tile.selected .pin-ring {
+  background: color-mix(in srgb, var(--crest-paper) calc(var(--selected-paper-opacity) * 100%), transparent);
+}
+.paper-selection.tint-selected-pins .pinned-tile.selected .pin-ring {
+  background: linear-gradient(color-mix(in srgb, var(--pin-accent, var(--default-favicon)) 30%, transparent) 0 0),
+    linear-gradient(color-mix(in srgb, var(--crest-paper) calc(var(--selected-paper-opacity) * 100%), transparent) 0 0),
+    var(--pin-accent, var(--default-favicon));
+}
+.pinned-tile > .tab-icon { position: relative; }
+@media (prefers-reduced-transparency: reduce) {
+  .paper-selection { --selected-paper-opacity: 1 !important; }
+}
+@media (prefers-contrast: more) {
+  .paper-selection .row-selection { outline: 1px solid var(--crest-ink); outline-offset: -1px; }
 }
 
 /* The selection shows at once, as the Mac's does (browsers switch tabs at once); only a press eases in,
@@ -1836,7 +1944,7 @@ button {
 .row-close {
   flex: none;
   width: 28px;
-  height: 28px;
+  height: min(28px, max(24px, calc(40px * var(--tab-scale, 1))));
   display: grid;
   place-items: center;
   border-radius: 6px;
@@ -1851,8 +1959,8 @@ button {
 }
 
 /* A tab whose page isn't loaded, as the Mac's residency dims it. */
-.tab-row.unloaded > .tab-icon,
-.tab-row.unloaded > .row-title {
+.dim-unloaded .tab-row.unloaded > .tab-icon,
+.dim-unloaded .tab-row.unloaded > .row-title {
   opacity: 0.5;
   filter: saturate(0.3);
 }
@@ -2070,10 +2178,8 @@ button {
   --default-favicon: rgb(95 99 104);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --default-favicon: rgb(154 160 166);
-  }
+:root[data-appearance="dark"] {
+  --default-favicon: rgb(154 160 166);
 }
 
 .tab-icon.default-favicon {
@@ -2548,16 +2654,14 @@ button {
   --prompt-on-accent: rgb(23 34 56);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --prompt-surface: rgb(39 54 83);
-    --prompt-bar: rgb(31 44 69);
-    --prompt-ink: rgb(255 250 240);
-    --prompt-ink-secondary: rgb(255 250 240 / 0.72);
-    --prompt-border: rgb(255 250 240 / 0.14);
-    --prompt-field: rgb(23 34 56);
-    --prompt-accent: rgb(241 117 98);
-  }
+:root[data-appearance="dark"] {
+  --prompt-surface: rgb(39 54 83);
+  --prompt-bar: rgb(31 44 69);
+  --prompt-ink: rgb(255 250 240);
+  --prompt-ink-secondary: rgb(255 250 240 / 0.72);
+  --prompt-border: rgb(255 250 240 / 0.14);
+  --prompt-field: rgb(23 34 56);
+  --prompt-accent: rgb(241 117 98);
 }
 
 /* A question a page or Crest asks, as the Mac's alert sheet: the page dimmed
@@ -3444,7 +3548,7 @@ embed.page-frame {
   font-size: 13px;
 }
 
-@media (prefers-color-scheme: dark) {
+:where(:root[data-appearance="dark"]) {
   /* The Mac's window background in Crest's dark, a warm near-black, and
      its separator. */
   .find-bar {
@@ -3567,7 +3671,7 @@ embed.page-frame {
 /* The Start Page's title in Crest's display type, rounded and heavy. */
 .start-page-title {
   margin: 0;
-  color: var(--fg);
+  color: rgb(var(--primary-rgb) / 0.86);
   font-family: var(--crest-font-display);
   font-size: 30px;
   font-weight: var(--crest-font-display-weight);
@@ -3603,10 +3707,17 @@ embed.page-frame {
   max-width: 720px;
 }
 
+@media (prefers-reduced-transparency: no-preference) {
+  .space-content-page.reads-light .palette-card.embedded {
+    --pal-surface: rgb(48 48 48 / 0.58);
+    backdrop-filter: blur(40px) saturate(1.55);
+  }
+}
+
 /* Under the overlay palette it blurs nothing but the Space's smooth banner,
    so it drops the blur, which every frame of the overlay's morph would draw
    again (palette-morph.ts). */
-.palette-card.embedded.overlaid {
+.space-content-page .palette-card.embedded.overlaid {
   backdrop-filter: none;
 }
 
@@ -4139,7 +4250,7 @@ embed.page-frame {
   -webkit-app-region: no-drag;
 }
 
-@media (prefers-color-scheme: dark) {
+:where(:root[data-appearance="dark"]) {
   .utility-fan-button {
     color: rgb(255 255 255 / 0.92);
     background: rgb(40 40 44 / 0.62);
@@ -4743,7 +4854,7 @@ embed.page-frame {
   -webkit-app-region: no-drag;
 }
 
-@media (prefers-color-scheme: dark) {
+:where(:root[data-appearance="dark"]) {
   .space-access {
     --access-surface: rgb(32 32 32);
     --access-ink: rgb(255 255 255 / 0.9);
@@ -4868,3 +4979,23 @@ embed.page-frame {
 .space-access-switch:hover:not(:disabled) {
   filter: brightness(1.15);
 }
+
+.folder-preview-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+  background: rgb(var(--primary-rgb) / 0.08);
+}
+.folder-preview-search input {
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+.folder-preview-list { display: flex; flex-direction: column; gap: calc(2px * var(--sidebar-spacing, 1)); max-height: 320px; overflow: auto; }
+.folder-preview-empty { display: block; padding: 8px; opacity: 0.65; }

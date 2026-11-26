@@ -1,6 +1,7 @@
 <script lang="ts" module>
   import type { SpaceState } from "@crest/contracts";
 
+  import { spaceIconDisplay, spaceIconScale, spaceIconSizing } from "../appearance.svelte";
   import { foregroundTone } from "../branding";
   import { interpolate, type PagerFrame } from "./space-pager";
 
@@ -51,8 +52,7 @@
 
   /** BrowserSpaceIconSizing.automatic: the largest step from 1 down to 0.3 at which every Space fits. */
   function fittedScale(style: BaseStyle, count: number, width: number): number {
-    const chosen = manualIconScale();
-    if (chosen !== null) return chosen;
+    if (spaceIconSizing.current === "manual" && spaceIconDisplay.current === "icons") return spaceIconScale.current;
     let narrowest = { scale: 1, width: Infinity };
     for (let percent = 100; percent >= 30; percent -= 5) {
       const candidate = scaled(style, percent / 100).contentWidth(count);
@@ -67,26 +67,6 @@
     const reservation = (width: number) => (width > 0 ? width + stripSpacing : 0);
     const content = Math.max(0, available - 2 * stripHorizontalInset);
     return Math.max(0, content - 2 * Math.max(reservation(leading), reservation(trailing)));
-  }
-
-  /** The person's Space icons on this device: crests, or dots. */
-  function spaceIconDisplay(): "icons" | "dots" {
-    try {
-      return localStorage.getItem("crest.appearance.space-icons") === "dots" ? "dots" : "icons";
-    } catch {
-      return "icons";
-    }
-  }
-
-  /** The scale the person set for Space icons, or null while they fit the strip. */
-  function manualIconScale(): number | null {
-    try {
-      if (localStorage.getItem("crest.appearance.spaceIconSizing") !== "manual") return null;
-      const value = Number(localStorage.getItem("crest.appearance.spaceIconScale"));
-      return Number.isFinite(value) ? Math.min(1.5, Math.max(0.3, value)) : 1;
-    } catch {
-      return null;
-    }
   }
 
   // MARK: - Position and frames
@@ -307,7 +287,7 @@
   // Every frame of the pager draws the strip again, as it moves; the
   // person's icon settings are read afresh with each.
   const frame = $derived(useSpacePagerFrames());
-  const showsDots = $derived((useSpacePagerFrames(), spaceIconDisplay() === "dots"));
+  const showsDots = $derived(spaceIconDisplay.current === "dots");
   const viewport = $derived(pickerViewportWidth(width, leading ? utilityButtonSize : 0, trailing ? utilityButtonSize : 0));
   const base = $derived(showsDots ? dotted(compact) : compact);
   const scale = $derived((useSpacePagerFrames(), fittedScale(base, spaces.length, viewport)));

@@ -28,19 +28,29 @@ def executable(bundle):
     return bundle / "Contents/MacOS" / name
 
 
-def build(build_native):
+def build(build_native, optimized, chromium_engine):
     arch = {"arm64": "arm64", "x86_64": "x64"}[platform.machine()]
     subprocess.run(["dotnet", "publish", "src/CrestCore.Native", "-c", "Release", "-r", f"osx-{arch}",
                     "--artifacts-path", OUTPUT / "dotnet", "-o", OUTPUT / "core"], cwd=ROOT / "CrestCore", check=True)
     subprocess.run(["dotnet", "build", ROOT / "CrestDesktop/devhost", "-c", "Release", "-o", OUTPUT / "bridge"],
                    cwd=ROOT / "CrestCore", check=True)
     subprocess.run(["npm", "ci", "--no-audit", "--no-fund"], cwd=UI, check=True)
+    if optimized:
+        subprocess.run([UI / "node_modules/.bin/vite", "build", "--mode", "comparison",
+                        "--outDir", OUTPUT / "ui", "--emptyOutDir"], cwd=UI / "app", check=True)
     if build_native:
-        subprocess.run(["xcodebuild", "-quiet", "-project", "Crest.xcodeproj", "-scheme", "Crest",
-                        "-configuration", "Debug", "-destination", f"platform=macOS,arch={platform.machine()}",
+        scheme = "CrestChromiumUI" if chromium_engine else "Crest"
+        conditions = ["$(inherited)"]
+        if optimized:
+            conditions.append("CREST_TEST_FIXTURES")
+        if chromium_engine:
+            conditions.extend(["CREST_CHROMIUM_HOST", "CREST_REVIEW_BUILD"])
+        subprocess.run(["xcodebuild", "-quiet", "-project", "Crest.xcodeproj", "-scheme", scheme,
+                        "-configuration", "Release" if optimized else "Debug", "-destination", f"platform=macOS,arch={platform.machine()}",
                         "-derivedDataPath", OUTPUT / "native", "CREST_MAC_BUNDLE_IDENTIFIER=com.pauldavis.crest.parity",
                         f"CREST_CORE_LIBRARY_DIR={OUTPUT / 'core'}", "ONLY_ACTIVE_ARCH=YES",
-                        "CODE_SIGN_IDENTITY=-", "CODE_SIGN_STYLE=Manual", "CODE_SIGN_ENTITLEMENTS=",
+                        "SWIFT_ACTIVE_COMPILATION_CONDITIONS=" + " ".join(conditions),
+                        "ENABLE_HARDENED_RUNTIME=NO", "CODE_SIGN_IDENTITY=-", "CODE_SIGN_STYLE=Manual", "CODE_SIGN_ENTITLEMENTS=",
                         "DEVELOPMENT_TEAM=", "PROVISIONING_PROFILE_SPECIFIER=", "build"], cwd=ROOT, check=True)
 
 
@@ -84,18 +94,26 @@ def ports():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--native-app", type=Path,
+    reference = parser.add_mutually_exclusive_group()
+    reference.add_argument("--native-app", type=Path,
                         help="The native reference build")
+    reference.add_argument("--chromium-engine", type=Path,
+                           help="Build the native Chromium UI with an existing Crest-overlaid Chromium.app")
+    parser.add_argument("--signing-identity", default="Apple Development",
+                        help="Local code-signing identity for the isolated Chromium reference")
     parser.add_argument("--browser", type=Path, default=Path("/Applications/Google Chrome.app"),
                         help="Chromium browser bundle for the Svelte interface")
     parser.add_argument("--no-build", action="store_true", help="Reuse this checkout's core, bridge and npm install")
+    parser.add_argument("--optimized", action="store_true",
+                        help="Pair an isolated Release build with the compiled Svelte bundle for timing comparisons")
     args = parser.parse_args()
     if sys.platform != "darwin":
         parser.error("This comparison runs on macOS")
     browser = executable(args.browser)
     if not args.no_build:
-        build(args.native_app is None)
-    native = executable(args.native_app or OUTPUT / "native/Build/Products/Debug/Crest.app")
+        build(args.native_app is None, args.optimized, args.chromium_engine)
+    configuration = "Release" if args.optimized else "Debug"
+    products = OUTPUT / "native/Build/Products" / configuration
     bridge_port, ui_port = ports()
     origin = f"http://127.0.0.1:{ui_port}"
     url = f"{origin}/?compare&bridge=ws://127.0.0.1:{bridge_port}/core"
@@ -105,13 +123,27 @@ def main():
     for key in ("CREST_ISOLATED_PERSISTENCE_ID", "CREST_ISOLATED_CLOUD_SYNC_ID"):
         env.pop(key, None)
     with tempfile.TemporaryDirectory(prefix="crest-desktop-parity-") as temporary, contextlib.ExitStack() as stack:
+        native_app = args.native_app or products / "Crest.app"
+        if args.chromium_engine:
+            native_app = Path(temporary) / "Crest Comparison.app"
+            subprocess.run([sys.executable, ROOT / "Scripts/control-plane/package-chromium-host.py",
+                            "--browser", args.chromium_engine, "--ui", products / "CrestChromiumUI.framework",
+                            "--core", OUTPUT / "core/CrestCore.Native.dylib", "--output", native_app,
+                            "--signing-identity", args.signing_identity], check=True)
+            # Launch Services remembers the app even after its temporary directory is gone.
+            register = Path("/System/Library/Frameworks/CoreServices.framework/Frameworks/"
+                            "LaunchServices.framework/Support/lsregister")
+            stack.callback(subprocess.run, [register, "-u", native_app], check=False)
+        native = executable(native_app)
+
         def start(command, **kwargs):
             return stack.enter_context(running(command, env=env, **kwargs))
 
         bridge = start(["dotnet", OUTPUT / "bridge/CrestDesktop.DevHost.dll", "--core",
                         OUTPUT / "core/CrestCore.Native.dylib", "--port", str(bridge_port), "--origin", origin])
         ready(bridge, f"http://127.0.0.1:{bridge_port}/health")
-        vite = start([UI / "node_modules/.bin/vite", "--port", str(ui_port), "--strictPort"], cwd=UI / "app")
+        vite = start([UI / "node_modules/.bin/vite", *(["preview", "--outDir", OUTPUT / "ui"] if args.optimized else []),
+                      "--host", "127.0.0.1", "--port", str(ui_port), "--strictPort"], cwd=UI / "app")
         ready(vite, origin)
         common = ["--no-first-run", "--no-default-browser-check", "--use-mock-keychain"]
         reference = start([native, *common, "--crest-control-plane", f"--user-data-dir={temporary}/native"])

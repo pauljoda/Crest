@@ -25,7 +25,7 @@
   import TabsPane from "./TabsPane.svelte";
 
   /** The page Settings shows for `name`. */
-  let { name, ...props }: PaneProps & { name: SettingsPageName } = $props();
+  let { name, onFlags, ...props }: PaneProps & { name: SettingsPageName; onFlags?: () => void } = $props();
 </script>
 
 {#if name === "general"}
@@ -45,7 +45,7 @@
 {:else if name === "adBlocking"}
   <AdBlockingPane session={props.session} />
 {:else if name === "advanced"}
-  <AdvancedPane />
+  <AdvancedPane {onFlags} />
 {:else if name === "about"}
   <AboutPane {...props} />
 {/if}

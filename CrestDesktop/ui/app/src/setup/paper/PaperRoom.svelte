@@ -15,7 +15,7 @@
   import { css } from "../../branding";
   import { presence } from "../../motion";
   import { backgroundFill, fillColorAt, mixOklab } from "../../spaces/space-fills";
-  import { useReadsDark } from "./reads-dark";
+  import { useReadsDark } from "../../appearance.svelte";
   import TiledGrain from "./TiledGrain.svelte";
 
   /**

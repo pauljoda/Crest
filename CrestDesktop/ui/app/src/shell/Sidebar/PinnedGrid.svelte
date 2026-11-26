@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
 
-  import { pinCapacity, pinColumns } from "../sidebar-layout";
+  import { pinGap, pinLayout, stretchPins, tabScale } from "../../appearance.svelte";
+  import { pinColumns } from "../sidebar-layout";
 
   /**
    * The pinned tiles in the Mac's PinnedTabGridLayout: at most four to a row,
@@ -17,20 +18,10 @@
     "data-list-folder": string;
   } = $props();
 
-  let grid = $state<HTMLDivElement | null>(null);
-  // Only a change in how many tiles fit redraws the grid, not every step of a resize.
-  let capacity = $state(4);
-  $effect(() => {
-    const element = grid;
-    if (!element) return;
-    const observer = new ResizeObserver(([entry]) => {
-      capacity = pinCapacity(entry.contentRect.width);
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  });
+  let width = $state(0);
+  const columns = $derived(pinColumns(count, width, tabScale(), pinGap(), pinLayout.current));
 </script>
 
-<div bind:this={grid} class={className} {...rest} style:--pin-columns={pinColumns(count, capacity)}>
+<div bind:clientWidth={width} class={className} class:stretch={stretchPins.current} {...rest} style:--pin-columns={columns}>
   {@render children?.()}
 </div>

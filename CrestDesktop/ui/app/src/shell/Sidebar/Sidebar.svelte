@@ -17,6 +17,7 @@
   type Renaming = { readonly tabId: string } | { readonly folderId: string } | null;
 
   interface SidebarProps {
+    readonly previews?: { pictures: import("../../switcher/tab-pictures").TabPictures; enabled: boolean };
     readonly session: Session;
     readonly browsing: Browsing;
     readonly space: SpaceState;
@@ -29,6 +30,7 @@
     readonly pagesByTab: ReadonlyMap<string, string>;
     /** Whether the navigation buttons head the sidebar, as on the Mac, rather than the window's title bar. */
     readonly showsNavigation: boolean;
+    readonly addressInSidebar?: boolean;
     /** The shown page's permission request waiting on the person, if any. */
     readonly permission: PermissionAsked | null;
     /** The window's downloads, inside Crest's own window; none in development. */
@@ -67,7 +69,7 @@
   import { untrack } from "svelte";
 
   import { portal } from "../../attachments";
-  import { css, emojiOf, indigo, primaryColor } from "../../branding";
+  import { emojiOf, indigo } from "../../branding";
   import { openPalette, toggleUtilityEvent } from "../../commands";
   import { type MenuEntry, showContextMenu } from "../../menus";
   import { residentNativeTabs } from "../../native-tabs";
@@ -80,15 +82,12 @@
   import SpacePageStrip from "../../spaces/SpacePageStrip.svelte";
   import { SpaceIdentityIcon } from "../../spaces/SpaceIdentity";
   import SpaceSwitcher from "../../spaces/SpaceSwitcher.svelte";
+  import PageAddress from "./PageAddress.svelte";
   import { isLocked } from "../../spaces/space-access";
   import { coreState, useCoreVersion } from "../../use-core";
   import ChromeButton from "../ChromeButton.svelte";
   import NavigationButtons from "../NavigationButtons.svelte";
-  import PermissionPrompt from "../prompts/PermissionPrompt.svelte";
-  import { blockedPopups, useBlockedPopups } from "../blocked-popups";
-  import { useCertificates } from "../site-control.svelte";
   import { PinnedExtensionStrip } from "../ExtensionActions";
-  import { SiteControlPanel } from "../SiteControl";
   import { droppedJustNow, type LiftItem, useSidebarLift } from "../sidebar-drag.svelte";
   import {
     backgroundMenu,
@@ -124,15 +123,16 @@
   } from "../sidebar-selection";
   import SidebarScrollAffordance from "../SidebarScrollAffordance.svelte";
   import SplitGroupHeader from "../SplitGroupHeader.svelte";
-  import { previewHandlers, showsTabPreviews } from "../TabPreview.svelte";
+  import { previewTabs, sidebarOnRight } from "../../appearance.svelte";
+  import { previewHandlers, tabPreview } from "../preview-state.svelte";
+  import TabPreviewLayer from "../TabPreview.svelte";
   import { ColorPicker, EmojiPicker, Popover } from "../pickers";
-  import AddressField from "./AddressField.svelte";
   import CurrentTabsDivider from "./CurrentTabsDivider.svelte";
   import FolderRow from "./FolderRow.svelte";
   import LiftPreview from "./LiftPreview.svelte";
   import PinnedGrid from "./PinnedGrid.svelte";
   import PinnedTileFace from "./PinnedTileFace.svelte";
-  import { folderTabCount, useRowMotion } from "./sidebar-parts.svelte";
+  import { folderTabIds, useRowMotion } from "./sidebar-parts.svelte";
   import TabRow from "./TabRow.svelte";
 
   /**
@@ -141,8 +141,8 @@
    * the core's sidebar outline, which already orders and nests them.
    */
   let {
-    session, browsing, space, spaces, shownTabId, shownTabs, page, pagesByTab, showsNavigation, permission, downloads, onDialog,
-    docked, onToggleDock, practice,
+    session, browsing, space, spaces, shownTabId, shownTabs, page, pagesByTab, addressInSidebar = true, showsNavigation, permission, downloads, onDialog,
+    docked, onToggleDock, practice, previews,
   }: SidebarProps = $props();
 
   let aside = $state<HTMLElement | null>(null);
@@ -226,24 +226,6 @@
     untrack(() => {
       renaming = null;
     });
-  });
-
-  // Site Controls act for the shown page while it has an address, and go
-  // with the Space or the page they opened for, as the Mac's popover does.
-  const siteControlPage = $derived(page?.live.url ? page : null);
-  const certificates = useCertificates(() => ({ session, page: siteControlPage }));
-  const popupNotice = $derived.by(() => {
-    const popups = useBlockedPopups();
-    return siteControlPage ? popups.notice(siteControlPage.id) : null;
-  });
-  let siteControlsOpen = $state(false);
-  const closeSiteControls = () => {
-    siteControlsOpen = false;
-  };
-  $effect(() => {
-    void space.id;
-    void siteControlPage?.id;
-    untrack(closeSiteControls);
   });
 
   // The window's selection, which the Mac's sidebar keeps beside the shown
@@ -567,19 +549,6 @@
   };
   // A locked Space's address field shows nothing of its tabs.
   const shownLocked = $derived.by(() => (useCoreVersion(session), isLocked(session.core, space)));
-  const live = $derived(shownLocked ? undefined : page?.live);
-  // A live site's controls: its lock, which opens its certificate, and Site Controls.
-  const addressSite = $derived(siteControlPage && !shownLocked ? {
-    secure: siteControlPage.live.security.isSecure,
-    certificate: certificates.current.length > 0,
-    reviewCertificate: () => void session.shell?.certificate(certificates.current),
-    open: siteControlsOpen,
-    notice: popupNotice,
-    toggle: () => {
-      siteControlsOpen = !siteControlsOpen;
-    },
-  } : null);
-
   const toggleSavedTabs = (pageSpace: SpaceState) => {
     disclosure.prepare();
     void session.core.send(ExpandSavedTabs({
@@ -590,7 +559,7 @@
   const isCurrentTop = (list: SidebarList) => list.folderId === null && list.section.name === "current";
   const openNewTab = () => (practice ? practice.openExampleTab() : openPalette("newTab"));
   // The card says what the tile is, where the person keeps previews, which each change reads again.
-  const tileTitle = (tab: TabState) => (useCoreVersion(session), showsTabPreviews() ? undefined : tab.displayTitle);
+  const tileTitle = (tab: TabState) => previewTabs.current ? undefined : tab.displayTitle;
 
   /**
    * What the shown Space's page draws as the person uses it. A page a slide
@@ -702,7 +671,7 @@
             {@const inside = folderList(view, folder)}
             <FolderRow
               {folder}
-              tabCount={folderTabCount(pageSpace, folder.id)}
+              tabCount={folderTabIds(pageSpace, folder.id).length}
               depth={row.depth}
               renaming={renamesFolder}
               marked={view.marked(folderItem(folder.id))}
@@ -904,27 +873,9 @@
       <NavigationButtons {browsing} {page} />
     </div>
   {/if}
-  <!-- An open utility list's search stands where the address field stood, as on the Mac. -->
-  {#if !practice && !utility}
+  {#if !practice && addressInSidebar && !utility}
     <div class="address-area">
-      <AddressField
-        space={space.id}
-        address={shownLocked ? "" : live?.address ?? live?.url ?? tabs.get(shownTabId ?? "")?.url ?? ""}
-        site={addressSite}
-        secure={live ? live.security.isSecure : !shownLocked && !!tabs.get(shownTabId ?? "")?.url?.toLowerCase().startsWith("https:")}
-        resident={!!page}
-        loading={!!live?.isLoading}
-        accent={css(primaryColor(space.settings.look))}
-      />
-      <PermissionPrompt {session} asked={permission} spaceName={space.settings.name} />
-      {#if siteControlPage && siteControlsOpen && !permission}
-        <SiteControlPanel {session} {browsing} page={siteControlPage} {space}
-          isPrivate={coreState(session).workspaces.get(session.workspaceId)?.kind.isPrivate ?? false}
-          certificates={certificates.current} notice={popupNotice}
-          onAllowPopups={() => void blockedPopups.allow(session.core,
-            { pageId: siteControlPage.id, spaceId: siteControlPage.spaceId, url: siteControlPage.live.url })}
-          onClose={closeSiteControls} />
-      {/if}
+      <PageAddress {session} {browsing} {space} {page} {permission} tabUrl={tabs.get(shownTabId ?? "")?.url ?? ""} />
     </div>
   {/if}
 
@@ -939,7 +890,7 @@
       onSelect={(spaceId) => void showSpace(session.core, session.windowId, spaceId).catch(() => undefined)}
     >
       {#snippet leading()}
-        <ChromeButton symbol="sidebar.left" label={docked ? "Hide Sidebar" : "Dock Sidebar"} onClick={onToggleDock} />
+        <ChromeButton symbol={sidebarOnRight.current ? "sidebar.right" : "sidebar.left"} label={docked ? "Hide Sidebar" : "Dock Sidebar"} onClick={onToggleDock} />
       {/snippet}
       {#snippet trailing()}
         <CommonListsButton {session} bind:button={listsButton} expanded={utility !== null} {chosen}
@@ -995,3 +946,24 @@
       pageId={lift.item.kind === "tab" ? pagesByTab.get(lift.item.id) ?? null : null} />
   {/if}
 </aside>
+
+{#if previews}
+  <TabPreviewLayer {session} {space} {tabs} {shownTabId} {pagesByTab} pictures={previews.pictures}
+    enabled={previews.enabled && !shownLocked && !lift && !renaming && !utility}
+    onSelect={(id) => { if (!shownLocked) activate(id); }}>
+    {#snippet folderRow(tab, inner)}
+      <TabRow {session} {tab} preview={inner} pageId={pagesByTab.get(tab.id) ?? null} resident={residesWithoutPage(tab.id)}
+        depth={0} inSplit={false} selected={tab.id === shownTabId} renaming={false} row={null} unit={null}
+        marked={false} held={false} lifted={false} insertsBefore={false} aimedAround={false}
+        onPress={(event) => {
+          if (!aside?.querySelector(`.space-page:not([aria-hidden]) [data-before-tab="${tab.id}"]`)) {
+            pressRow(tabItem(tab.id), { kind: "tab", id: tab.id }, event);
+          }
+        }}
+        onSelect={(event) => { if (!shownLocked && activates(event)) { tabPreview.dismiss(); activate(tab.id); } }}
+        onClose={() => close(tab.id)} onMiddleClick={() => middleClick(tab)}
+        onContextMenu={(event) => { tabPreview.dismiss(); rowMenu(event, tabItem(tab.id), () => tabMenu(context, tab)); }}
+        onRenamed={finishRename} />
+    {/snippet}
+  </TabPreviewLayer>
+{/if}

@@ -3,7 +3,7 @@
    title over one centred column of grouped settings. */
 .settings {
   --settings-canvas: rgb(var(--crest-canvas-light));
-  --settings-card: rgb(var(--crest-surface-light));
+  --settings-card: color-mix(in srgb, var(--settings-canvas) 97%, black);
   --settings-ink: rgb(0 0 0 / 0.86);
   --settings-secondary: rgb(0 0 0 / 0.5);
   --settings-primary: 0 0 0;
@@ -21,10 +21,10 @@
   text-align: start;
 }
 
-@media (prefers-color-scheme: dark) {
+:where(:root[data-appearance="dark"]) {
   .settings {
     --settings-canvas: rgb(var(--crest-canvas-dark));
-    --settings-card: rgb(var(--crest-surface-dark));
+    --settings-card: color-mix(in srgb, var(--settings-canvas) 97%, white);
     --settings-ink: rgb(255 255 255 / 0.9);
     --settings-secondary: rgb(255 255 255 / 0.55);
     --settings-primary: 255 255 255;
@@ -77,7 +77,7 @@
 }
 
 .settings-search {
-  margin: 12px 10px 4px;
+  margin: 12px 10px 12px;
 }
 
 .settings-search input,
@@ -129,7 +129,20 @@
 }
 
 .settings-nav-row.selected {
-  background: rgb(var(--settings-primary) / 0.13);
+  background: light-dark(#0065d1, #007af5);
+  color: white;
+}
+
+.settings-nav-row.selected .settings-nav-symbol {
+  color: inherit;
+}
+
+@media (forced-colors: active) {
+  .settings-nav-row.selected {
+    background: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
 }
 
 .settings-nav-row.sub {
@@ -137,6 +150,7 @@
 }
 
 .settings-nav-symbol {
+  color: var(--nav-tint, inherit);
   display: grid;
   place-items: center;
   flex: none;
@@ -248,18 +262,18 @@
   box-sizing: border-box;
   max-width: 640px;
   margin: 0 auto;
-  padding: 20px 12px 32px;
+  padding: 20px clamp(12px, 5vw, 32px) 32px;
 }
 
 .settings-group {
-  margin-bottom: 20px;
+  margin-bottom: 32px;
 }
 
 .settings-group-header {
   display: flex;
   align-items: center;
   min-height: 20px;
-  padding: 0 10px 6px;
+  padding: 0 10px 10px;
 }
 
 /* A section's title in Crest's rounded heavy type, as the Mac's
@@ -300,9 +314,9 @@
   align-items: center;
   gap: 12px;
   width: 100%;
-  min-height: 40px;
+  min-height: 49px;
   box-sizing: border-box;
-  padding: 6px 10px 6px 14px;
+  padding: 6px 10px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -372,12 +386,12 @@
   position: relative;
   display: flex;
   align-items: center;
-  width: 38px;
-  height: 22px;
+  width: 52px;
+  height: 24px;
   padding: 2px;
   border: 0;
-  border-radius: 11px;
-  background: rgb(var(--settings-primary) / 0.18);
+  border-radius: 12px;
+  background: rgb(var(--settings-primary) / 0.09);
   transition: background-color 120ms ease-in-out;
 }
 
@@ -391,9 +405,9 @@
 }
 
 .settings-switch-knob {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
+  width: 32px;
+  height: 20px;
+  border-radius: 10px;
   background: white;
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
 }
@@ -406,16 +420,16 @@
 
 .settings-select select {
   appearance: none;
-  min-width: 120px;
-  max-width: 260px;
+  min-width: 0;
+  max-width: min(260px, 38vw);
   height: 26px;
-  padding: 0 26px 0 10px;
+  padding: 0 28px 0 6px;
   border: 0;
   border-radius: 6px;
-  background: rgb(var(--settings-primary) / 0.07);
-  box-shadow: inset 0 0 0 0.5px var(--settings-hairline);
-  color: inherit;
+  background: transparent;
+  color: var(--settings-accent);
   font: inherit;
+  text-align: end;
 }
 
 .settings-select.compact select {
@@ -429,9 +443,13 @@
 
 .settings-select-glyph {
   position: absolute;
-  right: 8px;
+  right: 2px;
+  box-sizing: content-box;
+  padding: 3px;
+  border-radius: 50%;
+  background: rgb(var(--settings-primary) / 0.09);
   pointer-events: none;
-  color: var(--settings-secondary);
+  color: var(--settings-accent);
 }
 
 .settings-segmented {
@@ -442,7 +460,7 @@
 }
 
 .settings-segmented button {
-  min-width: 72px;
+  min-width: 68px;
   height: 24px;
   padding: 0 12px;
   border: 0;
@@ -453,19 +471,23 @@
 }
 
 .settings-segmented button.chosen {
-  background: var(--settings-canvas);
+  color: white;
+  background: var(--settings-accent);
   box-shadow: 0 0 0 0.5px var(--settings-hairline), 0 1px 2px rgb(0 0 0 / 0.12);
   font-weight: 500;
 }
 
 .settings-button {
-  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
   padding: 0 12px;
   border: 0;
   border-radius: 6px;
   background: rgb(var(--settings-primary) / 0.07);
   box-shadow: inset 0 0 0 0.5px var(--settings-hairline);
-  color: inherit;
+  color: var(--settings-accent);
   font: inherit;
 }
 
@@ -941,7 +963,7 @@
   --forge-label: rgb(138 106 34);
 }
 
-@media (prefers-color-scheme: dark) {
+:where(:root[data-appearance="dark"]) {
   .space-appearance {
     --forge-tint: rgb(79 142 224);
     --forge-line: rgb(255 253 247 / 0.22);
@@ -1334,6 +1356,34 @@
 .symbol-count {
   font-size: 11px;
   color: var(--prompt-ink-secondary);
+}
+
+.settings-appearance-slider {
+  width: clamp(80px, 18.52vw, 160px);
+  accent-color: var(--settings-accent);
+}
+
+@media (forced-colors: none) {
+  .settings-appearance-slider {
+    appearance: none;
+    background: transparent;
+  }
+
+  .settings-appearance-slider::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(to right, var(--settings-accent) var(--filled), rgb(var(--settings-primary) / 0.12) var(--filled));
+  }
+
+  .settings-appearance-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    margin-top: -6px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 1px 3px #0004;
+  }
 }
 
 .forge-slider {
@@ -1891,4 +1941,74 @@ button.forge-swatch.selected {
 /* The page's divider runs under the crest row, which stands between the header and the tabs. */
 .settings-page-header.space:has(+ .settings-group-crests) {
   border-bottom: 0;
+}
+
+/* The two native layout choices show a 520-point preview fitted into a square face.
+   The switcher choices crop into its sidebar so the four marks remain legible. */
+/* The Mac's Appearance form keeps 356 points for its controls in a narrow split. */
+.settings-column:has(.settings-layout-choices) { min-width: calc(356px + 2 * clamp(12px, 5vw, 32px)); }
+
+.settings-layout-choices {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  padding: 12px;
+}
+
+.settings-layout-choices:has(.switcher-crop) { padding-block: 22px; }
+
+.settings-layout-choices button {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 6px;
+  flex: 0 1 152px;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  color: var(--settings-secondary);
+  font: inherit;
+}
+
+.settings-layout-choices button[aria-checked="true"] { color: var(--settings-ink); font-weight: 600; }
+.settings-preview-face {
+  width: 100%; aspect-ratio: 1; padding: 7px; box-sizing: border-box;
+  background: rgb(var(--settings-primary) / 0.045); border-radius: 16px;
+  outline: 1px solid var(--settings-hairline);
+}
+.settings-layout-choices button[aria-checked="true"] .settings-preview-face { outline: 3px solid var(--settings-accent); }
+.settings-layout-choices button:focus-visible { outline: 2px solid var(--settings-accent); border-radius: 12px; }
+.settings-preview-window {
+  display: block; position: relative; overflow: hidden; width: 100%; height: 100%; container-type: inline-size;
+  background: #26323b; border-radius: 8px; color: #e3e7ec; font-weight: 400; font-size: 4px; text-align: left;
+}
+.settings-preview-window > span { position: absolute; }
+.preview-caption { left: 3%; top: 2%; opacity: 0.25; font-size: 2.5cqw; }
+.preview-nav { left: 41%; top: 2%; font-size: 3cqw; }
+.preview-address { left: 4%; top: 11%; font-size: 2.2cqw; }
+.preview-address.above { left: 67%; top: 3%; font-size: 2cqw; }
+.preview-pins { left: 4%; top: 20%; font-size: 3cqw; }
+.preview-space { left: 4%; top: 30%; font-size: 3.2cqw; }
+.preview-page { inset: 1.5% 1.5% 1.5% 55%; background: #fffdf7; border-radius: 2.6cqw; }
+.preview-page.below-bar { top: 10%; }
+.preview-tab-list { top: 40%; left: 2%; width: 51%; }
+.preview-tab { display: flex; align-items: center; gap: 2cqw; height: 7.8cqw; padding: 0 2cqw; font-size: 2.7cqw; white-space: nowrap; }
+.settings-preview-window:not(.switcher-crop) .preview-tab:first-child { background: #d1d2cd; color: #26323b; border-radius: 2.5cqw; }
+.switcher-crop .preview-tab-list { top: -7%; width: 98%; }
+.switcher-crop .preview-tab { height: 15.5cqw; padding-left: 5cqw; font-size: 5cqw; }
+.preview-switcher { display: flex; align-items: center; gap: 2cqw; left: 17%; bottom: 2%; font-size: 4cqw; }
+.preview-switcher svg { box-sizing: content-box; width: 3cqw; height: 3cqw; padding: 1cqw; border-radius: 1cqw; background: #52616a; }
+.preview-switcher i { width: 3cqw; height: 3cqw; border-radius: 50%; background: #6aaed2; }
+.preview-switcher i:nth-last-child(2) { background: #d5a93d; }
+.preview-switcher i:last-child { background: #80aa91; }
+.switcher-crop .preview-switcher { bottom: 5%; left: 50%; transform: translateX(-50%) scale(1.8); }
+
+.settings-engine-page { flex: 1; min-height: 0; width: 100%; border: 0; }
+
+.settings-space-order, .settings-nav-heading:has(.settings-icon-button) { display: flex; align-items: center; }
+.settings-space-order .settings-nav-row, .settings-nav-heading > span { flex: 1; min-width: 0; }
+.settings-accent-color { width: 32px; height: 24px; padding: 1px; border: 0; background: transparent; }
+.settings-route-pattern {
+  width: min(210px, 100%); padding: 4px 8px; border-radius: 6px;
+  border: 1px solid var(--settings-hairline); color: inherit; background: var(--settings-card); font: inherit;
 }

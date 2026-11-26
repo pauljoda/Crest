@@ -8,8 +8,6 @@
    */
   export type SidebarPresentation = "docked" | "floating" | "collapsed";
 
-  /** How long the pointer rests on the window's edge before the sidebar comes out, as the Mac's default. */
-  const revealDelay = 200;
   /** How far past the card toward the page the pointer may go before the card retreats. */
   const retreatMargin = 30;
   /**
@@ -36,10 +34,11 @@
    * edge beside the window, give or take the slack, as the Mac's
    * hasPointerLeftThroughStripEdge decides.
    */
-  function leftThroughLeadingEdge(from: Point | null, to: Point): boolean {
-    if (to.x >= 0) return false;
+  function leftThroughLeadingEdge(from: Point | null, to: Point, right: boolean): boolean {
+    const x = (point: Point) => right ? innerWidth - point.x : point.x;
+    if (x(to) >= 0) return false;
     const start = from ?? to;
-    const crossing = start.x === to.x ? to.y : start.y + ((0 - start.x) / (to.x - start.x)) * (to.y - start.y);
+    const crossing = x(start) === x(to) ? to.y : start.y - x(start) / (x(to) - x(start)) * (to.y - start.y);
     return crossing >= -edgeSlack && crossing <= innerHeight + edgeSlack;
   }
 
@@ -105,11 +104,14 @@
   import type { ShellTransport } from "@crest/core-client";
   import { springCurve } from "@crest/design";
   import { flushSync, type Snippet, untrack } from "svelte";
+  import { MediaQuery } from "svelte/reactivity";
 
   import { portal } from "../attachments";
   import { isMenuOpen } from "../menus";
   import { reducesMotion } from "../motion";
-  import { sidebarSlide } from "./sidebar-slide.svelte";
+  import { sidebarOnRight, fullscreenSidebarReveal, sidebarMotionFactor, sidebarRevealDelay, sidebarRevealWidth, sidebarSlide } from "../appearance.svelte";
+  import { tabPreview } from "./preview-state.svelte";
+  import { useShellFrame } from "./WindowControls.svelte";
   import { holdCards } from "./cards-snap";
   import { holdLiveResize } from "./PageCard.svelte";
   import SidebarResizeHandle from "./SidebarResizeHandle.svelte";
@@ -185,7 +187,7 @@
   // A menu or one of the card's own fields in use holds it out.
   const held = () => {
     const active = document.activeElement;
-    return isMenuOpen() || (active instanceof HTMLInputElement && !!slot?.contains(active));
+    return tabPreview.shown !== null || isMenuOpen() || (active instanceof HTMLInputElement && !!slot?.contains(active));
   };
   // The pointer on the card's region: the card, its leading inset, its edge, and the margin beside it.
   const onCard = () => [slot, margin, grip, inset].some((part) => part?.matches(":hover"));
@@ -209,12 +211,17 @@
     }
     onPresentation("collapsed");
   };
+  $effect(() => {
+    if (!tabPreview.shown) untrack(() => { if (!keepsCard()) retreat(); });
+  });
   // Out over the page as the pointer reached for it, held until it's all the way out.
+  const browserFullscreen = new MediaQuery("(display-mode: fullscreen)");
+  const hoverAllowed = $derived(fullscreenSidebarReveal.current || !(shell ? useShellFrame(shell).fullscreen : browserFullscreen.current));
   const revealByPointer = () => {
     clearTimeout(reveal);
     reveal = undefined;
-    if (presentation !== "collapsed" || running) return;
-    revealing = performance.now() + revealHold * sidebarSlide.factor;
+    if (!hoverAllowed || presentation !== "collapsed" || running) return;
+    revealing = performance.now() + revealHold * sidebarMotionFactor();
     onPresentation("floating");
   };
   // A pointer moving onto the strip, or along it, brings the card out once it
@@ -226,11 +233,11 @@
       if (resting.x === at.x && resting.y === at.y) return;
       resting = null;
     }
-    if (reveal !== undefined || !isActive()) return;
+    if (!hoverAllowed || reveal !== undefined || !isActive()) return;
     reveal = setTimeout(() => {
       reveal = undefined;
       if (strip?.matches(":hover") || outside) revealByPointer();
-    }, revealDelay);
+    }, sidebarRevealDelay.current);
   };
 
   // The window follows the pointer for the edge: where it last was inside,
@@ -248,7 +255,7 @@
         returned = performance.now();
       };
       const leftWindow = (event: MouseEvent) => {
-        const through = leftThroughLeadingEdge(pointer, { x: event.clientX, y: event.clientY });
+        const through = leftThroughLeadingEdge(pointer, { x: event.clientX, y: event.clientY }, sidebarOnRight.current);
         pointer = null;
         if (through && isActive()) {
           outside = true;
@@ -303,13 +310,20 @@
   let dressing = $state<"in" | "out" | null>(null);
   let morphRevision = 0;
   const content = () => slot?.parentElement?.querySelector<HTMLElement>(":scope > .space-content") ?? null;
+  const direction = () => sidebarOnRight.current ? -1 : 1;
+  const leading = (rect: DOMRect) => sidebarOnRight.current ? innerWidth - rect.right : rect.left;
+  const trailing = (rect: DOMRect) => leading(rect) + rect.width;
   const setOffsets = (offsets: Offsets | null, shadowBase = { x: 0, y: 0 }) => {
     const page = content();
-    if (slot) slot.style.transform = offsets ? `translate(${offsets.x}px, ${offsets.y}px)` : "";
+    if (slot) slot.style.transform = offsets ? `translate(${direction() * offsets.x}px, ${offsets.y}px)` : "";
     if (shadow) {
-      shadow.style.transform = offsets ? `translate(${shadowBase.x + offsets.x}px, ${shadowBase.y + offsets.y}px)` : "";
+      shadow.style.transform = offsets ? `translate(${shadowBase.x + direction() * offsets.x}px, ${shadowBase.y + offsets.y}px)` : "";
     }
-    if (page) page.style.marginLeft = offsets ? `calc(${offsets.page}px - var(--window-inset))` : "";
+    if (page) {
+      const margin = offsets ? `calc(${offsets.page}px - var(--window-inset))` : "";
+      page.style.marginLeft = sidebarOnRight.current ? "" : margin;
+      page.style.marginRight = sidebarOnRight.current ? margin : "";
+    }
   };
   // Script moves them each frame, so their own transitions stand aside
   // meanwhile, and until the frame after the morph hands them over. The pages
@@ -380,7 +394,7 @@
     // Where the sidebar and the page stand now: at rest, partway through a
     // slide of their own, or partway through another morph.
     const fromRows = rows.getBoundingClientRect();
-    const fromPage = page.getBoundingClientRect().left;
+    const fromPage = leading(page.getBoundingClientRect());
     stop();
     const revision = morphRevision;
     holdTransitions(true);
@@ -395,11 +409,11 @@
     });
     // Where the presentation the morph runs in lays them out.
     const natural = rows.getBoundingClientRect();
-    const naturalPage = page.getBoundingClientRect().left;
+    const naturalPage = leading(page.getBoundingClientRect());
     const slotBox = element.getBoundingClientRect();
     const shadowBox = shadow?.getBoundingClientRect();
     const shadowBase = shadowBox ? { x: slotBox.left - shadowBox.left, y: slotBox.top - shadowBox.top } : { x: 0, y: 0 };
-    const from: Offsets = { x: fromRows.left - natural.left, y: fromRows.top - natural.top, page: fromPage - naturalPage };
+    const from: Offsets = { x: leading(fromRows) - leading(natural), y: fromRows.top - natural.top, page: fromPage - naturalPage };
     // The page's edge at the window's full width, and beside the docked
     // sidebar: the sidebar's gap past its edge, where a full-width page
     // keeps the window's inset.
@@ -417,7 +431,7 @@
     // A drawer goes until the sidebar is past the window's edge, or comes
     // into its seat; a card settles where its presentation lays it out.
     const to: Offsets = kind === "drawer" && final === "collapsed"
-      ? { x: -natural.right, y: 0, page: pageWide }
+      ? { x: -trailing(natural), y: 0, page: pageWide }
       : { x: 0, y: 0, page: (pageEnd ?? (final === "docked" ? "beside" : "wide")) === "beside" ? pageBeside : pageWide };
     // A drawer's page keeps its edge beside the sidebar's, within its own
     // reach; beneath a card, the page moves on the card's spring.
@@ -429,7 +443,7 @@
       return { x, y: devicePixels(from.y + (to.y - from.y) * fraction), page: devicePixels(pageAt(x, fraction)) };
     };
     setOffsets(offsetsAt(0), shadowBase);
-    const duration = spring.visualDuration * sidebarSlide.factor;
+    const duration = spring.visualDuration * sidebarMotionFactor();
     if (duration === 0) {
       place(final);
       return;
@@ -459,7 +473,7 @@
     morph.frame = requestAnimationFrame(step);
   };
   const hide = () => {
-    if (reducesMotion() || sidebarSlide.milliseconds === 0) {
+    if (reducesMotion() || sidebarSlide.current === 0) {
       place(keepsCard() ? "floating" : "collapsed");
       return;
     }
@@ -467,7 +481,7 @@
     else begin({ kind: "drawer", during: "docked", final: "collapsed", spring: tokens.sidebarDrawer });
   };
   const dock = () => {
-    if (reducesMotion() || sidebarSlide.milliseconds === 0) {
+    if (reducesMotion() || sidebarSlide.current === 0) {
       place("docked");
       return;
     }
@@ -476,7 +490,7 @@
     // moves aside beneath the card as it comes to its floating place, then
     // the card settles into its seat, its dressing going as it does.
     const rows = slot?.querySelector(".sidebar")?.getBoundingClientRect();
-    const away = running ? running.kind === "drawer" : presentation === "collapsed" && (!rows || rows.right <= 0);
+    const away = running ? running.kind === "drawer" : presentation === "collapsed" && (!rows || trailing(rows) <= 0);
     if (away) begin({ kind: "drawer", during: "docked", final: "docked", spring: tokens.sidebarDrawer });
     else {
       begin({
@@ -497,7 +511,7 @@
   $effect(() => {
     const shown = dressing;
     if (!shown) return;
-    const length = (shown === "in" ? tokens.sidebarDrawer : tokens.sidebarDockAttachment).visualDuration * 1000 * sidebarSlide.factor;
+    const length = (shown === "in" ? tokens.sidebarDrawer : tokens.sidebarDockAttachment).visualDuration * 1000 * sidebarMotionFactor();
     const timer = setTimeout(() => {
       dressing = null;
     }, length + 50);
@@ -535,6 +549,7 @@
   <div
     bind:this={strip}
     class="sidebar-edge"
+    style:width="{sidebarRevealWidth.current}px"
     {@attach portal(() => edgeHost)}
     onmouseenter={reach}
     onmousemove={reach}
@@ -566,7 +581,7 @@
        page beyond the margin is covered while the card floats, and the
        pointer reaching it puts the card away and the cover with it. -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="sidebar-retreat-zone" style:left="calc(7px + var(--sidebar-width) + {retreatMargin}px)" onmousemove={retreat}></div>
+  <div class="sidebar-retreat-zone" style:--retreat-edge="calc(7px + var(--sidebar-width) + {retreatMargin}px)" onmousemove={retreat}></div>
 {/if}
 <!-- The card's shadow, backdrop and sheen stay drawn, unseen, while the
      sidebar is docked, so the card comes out on its first frame rather

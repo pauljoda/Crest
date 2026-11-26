@@ -186,7 +186,8 @@ export async function boot(bridgeUrl: string): Promise<Session> {
         restoresTabs: shell !== null,
       }),
     );
-    const comparison = !shell && import.meta.env.DEV && new URLSearchParams(location.search).has("compare");
+    const comparison = !shell && (import.meta.env.DEV || import.meta.env.MODE === "comparison")
+      && new URLSearchParams(location.search).has("compare");
     if (shell && launches) await presentLaunchChoice(core, workspace.workspaceId, windowId);
     if (comparison) {
       const practice = core.state.workspaces.get(workspace.workspaceId);
