@@ -513,6 +513,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         userActivityHandler = nil
     }
 
+    // MARK: - Actions - Lifecycle
+
     func adopt(tabID: UUID, tab: BrowserPageTab) {
         self.tabID = tabID
         updateNavigationContext(tab: tab)
@@ -661,6 +663,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         userActivityHandler = nil
     }
 
+    // MARK: - Actions - Content & display
+
     func reloadOrStop() {
         performReload(.standard)
     }
@@ -686,6 +690,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         )
     }
 
+    // MARK: - Actions - Find & Reader Mode
+
     func presentFind() {
         findSession.present(hasLoadedPage: webView.url != nil)
     }
@@ -705,6 +711,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     func toggleReaderMode() {
         readerModeSession.toggle()
     }
+
+    // MARK: - Actions - Printing & export
 
     func printPage() {
         guard webView.url != nil else { return }
@@ -802,6 +810,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
     }
 
+    // MARK: - Actions - Credentials
+
     /// Puts Crest's strip above the keyboard in place of WebKit's bar, on a
     /// phone, once per page.
     func installCredentialStrip(browser: BrowserStore) {
@@ -862,6 +872,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 contentWorld: BrowserCredentialContentBridge.contentWorld)
         }
     }
+
+    // MARK: - Actions - Observation & navigation state
 
     private func installObservations() {
         observations = [
@@ -1096,6 +1108,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 isApprovedOverride: { overrides.isApproved($0, for: profileID) }),
             media: pageEngine.knownMediaActivity)
     }
+
+    // MARK: - Actions - Script messages
 
     /// Reads what the credential bridge posted from this page's web view. A
     /// popup shares this page's controller, so its bridge posts here too: a

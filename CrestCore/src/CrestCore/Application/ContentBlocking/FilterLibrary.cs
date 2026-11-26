@@ -191,7 +191,7 @@ internal sealed partial class FilterLibrary {
     private readonly Download resourcesDownload;
     private readonly string resourcesDigest;
     private readonly Download linkTrackingDownload = new(LinkTrackingName, LinkTrackingId, LinkTrackingUrl);
-    private readonly Func<Device.FilterPreferences> preferences;
+    private readonly Func<FilterPreferences> preferences;
     private readonly Action<Change> announce;
     private readonly IClock clock;
     private readonly Dictionary<string, Copy> copies = [];
@@ -243,7 +243,7 @@ internal sealed partial class FilterLibrary {
     /// they added and their own filters. Tests may name resources of their own
     /// with their digest, `resourcesDigest`.
     public FilterLibrary(string? storageDirectory, DevicePlatform platform, IReadOnlyList<string>? languages,
-        Func<Device.FilterPreferences> preferences, Action<Change> announce, IClock clock, string? resourcesUrl = null,
+        Func<FilterPreferences> preferences, Action<Change> announce, IClock clock, string? resourcesUrl = null,
         string? resourcesDigest = null) {
         ArgumentNullException.ThrowIfNull(platform);
         ArgumentNullException.ThrowIfNull(preferences);
@@ -267,7 +267,7 @@ internal sealed partial class FilterLibrary {
 
     /// Whether the device subscribes to `list`: as the person turned it, or as
     /// the level they chose turns it.
-    private bool IsOn(FilterList list, Device.FilterPreferences chosen) =>
+    private bool IsOn(FilterList list, FilterPreferences chosen) =>
         chosen.Choices.TryGetValue(list, out bool isOn) ? isOn : list.IsOnByDefault(chosen.Level, languages);
 
     /// How a catalog list is named on the wire: the same on every device.
@@ -282,14 +282,14 @@ internal sealed partial class FilterLibrary {
     private static string Digest(string text) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
 
     /// The lists the device subscribes to: the catalog's, then the person's.
-    private IEnumerable<Download> Lists(Device.FilterPreferences chosen) =>
+    private IEnumerable<Download> Lists(FilterPreferences chosen) =>
         FilterList.All.Where(list => IsOn(list, chosen)).Select(list => new Download(list.Name, IdOf(list), list.Source))
             .Concat(chosen.CustomLists.Where(list => list.IsOn).Select(list => new Download(NameOf(list), list.Id, list.Url)));
 
     /// Every download in force: the lists the device subscribes to, the
     /// resources, and the link-tracking list while the device cleans copied
     /// links.
-    private IEnumerable<Download> Downloads(Device.FilterPreferences chosen) {
+    private IEnumerable<Download> Downloads(FilterPreferences chosen) {
         var downloads = Lists(chosen).Append(resourcesDownload);
         return chosen.CleansCopiedLinks ? downloads.Append(linkTrackingDownload) : downloads;
     }

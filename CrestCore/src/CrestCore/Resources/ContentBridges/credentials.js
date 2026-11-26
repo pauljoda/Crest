@@ -151,9 +151,9 @@
     if (!id) {
       id = `form-${nextID++}`;
       idsByRoot.set(root, id);
-      rootsByID.set(id, new WeakRef(root));
       observeRoot(root);
     }
+    rootsByID.set(id, new WeakRef(root));
     return id;
   };
 
@@ -187,7 +187,7 @@
   const maximumOptions = 400;
   const optionsOf = (input) => input instanceof HTMLSelectElement
     ? Array.from(input.options).slice(0, maximumOptions)
-      .map((option) => ({ value: textOf(option.value), text: textOf(option.text) }))
+      .map((option) => ({ value: (option.value || "").slice(0, maximumText), text: textOf(option.text) }))
     : undefined;
 
   const isEntered = (input) => enteredValues.has(input) && enteredValues.get(input) === input.value;
@@ -267,6 +267,17 @@
     return values;
   };
 
+  const digestOf = (text) => {
+    let a = 0x811c9dc5;
+    let b = 0x9e3779b9;
+    for (let i = 0; i < text.length; i++) {
+      const code = text.charCodeAt(i);
+      a = Math.imul(a ^ code, 0x01000193);
+      b = Math.imul(b ^ (code + i), 0x85ebca6b);
+    }
+    return `${text.length}:${(a >>> 0).toString(16)}:${(b >>> 0).toString(16)}`;
+  };
+
   // A form being sent. The core decides whether it was, and what to
   // keep; this reports how it went and what the person entered.
   const capture = (root, trigger, control) => {
@@ -277,7 +288,7 @@
     const hasPassword = reading.inputs.some(isPassword);
     const now = Date.now();
     const fingerprint = [reading.formID, trigger, controlLabelOf(control),
-      ...keys.map((key) => `${key}:${values[key].length}`)].join("\u0000");
+      ...keys.map((key) => `${key}:${digestOf(values[key])}`)].join("\u0000");
     if (fingerprint === lastSubmissionFingerprint && now - lastSubmissionTime < 750) return;
     lastSubmissionFingerprint = fingerprint;
     lastSubmissionTime = now;
@@ -329,7 +340,7 @@
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ["hidden", "style", "class", "disabled", "type"]
+    attributeFilter: ["hidden", "style", "class", "disabled", "type", "open"]
   };
 
   const mutationDidOccur = () => {
@@ -411,14 +422,15 @@
     fill(formID, readingID, entries, generated) {
       if (!Array.isArray(entries) || !entries.length) return false;
       const targets = entries.map((entry) => ({
+        index: entry.index,
         input: inputAt(formID, readingID, entry.index),
         value: String(entry.value)
       }));
       if (targets.some((target) => !target.input)) return false;
-      for (const { input, value } of targets) {
-        // A page that rebuilt the field while an earlier one filled
-        // leaves this one detached: the fill failed.
-        if (!input.isConnected || input.disabled) return false;
+      for (const { index, input, value } of targets) {
+        // A page that rebuilt or moved the field while an earlier one filled
+        // leaves this one no longer matching the selected form and reading.
+        if (inputAt(formID, readingID, index) !== input) return false;
         setInputValue(input, value);
         if (generated) enteredValues.set(input, value); else enteredValues.delete(input);
       }
@@ -486,6 +498,7 @@
   // the document altogether is the person reaching for the prompt
   // itself, which is exactly when it must keep following.
   document.addEventListener("focusout", (event) => {
+    if (event.relatedTarget instanceof Element) offeredForm = null;
     if (!trackedField || trackedField.input.deref() !== event.target) return;
     if (event.relatedTarget instanceof Element) {
       trackedField = null;

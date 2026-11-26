@@ -75,7 +75,7 @@ internal sealed class ContentBlockingLedger {
     #region Actions - Filter lists
 
     /// Snapshot of filtering choices for `FilterLibrary`.
-    public Device.FilterPreferences Preferences(ContentBlockingLevel resolvedLevel, bool cleansCopiedLinks) =>
+    public FilterPreferences Preferences(ContentBlockingLevel resolvedLevel, bool cleansCopiedLinks) =>
         new(resolvedLevel, new Dictionary<FilterList, bool>(filterListChoices), [.. customFilterLists], customFilters,
             cleansCopiedLinks);
 

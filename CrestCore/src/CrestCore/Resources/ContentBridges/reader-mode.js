@@ -3,11 +3,7 @@ const makeBridge = () => {
   let host = null;
   let shadow = null;
   let articleRoot = null;
-  let savedRootOverflow = null;
-  let savedRootOverflowPriority = null;
-  let bodyHadAriaHidden = false;
-  let savedBodyAriaHidden = null;
-  let savedBodyInert = false;
+  let savedPageState = null;
 
   const normalizedText = (element) =>
     (element?.innerText || element?.textContent || "")
@@ -59,12 +55,14 @@ const makeBridge = () => {
   };
 
   const sanitize = (source) => {
+    const wrapper = document.createElement("div");
     const clone = source.cloneNode(true);
     clone.querySelectorAll(
       "script, style, noscript, template, iframe, frame, object, embed, " +
       "form, input, textarea, select, option, button, video, audio, canvas, " +
       "svg, dialog, [contenteditable]"
     ).forEach((element) => element.remove());
+    wrapper.appendChild(clone);
 
     const allowedTags = new Set([
       "ARTICLE", "SECTION", "DIV", "HEADER", "FOOTER", "ASIDE",
@@ -75,7 +73,7 @@ const makeBridge = () => {
       "IMG", "A", "TIME", "TABLE", "THEAD", "TBODY", "TFOOT", "TR",
       "TH", "TD", "CAPTION"
     ]);
-    const elements = Array.from(clone.querySelectorAll("*")).reverse();
+    const elements = Array.from(wrapper.querySelectorAll("*")).reverse();
     for (const element of elements) {
       if (!allowedTags.has(element.tagName)) {
         element.replaceWith(...element.childNodes);
@@ -115,7 +113,9 @@ const makeBridge = () => {
       if (colSpan) element.setAttribute("colspan", colSpan);
       if (rowSpan) element.setAttribute("rowspan", rowSpan);
     }
-    return clone;
+    const fragment = document.createDocumentFragment();
+    fragment.append(...wrapper.childNodes);
+    return fragment;
   };
 
   const articleTitle = (candidate) => {
@@ -134,10 +134,19 @@ const makeBridge = () => {
 
   const availability = () => articleCandidate() !== null;
 
+  const restoreOverflow = (style, property, value, priority) => {
+    if (!value) {
+      style.removeProperty(property);
+    } else {
+      style.setProperty(property, value, priority || "");
+    }
+  };
+
   const activate = () => {
     if (host?.isConnected) return true;
+    if (savedPageState) deactivate();
     const candidate = articleCandidate();
-    if (!candidate || !document.documentElement) return false;
+    if (!candidate || !document.documentElement || !document.body) return false;
 
     const title = articleTitle(candidate);
     const byline = articleByline(candidate);
@@ -232,15 +241,24 @@ const makeBridge = () => {
     surface.appendChild(main);
     shadow.append(style, surface);
 
-    savedRootOverflow = document.documentElement.style.getPropertyValue("overflow");
-    savedRootOverflowPriority = document.documentElement.style.getPropertyPriority("overflow");
-    bodyHadAriaHidden = document.body.hasAttribute("aria-hidden");
-    savedBodyAriaHidden = document.body.getAttribute("aria-hidden");
-    savedBodyInert = document.body.inert;
-    document.body.setAttribute("aria-hidden", "true");
-    document.body.inert = true;
-    document.documentElement.style.setProperty("overflow", "hidden", "important");
-    document.documentElement.appendChild(host);
+    const root = document.documentElement;
+    const body = document.body;
+    savedPageState = {
+      root,
+      overflowX: root.style.getPropertyValue("overflow-x"),
+      overflowXPriority: root.style.getPropertyPriority("overflow-x"),
+      overflowY: root.style.getPropertyValue("overflow-y"),
+      overflowYPriority: root.style.getPropertyPriority("overflow-y"),
+      body,
+      bodyHadAriaHidden: body.hasAttribute("aria-hidden"),
+      bodyAriaHidden: body.getAttribute("aria-hidden"),
+      bodyInert: body.inert
+    };
+    body.setAttribute("aria-hidden", "true");
+    body.inert = true;
+    root.style.setProperty("overflow-x", "hidden", "important");
+    root.style.setProperty("overflow-y", "hidden", "important");
+    root.appendChild(host);
     host.scrollTop = 0;
     return true;
   };
@@ -250,26 +268,18 @@ const makeBridge = () => {
     host = null;
     shadow = null;
     articleRoot = null;
-    if (savedRootOverflow === null || savedRootOverflow === "") {
-      document.documentElement?.style.removeProperty("overflow");
+    const previous = savedPageState;
+    if (!previous) return true;
+    savedPageState = null;
+
+    restoreOverflow(previous.root.style, "overflow-x", previous.overflowX, previous.overflowXPriority);
+    restoreOverflow(previous.root.style, "overflow-y", previous.overflowY, previous.overflowYPriority);
+    if (previous.bodyHadAriaHidden) {
+      previous.body.setAttribute("aria-hidden", previous.bodyAriaHidden || "");
     } else {
-      document.documentElement?.style.setProperty(
-        "overflow", savedRootOverflow, savedRootOverflowPriority || ""
-      );
+      previous.body.removeAttribute("aria-hidden");
     }
-    savedRootOverflow = null;
-    savedRootOverflowPriority = null;
-    if (document.body) {
-      if (bodyHadAriaHidden) {
-        document.body.setAttribute("aria-hidden", savedBodyAriaHidden || "");
-      } else {
-        document.body.removeAttribute("aria-hidden");
-      }
-      document.body.inert = savedBodyInert;
-    }
-    bodyHadAriaHidden = false;
-    savedBodyAriaHidden = null;
-    savedBodyInert = false;
+    previous.body.inert = previous.bodyInert;
     return true;
   };
 

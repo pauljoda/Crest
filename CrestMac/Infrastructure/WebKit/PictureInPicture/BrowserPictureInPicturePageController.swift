@@ -18,44 +18,50 @@ final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureCo
         let candidate: FrameCandidate
     }
 
-    private struct BridgeMessage: Decodable {
-        enum Kind: String, Decodable {
-            case removed
-            case request
-            case state
-        }
+    private protocol BridgeMessage: Decodable {
+        var documentID: String { get }
 
+        @MainActor
+        func apply(to controller: BrowserPictureInPicturePageController, frame: WKFrameInfo)
+    }
+
+    private struct BridgeEnvelope: Decodable {
+        let kind: String
+    }
+
+    private struct RemovedMessage: BridgeMessage {
         let documentID: String
-        let kind: Kind
+
+        @MainActor
+        func apply(to controller: BrowserPictureInPicturePageController, frame: WKFrameInfo) {
+            controller.removeDocument(documentID)
+        }
+    }
+
+    private struct RequestMessage: BridgeMessage {
+        let documentID: String
         let requestID: String?
         let succeeded: Bool?
+
+        @MainActor
+        func apply(to controller: BrowserPictureInPicturePageController, frame: WKFrameInfo) {
+            controller.receiveRequestOutcome(
+                documentID: documentID, requestID: requestID, succeeded: succeeded == true)
+        }
+    }
+
+    private struct StateMessage: BridgeMessage {
+        let documentID: String
         let active: Bool?
         let eligible: Bool?
         let videoID: String?
         let score: Double?
 
-        init?(body: Any) {
-            guard JSONSerialization.isValidJSONObject(body),
-                let data = try? JSONSerialization.data(withJSONObject: body),
-                let decoded = try? JSONDecoder().decode(Self.self, from: data),
-                decoded.documentID.count <= 64
-            else { return nil }
-            self = decoded
-        }
-
         @MainActor
         func apply(to controller: BrowserPictureInPicturePageController, frame: WKFrameInfo) {
-            switch kind {
-            case .removed:
-                controller.removeDocument(documentID)
-            case .request:
-                controller.receiveRequestOutcome(
-                    documentID: documentID, requestID: requestID, succeeded: succeeded == true)
-            case .state:
-                controller.receiveState(
-                    documentID: documentID, active: active == true, eligible: eligible == true,
-                    videoID: videoID, score: score, frame: frame)
-            }
+            controller.receiveState(
+                documentID: documentID, active: active == true, eligible: eligible == true,
+                videoID: videoID, score: score, frame: frame)
         }
     }
 
@@ -64,6 +70,11 @@ final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureCo
     /// How long automatic Picture in Picture waits for the page to report a
     /// floating video before it gives up.
     private static let automaticPictureInPictureTimeout: Duration = .seconds(4)
+    private static let messageDecoders: [String: (Data) -> (any BridgeMessage)?] = [
+        "removed": { try? JSONDecoder().decode(RemovedMessage.self, from: $0) },
+        "request": { try? JSONDecoder().decode(RequestMessage.self, from: $0) },
+        "state": { try? JSONDecoder().decode(StateMessage.self, from: $0) },
+    ]
 
     // MARK: - Variables
 
@@ -151,9 +162,20 @@ final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureCo
 
     func receive(_ message: WKScriptMessage) {
         guard acceptsEvents, message.webView === webView,
-            let decoded = BridgeMessage(body: message.body)
+            let decoded = Self.decodeMessage(from: message.body)
         else { return }
         decoded.apply(to: self, frame: message.frameInfo)
+    }
+
+    private static func decodeMessage(from body: Any) -> (any BridgeMessage)? {
+        guard JSONSerialization.isValidJSONObject(body),
+            let data = try? JSONSerialization.data(withJSONObject: body),
+            let envelope = try? JSONDecoder().decode(BridgeEnvelope.self, from: data),
+            let decode = messageDecoders[envelope.kind],
+            let message = decode(data),
+            message.documentID.count <= 64
+        else { return nil }
+        return message
     }
 
     private func removeDocument(_ documentID: String) {

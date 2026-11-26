@@ -71,7 +71,7 @@ internal sealed partial class FilterLibrary {
 
     /// The lists in force that the device holds a copy of, with their digests,
     /// and the person's own filters. The caller holds the lock.
-    private List<(string Name, string Digest)> Inputs(Device.FilterPreferences chosen) {
+    private List<(string Name, string Digest)> Inputs(FilterPreferences chosen) {
         var inputs = Lists(chosen).Select(source => (source.Name, Digest: copies.GetValueOrDefault(source.Name)?.Digest))
             .Where(input => input.Digest is not null).Select(input => (input.Name, input.Digest!)).ToList();
         if (chosen.CustomFilters.Length > 0) inputs.Add((CustomFiltersName, Digest(chosen.CustomFilters)));

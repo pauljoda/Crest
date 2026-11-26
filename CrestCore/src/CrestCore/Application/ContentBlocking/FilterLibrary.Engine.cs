@@ -109,7 +109,7 @@ internal sealed partial class FilterLibrary {
 
     /// The key the lists in force compile to, with the pinned resources and
     /// without them.
-    private (string Key, string WithoutResources) WantedEngineKey(Device.FilterPreferences chosen) {
+    private (string Key, string WithoutResources) WantedEngineKey(FilterPreferences chosen) {
         lock (gate) {
             var inputs = Inputs(chosen);
             string without = EngineKey(inputs);

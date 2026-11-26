@@ -2,10 +2,30 @@ const makeBridge = () => {
   let current = null;
   const excluded = "script,style,noscript,template,input,textarea,select,option,code,pre,kbd,samp," +
     "svg,canvas,iframe,object,embed,[contenteditable],[role='textbox'],[translate='no'],.notranslate,[hidden]";
+  const isVisibleText = (node, parent) => {
+    if (parent.checkVisibility({checkVisibilityCSS:true,checkOpacity:true})) return true;
+    const style = getComputedStyle(parent);
+    if (style.display !== "contents" || style.visibility !== "visible" || Number(style.opacity) === 0) return false;
+    let ancestor = parent.parentElement;
+    while (ancestor) {
+      if (ancestor.checkVisibility({checkVisibilityCSS:true,checkOpacity:true})) {
+        const range = document.createRange();
+        range.selectNode(node);
+        return range.getClientRects().length > 0;
+      }
+      const ancestorStyle = getComputedStyle(ancestor);
+      if (ancestorStyle.display !== "contents" || ancestorStyle.visibility !== "visible"
+          || Number(ancestorStyle.opacity) === 0) {
+        return false;
+      }
+      ancestor = ancestor.parentElement;
+    }
+    return false;
+  };
   const eligible = node => {
     const parent = node.parentElement;
     return node.isConnected && parent && !parent.isContentEditable && parent.translate !== false &&
-      !parent.closest(excluded) && parent.checkVisibility({checkVisibilityCSS:true,checkOpacity:true});
+      !parent.closest(excluded) && isVisibleText(node, parent);
   };
   const route = () => location.href.split("#")[0];
   const walker = () => document.body && document.contentType === "text/html"
@@ -36,7 +56,7 @@ const makeBridge = () => {
     state.observer.disconnect();
     current = null;
     for (const entry of state.entries) {
-      if (!entry.disowned && entry.translated !== null && eligible(entry.node) && entry.node.data === entry.translated) {
+      if (!entry.disowned && entry.translated !== null && entry.node.data === entry.translated) {
         entry.node.data = entry.original;
       }
     }
@@ -66,6 +86,7 @@ const makeBridge = () => {
         sliceStart = performance.now();
       }
     }
+    if (current !== state || state.route !== route()) return {texts:[],limited:false};
     return {texts:state.entries.map(e => e.original.trim()), limited:limited || !!node};
   };
   const apply = (id, values, start, indices) => {
