@@ -3,6 +3,6 @@
   "channels": {
     "stable": "crest-0-11-new-look",
     "development": "picture-in-picture-settings-window-fallback",
-    "nightly": "sidebar-scrolls-smoothly-with-many-tabs"
+    "nightly": "picture-in-picture-settings-window-fallback"
   }
 }

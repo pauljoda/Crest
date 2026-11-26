@@ -6,47 +6,41 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.11.40</title>
-            <pubDate>Wed, 25 Nov 2026 19:41:58 +0000</pubDate>
+            <title>0.11.45</title>
+            <pubDate>Thu, 26 Nov 2026 19:31:08 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>nightly</sparkle:channel>
-            <sparkle:version>1716</sparkle:version>
-            <sparkle:shortVersionString>0.11.40</sparkle:shortVersionString>
+            <sparkle:version>1719</sparkle:version>
+            <sparkle:shortVersionString>0.11.45</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-Showing the 12 most recent highlights from 24 user-facing changes.
-
 ### New
 
-- Passwords can make one-time codes. Set one up from the site's QR code, a pasted key or link, an image, or the iPhone camera, and Crest offers the live code in the code field, across split fields too.
-- Crest fills addresses and payment cards into whole forms, menus included, and offers to save new ones you send. They're shared by every Space, and a card fills only after Touch ID or your device password.
-- On sites that ask for your email or username first, choosing an account fills its password on the next page as soon as it appears.
-- Settings › Autofill › Passwords has Add Password, for a password you type in yourself, with a strong password one click away.
+- Preview Picture in Picture’s border and switch between rounded and square corners in Settings.
 
 ### Improved
 
-- When a password manager extension handles passwords in a Space, Crest leaves passwords and codes to it and says so once. Addresses and cards still fill.
-- The engine's own password, payment and address settings pages open Settings › Autofill instead.
-- Clicking anywhere on the page outside the field closes Crest's passwords popup.
-- Saved passwords show each site's own icon in Settings and in the popup, fetched once from the site itself when Crest hasn't seen it yet.
-- The sidebar scrolls smoothly with hundreds or thousands of tabs, and tab icons no longer pop in as rows scroll into view.
+- Picture in Picture works the same in WebKit and Chromium. Drag the player anywhere, flick it toward a corner, or resize it from an edge.
+- Choose when videos float or return to their tabs, and turn off automatic Picture in Picture for individual sites.
+- Open Picture in Picture settings from the player. The optional border matches your window border width and the video’s Space theme, and resize cursors show where to drag.
 
 ### Fixed
 
-- Logins saved for an IP address written another way, such as 127.1, fill again.
-- On Chromium pages, only Crest offers to save and fill passwords, even if the engine's own password setting was turned back on.
-- On Chromium pages, suggestions point at sign-in fields inside a frame from another site, and follow the page as it scrolls.
+- Use the Picture in Picture controls with the keyboard or VoiceOver. Chromium keeps captions from videos inside shadow DOM and docks videos that arrive late after you return to their tab.
+- Picture in Picture refreshes its video when it opens and when you switch apps or desktops.
+- Picture in Picture settings open in the video's current window, even after you move its tab.
+- Picture in Picture can open its settings in another Crest window after the source window closes.
 
 ---
 
 Nightly builds contain the newest changes and may be less reliable than stable releases.
 
-[Release notes](https://crestbrowser.com/releases/mac/nightly/0.11.40/) · [View all changes](https://github.com/crest-browser/Crest/compare/59f6d549259747b314b5f7a82d7123c1e90b85d9...b36496c6e5af334e76040f119fccec656d87b969) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/nightly-0.11.40-2026-11-25-1716-r716.1/Installer-Crest-0.11.40-nightly-2026-11-25-b36496c.dmg)
+[Release notes](https://crestbrowser.com/releases/mac/nightly/0.11.45/) · [View all changes](https://github.com/crest-browser/Crest/compare/b36496c6e5af334e76040f119fccec656d87b969...3fb60e2846affbe26cf35060408852f280c3946f) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/nightly-0.11.45-2026-11-26-1719-r719.1/Installer-Crest-0.11.45-nightly-2026-11-26-3fb60e2.dmg)
 
 [Browse Nightly releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Nightly+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/crest-browser/Crest/releases/download/nightly-0.11.40-2026-11-25-1716-r716.1/Installer-Crest-0.11.40-nightly-2026-11-25-b36496c.dmg" length="413292014" type="application/octet-stream" sparkle:edSignature="ugnfilpk22oHM3R3CrQFXrukCWjzC2+w5T8rb+2ZHo6yLpqpdBR0+Qafv1gpHkLw/0HnIo0SX0qCZw8RZU0FCQ=="/>
+            <enclosure url="https://github.com/crest-browser/Crest/releases/download/nightly-0.11.45-2026-11-26-1719-r719.1/Installer-Crest-0.11.45-nightly-2026-11-26-3fb60e2.dmg" length="413514222" type="application/octet-stream" sparkle:edSignature="xmnjO6wwKhrHcVhr6G1MkXJWnGDWCwzGlsQH/7zIZByigbvqeLztLhcUCXVFbXKoLqyEv1FhPzfKn1snbASlAQ=="/>
         </item>
         <item>
             <title>0.11.0</title>
@@ -245,6 +239,6 @@ Nightly builds contain the newest changes and may be less reliable than stable r
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: JThSiVfGbMP0IaxI/ebsQelKLxn8ilUU/eE59xmqcfUd2hGuxdh35/L6NVZYP0axB81kvTbHweTiUMV9dPLjAw==
-length: 22934
+edSignature: Il/J4fM6uOXbfgSrobVaMyO6YePWDiFtczYqwD1Ns2fWsnf3aZ5JzN/r1d7G511qtHpxrC0N25EVnuIuOieqAA==
+length: 22261
 -->
