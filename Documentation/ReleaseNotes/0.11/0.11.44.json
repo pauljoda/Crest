@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "picture-in-picture-settings-follow-source-window",
+      "category": "fixed",
+      "message": "Picture in Picture settings open in the video's current window, even after you move its tab.",
+      "platforms": ["mac"]
+    }
+  ]
+}

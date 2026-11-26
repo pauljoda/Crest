@@ -330,6 +330,16 @@ final class BrowserMacApplication {
         memoryPressure =
             usesIsolatedLaunch
             ? nil : BrowserMemoryPressureMonitor(core: core) { [pagePoolRegistry] in pagePoolRegistry.livePools }
+        BrowserPictureInPicturePresenter.configure(
+            findSourcePage: { [weak self] view in
+                guard let self else { return nil }
+                return ([privatePages] + pagePoolRegistry.livePools).lazy.flatMap(\.livePages).first { page in
+                    view.isDescendant(of: page.nativeView)
+                }
+            },
+            openSettings: { [weak self] page, window in
+                self?.openPictureInPictureSettings(from: page, in: window)
+            })
         browser.family.configureSpaceDataCleanup(pagePoolRegistry, from: browser)
         memoryPressure?.start()
     }

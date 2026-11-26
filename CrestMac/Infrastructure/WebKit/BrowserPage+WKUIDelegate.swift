@@ -32,6 +32,10 @@ extension BrowserPage: WKUIDelegate {
     /// video context menu, including videos inside cross-origin frames.
     @objc(_webView:hasVideoInPictureInPictureDidChange:)
     func webView(_ webView: WKWebView, hasVideoInPictureInPictureDidChange isActive: Bool) {
+        guard webView === webKitView else { return }
+        if isActive, webKitEngine?.hasVideoInPictureInPicture != true {
+            BrowserPictureInPicturePresenter.webKitEntered(from: self)
+        }
         pictureInPicture?.nativePresentationDidChange(isActive: isActive)
         webKitEngine?.hasVideoInPictureInPicture = isActive
         refreshMediaActivity()

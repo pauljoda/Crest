@@ -1,0 +1,22 @@
+{
+  "entries": [
+    {
+      "id": "picture-in-picture-settings-and-border",
+      "category": "improved",
+      "message": "Open Picture in Picture settings from the player. The optional border matches your window border width and the video’s Space theme, and resize cursors show where to drag.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "picture-in-picture-appearance-preview",
+      "category": "new",
+      "message": "Preview Picture in Picture’s border and switch between rounded and square corners in Settings.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "picture-in-picture-redraw-after-focus-switch",
+      "category": "fixed",
+      "message": "Picture in Picture refreshes its video when it opens and when you switch apps or desktops.",
+      "platforms": ["mac"]
+    }
+  ]
+}

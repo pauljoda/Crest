@@ -4,6 +4,7 @@ struct BrowserPictureInPictureControls: View {
     let isPlaying: Bool
     let playPause: () -> Void
     let restore: () -> Void
+    let settings: () -> Void
     let close: () -> Void
 
     var body: some View {
@@ -15,6 +16,7 @@ struct BrowserPictureInPictureControls: View {
                 control("Play", symbol: "play.fill", action: playPause)
             }
             control("Return to Tab", symbol: "pip.exit", action: restore)
+            control("Picture in Picture Settings", symbol: "gearshape", action: settings)
         }
         .padding(CrestSpacing.extraSmall)
         .crestGlass(in: Capsule())
