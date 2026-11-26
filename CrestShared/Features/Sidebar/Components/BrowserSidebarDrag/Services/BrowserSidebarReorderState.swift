@@ -200,6 +200,10 @@ final class BrowserSidebarReorderState {
     }
 
     func register(virtualRun run: BrowserSidebarReorderGeometry.VirtualRowRun) {
+        guard !isDragging || !geometry.hasVirtualRun(for: run.id, in: run.space) else {
+            geometry.hold(virtualRun: run)
+            return
+        }
         geometry.register(virtualRun: run)
         if needsLandingMeasurement, var preview = landingPreview,
             run.space == preview.item.spaceAssignment,

@@ -28,23 +28,16 @@ struct BrowserSidebarTabActivationButton: View {
     @State private var keepsIconPicker = false
 
     var body: some View {
-        BrowserSidebarTabLabel(
-            tab: tab, favicons: favicons, profileID: profileID, isSelected: isSelected,
-            isLoaded: isLoaded, metrics: metrics, leadingInset: leadingInset,
-            restoreSavedLocation: restoreSavedLocation, faviconPrimaryClick: faviconPrimaryClick
-        )
+        Button(action: select) {
+            BrowserSidebarTabLabel(
+                tab: tab, favicons: favicons, profileID: profileID, isSelected: isSelected,
+                isLoaded: isLoaded, metrics: metrics, leadingInset: leadingInset,
+                restoreSavedLocation: restoreSavedLocation, faviconPrimaryClick: faviconPrimaryClick
+            )
+        }
+        .buttonStyle(.plain)
         .frame(maxWidth: .infinity, maxHeight: maxHeight)
         .contentShape(.rect)
-        .onTapGesture(perform: select)
-        .focusable(interactions: .activate)
-        .onKeyPress(.space) {
-            select()
-            return .handled
-        }
-        .onKeyPress(.return) {
-            select()
-            return .handled
-        }
         #if os(macOS)
             .modifier(
                 BrowserSavedTabDoubleClickRestore(
@@ -67,12 +60,10 @@ struct BrowserSidebarTabActivationButton: View {
                     .onAppear { keepsIconPicker = true }
             }
         }
-        .accessibilityElement(children: .ignore)
         .accessibilityLabel(tab.shownTitle(in: isLoaded ? core?.state : nil))
         .accessibilityValue(BrowserChromeAccessibility.tabValue(isLoaded: isLoaded))
         .browserTabPreviewAccessibility(tab)
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-        .accessibilityAction { select() }
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityIdentifier(BrowserTabAccessibilityID.row(tab.id))
     }
 

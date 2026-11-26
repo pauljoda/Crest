@@ -23,6 +23,8 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     @State private var scrollRegionID = UUID()
+    @State private var scrollRegionFrame = CGRect.zero
+    @State private var visibleOrigin = CGPoint.zero
     @State private var lastScrollContentOrigin: CGPoint?
 
     var body: some View {
@@ -48,28 +50,25 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                     }
                     .coordinateSpace(BrowserSidebarVisibleBand.contentSpace)
                     .environment(\.browserSidebarScrollContentSpace, BrowserSidebarVisibleBand.contentSpace)
-                    .background(alignment: .topLeading) {
-                        Color.clear
-                            .frame(width: 1, height: 1)
-                            .onGeometryChange(for: CGPoint.self) { proxy in
-                                proxy.frame(in: BrowserSidebarReorderSpace.globalSpace).origin
-                            } action: { origin in
-                                handleScrollContentOriginChange(origin)
-                            }
-                            .allowsHitTesting(false)
-                            .accessibilityHidden(true)
-                    }
                 }
                 .environment(\.browserSidebarScrollRegionID, scrollRegionID)
+                .onScrollGeometryChange(for: CGRect.self) {
+                    $0.visibleRect
+                } action: { _, rect in
+                    visibleOrigin = rect.origin
+                    publishScrollContentOrigin()
+                }
                 .background {
                     Color.clear
                         .onGeometryChange(for: CGRect.self) { proxy in
                             proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
                         } action: { frame in
+                            scrollRegionFrame = frame
                             sidebarInteraction.sidebarReorderState.register(
                                 scrollRegionFrame: frame,
                                 for: scrollRegionID
                             )
+                            publishScrollContentOrigin()
                         }
                         .allowsHitTesting(false)
                         .accessibilityHidden(true)
@@ -107,6 +106,13 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                 }
             }
         }
+    }
+
+    private func publishScrollContentOrigin() {
+        guard !scrollRegionFrame.isEmpty else { return }
+        handleScrollContentOriginChange(
+            CGPoint(x: scrollRegionFrame.minX - visibleOrigin.x, y: scrollRegionFrame.minY - visibleOrigin.y)
+        )
     }
 
     /// Forwards live scroll-origin changes and lift-time scroll movement to

@@ -328,6 +328,16 @@ private struct BrowserSidebarRecycledTabRun: View {
             return CGFloat(index - liftedBefore) * rowStride + gapBefore
         }
 
+        func gapYOffset(rowStride: CGFloat) -> CGFloat? {
+            guard isActive, let gapAnchorIndex, gapHeight > 0 else { return nil }
+            let targetIndex = gapInsertsBeforeAnchor ? gapAnchorIndex : gapAnchorIndex + 1
+            var liftedBefore = 0
+            for lifted in liftedIndices where lifted < targetIndex {
+                liftedBefore += 1
+            }
+            return CGFloat(targetIndex - liftedBefore) * rowStride
+        }
+
         /// Converts a projected Y coordinate (in the same layout as `yOffset`,
         /// accounting for collapsed lifted rows and any insertion gap of
         /// arbitrary height) to the first non-lifted item index whose row
@@ -365,6 +375,7 @@ private struct BrowserSidebarRecycledTabRun: View {
 
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction: BrowserSidebarInteractionState?
     @Environment(\.browserSidebarScrollRegionID) private var scrollRegionID
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var runFrame: CGRect = .zero
     @State private var virtualRunID = UUID()
     @State private var poolCapacity = defaultPoolCapacity
@@ -400,21 +411,39 @@ private struct BrowserSidebarRecycledTabRun: View {
             in: spaceAssignment
         )
 
+        let gapY = projection.gapYOffset(rowStride: rowStride)
+        let dragAnimation = CrestMotion.dragSource.unlessReducingMotion(reduceMotion)
+
         ZStack(alignment: .top) {
+            if let gapY {
+                BrowserSidebarReorderGap(height: projection.gapHeight)
+                    .environment(\.sidebarLayerDepth, items.first?.depth ?? 0)
+                    .offset(y: gapY)
+                    .animation(dragAnimation, value: gapY)
+                    .animation(dragAnimation, value: projection.gapHeight)
+            }
             ForEach(0..<effectivePool, id: \.self) { slot in
                 if let itemIndex = assignment.slots[slot] {
+                    let baseY = CGFloat(itemIndex) * rowStride
+                    let projectedY = projection.yOffset(for: itemIndex, rowStride: rowStride)
                     BrowserSidebarRecycledTabSlot(
                         item: items[itemIndex],
-                        yOffset: projection.yOffset(for: itemIndex, rowStride: rowStride),
+                        baseY: baseY,
+                        dragShift: projectedY - baseY,
+                        animatesShift: projection.isActive,
                         context: context
                     )
                     .equatable()
                 }
             }
             if let overflowItemIndex = assignment.overflow {
+                let baseY = CGFloat(overflowItemIndex) * rowStride
+                let projectedY = projection.yOffset(for: overflowItemIndex, rowStride: rowStride)
                 BrowserSidebarRecycledTabSlot(
                     item: items[overflowItemIndex],
-                    yOffset: projection.yOffset(for: overflowItemIndex, rowStride: rowStride),
+                    baseY: baseY,
+                    dragShift: projectedY - baseY,
+                    animatesShift: projection.isActive,
                     context: context
                 )
                 .equatable()
@@ -423,6 +452,7 @@ private struct BrowserSidebarRecycledTabRun: View {
         .environment(\.browserSidebarUsesVirtualRowGeometry, true)
         .frame(maxWidth: .infinity)
         .frame(height: totalHeight, alignment: .top)
+        .animation(projection.isActive ? dragAnimation : nil, value: totalHeight)
         .onGeometryChange(for: CGRect.self) { proxy in
             proxy.frame(in: BrowserSidebarVisibleBand.contentSpace)
         } action: { frame in
@@ -629,11 +659,19 @@ private struct BrowserSidebarRecycledTabRun: View {
 
 private struct BrowserSidebarRecycledTabSlot: View, @MainActor Equatable {
     let item: BrowserSidebarListItem
-    let yOffset: CGFloat
+    let baseY: CGFloat
+    let dragShift: CGFloat
+    let animatesShift: Bool
     let context: BrowserSidebarListContext
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     static func == (lhs: BrowserSidebarRecycledTabSlot, rhs: BrowserSidebarRecycledTabSlot) -> Bool {
-        lhs.item == rhs.item && lhs.yOffset == rhs.yOffset && lhs.context == rhs.context
+        lhs.item == rhs.item
+            && lhs.baseY == rhs.baseY
+            && lhs.dragShift == rhs.dragShift
+            && lhs.animatesShift == rhs.animatesShift
+            && lhs.context == rhs.context
     }
 
     var body: some View {
@@ -642,7 +680,12 @@ private struct BrowserSidebarRecycledTabSlot: View, @MainActor Equatable {
                 .equatable()
                 .modifier(BrowserSidebarFolderRowIndent(depth: item.depth))
                 .environment(\.sidebarLayerDepth, item.depth)
-                .offset(y: yOffset)
+                .offset(y: dragShift)
+                .animation(
+                    animatesShift ? CrestMotion.dragSource.unlessReducingMotion(reduceMotion) : nil,
+                    value: dragShift
+                )
+                .offset(y: baseY)
         }
     }
 }

@@ -97,8 +97,18 @@ enum BrowserPasteboardStringCache {
         if count == lastChangeCount {
             return lastString
         }
+        guard pasteboard.availableType(from: [.string]) != nil else {
+            lastChangeCount = count
+            lastString = nil
+            return nil
+        }
+        // Only cache non-nil reads when a string type is advertised so a
+        // transient pasteboard-provider timeout stays retryable.
+        guard let value = pasteboard.string(forType: .string) else {
+            return nil
+        }
         lastChangeCount = count
-        lastString = pasteboard.string(forType: .string)
-        return lastString
+        lastString = value
+        return value
     }
 }

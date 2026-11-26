@@ -68,7 +68,7 @@ private struct BrowserWebKitFeatureFlagTableView: NSViewRepresentable {
 
         tableView.delegate = context.coordinator
         tableView.dataSource = context.coordinator
-        context.coordinator.tableView = tableView
+        context.coordinator.attach(to: tableView)
 
         scrollView.documentView = tableView
         context.coordinator.update(groups: groups, overrides: overrides, setOverride: setOverride)
@@ -77,6 +77,10 @@ private struct BrowserWebKitFeatureFlagTableView: NSViewRepresentable {
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         context.coordinator.update(groups: groups, overrides: overrides, setOverride: setOverride)
+    }
+
+    static func dismantleNSView(_ scrollView: NSScrollView, coordinator: Coordinator) {
+        coordinator.detach()
     }
 
     enum Row: Equatable {
@@ -96,9 +100,50 @@ private struct BrowserWebKitFeatureFlagTableView: NSViewRepresentable {
         private var setOverride: @MainActor (BrowserWebKitFeatureFlagOverride?, BrowserWebKitFeatureFlag) -> Void
         private var cachedWidthBucket = 0
         private var cachedHeights: [String: CGFloat] = [:]
+        private var frameObserver: NSObjectProtocol?
 
         init(setOverride: @escaping @MainActor (BrowserWebKitFeatureFlagOverride?, BrowserWebKitFeatureFlag) -> Void) {
             self.setOverride = setOverride
+        }
+
+        func attach(to tableView: NSTableView) {
+            detach()
+            self.tableView = tableView
+            cachedWidthBucket = widthBucket(for: tableView)
+            tableView.postsFrameChangedNotifications = true
+            frameObserver = NotificationCenter.default.addObserver(
+                forName: NSView.frameDidChangeNotification,
+                object: tableView,
+                queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    self?.handleTableFrameChange()
+                }
+            }
+        }
+
+        func detach() {
+            if let frameObserver {
+                NotificationCenter.default.removeObserver(frameObserver)
+                self.frameObserver = nil
+            }
+        }
+
+        private func widthBucket(for tableView: NSTableView) -> Int {
+            Int((max(320, tableView.bounds.width) / 16).rounded())
+        }
+
+        private func handleTableFrameChange() {
+            guard let tableView else { return }
+            let nextBucket = widthBucket(for: tableView)
+            guard nextBucket != cachedWidthBucket else { return }
+            cachedWidthBucket = nextBucket
+            cachedHeights.removeAll(keepingCapacity: true)
+            guard !rows.isEmpty else { return }
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0
+                tableView.noteHeightOfRows(withIndexesChanged: IndexSet(integersIn: 0..<rows.count))
+            }
         }
 
         func update(
@@ -157,11 +202,6 @@ private struct BrowserWebKitFeatureFlagTableView: NSViewRepresentable {
                 return Self.headerHeight
             case .flag(let flag, _):
                 let tableWidth = max(320, tableView.bounds.width)
-                let widthBucket = Int((tableWidth / 16).rounded())
-                if widthBucket != cachedWidthBucket {
-                    cachedWidthBucket = widthBucket
-                    cachedHeights.removeAll(keepingCapacity: true)
-                }
                 if let cached = cachedHeights[flag.key] {
                     return cached
                 }
@@ -223,6 +263,9 @@ private final class FeatureFlagSectionHeaderCell: NSTableCellView {
     func configure(title: String) {
         guard titleText != title else { return }
         titleText = title
+        setAccessibilityElement(true)
+        setAccessibilityRole(.staticText)
+        setAccessibilityLabel(title)
         needsDisplay = true
     }
 
@@ -327,6 +370,15 @@ private final class FeatureFlagRowCell: NSTableCellView {
         }
         if textChanged || titleChanged {
             stateButton.setAccessibilityLabel("State for \(flag.name)")
+            var detailsParts = [flag.status.title]
+            if !flag.details.isEmpty {
+                detailsParts.append(flag.details)
+            }
+            detailsParts.append(flag.key)
+            let detailsSummary = detailsParts.joined(separator: ". ")
+            stateButton.setAccessibilityHelp(detailsSummary)
+            setAccessibilityLabel(flag.name)
+            setAccessibilityValue("\(buttonTitle). \(detailsSummary)")
             setAccessibilityIdentifier("webkit-feature-\(flag.key)")
             needsDisplay = true
         }

@@ -95,6 +95,7 @@ private struct BrowserShortcutRecorderBridge: NSViewRepresentable {
         )
         button.eventHandler = context.coordinator.handle
         button.onEndRecording = context.coordinator.didEndRecording
+        applyAccessibility(to: button)
         DispatchQueue.main.async { [weak button] in
             button?.beginRecording()
         }
@@ -119,6 +120,29 @@ private struct BrowserShortcutRecorderBridge: NSViewRepresentable {
         )
         button.eventHandler = context.coordinator.handle
         button.onEndRecording = context.coordinator.didEndRecording
+        applyAccessibility(to: button)
+    }
+
+    private func applyAccessibility(to button: ShortcutRecorderButton) {
+        button.setAccessibilityLabel(
+            BrowserShortcutLocalization.string(
+                BrowserShortcutSettingsPresentation.recorderAccessibilityLabel(title: title),
+                locale: locale
+            )
+        )
+        button.setAccessibilityValue(
+            shortcut?.displayString(locale: locale)
+                ?? BrowserShortcutLocalization.string(
+                    BrowserShortcutSettingsPresentation.unassigned,
+                    locale: locale
+                )
+        )
+        let help = BrowserShortcutLocalization.string(
+            BrowserShortcutSettingsPresentation.recorderHelp,
+            locale: locale
+        )
+        button.setAccessibilityHelp(help)
+        button.toolTip = help
     }
 }
 

@@ -139,6 +139,7 @@ final class BrowserPictureInPictureWindow: NSPanel {
     private var refreshPending = false
     private weak var video: NSView?
     private var aspect: CGFloat
+    private var pendingAspectReconcile = false
     private var drag: Drag?
     private var destination: CGRect
     private var frameAnimation: FrameAnimation?
@@ -311,9 +312,7 @@ final class BrowserPictureInPictureWindow: NSPanel {
                 previous, to: previous.width + change, in: visible,
                 horizontal: anchor.horizontal, vertical: anchor.vertical,
                 borderWidth: borderWidth, aspect: aspect, backingScale: backingScaleFactor)
-            if !isPresenting && frameAnimation == nil {
-                applyFrameWithoutActions(destination)
-            }
+            retargetOrApplyDestination()
         }
         layoutContent()
         invalidateShadow()
@@ -355,18 +354,34 @@ final class BrowserPictureInPictureWindow: NSPanel {
         let next = Self.aspect(of: size)
         guard next != aspect else { return }
         aspect = next
-        guard drag == nil else { return }
+        guard drag == nil else {
+            pendingAspectReconcile = true
+            return
+        }
+        pendingAspectReconcile = false
         if let visible = screen?.visibleFrame {
             let previous = restingFrame
             let anchor = Self.nearestEdgeAnchor(of: previous, in: visible)
-            let rect = Self.resized(
+            destination = Self.resized(
                 previous, to: previous.width, in: visible,
                 horizontal: anchor.horizontal, vertical: anchor.vertical,
                 borderWidth: borderWidth, aspect: aspect, backingScale: backingScaleFactor)
-            destination = rect
-            if !isPresenting && frameAnimation == nil {
-                applyFrameWithoutActions(rect)
-            }
+            retargetOrApplyDestination()
+        }
+    }
+
+    private func retargetOrApplyDestination() {
+        if let active = frameAnimation {
+            let remaining = max(0.08, active.duration - (CACurrentMediaTime() - active.startTime))
+            frameAnimation = FrameAnimation(
+                from: frame,
+                to: destination,
+                startTime: CACurrentMediaTime(),
+                duration: remaining,
+                completion: active.completion
+            )
+        } else if !isPresenting {
+            applyFrameWithoutActions(destination)
         }
     }
 
@@ -551,12 +566,23 @@ final class BrowserPictureInPictureWindow: NSPanel {
             updateControlVisibility()
         }
         if drag.resizes {
-            // Live resize already keeps the frame aspect-locked, pixel-aligned,
-            // and clamped to its anchored edges; leave it exactly where released.
-            destination = frame
+            if pendingAspectReconcile {
+                pendingAspectReconcile = false
+                let reconciled = Self.resized(
+                    frame, to: frame.width, in: drag.visibleFrame,
+                    horizontal: drag.horizontalEdge, vertical: drag.verticalEdge,
+                    borderWidth: borderWidth, aspect: aspect, backingScale: backingScaleFactor)
+                destination = reconciled
+                if reconciled != frame { applyFrameWithoutActions(reconciled) }
+            } else {
+                // Live resize already keeps the frame aspect-locked, pixel-aligned,
+                // and clamped to its anchored edges; leave it exactly where released.
+                destination = frame
+            }
             refreshVideoSurface()
             return
         }
+        pendingAspectReconcile = false
         guard let visible = (NSScreen.screens.first { $0.frame.contains(mouse) } ?? screen)?.visibleFrame else {
             return
         }
@@ -633,8 +659,8 @@ final class BrowserPictureInPictureWindow: NSPanel {
 
         let screenMaximum = min(bounds.width, (bounds.height - border) * aspect + border)
         let anchoredMaximum = min(availableWidth, (availableHeight - border) * aspect + border)
-        let minimum = min(Self.minimumWidth, screenMaximum)
-        let maximum = max(minimum, anchoredMaximum)
+        let maximum = max(border + 1, min(screenMaximum, anchoredMaximum))
+        let minimum = min(Self.minimumWidth, maximum)
 
         let rawWidth = min(max(minimum, width), maximum)
         let alignedWidth: CGFloat

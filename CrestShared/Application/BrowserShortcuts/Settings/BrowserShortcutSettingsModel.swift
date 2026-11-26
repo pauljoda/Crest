@@ -12,8 +12,9 @@ final class BrowserShortcutSettingsModel {
 
     @ObservationIgnored private var searchProvider: any BrowserShortcutSearchProviding
     @ObservationIgnored private var cachedGroupsQuery: String?
-    @ObservationIgnored private var cachedGroupsLocaleCount = 0
+    @ObservationIgnored private var cachedGroupsShortcuts: [BrowserShortcut?] = []
     @ObservationIgnored private var cachedGroupsRevision = 0
+    @ObservationIgnored private var cachedGroupsCachedRevision = -1
     @ObservationIgnored private var cachedGroups: [BrowserShortcutCommandGroup]?
 
     init(
@@ -65,21 +66,23 @@ final class BrowserShortcutSettingsModel {
         // across scroll-time reads.
         let query = searchText
         let offered = shortcuts.offeredCommands
-        let isCustomized = shortcuts.hasCustomizations
-        let revision = offered.count &* 31 &+ (isCustomized ? 1 : 0) &+ cachedGroupsRevision
-        if let cachedGroups, cachedGroupsQuery == query, cachedGroupsLocaleCount == revision {
+        let currentShortcuts = offered.map { shortcuts.shortcut(for: $0) }
+        if let cachedGroups, cachedGroupsQuery == query,
+            cachedGroupsCachedRevision == cachedGroupsRevision,
+            cachedGroupsShortcuts == currentShortcuts
+        {
             return cachedGroups
         }
         let matches: [ShortcutCommand]
         if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             matches = offered
         } else {
-            matches = offered.filter {
+            matches = zip(offered, currentShortcuts).compactMap { command, shortcut in
                 searchProvider.matches(
-                    $0,
-                    currentShortcut: shortcuts.shortcut(for: $0),
+                    command,
+                    currentShortcut: shortcut,
                     query: query
-                )
+                ) ? command : nil
             }
         }
         var bySection: [ShortcutSection: [ShortcutCommand]] = [:]
@@ -91,7 +94,8 @@ final class BrowserShortcutSettingsModel {
             return BrowserShortcutCommandGroup(section: section, commands: commands)
         }
         cachedGroupsQuery = query
-        cachedGroupsLocaleCount = revision
+        cachedGroupsShortcuts = currentShortcuts
+        cachedGroupsCachedRevision = cachedGroupsRevision
         cachedGroups = groups
         return groups
     }

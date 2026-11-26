@@ -36,14 +36,17 @@ struct BrowserSidebarReorderContainerModifier: ViewModifier {
         !isEnabled || state.layout.isActive || section.usesGridOrdering ? nil : state.indicator(for: item.id)
     }
 
-    private var topSpace: CGFloat { isEnabled ? state.layout.topSpace(for: item.id) : 0 }
-    private var bottomSpace: CGFloat { isEnabled ? state.layout.bottomSpace(for: item.id) : 0 }
+    private var topSpace: CGFloat { isEnabled && !usesVirtualRowGeometry ? state.layout.topSpace(for: item.id) : 0 }
+    private var bottomSpace: CGFloat {
+        isEnabled && !usesVirtualRowGeometry ? state.layout.bottomSpace(for: item.id) : 0
+    }
     private var hidesSource: Bool { isEnabled && state.hidesSource(item.id) }
     private var isRevealing: Bool { isEnabled && state.isRevealing(item.id) }
 
     func body(content: Content) -> some View {
         let topGap = topSpace
         let bottomGap = bottomSpace
+        let showsRowGaps = !usesVirtualRowGeometry && state.isDragging
         let measured =
             content
             // Keep the gesture's content alive at its lifted dimensions while
@@ -87,13 +90,15 @@ struct BrowserSidebarReorderContainerModifier: ViewModifier {
             .padding(.top, topGap)
             .padding(.bottom, bottomGap)
             .overlay(alignment: .top) {
-                if topGap > 0 {
+                if showsRowGaps {
                     BrowserSidebarReorderGap(height: topGap)
+                        .opacity(topGap > 0 ? 1 : 0)
                 }
             }
             .overlay(alignment: .bottom) {
-                if bottomGap > 0 {
+                if showsRowGaps {
                     BrowserSidebarReorderGap(height: bottomGap)
+                        .opacity(bottomGap > 0 ? 1 : 0)
                 }
             }
             // Layout capacity moves with the gap, across section boundaries.

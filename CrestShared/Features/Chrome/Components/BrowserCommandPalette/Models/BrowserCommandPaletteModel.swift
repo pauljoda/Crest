@@ -305,6 +305,9 @@ final class BrowserCommandPaletteModel {
         keyWaitTask = Task { [weak self] in
             try? await Task.sleep(for: Self.keyWait)
             guard !Task.isCancelled, let self else { return }
+            // Keep the key pending if the initial deferred answer has not yet
+            // arrived and no rows exist to act on.
+            guard self.shownSequence > 0 || !self.items.isEmpty else { return }
             runWaitingKey()
         }
     }

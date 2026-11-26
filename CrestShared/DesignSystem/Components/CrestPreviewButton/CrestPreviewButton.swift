@@ -78,7 +78,8 @@ private enum CrestPreviewSnapshotCache {
         let contentKey: AnyHashable
         let colorScheme: ColorScheme
         let widthBucket: Int
-        let heightBucket: Int
+        let previewWidthBucket: Int
+        let previewHeightBucket: Int
         let scaleBucket: Int
     }
 
@@ -97,7 +98,8 @@ private enum CrestPreviewSnapshotCache {
             contentKey: key,
             colorScheme: colorScheme,
             widthBucket: Int((innerSize * 2).rounded()),
-            heightBucket: Int((previewSize.width * 2).rounded()),
+            previewWidthBucket: Int((previewSize.width * 2).rounded()),
+            previewHeightBucket: Int((previewSize.height * 2).rounded()),
             scaleBucket: Int((displayScale * 10).rounded())
         )
         if let cached = images[cacheKey] { return cached }

@@ -12,6 +12,11 @@
         "mac"
       ],
       "message": "Picture in Picture no longer jumps or pushes away from display edges while resizing, and flies cleanly into place without blocking input."
+    },
+    {
+      "id": "sidebar-drag-preview-and-live-reorder-motion",
+      "category": "fixed",
+      "message": "Dragging tabs in scrolled and large sidebar lists keeps the floating pickup preview aligned under the pointer and smoothly moves surrounding tabs and drop slots out of the way while preserving 120 fps scrolling."
     }
   ]
 }
