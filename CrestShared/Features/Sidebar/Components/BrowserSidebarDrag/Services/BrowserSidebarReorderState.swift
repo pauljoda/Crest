@@ -344,7 +344,7 @@ final class BrowserSidebarReorderState {
         let pinned = pinnedGeometry
         var result = geometry.resolvedZones.compactMap { registration -> BrowserSidebarReorderZone? in
             let projected: CGRect?
-            if case .section(let section) = registration.zone.target, section.usesGridOrdering,
+            if let section = registration.zone.target.section, section.usesGridOrdering,
                 let pinned, registration.zone.frame.intersects(pinned.frame)
             {
                 projected = CGRect(
@@ -363,7 +363,7 @@ final class BrowserSidebarReorderState {
                 guard let viewport = geometry.sidebarViewports[viewportID] else { return nil }
                 frame = frame.intersection(viewport)
                 guard !frame.isNull, !frame.isEmpty else { return nil }
-                if case .section = registration.zone.target {
+                if registration.zone.target.section != nil {
                     frame.size.width =
                         viewport.maxX + Self.sidebarExitBuffer - frame.minX
                 }
@@ -380,7 +380,7 @@ final class BrowserSidebarReorderState {
                 let row = registration.row
                 guard row.parentItemID == nil,
                     case .tab(let tabID) = row.id,
-                    case .tabs(placement: .current, folderID: nil) = row.section,
+                    row.section == .tabs(placement: .current, folderID: nil),
                     let projected = layout.frame(for: row)
                 else { continue }
                 var frame = BrowserSidebarReorderZone.nestingFrame(for: projected)
@@ -410,10 +410,10 @@ final class BrowserSidebarReorderState {
         }
         var result = BrowserPinnedTabReorderLayout(ids: ids, liftedID: lift.item.id)
         result.liftedIDs = lift.rowIDs
-        if case .insert(let section, _, let index) = resolvedTarget?.kind, section.usesGridOrdering,
+        if let insertion = resolvedTarget?.kind.insertion, insertion.section.usesGridOrdering,
             constraintMessage == nil
         {
-            result.insertionIndex = index
+            result.insertionIndex = insertion.index
         }
         return result
     }
@@ -818,7 +818,7 @@ final class BrowserSidebarReorderState {
         guard let lift,
             lift.item.id != id,
             let target = resolvedTarget,
-            case .insert = target.kind,
+            target.kind.insertion != nil,
             let order = insertionOrder(for: lift, target: target),
             let candidateIndex = order.candidateIndexes[id]
         else { return nil }
@@ -834,7 +834,8 @@ final class BrowserSidebarReorderState {
         {
             return order
         }
-        guard case .insert(let section, _, let index) = target.kind else { return nil }
+        guard let insertion = target.kind.insertion else { return nil }
+        let (section, index) = (insertion.section, insertion.index)
         let ordered = section.rows(from: registeredRows(in: lift.item.spaceAssignment))
         let candidates = ordered.filter { $0.id != lift.item.id }
         let order = InsertionOrder(
@@ -868,7 +869,7 @@ final class BrowserSidebarReorderState {
             pinned: pinnedGeometry, zones: visibleZones, rows: geometry.rows(in: lift.item.spaceAssignment),
             splitCards: Array(geometry.splitCards.values)
         ).target(previousTarget: previousTarget)
-        if case .splitInsert = resolvedTarget?.kind { hasEnteredSplitContent = true }
+        if resolvedTarget?.kind.splitInsertion != nil { hasEnteredSplitContent = true }
     }
 
     /// Asks the lift's plan about the target it is over: a target the core
@@ -909,9 +910,8 @@ final class BrowserSidebarReorderState {
             if next != layout { layout = next }
             return
         }
-        if case .insert(let section, let beforeID, _) = resolvedTarget?.kind,
-            !section.usesGridOrdering
-        {
+        if let insertion = resolvedTarget?.kind.insertion, !insertion.section.usesGridOrdering {
+            let (section, beforeID) = (insertion.section, insertion.beforeID)
             let candidates = section.rows(from: registeredRows(in: lift.item.spaceAssignment))
                 .filter { !next.hiddenIDs.contains($0.id) }
             let anchor: BrowserSidebarReorderLayout.Gap.Anchor

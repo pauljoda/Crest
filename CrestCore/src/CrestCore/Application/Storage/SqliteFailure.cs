@@ -5,7 +5,7 @@ namespace CrestCore.Application;
 /// The SQLite result codes the core reports as something other than an
 /// unavailable file. Each member names the primary code and the reason it means.
 internal sealed class SqliteFailure {
-    #region Variables
+    #region Static Variables
 
     public static readonly SqliteFailure Busy = new(code: 5, StorageFailure.Busy);
     public static readonly SqliteFailure Locked = new(code: 6, StorageFailure.Busy);
@@ -17,6 +17,10 @@ internal sealed class SqliteFailure {
 
     /// Extended result codes keep the primary code in their low byte.
     private const int PrimaryMask = 0xff;
+
+    #endregion
+
+    #region Variables
 
     public int Code { get; }
     public StorageFailure Reason { get; }

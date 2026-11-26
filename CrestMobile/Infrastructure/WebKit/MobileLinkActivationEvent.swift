@@ -7,7 +7,7 @@ import WebKit
 // MARK: - Types
 
 /// Where a press on a link is.
-enum MobileLinkPressPhase: String {
+enum MobileLinkPressPhase: String, Decodable {
     case began
     /// The press lasted long enough to open Peek.
     case held
@@ -16,6 +16,22 @@ enum MobileLinkPressPhase: String {
 }
 
 struct MobileLinkActivationEvent {
+    // MARK: - Types
+
+    private struct WirePayload: Decodable {
+        let phase: MobileLinkPressPhase
+        let pressID: String
+        let href: String?
+        let label: String?
+        let minX: Double?
+        let minY: Double?
+        let width: Double?
+        let height: Double?
+        let touchX: Double?
+        let touchY: Double?
+    }
+
+    // MARK: - Variables
 
     let phase: MobileLinkPressPhase
     let pressID: String
@@ -24,40 +40,37 @@ struct MobileLinkActivationEvent {
     let normalizedSourceRect: CGRect?
     let normalizedTouchPoint: CGPoint?
 
+    // MARK: - Initializers
+
     init?(body: Any) {
-        guard let values = body as? [String: Any],
-            let phase = (values["phase"] as? String).flatMap(MobileLinkPressPhase.init(rawValue:)),
-            let pressID = values["pressID"] as? String
+        guard JSONSerialization.isValidJSONObject(body),
+            let data = try? JSONSerialization.data(withJSONObject: body),
+            let payload = try? JSONDecoder().decode(WirePayload.self, from: data)
         else { return nil }
 
-        self.phase = phase
-        self.pressID = pressID
-        destinationURL = (values["href"] as? String).flatMap(URL.init(string:))
-        label = values["label"] as? String ?? ""
+        phase = payload.phase
+        pressID = payload.pressID
+        destinationURL = payload.href.flatMap(URL.init(string:))
+        label = payload.label ?? ""
 
-        if let minX = Self.number(values["minX"]),
-            let minY = Self.number(values["minY"]),
-            let width = Self.number(values["width"]),
-            let height = Self.number(values["height"])
+        if let minX = payload.minX,
+            let minY = payload.minY,
+            let width = payload.width,
+            let height = payload.height
         {
-            normalizedSourceRect = CGRect(
-                x: minX,
-                y: minY,
-                width: width,
-                height: height
-            )
+            normalizedSourceRect = CGRect(x: minX, y: minY, width: width, height: height)
         } else {
             normalizedSourceRect = nil
         }
 
-        if let touchX = Self.number(values["touchX"]),
-            let touchY = Self.number(values["touchY"])
-        {
+        if let touchX = payload.touchX, let touchY = payload.touchY {
             normalizedTouchPoint = CGPoint(x: touchX, y: touchY)
         } else {
             normalizedTouchPoint = nil
         }
     }
+
+    // MARK: - Actions - Peek
 
     /// The Peek holding this press on a link opens, from the page described
     /// by `context`.
@@ -74,10 +87,5 @@ struct MobileLinkActivationEvent {
             trigger: .longPress,
             sourcePresentation: sourcePresentation
         )
-    }
-
-    private static func number(_ value: Any?) -> Double? {
-        if let number = value as? NSNumber { return number.doubleValue }
-        return value as? Double
     }
 }

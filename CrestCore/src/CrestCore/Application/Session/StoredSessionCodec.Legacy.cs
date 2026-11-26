@@ -6,7 +6,7 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 internal static partial class StoredSessionCodec {
-    #region Variables
+    #region Static Variables
 
     private const string LegacyTabGroups = "currentTabFolders";
     private const string FaviconData = "faviconData";

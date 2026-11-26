@@ -4,7 +4,7 @@ namespace CrestCore.Contracts;
 /// lists it under the agent. A kind travels as its index in `All`, so `All`
 /// is append-only.
 public sealed class AgentActivityKind {
-    #region Variables
+    #region Static Variables
 
     public static readonly AgentActivityKind OpenedTab = new(name: "openedTab", title: "Opened a tab", symbol: "plus.square");
     public static readonly AgentActivityKind LoadedPage = new(name: "loadedPage", title: "Loaded a page",
@@ -20,6 +20,10 @@ public sealed class AgentActivityKind {
 
     public static IReadOnlyList<AgentActivityKind> All { get; } =
         [OpenedTab, LoadedPage, ClosedTab, OpenedWindow, OpenedPrivateWindow, DeletedHistory, RanScript];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

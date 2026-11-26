@@ -8,7 +8,7 @@ namespace CrestCore.Contracts;
 /// the two types are related (null when either type is unknown).
 public sealed record DownloadRiskFacts(string SuggestedFilename, string SanitizedFilename, string? MimeType,
     bool ExtensionRunsCode, bool MimeTypeRunsCode, bool? TypesRelated) {
-    #region Variables
+    #region Static Variables
 
     /// Extensions and MIME types that install or run software even when the
     /// platform's type registry does not say so.
@@ -32,6 +32,10 @@ public sealed record DownloadRiskFacts(string SuggestedFilename, string Sanitize
 
     /// The platform's suggested name may be longer than the name it saves under.
     public static int MaximumSuggestedFilenameLength => DownloadTextField.Filename.MaximumLength * 4;
+
+    #endregion
+
+    #region Variables
 
     /// The saved name's extension or the declared type installs or runs software.
     public bool RunsCode => ExtensionRunsCode || MimeTypeRunsCode || CodeRunningExtensions.Contains(SanitizedExtension)

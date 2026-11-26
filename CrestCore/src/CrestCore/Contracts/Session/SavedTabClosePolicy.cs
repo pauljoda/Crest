@@ -5,7 +5,7 @@ namespace CrestCore.Contracts;
 /// `Name`, so a name never changes. A policy travels as its index in `All`,
 /// so `All` is append-only.
 public sealed class SavedTabClosePolicy {
-    #region Variables
+    #region Static Variables
 
     public static readonly SavedTabClosePolicy ResumeLastLocation = new(name: "resumeLastLocation",
         title: "Resume last location");
@@ -13,6 +13,10 @@ public sealed class SavedTabClosePolicy {
     public static readonly SavedTabClosePolicy ReturnToSavedUrl = new(name: "returnToSavedURL", title: "Return to saved URL");
 
     public static IReadOnlyList<SavedTabClosePolicy> All { get; } = [ResumeLastLocation, ReturnToSavedUrl];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

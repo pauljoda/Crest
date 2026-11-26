@@ -12,8 +12,12 @@ protocol BrowserPageOwner: AnyObject, BrowserTabCopying, BrowserTabLinkProviding
     var host: BrowserPageHost { get }
     /// The focused card's page, which the page commands act on.
     var activePage: BrowserPlatformPage? { get }
+    /// Every card this window is presenting, in column order.
+    var presentedTabIDs: [UUID] { get }
     /// Every tab whose page some window over the host presents now.
     var presentedTabIDsAcrossWindows: Set<UUID> { get }
+    /// The media session store shared across this window's pages, or nil in private browsing.
+    var mediaSessionStore: BrowserMediaSessionStore? { get }
     /// The built-in content blocking the owner applies to its pages.
     var contentBlocking: BrowserContentBlockingController { get }
     /// The certificate exceptions people accepted for the owner's pages, by
@@ -32,10 +36,8 @@ protocol BrowserPageOwner: AnyObject, BrowserTabCopying, BrowserTabLinkProviding
     func select(at time: Date)
     /// Stops presenting the window's page, as when the sidebar takes its place.
     func deactivatePagePresentation()
-    /// What the page of the tab `assignment` names is playing, if anything.
-    func mediaSession(matching assignment: BrowserTabRuntimeAssignment) -> BrowserMediaSessionSnapshot?
-    /// Mutes or unmutes the page of the tab `assignment` names.
-    func setMuted(_ muted: Bool, matching assignment: BrowserTabRuntimeAssignment)
+    /// Platform-specific cleanup run on a Space's live pages before relocking it.
+    func prepareRelock(of space: SpaceModel)
 
     /// A lease on a page the core opens in `space` for a transient request,
     /// on `opener`'s engine when another page opened it.
@@ -52,6 +54,25 @@ protocol BrowserPageOwner: AnyObject, BrowserTabCopying, BrowserTabLinkProviding
     /// Hosts `opened`, a page the core opened itself for `tab` in `space`, as
     /// the tab's resident page, and brings the tab forward when `shows`.
     func hostAdoptedPage(_ opened: Engines.OpenedPage, as tab: BrowserPageTab, in space: SpaceModel, shows: Bool)
+}
+
+// MARK: - Types
+
+extension BrowserPageOwner {
+    typealias HTTPAuthenticationCredentialLoader =
+        @MainActor (
+            BrowserHTTPAuthenticationProtectionSpace,
+            UUID
+        ) async throws -> BrowserCredential?
+
+    typealias HTTPAuthenticationCredentialSaver =
+        @MainActor (
+            BrowserHTTPAuthenticationSaveRequest,
+            UUID
+        ) async throws -> Void
+
+    typealias ModifiedLinkOpener =
+        @MainActor (URL, UUID, Bool) -> BrowserModifiedLinkRegistration?
 }
 
 // MARK: - Pages the core opened or put away
@@ -362,5 +383,46 @@ extension BrowserPageOwner {
     /// Gives every page the host keeps the new default zoom.
     func defaultPageZoomDidChange(to zoom: CGFloat) {
         host.defaultPageZoomDidChange(to: zoom)
+    }
+
+    // MARK: - Media sessions
+
+    /// The media session the tab's page publishes. A private window reports
+    /// no media sessions.
+    func mediaSession(matching assignment: BrowserTabRuntimeAssignment) -> BrowserMediaSessionSnapshot? {
+        mediaSessionStore?.session(of: assignment)
+    }
+
+    /// Mutes or unmutes the sound the tab's page plays.
+    func setMuted(_ muted: Bool, matching assignment: BrowserTabRuntimeAssignment) {
+        mediaSessionStore?.setMuted(muted, of: assignment)
+    }
+
+    // MARK: - Lifecycle
+
+    /// Retires an empty surface whose initial navigation became a download:
+    /// a transient one closes, and a tab's page asks the core to close it as
+    /// its own script would.
+    func discardDownloadOnlyPage(_ page: BrowserPlatformPage) {
+        guard !host.discardDownloadOnlyTransientPage(page) else { return }
+        page.corePage.report(PageCloseRequested(pageID: page.corePage.id))
+    }
+
+    func prepareRelock(of space: SpaceModel) {}
+
+    /// Hides a protected Space without unloading its tabs. Unlocking can reuse
+    /// the same pages, including scroll position and unsaved form state.
+    ///
+    /// Previously archived state is still purged from disk so no snapshot of a
+    /// protected Space lingers.
+    func relockProtectedSpace(_ space: SpaceModel) {
+        guard space.settings.requiresAuthentication else { return }
+        prepareRelock(of: space)
+        if activePage?.spaceID == space.id
+            || presentedTabIDs.contains(where: { host.page(for: $0)?.spaceID == space.id })
+        {
+            deactivatePagePresentation()
+        }
+        host.tabState.removeStates(profileID: space.profileID)
     }
 }

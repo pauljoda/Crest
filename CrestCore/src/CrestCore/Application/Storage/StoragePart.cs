@@ -4,12 +4,16 @@ namespace CrestCore.Application;
 /// without history, the sync journal, and each Space's history. Earlier
 /// releases wrote these names, and a rollback build still reads them.
 internal sealed record StoragePart(string Name) {
-    #region Variables
+    #region Static Variables
 
     public static readonly StoragePart Core = new("core");
     public static readonly StoragePart Journal = new("journal");
 
     private const string HistoryPrefix = "history.";
+
+    #endregion
+
+    #region Variables
 
     /// Whether this part holds one Space's history.
     public bool IsHistory => Name.StartsWith(HistoryPrefix, StringComparison.Ordinal);

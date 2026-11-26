@@ -9,7 +9,7 @@ public sealed class CrestFieldDivision {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     // Titles are one word: they caption gallery cards that already show the division.
     public static readonly CrestFieldDivision Plain = new(Kinds.Plain, "plain", "Plain", CrestVocabulary.Baseline);
@@ -26,6 +26,10 @@ public sealed class CrestFieldDivision {
 
     public static IReadOnlyList<CrestFieldDivision> All { get; } =
         [Plain, PerPale, PerFess, PerBend, PerChevron, Quarterly, PerSaltire, Gyronny, Barry, Paly, Checky];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

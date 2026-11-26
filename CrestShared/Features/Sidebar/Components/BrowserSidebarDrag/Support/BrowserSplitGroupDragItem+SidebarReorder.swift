@@ -53,8 +53,7 @@ extension BrowserSplitGroupDragItem: BrowserSidebarDraggedItem {
     /// cannot be members, so the pinned grid refuses it the same way it
     /// refuses a folder.
     func isAcceptedAlone(by section: BrowserSidebarReorderSection) -> Bool {
-        guard case .tabs(let placement, _) = section else { return false }
-        return placement.holdsSplits
+        section.tabPlacement?.holdsSplits ?? false
     }
 
     func foldsAroundAlone(_ tabID: UUID) -> Bool {

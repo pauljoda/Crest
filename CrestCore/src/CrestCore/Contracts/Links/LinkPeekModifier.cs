@@ -6,7 +6,7 @@ namespace CrestCore.Contracts;
 /// Link preferences (`crest.link-preferences.v1`) and the link-navigation
 /// policy spell a modifier as its `Name`, so a name never changes.
 public sealed class LinkPeekModifier {
-    #region Variables
+    #region Static Variables
 
     public static readonly LinkPeekModifier Option = new(name: "option", title: "Option (⌥)", clickTitle: "Option-click",
         peekKey: ShortcutModifiers.Option, newTabKey: ShortcutModifiers.Command, yieldsToNewTabKey: false);
@@ -18,6 +18,10 @@ public sealed class LinkPeekModifier {
         peekKey: ShortcutModifiers.Shift, newTabKey: ShortcutModifiers.Command, yieldsToNewTabKey: true);
 
     public static IReadOnlyList<LinkPeekModifier> All { get; } = [Option, Command, Shift];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

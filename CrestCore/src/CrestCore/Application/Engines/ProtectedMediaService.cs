@@ -8,7 +8,7 @@ namespace CrestCore.Application;
 /// start, rather than after a first load fails, unless the person chose an
 /// engine for the site.
 internal sealed class ProtectedMediaService {
-    #region Variables
+    #region Static Variables
 
     public static readonly ProtectedMediaService Netflix = new("netflix.com", "www.netflix.com");
     public static readonly ProtectedMediaService DisneyPlus = new("disneyplus.com", "www.disneyplus.com");
@@ -17,6 +17,10 @@ internal sealed class ProtectedMediaService {
     public static readonly ProtectedMediaService PrimeVideo = new("primevideo.com", "www.primevideo.com");
 
     public static IReadOnlyList<ProtectedMediaService> All { get; } = [Netflix, DisneyPlus, Max, PrimeVideo];
+
+    #endregion
+
+    #region Variables
 
     /// The secure origins the service's site and player load from.
     private readonly IReadOnlyList<SiteOrigin> origins;

@@ -10,7 +10,7 @@ namespace CrestCore.Contracts;
 /// `Name`, so a name never changes. `All` is append-only, and its order is the
 /// order a choice lists them in.
 public sealed class ShortcutPreference {
-    #region Variables
+    #region Static Variables
 
     public static readonly ShortcutPreference PreferCrest = new(name: "preferCrest", title: "Prefer Crest", symbol: "macwindow",
         runsBeforePage: true, takesSecondPress: false);
@@ -20,6 +20,10 @@ public sealed class ShortcutPreference {
         runsBeforePage: false, takesSecondPress: false);
 
     public static IReadOnlyList<ShortcutPreference> All { get; } = [PreferCrest, UseBoth, PreferWebsite];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

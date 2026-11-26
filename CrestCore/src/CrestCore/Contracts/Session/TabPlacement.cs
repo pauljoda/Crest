@@ -7,7 +7,7 @@ namespace CrestCore.Contracts;
 /// as its `Name`, so a name never changes. A placement travels as its index in
 /// `All`, so `All` is append-only.
 public sealed class TabPlacement {
-    #region Variables
+    #region Static Variables
 
     /// The most pinned tabs one Space holds.
     public const int PinnedCapacity = 12;
@@ -25,6 +25,10 @@ public sealed class TabPlacement {
         paletteRow: PaletteRowKind.Tab);
 
     public static IReadOnlyList<TabPlacement> All { get; } = [Pinned, Saved, Current];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

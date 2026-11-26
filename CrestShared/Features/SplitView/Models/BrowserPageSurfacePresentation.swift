@@ -143,8 +143,8 @@ enum BrowserPageSurfacePresentation {
 
     /// The slot a drag in flight would drop a card into, for this Space.
     private static func placeholderIndex(resolvedTarget: BrowserSidebarReorderTarget?, spaceID: UUID) -> Int? {
-        guard case .splitInsert(let assignment, let index) = resolvedTarget?.kind, assignment.spaceID == spaceID
+        guard let split = resolvedTarget?.kind.splitInsertion, split.assignment.spaceID == spaceID
         else { return nil }
-        return index
+        return split.index
     }
 }

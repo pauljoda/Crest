@@ -48,8 +48,7 @@ extension BrowserFolderDragItem: BrowserSidebarDraggedItem {
     /// A folder reorders only among folders, so a folder dragged over the
     /// pinned grid resolves to no target rather than a nonsensical one.
     func isAcceptedAlone(by section: BrowserSidebarReorderSection) -> Bool {
-        guard case .tabs(let placement, _) = section else { return true }
-        return placement.holdsFolders
+        section.tabPlacement?.holdsFolders ?? true
     }
 
     func foldsAroundAlone(_ tabID: UUID) -> Bool {

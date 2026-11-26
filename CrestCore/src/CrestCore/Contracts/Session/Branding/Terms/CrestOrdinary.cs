@@ -9,7 +9,7 @@ public sealed class CrestOrdinary {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static readonly CrestOrdinary None = new(Kinds.None, "none", "None", CrestVocabulary.Baseline);
     public static readonly CrestOrdinary Pale = new(Kinds.Pale, "pale", "Pale", CrestVocabulary.Baseline);
@@ -27,6 +27,10 @@ public sealed class CrestOrdinary {
 
     public static IReadOnlyList<CrestOrdinary> All { get; } =
         [None, Pale, Fess, Bend, Chevron, Cross, Saltire, Chief, Bordure, Pall, Pile, Canton, Roundel];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

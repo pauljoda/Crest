@@ -45,7 +45,7 @@ internal sealed class SessionStorage : IDisposable {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public const string FileName = "session.sqlite";
     private const string RecoveryFileName = "session.recovery.sqlite";
@@ -67,6 +67,10 @@ internal sealed class SessionStorage : IDisposable {
     /// the whole session on its own.
     private static readonly TimeSpan SaveBehindDelay = TimeSpan.FromMilliseconds(500);
     private const UnixFileMode OwnerOnly = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
+
+    #endregion
+
+    #region Variables
 
     private readonly SqliteConnection connection;
     private readonly Action<Change> announce;

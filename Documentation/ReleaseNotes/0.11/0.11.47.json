@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "architecture-oop-consolidation",
+      "category": "internal",
+      "message": "Consolidate shared Mac and mobile browsing surfaces, replace switch-driven drag and bridge decoding with self-describing types, and align core and Apple source layout."
+    }
+  ]
+}

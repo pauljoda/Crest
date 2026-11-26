@@ -4,12 +4,16 @@ namespace CrestCore.Contracts;
 /// simple, a bold rounded figure on a soft shape in Crest's own colors, or
 /// heraldic, full arms in the colors of the house.
 public sealed class SpaceHouseStyle {
-    #region Variables
+    #region Static Variables
 
     public static readonly SpaceHouseStyle Simple = new("simple", "Simple");
     public static readonly SpaceHouseStyle Heraldic = new("heraldic", "Heraldic");
 
     public static IReadOnlyList<SpaceHouseStyle> All { get; } = [Simple, Heraldic];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

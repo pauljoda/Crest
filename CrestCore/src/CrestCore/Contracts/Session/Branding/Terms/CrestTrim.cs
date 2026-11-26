@@ -9,7 +9,7 @@ public sealed class CrestTrim {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static readonly CrestTrim None = new(Kinds.None, "none", "None", CrestVocabulary.Baseline);
     public static readonly CrestTrim Shield = new(Kinds.Shield, "shield", "Shield", CrestVocabulary.Baseline);
@@ -22,6 +22,10 @@ public sealed class CrestTrim {
     public static readonly CrestTrim Beaded = new(Kinds.Beaded, "beaded", "Beaded", CrestVocabulary.Studio, isCounted: true);
 
     public static IReadOnlyList<CrestTrim> All { get; } = [None, Shield, Line, DoubleLine, Laurel, Sunburst, DoubleRing, Seal, Beaded];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

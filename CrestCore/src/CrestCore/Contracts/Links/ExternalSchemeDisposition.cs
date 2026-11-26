@@ -11,7 +11,7 @@ public sealed class ExternalSchemeDisposition {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     /// The page engine's to load, or to refuse on its own terms.
     public static readonly ExternalSchemeDisposition Engine = new(Kinds.Engine, name: "engine");
@@ -21,6 +21,10 @@ public sealed class ExternalSchemeDisposition {
     public static readonly ExternalSchemeDisposition HandOff = new(Kinds.HandOff, name: "handOff");
 
     public static IReadOnlyList<ExternalSchemeDisposition> All { get; } = [Engine, Blocked, HandOff];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

@@ -7,7 +7,7 @@ namespace CrestCore.Contracts;
 /// An assessment lists its reasons in `All` order, and a reason travels as its
 /// index there, so `All` is append-only.
 public sealed class DownloadRiskReason {
-    #region Variables
+    #region Static Variables
 
     public static readonly DownloadRiskReason ExecutableOrInstaller = new(name: "executableOrInstaller",
         applies: facts => facts.RunsCode, confirmsUserInitiated: false,
@@ -20,6 +20,10 @@ public sealed class DownloadRiskReason {
         message: "The server-reported file type does not match the filename and one of those types can run software.");
 
     public static IReadOnlyList<DownloadRiskReason> All { get; } = [ExecutableOrInstaller, DeceptiveFilename, DangerousTypeMismatch];
+
+    #endregion
+
+    #region Variables
 
     private readonly Func<DownloadRiskFacts, bool> applies;
 

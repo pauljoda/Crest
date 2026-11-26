@@ -55,10 +55,14 @@ internal sealed class EngineDownloads(Downloads downloads, Device device, Pages 
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     internal const string CanceledMessage = "Canceled.";
     internal const string DeclinedMessage = "Canceled before downloading a potentially dangerous file.";
+
+    #endregion
+
+    #region Variables
 
     private readonly Dictionary<(Engine Engine, Guid ProfileId, string EngineId), Tracked> tracked = [];
     private readonly Dictionary<Guid, Tracked> byDownload = [];

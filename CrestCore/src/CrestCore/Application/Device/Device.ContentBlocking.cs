@@ -20,34 +20,25 @@ internal sealed partial class Device {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     /// The most filter lists the person may add.
-    public const int MaximumCustomFilterLists = 30;
+    public const int MaximumCustomFilterLists = ContentBlockingLedger.MaximumCustomFilterLists;
     /// The longest address a custom filter list may have.
-    public const int MaximumFilterListAddressLength = 2_048;
-
+    public const int MaximumFilterListAddressLength = ContentBlockingLedger.MaximumFilterListAddressLength;
     /// The longest the person's own filters may be.
-    public const int MaximumCustomFiltersBytes = 512 * 1024;
+    public const int MaximumCustomFiltersBytes = ContentBlockingLedger.MaximumCustomFiltersBytes;
 
-    /// The level the person chose, or the one first answered for them; null
-    /// before either.
-    private ContentBlockingLevel? contentBlockingLevel;
-    /// The lists the person turned on or off; any other follows the level.
-    private readonly Dictionary<FilterList, bool> filterListChoices = [];
-    /// The lists the person added, in the order added.
-    private readonly List<CustomFilterList> customFilterLists = [];
-    /// The person's own filters.
-    private string customFilters = "";
-    /// The persistent session's Spaces' sites, which the device store keeps.
-    private readonly List<SiteContentBlocking> keptBlockingSites = [];
-    /// Every other Space's sites, which live as long as the process.
-    private readonly List<SiteContentBlocking> passingBlockingSites = [];
+    #endregion
+
+    #region Variables
+
+    private readonly ContentBlockingLedger contentBlocking = new();
 
     /// The lists the person turned on or off.
     internal IReadOnlyDictionary<FilterList, bool> FilterListChoices {
         get {
-            lock (gate) return new Dictionary<FilterList, bool>(filterListChoices);
+            lock (gate) return contentBlocking.FilterListChoices;
         }
     }
 
@@ -55,9 +46,7 @@ internal sealed partial class Device {
     internal FilterPreferences FilterChoices {
         get {
             var level = ContentBlockingLevel;
-            lock (gate)
-                return new(level, new Dictionary<FilterList, bool>(filterListChoices), [.. customFilterLists], customFilters,
-                    links.CleansCopiedLinks);
+            lock (gate) return contentBlocking.Preferences(level, links.CleansCopiedLinks);
         }
     }
 
@@ -69,38 +58,35 @@ internal sealed partial class Device {
     internal ContentBlockingLevel ContentBlockingLevel {
         get {
             lock (gate)
-                if (contentBlockingLevel is { } chosen) return chosen;
+                if (contentBlocking.Level is { } chosen) return chosen;
             if (Persistent() is not (_, var authority)) return ContentBlockingLevel.Balanced;
             var level = FirstLevel(authority);
             lock (gate) {
-                if (contentBlockingLevel is null) {
-                    contentBlockingLevel = level;
-                    storage?.EnqueueDevice(Records());
-                }
-                return contentBlockingLevel;
+                if (contentBlocking.AdoptLevelIfUnset(level)) storage?.EnqueueDevice(Records());
+                return contentBlocking.Level!;
             }
         }
-    }
-
-    /// Whether the persistent session, now attached, gives a device that
-    /// never chose a level another level than the Balanced the core answered
-    /// before it could.
-    internal bool OpeningChangesContentBlockingLevel() {
-        lock (gate)
-            if (contentBlockingLevel is not null) return false;
-        return Persistent() is (_, var authority) && FirstLevel(authority) != ContentBlockingLevel.Balanced;
     }
 
     /// Every site where Crest blocks nothing.
     internal IReadOnlyList<SiteContentBlocking> BlockingSites {
         get {
-            lock (gate) return [.. keptBlockingSites, .. passingBlockingSites];
+            lock (gate) return contentBlocking.BlockingSites;
         }
     }
 
     #endregion
 
     #region Actions - Filter lists
+
+    /// Whether the persistent session, now attached, gives a device that
+    /// never chose a level another level than the Balanced the core answered
+    /// before it could.
+    internal bool OpeningChangesContentBlockingLevel() {
+        lock (gate)
+            if (contentBlocking.Level is not null) return false;
+        return Persistent() is (_, var authority) && FirstLevel(authority) != ContentBlockingLevel.Balanced;
+    }
 
     /// Blocks at `level` from now on. A level that blocks sets every catalog
     /// list to what it turns on, forgetting the lists the person turned on or
@@ -109,25 +95,13 @@ internal sealed partial class Device {
     internal bool SetContentBlockingLevel(ContentBlockingLevel level) {
         ArgumentNullException.ThrowIfNull(level);
         var current = ContentBlockingLevel;
-        lock (gate) {
-            bool resetsLists = level.BlocksContent && filterListChoices.Count > 0;
-            if (level == current && !resetsLists) return false;
-            contentBlockingLevel = level;
-            if (level.BlocksContent) filterListChoices.Clear();
-            storage?.EnqueueDevice(Records());
-            return true;
-        }
+        return UpdateContentBlocking(ledger => ledger.SetLevel(level, current));
     }
 
     /// Turns `list` on or off for good. Answers whether that changed anything.
     internal bool ChooseFilterList(FilterList list, bool isOn) {
         ArgumentNullException.ThrowIfNull(list);
-        lock (gate) {
-            if (filterListChoices.TryGetValue(list, out bool chosen) && chosen == isOn) return false;
-            filterListChoices[list] = isOn;
-            storage?.EnqueueDevice(Records());
-            return true;
-        }
+        return UpdateContentBlocking(ledger => ledger.ChooseFilterList(list, isOn));
     }
 
     /// Adds the list at `url` as `id`, on. Answers whether that changed
@@ -136,73 +110,35 @@ internal sealed partial class Device {
     /// list on its way, or past the most lists kept.
     internal bool AddCustomFilterList(Guid id, string url) {
         ArgumentNullException.ThrowIfNull(url);
-        string address = url.Trim();
-        if (address.Length > MaximumFilterListAddressLength || !Uri.TryCreate(address, UriKind.Absolute, out var parsed)
-            || WebScheme.Spelled(parsed.Scheme) != WebScheme.Https || string.IsNullOrEmpty(parsed.Host))
-            throw new Rejected(new FilterListAddressInvalid(url));
-        lock (gate) {
-            if (customFilterLists.Any(list => list.Id == id || list.Url == parsed.AbsoluteUri)) return false;
-            if (customFilterLists.Count >= MaximumCustomFilterLists)
-                throw new Rejected(new CustomFilterListLimitReached(MaximumCustomFilterLists));
-            customFilterLists.Add(new(id, parsed.AbsoluteUri, IsOn: true));
-            storage?.EnqueueDevice(Records());
-            return true;
-        }
+        return UpdateContentBlocking(ledger => ledger.AddCustomFilterList(id, url));
     }
 
     /// Removes the list the person added as `id`. Answers whether it was there.
-    internal bool RemoveCustomFilterList(Guid id) {
-        lock (gate) {
-            if (customFilterLists.RemoveAll(list => list.Id == id) == 0) return false;
-            storage?.EnqueueDevice(Records());
-            return true;
-        }
-    }
+    internal bool RemoveCustomFilterList(Guid id) => UpdateContentBlocking(ledger => ledger.RemoveCustomFilterList(id));
 
     /// Turns the list the person added as `id` on or off. Answers whether that
     /// changed anything.
-    internal bool ChooseCustomFilterList(Guid id, bool isOn) {
-        lock (gate) {
-            int index = customFilterLists.FindIndex(list => list.Id == id);
-            if (index < 0 || customFilterLists[index].IsOn == isOn) return false;
-            customFilterLists[index] = customFilterLists[index] with { IsOn = isOn };
-            storage?.EnqueueDevice(Records());
-            return true;
-        }
-    }
+    internal bool ChooseCustomFilterList(Guid id, bool isOn) =>
+        UpdateContentBlocking(ledger => ledger.ChooseCustomFilterList(id, isOn));
 
     /// Replaces the person's own filters. Answers whether that changed
     /// anything. Refused for filters longer than the core keeps.
     internal bool SetCustomFilters(string text) {
         ArgumentNullException.ThrowIfNull(text);
-        if (System.Text.Encoding.UTF8.GetByteCount(text) > MaximumCustomFiltersBytes)
-            throw new Rejected(new CustomFiltersTooLarge(MaximumCustomFiltersBytes));
-        lock (gate) {
-            if (customFilters == text) return false;
-            customFilters = text;
-            storage?.EnqueueDevice(Records());
-            return true;
-        }
+        return UpdateContentBlocking(ledger => ledger.SetCustomFilters(text));
     }
 
     /// Removes the lines of the person's filters that `matches`, answering
     /// whether any went.
     internal bool RemoveCustomFilters(Func<string, bool> matches) {
         ArgumentNullException.ThrowIfNull(matches);
-        lock (gate) {
-            var lines = customFilters.Split('\n');
-            var kept = lines.Where(line => !matches(line)).ToArray();
-            if (kept.Length == lines.Length) return false;
-            customFilters = string.Join('\n', kept);
-            storage?.EnqueueDevice(Records());
-            return true;
-        }
+        return UpdateContentBlocking(ledger => ledger.RemoveCustomFilters(matches));
     }
 
     /// Whether a line of the person's filters `matches`.
     internal bool HoldsCustomFilter(Func<string, bool> matches) {
         ArgumentNullException.ThrowIfNull(matches);
-        lock (gate) return customFilters.Split('\n').Any(matches);
+        lock (gate) return contentBlocking.HoldsCustomFilter(matches);
     }
 
     /// Adds `rule` as its own line of the person's filters, unless a line
@@ -210,14 +146,12 @@ internal sealed partial class Device {
     /// core keeps.
     internal bool AddCustomFilter(string rule) {
         ArgumentException.ThrowIfNullOrWhiteSpace(rule);
+        return UpdateContentBlocking(ledger => ledger.AddCustomFilter(rule));
+    }
+
+    private bool UpdateContentBlocking(Func<ContentBlockingLedger, bool> edit) {
         lock (gate) {
-            if (customFilters.Split('\n').Any(line => line.Trim() == rule)) return false;
-            var text = customFilters.Length == 0 || customFilters.EndsWith('\n')
-                ? customFilters + rule
-                : customFilters + "\n" + rule;
-            if (System.Text.Encoding.UTF8.GetByteCount(text) > MaximumCustomFiltersBytes)
-                throw new Rejected(new CustomFiltersTooLarge(MaximumCustomFiltersBytes));
-            customFilters = text;
+            if (!edit(contentBlocking)) return false;
             storage?.EnqueueDevice(Records());
             return true;
         }
@@ -241,20 +175,10 @@ internal sealed partial class Device {
         var (keeps, locked) = ChoiceScope(spaceId);
         if (locked && !blocks) throw new Rejected(new SpaceLocked(spaceId));
         lock (gate) {
-            bool storesChange;
-            if (blocks) {
-                storesChange = keptBlockingSites.RemoveAll(site => site.Origin == origin) > 0;
-                if (passingBlockingSites.RemoveAll(site => site.Origin == origin) == 0 && !storesChange) return;
-            } else {
-                if (keptBlockingSites.Any(site => site.Origin == origin)) return;
-                bool passing = passingBlockingSites.Any(site => site.Origin == origin);
-                if (passing && !keeps) return;
-                passingBlockingSites.RemoveAll(site => site.Origin == origin);
-                (keeps ? keptBlockingSites : passingBlockingSites).Add(new(spaceId, origin));
-                storesChange = keeps;
-            }
+            var (changed, storesChange) = contentBlocking.SetBlocking(spaceId, origin, blocks, keeps);
+            if (!changed) return;
             if (storesChange) storage?.EnqueueDevice(Records());
-            changes.Publish(new SiteContentBlockingChanged([.. keptBlockingSites, .. passingBlockingSites]));
+            changes.Publish(new SiteContentBlockingChanged(contentBlocking.BlockingSites));
         }
     }
 
@@ -264,8 +188,8 @@ internal sealed partial class Device {
     public void ForgetBlockingSites(Guid spaceId, ChangeFeed changes) {
         ArgumentNullException.ThrowIfNull(changes);
         lock (gate) {
-            if (passingBlockingSites.RemoveAll(site => site.SpaceId == spaceId) == 0) return;
-            changes.Publish(new SiteContentBlockingChanged([.. keptBlockingSites, .. passingBlockingSites]));
+            if (!contentBlocking.ForgetPassingSites(spaceId)) return;
+            changes.Publish(new SiteContentBlockingChanged(contentBlocking.BlockingSites));
         }
     }
 
@@ -279,7 +203,7 @@ internal sealed partial class Device {
         lock (gate) attached = [.. workspaces];
         if (!attached.Any(entry => entry.Value.Current.Space(spaceId) is not null)) return false;
         if (origin is null) return true;
-        lock (gate) return !keptBlockingSites.Concat(passingBlockingSites).Any(site => site.Origin == origin);
+        lock (gate) return !contentBlocking.IsExempt(origin);
     }
 
     /// The level a device that never chose one starts at: Off when every
@@ -292,13 +216,7 @@ internal sealed partial class Device {
     }
 
     /// Takes the device store's choices and sites at launch.
-    private void RestoreContentBlocking(DeviceRecords records) {
-        contentBlockingLevel = records.ContentBlockingLevel;
-        foreach (var (list, isOn) in records.FilterListChoices) filterListChoices[list] = isOn;
-        customFilterLists.AddRange(records.CustomFilterLists.DistinctBy(list => list.Id));
-        customFilters = records.CustomFilters;
-        keptBlockingSites.AddRange(records.BlockingSites.Distinct());
-    }
+    private void RestoreContentBlocking(DeviceRecords records) => contentBlocking.Restore(records);
 
     #endregion
 }

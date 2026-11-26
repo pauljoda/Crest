@@ -10,7 +10,7 @@ public sealed class SpaceTextColorMode {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static readonly SpaceTextColorMode Automatic = new(Kinds.Automatic, "automatic", "Automatic");
     public static readonly SpaceTextColorMode Light = new(Kinds.Light, "light", "Light");
@@ -18,6 +18,10 @@ public sealed class SpaceTextColorMode {
     public static readonly SpaceTextColorMode System = new(Kinds.System, "system", "System");
 
     public static IReadOnlyList<SpaceTextColorMode> All { get; } = [Automatic, Light, Dark, System];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

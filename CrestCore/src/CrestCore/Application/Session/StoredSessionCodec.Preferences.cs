@@ -7,7 +7,7 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 internal static partial class StoredSessionCodec {
-    #region Variables
+    #region Static Variables
 
     /// What a Space that stored no browsing preferences searches and keeps.
     internal static BrowsingPreferences DefaultBrowsingPreferences { get; } = new(BuiltInSearchProvider.Google, null, [], false,

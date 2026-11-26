@@ -44,15 +44,10 @@ final class BrowserStore {
     @ObservationIgnored let core: CrestCore
     @ObservationIgnored let credentialVault: any CredentialVault
 
-    /// Where this window's addresses and payment cards live: beside the
-    /// Keychain passwords, in memory where the passwords are, and nowhere in
-    /// a private window.
-    @ObservationIgnored private(set) lazy var autofillVault: BrowserAutofillVault = {
-        if let keychain = credentialVault as? KeychainCredentialVault {
-            return BrowserAutofillVault(store: SecurityCredentialKeychainStore(), servicePrefix: keychain.servicePrefix)
-        }
-        return credentialVault is PrivateBrowsingCredentialVault ? .unavailable : .inMemory
-    }()
+    /// Where this window's addresses and payment cards live: supplied by the
+    /// credential vault itself so storage stays polymorphic.
+    @ObservationIgnored private(set) lazy var autofillVault: BrowserAutofillVault =
+        (credentialVault as? any BrowserAutofillVaultProviding)?.makeAutofillVault() ?? .inMemory
     @ObservationIgnored var credentialSaveOperations: [BrowserCredentialSaveKey: BrowserCredentialSaveOperation] = [:]
     @ObservationIgnored let linkPreferences: BrowserLinkPreferenceStore
     @ObservationIgnored var pendingMovedTabActivation: BrowserTabRuntimeAssignment?
@@ -88,143 +83,11 @@ final class BrowserStore {
 
     var selectedSpaceID: UUID { windowModel?.shownSpaceID ?? lastWindow.shownSpace }
 
-    /// The tab this window shows in a Space, if any.
-    func selectedTabID(in spaceID: UUID) -> UUID? {
-        guard let windowModel else { return lastWindow.shownTabID(in: spaceID) }
-        return windowModel.shownTabID(in: spaceID)
-    }
-
     var isPrivateBrowsing: Bool { workspaceKind.isPrivate }
     var isTemporaryWorkspace: Bool { temporarySourceAssignment != nil }
     var temporarySourceAssignment: BrowserSpaceRuntimeAssignment? { family.temporarySourceAssignment }
 
-    /// Shows a Space in this window, on the tab it last showed there or the
-    /// Space's fallback.
-    func selectPresentedSpace(_ id: UUID) {
-        guard !isDeleting(id), spaceModel(id) != nil else { return }
-        guard sendWindowIntent(ShowSpace(windowID: windowID, spaceID: id)) else { return }
-        tabMultiSelection.clear()
-        windowRevision &+= 1
-    }
-
-    /// Shows the Space before or after this window's, wrapping, among the
-    /// Spaces it may show, and answers it; nil when the core showed no other.
-    @discardableResult
-    func selectAdjacentSpace(_ direction: AdjacentDirection) -> UUID? {
-        let shown = selectedSpaceID
-        guard sendWindowIntent(ShowAdjacentSpace(windowID: windowID, direction: direction)),
-            selectedSpaceID != shown
-        else { return nil }
-        spaceStep = BrowserSpaceStep(origin: shown, destination: selectedSpaceID, direction: direction)
-        tabMultiSelection.clear()
-        windowRevision &+= 1
-        return selectedSpaceID
-    }
-
-    /// Shows the tab one stop from this window's in the order its sidebar
-    /// shows them, wrapping, and answers it; nil when the core showed no other.
-    @discardableResult
-    func selectAdjacentTab(_ direction: AdjacentDirection) -> UUID? {
-        let shown = shownTab?.id
-        guard sendWindowIntent(ShowAdjacentTab(windowID: windowID, direction: direction)),
-            let next = shownTab?.id, next != shown
-        else { return nil }
-        windowRevision &+= 1
-        return next
-    }
-
-    /// Shows the tab of this window's Space used most recently other than the
-    /// one it shows, which the core chooses. False when there is none.
-    @discardableResult
-    func showMostRecentTab() -> Bool {
-        let shown = shownTab?.id
-        guard sendWindowIntent(ShowMostRecentTab(windowID: windowID)), shownTab?.id != shown else { return false }
-        windowRevision &+= 1
-        return true
-    }
-
-    /// Shows the tab of this window's Space used least recently, which the
-    /// core chooses. False when there is none.
-    @discardableResult
-    func showLeastRecentTab() -> Bool {
-        let shown = shownTab?.id
-        guard sendWindowIntent(ShowLeastRecentTab(windowID: windowID)), shownTab?.id != shown else { return false }
-        windowRevision &+= 1
-        return true
-    }
-
-    /// This window's tabs and splits from the one it shows to the one used
-    /// longest ago, as the core orders them; empty when it shows no tab.
-    func recentTabItems() -> [RecentTabItem] {
-        (try? core.query(RecentTabs(windowID: windowID)))?.items ?? []
-    }
-
-    /// Shows the tab or split `item` stands for, focusing the tab the core
-    /// named, in its own Space, which may be another Space of the shown
-    /// Space's Sub-Space group. False when the core showed nothing new.
-    @discardableResult
-    func showRecentTab(_ item: RecentTabItem) -> Bool {
-        let shown = shownTab?.id
-        let space = selectedSpaceID
-        guard
-            sendWindowIntent(ShowTab(windowID: windowID, spaceID: item.spaceID, tabID: item.focusedTabID)),
-            shownTab?.id != shown
-        else { return false }
-        // A selection belongs to the Space it was made in, as a Space switch
-        // drops it.
-        if item.spaceID != space { tabMultiSelection.clear() }
-        windowRevision &+= 1
-        return true
-    }
-
-    func clearPresentedTabSelection(in spaceID: UUID) {
-        guard sendWindowIntent(ShowTab(windowID: windowID, spaceID: spaceID, tabID: nil)) else {
-            return
-        }
-        windowRevision &+= 1
-    }
-
-    /// Shows a tab in this window and records when it was last used, which
-    /// current-tab cleanup reads. Answers false when the core would not show it.
-    @discardableResult
-    func activateSessionTab(_ id: UUID, in spaceID: UUID) -> Bool {
-        guard !isDeleting(spaceID), spaceModel(spaceID)?.shownTab(id) != nil,
-            sendWindowIntent(ShowTab(windowID: windowID, spaceID: spaceID, tabID: id))
-        else { return false }
-        windowRevision &+= 1
-        return true
-    }
-
-    /// Stops showing a tab the session keeps: the window returns to the tab it
-    /// showed before in that Space, or shows nothing there.
-    func dismissShownTab(_ id: UUID, in spaceID: UUID) {
-        guard
-            sendWindowIntent(
-                DismissShownTab(windowID: windowID, spaceID: spaceID, tabID: id))
-        else { return }
-        windowRevision &+= 1
-    }
-
-    /// The column shares this window keeps for a split group it resized.
-    func resizeSplitColumns(_ fractions: [Double], for groupID: UUID) {
-        sendWindowIntent(ResizeSplitColumns(windowID: windowID, groupID: groupID, shares: fractions))
-    }
-
-    /// Runs one intent about this window. What it changed, including a tab
-    /// use the core recorded, reaches the read model through the core's
-    /// changes. Answers false when a rule refused it.
-    @discardableResult
-    private func sendWindowIntent(_ intent: some Intent) -> Bool {
-        do { try core.send(intent) } catch { return false }
-        lastSelectionScope = selectionScope
-        return true
-    }
-
-    /// What this window shows changed without an intent of its own, as when a
-    /// tab moved into or out of it.
-    func showsAnew() {
-        windowRevision &+= 1
-    }
+    // MARK: - Initializers
 
     /// A window over a new family the core opens from `seed`, whose tabs wear
     /// the images `images` holds for the seed's tabs. Without `spaceID` it
@@ -288,6 +151,149 @@ final class BrowserStore {
         lastSelectionScope = selectionScope
     }
 
+    isolated deinit {
+        close()
+    }
+
+    // MARK: - Actions - Window Selection
+
+    /// The tab this window shows in a Space, if any.
+    func selectedTabID(in spaceID: UUID) -> UUID? {
+        guard let windowModel else { return lastWindow.shownTabID(in: spaceID) }
+        return windowModel.shownTabID(in: spaceID)
+    }
+
+    /// Shows a Space in this window, on the tab it last showed there or the
+    /// Space's fallback.
+    func selectPresentedSpace(_ id: UUID) {
+        guard !isDeleting(id), spaceModel(id) != nil else { return }
+        guard sendWindowIntent(ShowSpace(windowID: windowID, spaceID: id)) else { return }
+        tabMultiSelection.clear()
+    }
+
+    /// Shows the Space before or after this window's, wrapping, among the
+    /// Spaces it may show, and answers it; nil when the core showed no other.
+    @discardableResult
+    func selectAdjacentSpace(_ direction: AdjacentDirection) -> UUID? {
+        let shown = selectedSpaceID
+        guard
+            sendWindowIntent(
+                ShowAdjacentSpace(windowID: windowID, direction: direction),
+                requiresChange: {
+                    selectedSpaceID != shown
+                })
+        else { return nil }
+        spaceStep = BrowserSpaceStep(origin: shown, destination: selectedSpaceID, direction: direction)
+        tabMultiSelection.clear()
+        return selectedSpaceID
+    }
+
+    /// Shows the tab one stop from this window's in the order its sidebar
+    /// shows them, wrapping, and answers it; nil when the core showed no other.
+    @discardableResult
+    func selectAdjacentTab(_ direction: AdjacentDirection) -> UUID? {
+        let shown = shownTab?.id
+        guard
+            sendWindowIntent(
+                ShowAdjacentTab(windowID: windowID, direction: direction),
+                requiresChange: {
+                    shownTab?.id != nil && shownTab?.id != shown
+                })
+        else { return nil }
+        return shownTab?.id
+    }
+
+    /// Shows the tab of this window's Space used most recently other than the
+    /// one it shows, which the core chooses. False when there is none.
+    @discardableResult
+    func showMostRecentTab() -> Bool {
+        let shown = shownTab?.id
+        return sendWindowIntent(ShowMostRecentTab(windowID: windowID), requiresChange: { shownTab?.id != shown })
+    }
+
+    /// Shows the tab of this window's Space used least recently, which the
+    /// core chooses. False when there is none.
+    @discardableResult
+    func showLeastRecentTab() -> Bool {
+        let shown = shownTab?.id
+        return sendWindowIntent(ShowLeastRecentTab(windowID: windowID), requiresChange: { shownTab?.id != shown })
+    }
+
+    /// This window's tabs and splits from the one it shows to the one used
+    /// longest ago, as the core orders them; empty when it shows no tab.
+    func recentTabItems() -> [RecentTabItem] {
+        (try? core.query(RecentTabs(windowID: windowID)))?.items ?? []
+    }
+
+    /// Shows the tab or split `item` stands for, focusing the tab the core
+    /// named, in its own Space, which may be another Space of the shown
+    /// Space's Sub-Space group. False when the core showed nothing new.
+    @discardableResult
+    func showRecentTab(_ item: RecentTabItem) -> Bool {
+        let shown = shownTab?.id
+        let space = selectedSpaceID
+        guard
+            sendWindowIntent(
+                ShowTab(windowID: windowID, spaceID: item.spaceID, tabID: item.focusedTabID),
+                requiresChange: { shownTab?.id != shown }
+            )
+        else { return false }
+        // A selection belongs to the Space it was made in, as a Space switch
+        // drops it.
+        if item.spaceID != space { tabMultiSelection.clear() }
+        return true
+    }
+
+    func clearPresentedTabSelection(in spaceID: UUID) {
+        sendWindowIntent(ShowTab(windowID: windowID, spaceID: spaceID, tabID: nil))
+    }
+
+    /// Shows a tab in this window and records when it was last used, which
+    /// current-tab cleanup reads. Answers false when the core would not show it.
+    @discardableResult
+    func activateSessionTab(_ id: UUID, in spaceID: UUID) -> Bool {
+        guard !isDeleting(spaceID), spaceModel(spaceID)?.shownTab(id) != nil else { return false }
+        return sendWindowIntent(ShowTab(windowID: windowID, spaceID: spaceID, tabID: id))
+    }
+
+    /// Stops showing a tab the session keeps: the window returns to the tab it
+    /// showed before in that Space, or shows nothing there.
+    func dismissShownTab(_ id: UUID, in spaceID: UUID) {
+        sendWindowIntent(DismissShownTab(windowID: windowID, spaceID: spaceID, tabID: id))
+    }
+
+    /// The column shares this window keeps for a split group it resized.
+    func resizeSplitColumns(_ fractions: [Double], for groupID: UUID) {
+        sendWindowIntent(
+            ResizeSplitColumns(windowID: windowID, groupID: groupID, shares: fractions),
+            advancesRevision: false)
+    }
+
+    /// What this window shows changed without an intent of its own, as when a
+    /// tab moved into or out of it.
+    func showsAnew() {
+        windowRevision &+= 1
+    }
+
+    /// Runs one intent about this window. What it changed, including a tab
+    /// use the core recorded, reaches the read model through the core's
+    /// changes. Answers false when a rule refused it or `requiresChange` is
+    /// false.
+    @discardableResult
+    private func sendWindowIntent(
+        _ intent: some Intent,
+        advancesRevision: Bool = true,
+        requiresChange: () -> Bool = { true }
+    ) -> Bool {
+        do { try core.send(intent) } catch { return false }
+        lastSelectionScope = selectionScope
+        guard requiresChange() else { return false }
+        if advancesRevision { windowRevision &+= 1 }
+        return true
+    }
+
+    // MARK: - Actions - Lifecycle
+
     /// Closes this window in the core's device. What it showed stays readable
     /// for anything still holding the store.
     func close() {
@@ -303,10 +309,6 @@ final class BrowserStore {
     /// own, so a closed store is none.
     func isOpen(as windowID: UUID) -> Bool {
         !isClosed && windowID == self.windowID
-    }
-
-    isolated deinit {
-        close()
     }
 }
 

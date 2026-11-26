@@ -5,7 +5,11 @@ import SwiftUI
 @Observable
 @MainActor
 final class BrowserRootModel {
+    // MARK: - Types
+
     typealias SidebarMorphWait = @MainActor (Duration) async throws -> Void
+
+    // MARK: - Variables
 
     let browser: BrowserStore
     let sidebarInteraction: BrowserSidebarInteractionState
@@ -16,7 +20,7 @@ final class BrowserRootModel {
     /// The window this model shows. A private window keeps no window state,
     /// so its pages name it.
     var windowID: UUID { windowState?.id ?? pages.windowID }
-    private let layoutPersistence: BrowserWindowLayoutPersistence
+    let layoutPersistence: BrowserWindowLayoutPersistence
     let startupBehavior: StartupBehavior
 
     var address = ""
@@ -39,6 +43,7 @@ final class BrowserRootModel {
         }
     )
     var isPrepared = false
+    var isBrowserPrepared: Bool { isPrepared }
     @ObservationIgnored private var isPreparingBrowser = false
     /// The window's chrome keeps it, so a command that presents a sidebar list
     /// knows whether the sidebar is already on screen.
@@ -106,6 +111,8 @@ final class BrowserRootModel {
     /// Where each page card's address field lies, while the address bar is
     /// on top, for the palette to drop out of.
     let pageBarFieldFrames = BrowserPageBarFieldFrames()
+
+    // MARK: - Initializers
 
     init(
         browser: BrowserStore,
@@ -182,33 +189,6 @@ extension BrowserRootModel {
         guard !pages.publishesPageMetadataCentrally else { return }
         pages.setWindowFocused(isFocused)
     }
-
-    func reconcileTabIcons() {
-        pages.reconcileTabIcons()
-    }
-
-    func reconcileContentBlocking() {
-        guard isPrepared else { return }
-        Task { await pages.reconcileContentBlocking() }
-    }
-
-    func reconcileCredentialAccess() {
-        pages.reconcileCredentialAccess()
-    }
-
-    func reloadContentBlocking() {
-        guard isPrepared else { return }
-        Task { await pages.reloadContentBlocking() }
-    }
-
-    func relockProtectedSpaces(_ spaceIDs: Set<UUID>) {
-        // The Space itself, not just its ID: relocking has to reach the
-        // profile its archived tab state is filed under, and that state
-        // outlives the resident pages an ID alone can find.
-        for space in browser.spaceModels where spaceIDs.contains(space.id) {
-            pages.relockProtectedSpace(space)
-        }
-    }
 }
 
 // MARK: - Page Synchronization
@@ -248,15 +228,6 @@ extension BrowserRootModel {
             tabID: browser.shownTab?.id,
             spaceID: browser.selectedSpaceID
         )
-    }
-
-    var selectedSpaceIsLocked: Bool {
-        guard let space = browser.shownSpace else { return false }
-        return spaceAccess.isLocked(space)
-    }
-
-    var lockedSpaceIDs: Set<UUID> {
-        Set(browser.spaceModels.filter(spaceAccess.isLocked).map(\.id))
     }
 
     func openNewTab() {
@@ -354,25 +325,6 @@ extension BrowserRootModel {
             isFloatingSidebarPresented: isFloatingSidebarPresented,
             isPageFullscreen: chrome.revealsSidebarOverFullscreenPage
         )
-    }
-
-    var sidebarWidth: CGFloat {
-        sidebarWidthTransaction.width
-    }
-
-    var sidebarWidthBinding: Binding<CGFloat> {
-        Binding(
-            get: { self.sidebarWidthTransaction.width },
-            set: { self.sidebarWidthTransaction.resize(to: $0) }
-        )
-    }
-
-    func restoreSidebarWidth(_ width: CGFloat) {
-        layoutPersistence.restoreSidebarWidth(width, transaction: &sidebarWidthTransaction)
-    }
-
-    func commitSidebarWidth(_ width: CGFloat) -> CGFloat? {
-        layoutPersistence.commitSidebarWidth(width, transaction: &sidebarWidthTransaction)
     }
 
     func hideSidebar(reduceMotion: Bool) {
@@ -580,37 +532,6 @@ extension BrowserRootModel {
 // MARK: - Split Layout
 
 extension BrowserRootModel {
-    /// The cards the content area presents, as the window's read model
-    /// publishes them, so SwiftUI observes what changes when membership does.
-    var presentedSplitMembers: [TabStateModel] {
-        browser.shownCards
-    }
-
-    /// The group the presented cards belong to, or `nil` when one tab presents
-    /// alone. Column fractions are stored per group, so a lone tab has no
-    /// layout to store.
-    var presentedSplitGroupID: UUID? {
-        browser.shownSpace.flatMap(browser.shownSplitGroupID(in:))
-    }
-
-    var splitWidthTransactionBinding: Binding<BrowserSplitWidthTransaction> {
-        Binding(
-            get: { self.splitWidthTransaction },
-            set: { self.splitWidthTransaction = $0 }
-        )
-    }
-
-    func seedSplitColumnFractions() {
-        layoutPersistence.seedSplitLayout(
-            groupID: presentedSplitGroupID, memberCount: presentedSplitMembers.count,
-            transaction: &splitWidthTransaction
-        )
-    }
-
-    func commitSplitColumnFractions(_ fractions: [Double]) {
-        layoutPersistence.commitSplitLayout(fractions, groupID: presentedSplitGroupID)
-    }
-
     func focusSplitCard(_ tabID: UUID) {
         guard tabID != browser.shownTab?.id,
             presentedSplitMembers.contains(where: { $0.id == tabID })
@@ -659,10 +580,6 @@ extension BrowserRootModel {
         )
     }
 
-    var selectedTabAssignment: BrowserTabRuntimeAssignment? {
-        browser.shownTabAssignment
-    }
-
     /// The commands this window's palettes offer, the overlay's and every
     /// Start Page's, run by the same routes as the menu bar.
     func paletteRegistry(
@@ -694,12 +611,6 @@ extension BrowserRootModel {
         pages.select()
     }
 
-    func isPaletteSourceAvailable(
-        _ source: BrowserTabRuntimeAssignment
-    ) -> Bool {
-        browser.isPaletteSourceAvailable(source, accessController: spaceAccess)
-    }
-
     @discardableResult
     func selectPaletteTab(
         from source: BrowserTabRuntimeAssignment,
@@ -725,59 +636,34 @@ extension BrowserRootModel {
         opening: BrowserCommandPaletteOpening = .here,
         windows: BrowserMacWindows? = nil
     ) -> Bool {
-        guard
-            browser.isPaletteSourceAvailable(source, accessController: spaceAccess)
-        else { return false }
-        return opening.open(url, from: source, with: BrowserMacPaletteOpener(model: self, mode: mode, windows: windows))
+        guard isPaletteSourceAvailable(source) else { return false }
+        let opener = BrowserStandardPaletteOpener(
+            browser: browser,
+            mode: mode,
+            loadInShownPage: { [weak self] in self?.showLoading($0) },
+            openSplit: { [browser] url, source in
+                let assignment = BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID)
+                return browser.openLinkInSplit(url: url, joining: source.tabID, matching: assignment) != nil
+            },
+            openQuickWindow: { [windowID, windows] url, source in
+                guard let windows else { return false }
+                windows.openQuickWindow(
+                    BrowserQuickWindowRequest(
+                        url: url,
+                        spaceAssignment: BrowserSpaceRuntimeAssignment(
+                            spaceID: source.spaceID, profileID: source.profileID),
+                        targetWindowID: windowID))
+                return true
+            }
+        )
+        return opening.open(url, from: source, with: opener)
     }
 
     /// Loads `url` in the page the window shows and shows it in the address field.
-    fileprivate func showLoading(_ url: URL) {
+    private func showLoading(_ url: URL) {
         pages.select()
         pages.load(url)
         address = url.absoluteString
-    }
-}
-
-/// How the Mac window opens an address from its palette: in place of the
-/// source tab, or in a new tab when the palette opened for one; in a new tab
-/// behind or in front; beside the source in Split View; or in a Quick Window
-/// that hands its result back to this window.
-@MainActor
-private struct BrowserMacPaletteOpener: BrowserCommandPaletteOpener {
-    let model: BrowserRootModel
-    let mode: BrowserCommandPaletteMode
-    let windows: BrowserMacWindows?
-
-    func openHere(_ url: URL, from source: BrowserTabRuntimeAssignment) -> Bool {
-        if mode == .newTab { return openTab(url, from: source, selecting: true) }
-        model.browser.navigateSelectedTab(to: url.absoluteString)
-        model.showLoading(url)
-        return true
-    }
-
-    func openTab(_ url: URL, from source: BrowserTabRuntimeAssignment, selecting: Bool) -> Bool {
-        guard selecting else {
-            return model.browser.openBackgroundTab(url: url, in: source.spaceID, savesInSavedFolder: true) != nil
-        }
-        guard model.browser.openAddress(url, in: source.spaceID, placesAsNewTab: true) else { return false }
-        model.showLoading(url)
-        return true
-    }
-
-    func openInSplit(_ url: URL, from source: BrowserTabRuntimeAssignment) -> Bool {
-        let assignment = BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID)
-        return model.browser.openLinkInSplit(url: url, joining: source.tabID, matching: assignment) != nil
-    }
-
-    func openInQuickWindow(_ url: URL, from source: BrowserTabRuntimeAssignment) -> Bool {
-        guard let windows else { return false }
-        windows.openQuickWindow(
-            BrowserQuickWindowRequest(
-                url: url,
-                spaceAssignment: BrowserSpaceRuntimeAssignment(spaceID: source.spaceID, profileID: source.profileID),
-                targetWindowID: model.windowID))
-        return true
     }
 }
 
@@ -791,19 +677,7 @@ extension BrowserRootModel {
     }
 }
 
-// MARK: - Downloads
-
-extension BrowserRootModel {
-    var selectedUtilityDownloads: [DownloadState] {
-        guard let profileID = browser.shownSpace?.profileID else { return [] }
-        return pages.downloadCenter.items(for: profileID)
-    }
-
-    var newUtilityDownloads: [DownloadState] {
-        guard let profileID = browser.shownSpace?.profileID else { return [] }
-        return pages.downloadCenter.unacknowledgedItems(for: profileID)
-    }
-}
+extension BrowserRootModel: BrowserWindowRootModel {}
 
 extension BrowserRootModel: BrowserStoreFirstObservable {}
 

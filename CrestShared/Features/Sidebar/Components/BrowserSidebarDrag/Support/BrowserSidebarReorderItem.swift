@@ -112,8 +112,7 @@ enum BrowserSidebarReorderItem: Equatable, Sendable {
     /// a folder.
     func isAccepted(by section: BrowserSidebarReorderSection) -> Bool {
         if let selection {
-            if case .tabs = section { return true }
-            return selection.hasFolders
+            return section.isTabs || selection.hasFolders
         }
         return dragged.isAcceptedAlone(by: section)
     }

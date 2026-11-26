@@ -10,7 +10,7 @@ namespace CrestCore.Application;
 /// Space's history, the sync journal when one was written, and the selection
 /// an older release stored inside the session.
 internal sealed record StoredSession(SessionState? Session, NativeSyncJournal? Journal, JsonObject? LegacySelection) {
-    #region Variables
+    #region Static Variables
 
     private const string SchemaVersionField = "schemaVersion";
     private const int JournalSchemaVersion = 1;

@@ -12,7 +12,7 @@ namespace CrestCore.Application;
 /// waits long enough for many to share one stage. Nothing is lost by waiting:
 /// an upload, backgrounding and quitting each settle every queued stage first.
 internal sealed class SyncUrgency {
-    #region Variables
+    #region Static Variables
 
     /// Staged once edits pause: a drag or a rename.
     public static readonly SyncUrgency Coalesced = new(delay: TimeSpan.FromMilliseconds(150), durability: Durability.WriteBehind);
@@ -29,6 +29,10 @@ internal sealed class SyncUrgency {
     public static readonly SyncUrgency WithSave = new(delay: TimeSpan.Zero, durability: Durability.BeforeReturn);
 
     public static IReadOnlyList<SyncUrgency> All { get; } = [Coalesced, Deferred, Immediate, WithSave];
+
+    #endregion
+
+    #region Variables
 
     /// How long a queued stage waits for a later edit to replace it.
     public TimeSpan Delay { get; }

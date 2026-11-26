@@ -9,7 +9,7 @@ namespace CrestCore.Domain;
 /// edge spaces and dots, and no longer than a file system allows. The platform's
 /// `BrowserDownloadDestination.safeFilename` names files the same way.
 public static class DownloadFilename {
-    #region Variables
+    #region Static Variables
 
     /// The longest name, in UTF-8 bytes, left room for a numbered duplicate.
     public const int MaximumByteCount = 240;

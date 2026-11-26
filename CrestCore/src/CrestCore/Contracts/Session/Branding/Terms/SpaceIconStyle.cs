@@ -9,12 +9,16 @@ public sealed class SpaceIconStyle {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static readonly SpaceIconStyle SimpleSymbol = new(Kinds.SimpleSymbol, "simpleSymbol", "Icon");
     public static readonly SpaceIconStyle LayeredCrest = new(Kinds.LayeredCrest, "layeredCrest", "Crest");
 
     public static IReadOnlyList<SpaceIconStyle> All { get; } = [SimpleSymbol, LayeredCrest];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

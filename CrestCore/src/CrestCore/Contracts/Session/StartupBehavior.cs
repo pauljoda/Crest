@@ -5,7 +5,7 @@ namespace CrestCore.Contracts;
 /// The stored preferences spell a behavior as its `Name`, so a name never
 /// changes. A behavior travels as its index in `All`, so `All` is append-only.
 public sealed class StartupBehavior {
-    #region Variables
+    #region Static Variables
 
     public static readonly StartupBehavior ShowStartPage = new(name: "showStartPage", title: "Show Start Page",
         activatesRestoredTab: false, opensNewTab: false);
@@ -17,6 +17,10 @@ public sealed class StartupBehavior {
         activatesRestoredTab: false, opensNewTab: true);
 
     public static IReadOnlyList<StartupBehavior> All { get; } = [ShowStartPage, LastActiveTab, NewTab];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

@@ -6,7 +6,7 @@ namespace CrestCore.Application;
 /// The system SQLite library. NativeAOT links it directly (`DirectPInvoke` in
 /// the native project); a JIT host resolves it by the names each platform ships.
 internal static partial class Sqlite {
-    #region Variables
+    #region Static Variables
 
     private const string Library = "libsqlite3";
 

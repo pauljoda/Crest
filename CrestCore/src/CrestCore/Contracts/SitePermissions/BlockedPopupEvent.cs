@@ -8,7 +8,7 @@ namespace CrestCore.Contracts;
 /// directly to the bridge cannot stack indications or announcements in one
 /// document. An event travels as its index in `All`, so `All` is append-only.
 public sealed class BlockedPopupEvent {
-    #region Variables
+    #region Static Variables
 
     /// The engine or the page's bridge held back an automatic popup. It needs
     /// the document identifier and the blocked site's origin, and shows one
@@ -33,6 +33,10 @@ public sealed class BlockedPopupEvent {
 
     public static IReadOnlyList<BlockedPopupEvent> All { get; } =
         [Blocked, PermissionAllowed, PermissionBlockedAgain, Navigation, PopupAllowed];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

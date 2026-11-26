@@ -92,7 +92,7 @@ public sealed class ShortcutCommand {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static readonly ShortcutCommand NewWindow = new(Kinds.NewWindow, name: "newWindow", ShortcutSection.Everyday,
         title: "New Window", symbol: "macwindow.badge.plus", shortcuts: Everywhere(Character("n", Command)), paletteRest: 1,
@@ -379,6 +379,10 @@ public sealed class ShortcutCommand {
         FindPrevious, CapturePage, MostRecentTabBackward, ClearSiteCookies, ClearSiteCache, ToggleSelectedTabSaved,
         OpenNextExtension, ClearAllTabs, CollapseAllFolders, CopyPageTitle, ShowPageQRCode, OpenPageInPrivateWindow
     ];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
 

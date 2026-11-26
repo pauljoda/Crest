@@ -5,7 +5,7 @@ namespace CrestCore.Contracts;
 /// The link preferences spell a choice as its `Name`, so a name never changes.
 /// A choice travels as its index in `All`, so `All` is append-only.
 public sealed class QuickWindowArchivePolicy {
-    #region Variables
+    #region Static Variables
 
     public static readonly QuickWindowArchivePolicy After1Hour = new(name: "after1Hour", title: "After 1 Hour",
         lifetime: TimeSpan.FromHours(1));
@@ -19,6 +19,10 @@ public sealed class QuickWindowArchivePolicy {
 
     /// The choices, in the order the settings offer them.
     public static IReadOnlyList<QuickWindowArchivePolicy> All { get; } = [After1Hour, After6Hours, After12Hours, After24Hours, Never];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

@@ -9,11 +9,15 @@ namespace CrestCore.Application;
 /// every directive as a comment, so a list goes to it only once the blocks that
 /// do not apply are left out.
 internal sealed partial class FilterListText {
-    #region Variables
+    #region Static Variables
 
     /// The longest interval a list's `Expires` header may ask for, as the
     /// filter-list convention caps it.
     private static readonly TimeSpan LongestExpiry = TimeSpan.FromDays(14);
+
+    #endregion
+
+    #region Variables
 
     public string Text { get; }
 

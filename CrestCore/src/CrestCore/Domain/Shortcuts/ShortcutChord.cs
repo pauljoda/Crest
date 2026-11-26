@@ -8,7 +8,7 @@ namespace CrestCore.Domain;
 /// mask. The mask keeps every bit the platform stored so equality matches the
 /// native value exactly; only the four supported bits make a chord usable.
 public sealed record ShortcutChord {
-    #region Variables
+    #region Static Variables
 
     public const int Command = (int)ShortcutModifiers.Command;
     public const int Option = (int)ShortcutModifiers.Option;
@@ -22,6 +22,10 @@ public sealed record ShortcutChord {
         new("z", false, Command), new("z", false, Command | Shift), new("x", false, Command), new("c", false, Command),
         new("v", false, Command), new("a", false, Command)
     ];
+
+    #endregion
+
+    #region Variables
 
     public string Key { get; }
     public bool IsSpecial { get; }
