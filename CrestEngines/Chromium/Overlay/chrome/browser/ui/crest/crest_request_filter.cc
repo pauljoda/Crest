@@ -1,6 +1,12 @@
 #include "chrome/browser/ui/crest/crest_request_filter.h"
 
+#include "build/build_config.h"
+
+#if BUILDFLAG(IS_WIN)
+#include <windows.h>
+#else
 #include <dlfcn.h>
+#endif
 
 #include <algorithm>
 #include <atomic>
@@ -432,13 +438,28 @@ void FilterRequests(content::RenderFrameHost* frame,
                                                        std::move(target), page->RequestFilter(), std::move(top)));
 }
 
+namespace {
+
+// An export of the core's library, which the process has loaded: the Mac's
+// UI framework links it, and Windows' desktop host loads it by name.
+void* CoreExport(const char* name) {
+#if BUILDFLAG(IS_WIN)
+  HMODULE core = ::GetModuleHandleW(L"CrestCore.Native.dll");
+  return core ? reinterpret_cast<void*>(::GetProcAddress(core, name)) : nullptr;
+#else
+  return dlsym(RTLD_DEFAULT, name);
+#endif
+}
+
+}  // namespace
+
 void UseContentFilter(uint64_t app) {
   if (Filter().check.load()) return;
   // The core's library exports them: the slot's address through the app, the
   // check every request goes through, and the release of a redirect it hands.
-  auto slot_address = reinterpret_cast<SlotAddress>(dlsym(RTLD_DEFAULT, "crest_app_content_filter_slot"));
-  auto check = reinterpret_cast<SlotCheck>(dlsym(RTLD_DEFAULT, "crest_content_filter_slot_check_redirect"));
-  auto free = reinterpret_cast<BufferFree>(dlsym(RTLD_DEFAULT, "crest_content_filter_buffer_free"));
+  auto slot_address = reinterpret_cast<SlotAddress>(CoreExport("crest_app_content_filter_slot"));
+  auto check = reinterpret_cast<SlotCheck>(CoreExport("crest_content_filter_slot_check_redirect"));
+  auto free = reinterpret_cast<BufferFree>(CoreExport("crest_content_filter_buffer_free"));
   void* slot = nullptr;
   if (!slot_address || !check || !free || slot_address(app, &slot) != CREST_OK || !slot) return;
   Filter().slot.store(static_cast<const crest_content_filter_slot_t*>(slot));

@@ -24,6 +24,8 @@ namespace extensions { class Extension; class ExtensionHost; }
 namespace content { class WebContents; class NavigationThrottleRegistry; class JavaScriptDialogManager; struct DesktopMediaID; struct DropData; struct MediaStreamRequest; struct OpenURLParams; }
 namespace content { class VideoOverlayWindow; class VideoPictureInPictureWindowController; }
 namespace net { class AuthChallengeInfo; }
+namespace views { class Widget; }
+namespace base { class CommandLine; class FilePath; }
 
 namespace crest {
 // The isolated world Crest's content bridges run in. It sits at the top of
@@ -56,6 +58,14 @@ bool OwnsWindow(const Browser* browser);
 // no unowned Browser is left running with tabs to decline.
 bool CanCreateEngineBrowser(Profile* profile);
 void EnsureCrestUIStarted(Browser* browser);
+// Windows: a launch's links and documents, which Chromium read from
+// `command_line` as it ran in `cur_dir`, as Windows hands them to the browser
+// that opens them, and as ProcessSingleton forwards another launch's to the
+// running Crest. Crest opens them where its core places them, as the Mac
+// opens what other apps hand it, and brings the running Crest forward.
+// Answers whether the launch is handled; a first launch isn't until its
+// Browser starts Crest's window, which takes them.
+bool OpenFromLaunch(Profile* profile, const base::CommandLine& command_line, const base::FilePath& cur_dir);
 // Chrome's AppController retains its lifecycle role. A quit waits for core saves.
 bool DeferQuit();
 // A Dock click or reopen with no windows. Crest activates an existing window

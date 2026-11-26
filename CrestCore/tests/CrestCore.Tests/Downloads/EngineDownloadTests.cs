@@ -130,7 +130,8 @@ public sealed partial class BrowserContractsTests {
         // Keeping it asks where it goes, and only then.
         var kept = app.Send(new AnswerDownloadApproval(approval.PromptId, Approved: true));
         Assert.Equal(new DownloadDestinationAsked(prompt, approval.DownloadId, space, "installer.dmg", ForcesPrompt: false), kept[^1]);
-        app.Send(new AnswerDownloadDestination(prompt, "/Users/test/Downloads/installer.dmg"));
+        // An engine reports the path in its own platform's form.
+        app.Send(new AnswerDownloadDestination(prompt, Path.Combine(Path.GetTempPath(), "Downloads", "installer.dmg")));
 
         // The engine's warning that the file runs code is what the person
         // kept, so the core approves it without asking.

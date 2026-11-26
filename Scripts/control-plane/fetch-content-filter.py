@@ -3,18 +3,20 @@
 
 The core's builds run this, so a checkout without Rust builds the core:
 
-- For an Apple runtime it prints the static library Native AOT links. The
-  prebuilt archive the lock names is downloaded once, checked against the
-  lock's digests and kept in the cache.
+- For a published runtime it prints the static library Native AOT links. The
+  prebuilt archive of the runtime's family that the lock names is downloaded
+  once, checked against the lock's digests and kept in the cache.
 - For `host` it prints the dynamic library the core's tests load without
   Native AOT. On a Mac that library is linked from the verified macOS static
-  library; elsewhere, such as CI's Linux runner, it is compiled from source.
+  library; elsewhere, such as CI's Linux runner or Windows, it is compiled from
+  source.
 
-When the crate's sources no longer match the lock, or CREST_CONTENT_FILTER_FROM_SOURCE
-is 1, the library is compiled from source instead, which needs Rust.
+When the crate's sources no longer match the lock, the runtime's family has no
+archive for the lock's key yet, or CREST_CONTENT_FILTER_FROM_SOURCE is 1, the
+library is compiled from source instead, which needs Rust.
 """
 import argparse
-import fcntl
+import contextlib
 import hashlib
 import http.client
 import io
@@ -73,15 +75,40 @@ def download(url: str) -> bytes:
     raise Unpublished(f"Cannot download {url}: {failure}")
 
 
-def unpack(lock: dict, cache: Path, repository: str):
-    """Downloads the locked archive and keeps each member whose digest the lock records."""
-    url = DOWNLOADS.format(repository=repository, tag=content_filter.release_tag(lock["key"]), asset=lock["archive"])
-    print(f"Downloading the content filter {lock['archive']}", file=sys.stderr)
+@contextlib.contextmanager
+def exclusive(path: Path):
+    """Holds `path` locked, since parallel builds of the app and its
+    frameworks ask at the same time."""
+    with path.open("a+b") as stream:
+        if os.name == "nt":
+            import msvcrt
+            stream.seek(0)
+            while True:
+                try:
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
+                    break
+                except OSError:
+                    continue
+            try:
+                yield
+            finally:
+                stream.seek(0)
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(stream, fcntl.LOCK_EX)
+            yield
+
+
+def unpack(lock: dict, entry: dict, cache: Path, repository: str):
+    """Downloads the family's locked archive and keeps each member whose digest the lock records."""
+    url = DOWNLOADS.format(repository=repository, tag=content_filter.release_tag(lock["key"]), asset=entry["archive"])
+    print(f"Downloading the content filter {entry['archive']}", file=sys.stderr)
     data = download(url)
-    if hashlib.sha256(data).hexdigest() != lock["sha256"]:
-        raise SystemExit(f"{lock['archive']} does not match the digest in {content_filter.LOCK}")
+    if hashlib.sha256(data).hexdigest() != entry["sha256"]:
+        raise SystemExit(f"{entry['archive']} does not match the digest in {content_filter.LOCK}")
     with zipfile.ZipFile(io.BytesIO(data)) as bundle:
-        for name, digest in lock["files"].items():
+        for name, digest in entry["files"].items():
             contents = bundle.read(name)
             if hashlib.sha256(contents).hexdigest() != digest:
                 raise SystemExit(f"{name} in {lock['archive']} does not match {content_filter.LOCK}")
@@ -94,10 +121,13 @@ def unpack(lock: dict, cache: Path, repository: str):
 
 def published_library(runtime: str, cache: Path, repository: str) -> Path:
     lock = content_filter.read_lock()
+    entry = content_filter.family_archive(lock, content_filter.TARGETS[runtime][2])
+    if entry is None:
+        raise Unpublished(f"{content_filter.LOCK} has no {content_filter.TARGETS[runtime][2]} archive for its key")
     folder = cache / lock["key"][:16]
     library = folder / content_filter.member(runtime)
-    if not all(verified(folder / name, digest) for name, digest in lock["files"].items()):
-        unpack(lock, folder, repository)
+    if not all(verified(folder / name, digest) for name, digest in entry["files"].items()):
+        unpack(lock, entry, folder, repository)
     return library
 
 
@@ -105,9 +135,11 @@ def source_library(runtime: str) -> Path:
     target = content_filter.TARGETS[runtime][0] if runtime != "host" else None
     release = content_filter.compile_library(target)
     if runtime != "host":
-        return release / content_filter.LIBRARY
-    suffix = {"Darwin": ".dylib", "Windows": ".dll"}.get(platform.system(), ".so")
-    return release / f"libcrest_content_filter{suffix}"
+        return release / content_filter.library_name(runtime)
+    # Rust names a Windows DLL without the lib prefix.
+    name = {"Darwin": "libcrest_content_filter.dylib", "Windows": "crest_content_filter.dll"}.get(
+        platform.system(), "libcrest_content_filter.so")
+    return release / name
 
 
 def mac_test_library(static_library: Path, folder: Path) -> Path:
@@ -142,9 +174,7 @@ def main():
 
     cache = args.cache.resolve()
     cache.mkdir(parents=True, exist_ok=True)
-    # Parallel builds of the app and its frameworks ask at the same time.
-    with (cache / ".lock").open("w") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    with exclusive(cache / ".lock"):
         library = resolve(args.runtime, cache, args.repository, from_source)
     print(library)
 
@@ -158,7 +188,9 @@ def resolve(runtime: str, cache: Path, repository: str, from_source: bool) -> Pa
         print(f"{error}\nCompiling the content filter from source instead", file=sys.stderr)
         library = located(runtime, cache, repository, True)
         # The sources are the locked ones, so the build must be the locked library.
-        expected = content_filter.read_lock()["files"].get(content_filter.member(runtime))
+        entry = content_filter.family_archive(content_filter.read_lock(), content_filter.TARGETS[runtime][2]) \
+            if runtime != "host" else None
+        expected = entry["files"].get(content_filter.member(runtime)) if entry else None
         if expected and content_filter.sha256(library) != expected:
             raise SystemExit(f"Compiling the locked sources gave a {runtime} library that differs from "
                              f"{content_filter.LOCK}; refusing to use it")

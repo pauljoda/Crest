@@ -16,6 +16,7 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
     let isolatedCloudSyncID: String?
     let requestsIsolatedCloudSync: Bool
     let resetsSession: Bool
+    let presentsDesktopComparison: Bool
     let presentsShowcaseSession: Bool
     /// An isolated launch opens a session whose Work Space leads two
     /// Sub-Spaces, for reviewing groups.
@@ -58,6 +59,7 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
             return value
         }
         resetsSession = Self.isEnabled(.resetSession, in: values)
+        presentsDesktopComparison = explicitlyRequiresIsolation && Self.isEnabled(.desktopComparison, in: values)
         presentsShowcaseSession = Self.isEnabled(.showcaseSession, in: values)
         presentsSubSpacesSession = Self.isEnabled(.subSpacesSession, in: values)
         usesInMemoryCredentialVault = Self.isEnabled(
@@ -158,6 +160,7 @@ struct BrowserLaunchEnvironment: Equatable, Sendable {
         case persistentIsolationID = "CREST_ISOLATED_PERSISTENCE_ID"
         case isolatedCloudSyncID = "CREST_ISOLATED_CLOUD_SYNC_ID"
         case resetSession = "CREST_RESET_SESSION"
+        case desktopComparison = "CREST_DESKTOP_COMPARISON"
         case showcaseSession = "CREST_SHOWCASE_SESSION"
         case subSpacesSession = "CREST_SUBSPACES_SESSION"
         case useInMemoryCredentials = "CREST_USE_IN_MEMORY_CREDENTIALS"

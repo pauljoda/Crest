@@ -1,0 +1,8 @@
+{
+  "name": "@crest/design",
+  "private": true,
+  "description": "Crest's design tokens for the desktop interface, the same values CrestShared/DesignSystem/Tokens names.",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}

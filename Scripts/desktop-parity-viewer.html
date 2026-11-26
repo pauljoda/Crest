@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crest frame comparison</title>
+<style>
+  :root { color-scheme: light dark; font: 15px system-ui; }
+  body { margin: 1rem; }
+  section { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  figure { margin: 0; min-width: 0; }
+  figcaption { margin: .6rem 0; }
+  img { width: 100%; }
+  #difference { display: none; position: relative; width: min(100%, 960px); isolation: isolate; }
+  #difference img { display: block; }
+  #difference img + img { position: absolute; inset: 0; mix-blend-mode: difference; }
+  main.compare section { display: none; }
+  main.compare #difference { display: block; }
+  input[type="range"] { width: min(65vw, 60rem); vertical-align: middle; }
+  output, span { font-variant-numeric: tabular-nums; }
+</style>
+<label>Elapsed time <input id="position" type="range" min="0" value="0" step="1"></label>
+<output for="position"></output>
+<label><input id="mode" type="checkbox"> Show pixel difference</label>
+<main>
+<section>
+  <figure><figcaption>Native Crest · <span></span></figcaption><img alt="Native window"></figure>
+  <figure><figcaption>Svelte · <span></span></figcaption><img alt="Svelte window"></figure>
+</section>
+<div id="difference"><img alt="Native frame"><img alt="Difference from the Svelte frame"></div>
+</main>
+<script>
+  const times = FRAME_TIMES;
+  const timeline = [...new Set([0, ...times.native.slice(1), ...times.svelte.slice(1)])].sort((a, b) => a - b);
+  const position = document.querySelector("input");
+  const mode = document.querySelector("#mode");
+  mode.addEventListener("change", () => {
+    document.querySelector("main").classList.toggle("compare", mode.checked);
+    show();
+  });
+  position.max = timeline.length - 1;
+  function show() {
+    const time = timeline[position.valueAsNumber];
+    document.querySelector("output").value = time.toFixed(1) + " ms";
+    ["native", "svelte"].forEach((source, i) => {
+      const index = times[source].findLastIndex(frame => frame <= time);
+      const figure = document.querySelectorAll("figure")[i];
+      const file = source + "/" + index + ".png";
+      figure.querySelector("img").src = file;
+      if (mode.checked) document.querySelectorAll("#difference img")[i].src = file;
+      figure.querySelector("span").textContent = "frame " + index + " · " + times[source][index].toFixed(1) + " ms";
+    });
+  }
+  position.addEventListener("input", show);
+  position.focus();
+  show();
+</script>
+</html>

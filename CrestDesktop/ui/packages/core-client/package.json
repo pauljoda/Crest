@@ -1,0 +1,11 @@
+{
+  "name": "@crest/core-client",
+  "private": true,
+  "description": "The desktop interface's path to the core: its transport, intents and queries, and the read model the changes keep.",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@crest/contracts": "*"
+  }
+}

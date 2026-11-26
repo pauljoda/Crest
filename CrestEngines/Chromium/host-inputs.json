@@ -1,11 +1,11 @@
 {
   "chrome/browser/ui/views/frame/browser_window_factory.cc": {
     "before": "48515fc4eb091e99e99aa1e945750badd41e2c654aeac551856cda861498cf76",
-    "after": "978968e2119eabf01597718230954080d360bb403eb3474b247aa728df250128"
+    "after": "abc5e90f1b9dbdedea3283303868d4a88a90c71eae07f085c4c7e9e76160dcd8"
   },
   "chrome/browser/ui/startup/startup_browser_creator_impl.cc": {
     "before": "1b78f7e124fea6ffdc97eddbd1c5111011467bf398bb5b80cba1f8a17a43ad1e",
-    "after": "a4772b44bade7424ce93b8100176e25722da9eb2b65eab26abeed21f4e37d9e4"
+    "after": "c91435f8b90b6425a569a1ec8deb14f7c0964dd32320576f5cd5b77d9a44a59f"
   },
   "chrome/browser/app_controller_mac.mm": {
     "before": "b532243a1fd78cf5c77beed511f8e31376809600262147fe0d07585c71e4ef47",
@@ -13,19 +13,19 @@
   },
   "chrome/BUILD.gn": {
     "before": "2171e306bf7f0a046429b6e442a3df1774b1413676ab1c3b18b0a72be7e7e9cc",
-    "after": "4022d0abf658fe582323bb782cd76b4e9d1c3fdedc4167c50cac07e89282300b"
+    "after": "cbedbcf3d8ee5f0ed57017698df952c2228bad8ee1b08b2003f37bd6497a8cdd"
   },
   "chrome/browser/BUILD.gn": {
     "before": "e4098a876ac02db4ab67a4ce1ab3261545d1a4cd4b13433fa0b4bc03969baac3",
-    "after": "923e6a3bbfabfe8e47f305770b6aad5c630014a81d48cf5f0c5219bd8a09feb5"
+    "after": "de457dceb509bca30b0b96491790b9104456ab6a03824a78ef0255b2bb7d89f0"
   },
   "chrome/browser/ui/tabs/tab_features.cc": {
     "before": "d73f9115e1f549c9e1b170e722a2ca3f26dddb7fe72b8a3cebe8c3f881ac636c",
-    "after": "05632a0940ba3d10a61996db3ed930eeb86c81e19c50ad5c74353dab8fc63526"
+    "after": "63d4305d4a07910175645412127ad07a91c257f617ff2d93b52843f543cbbafb"
   },
   "chrome/browser/ui/startup/startup_browser_creator.cc": {
     "before": "90a94bfdd710e052061fe70831279e999cbc5aed5f7d6fd82004e660093d8ad7",
-    "after": "6df5ec55ef11b3e8e7b00d32748bbd716a0df3046ed54503adcc40fcd4319073"
+    "after": "d44c143d3788f0538ef98f3b43a00f992c690cb4088f3f172a67d581efa0eeda"
   },
   "components/os_crypt/common/keychain_password_mac.mm": {
     "before": "dcf606d11c33974f57370e491b408232646f8ea8a55e2b5c513abf0dbc7a2214",
@@ -33,11 +33,11 @@
   },
   "chrome/browser/ui/views/permissions/permission_prompt_factory.cc": {
     "before": "308e6a8debee40f17db6cac37b6f1dcd08ade714e3996ca8a370f6377871c68a",
-    "after": "176493d604d3aeca3c5e02a74c63ccd6bcdee44bd6092390a68f2d33029dbe30"
+    "after": "eb805a87060d6c88a9f74e520a8652d90c8557bdefb7839eae880fa6991b4e80"
   },
   "chrome/browser/profiles/profile.cc": {
     "before": "441939664eb65da76f3bb257d56420dc422337cc66b25829a95ac22b4c592685",
-    "after": "04bba93e6dc275d80d96d7c581d137e4d9dad9b645d4f125d1f6b824b1e286f6"
+    "after": "bbfe997259414d9b925a577529f26bd21b59671102cd8d563d01aad8fd72df12"
   },
   "chrome/browser/ui/views/extensions/extension_install_dialog_view.cc": {
     "before": "5fc0fbfb7e65cda3652bb88486e7defae0b0f0863c294ddbb6cc47a7f3220cba",
@@ -49,19 +49,19 @@
   },
   "chrome/browser/ui/unload_controller.cc": {
     "before": "9f8ea7b12055cfd39eb1e3ffb7a450cf824aa9d42344f00b7092190292d757ac",
-    "after": "9b15df725fe9b9a1e9414517aab3f87ec42465ff3eb45917df40472e1c1ccbdd"
+    "after": "96194eb8370eec7bfbbee6f34030416d5e71a064bd5bf0e58856b0c126258bd7"
   },
   "chrome/browser/download/download_ui_controller.cc": {
     "before": "010b3d95d95538531d00352eb115788274cda8de19434cb8fdc37385834d75f1",
-    "after": "ac7971b424bc6d4af37b029a83a298e0b162f8614d9517f172f90804c8c56be1"
+    "after": "8e88b0406abc6de39f0975ef69a5f5202eef19024d57939a72b196c7c8f2afa2"
   },
   "chrome/browser/download/chrome_download_manager_delegate.cc": {
     "before": "257e953c4722e64e3b3f5d245fffd162b0c9456ba4b83b7323d2c5eceaba53d1",
-    "after": "6217ad6ba7b94db4ea7508b89ab4eb49369816604f2869a5802a2464e0df01ac"
+    "after": "ded823716588a3b3fc65d71caf2ee24e465c3af453e6e3b73db57f52d1597855"
   },
   "chrome/browser/download/download_target_determiner.cc": {
     "before": "64194f3095cef3303501c96afecf4f92a116559f1199c509d55f487841ebe814",
-    "after": "64a77af3f78ce0321f2d6b92dcb9dcb6b7119dcecd940679caa3d015bcc42206"
+    "after": "60a1cfb1e890907c323273bf55e2f330747427e9ad1aebfb1fa1af835c25ffb3"
   },
   "chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_cocoa.mm": {
     "before": "903582053e2ac7de59513ee8f5c4dc06b7e5359bc4873f11b3efaf6634124000",
@@ -93,11 +93,11 @@
   },
   "chrome/browser/chrome_content_browser_client.cc": {
     "before": "235fbfdbfe13d7ce2833017f67d6a899dda5b14131e38e5f7177b62f8a4b981b",
-    "after": "9b6a822b526e030e6f2d4498a733bf6224323ebaccd1f1a8b5d3dd19bd2dc53c"
+    "after": "8a9c58a9f9888f98d670e712f149f495aa0f169238112533ab3b129d716403aa"
   },
   "chrome/browser/ui/browser_web_contents_delegate/browser_web_contents_delegate.cc": {
     "before": "e0ab17b1d976d5d5c5c6be22171d92c8a7d613f5d83894445bf03146df61b12d",
-    "after": "187e9d28679b605ad15fd9314752025ffbe2efb6c889c77943a40f4561df8616"
+    "after": "7da7d3606b4856677644b66f334cbc11d86f671c295d4924ba752fe678e79e0d"
   },
   "chrome/browser/ui/browser_web_contents_delegate/browser_web_contents_delegate.h": {
     "before": "7c58c13d0972384c4cdfa70e62fe6853dd346e01c010e3b2caba45d2c274bae7",
@@ -129,7 +129,7 @@
   },
   "third_party/blink/renderer/core/html/html_anchor_element.cc": {
     "before": "ed4f9c74891c09cc97563b869fd3e7fb0fbdd114e32745b461d5d35a61ad0f19",
-    "after": "d4aaaf86a176fa86cd203bdad43587d55d994974221c169691d1126b6d6ac79a"
+    "after": "93c7f6ddeb7de44c1730f3f6df4161d6293af8787f654ab91057bc10d1ea5440"
   },
   "third_party/blink/renderer/core/loader/empty_clients.cc": {
     "before": "3b30b66e0f060d1d5a380cae0c74d939abf2879d0c57033d0f2acfbcd694584f",
@@ -173,7 +173,7 @@
   },
   "chrome/browser/ui/extensions/extension_side_panel_utils.cc": {
     "before": "7d1e95b7fa1e547aebfa941e17b3945c78b60f4f9a8a50a4151ed9bbcc283fbd",
-    "after": "7a2fe3460e48a3979816de480c442b83c058e70e6da9ab872d659bc2d4a404ab"
+    "after": "63e022af3b2aaf956fbf5699d58a6066283d93f86c2305a8d10eb3d4eb6eccd2"
   },
   "chrome/browser/devtools/devtools_window.cc": {
     "before": "4113cdfc5b0adda79eedf442fd5effe7bb7e50931edb9339b1aba7fe77dacf87",
@@ -185,11 +185,11 @@
   },
   "chrome/browser/extensions/api/tabs/windows_api.cc": {
     "before": "f3e27b42ea5045914c6768e91114f5619e4b176bd2dd314e8433e9eefbf5d832",
-    "after": "9b1d646de7b25fc5cc1d885b9753d343ba4cac852d330b3004b0baf0c489ffcf"
+    "after": "1852c170636008570d94130ca723c159df67d7d00881eb1cf2823d21ffbaca0a"
   },
   "chrome/browser/ui/views/profiles/profile_picker_view.cc": {
     "before": "db20f7668c0330bdb81e81b65bb285c3e398d0ddbc5cdeff0ecca8d8beb7b582",
-    "after": "eab66c44f04163df9d8e049d1bb4be469ae8485917ad14fc950af9362b61320a"
+    "after": "a03a38587e4ec6296f830031c610085dc5704a669843eba5200a446585c69981"
   },
   "chrome/app/chrome_main_delegate.cc": {
     "before": "061dca08e0a9643b6c01172244bcec8056c77a56fcb176a3c64de0df87b796bb",
@@ -209,7 +209,7 @@
   },
   "chrome/browser/ui/toasts/toast_controller.cc": {
     "before": "f1a35694be91dfe51ff23a095aca34951df586e8f04c1783bc430e5e2ddd89d0",
-    "after": "ed2e3fc1085e82f7d4466e0e1b13837d8ef817ebb96f98137e4e7675e74e0335"
+    "after": "da5027a8710141225eec64b9e33d41967cd4e57c5578584efd797ffe2b7be974"
   },
   "chrome/browser/ui/sad_tab_controller.cc": {
     "before": "524dedcba6b875dab9828f3d2a720e28925bb22b2a3f8e5d38318e613d707a12",
@@ -229,7 +229,7 @@
   },
   "chrome/browser/ui/views/translate/translate_bubble_controller.cc": {
     "before": "215c89a66f9cfe18af34c346df9d904a86fc9ed7c57df8fce87dfa5c3a075f12",
-    "after": "f7861e9d43a3c5d2fa9f976c4c3fd50791282242d0cbae1cd19808606b1ef723"
+    "after": "1d4a34cc3f9e997ce2df4510280397806582428800c178ca87d7a9fe7a617414"
   },
   "chrome/browser/ui/views/login_handler_views.cc": {
     "before": "00184571de0b49358f9c11af658f0066bb15a241f1f530b62bc57fa235438212",
@@ -297,7 +297,7 @@
   },
   "chrome/browser/resource_coordinator/tab_lifecycle_unit.cc": {
     "before": "1f8e897703624324d0b31538d2f22954e7d9215d642c2f643db1fa8bcee30eb2",
-    "after": "dd96f43257f3b6ecd776c05f62839a30c40cd1d15fe8b7fc27cb8c95c84bdd77"
+    "after": "dc86a71f829e70afe774dccde0907006780cc73dce3b8ac52c40484c7af4bbdd"
   },
   "chrome/browser/ui/cocoa/dock_icon.mm": {
     "before": "2d43977fef3854fc3ce55270f0efabcf15e93806c19df7d341c927ee839df2ec",
@@ -305,7 +305,7 @@
   },
   "chrome/browser/chrome_browser_field_trials.cc": {
     "before": "70c47d2d0ef60ff2f778341b625e334ca2b4a184e389ab2dfd2d0904802a2813",
-    "after": "552d68449ecf5563866fee8dc613b0029afc241a92705720920019e3e0c22650"
+    "after": "fc884c0e403693141820354c95d77f4e2873ee34586218f06259a5d6946eed84"
   },
   "chrome/browser/media/webrtc/display_media_access_handler.cc": {
     "before": "270e82e3b59e57c7303d1c083d664720f52de222894cc7f1600faa325a5df87e",
@@ -313,7 +313,7 @@
   },
   "chrome/browser/media/webrtc/desktop_capture_devices_util.cc": {
     "before": "02861ed4412788ef37f740a534959ff23ba6c4b44c5519a8306f39f1f778e283",
-    "after": "c4bfd1e3c04dadf43ab44a40a58f2d83b516962943680e6cb1cd824e203a76e5"
+    "after": "652a1dde37a7f993a1044c704779b07f0efb7b260ac2a1723c74f47867abf0b6"
   },
   "chrome/browser/media/webrtc/desktop_capture_access_handler.cc": {
     "before": "992cb9154f2f2d1110d8a36b35d5ee228718baad8acc36cfd20759e238c18f07",
@@ -329,7 +329,7 @@
   },
   "components/performance_manager/freezing/freezer.cc": {
     "before": "5cafb9a71c23ab72d7348c7659d730d2d92b4ccc89cce33c47025dc659890bad",
-    "after": "46d211d1e7d9ac2956cbbaabe345a2ec0423ebd347ea0cef78758710068cc758"
+    "after": "86606f15abb16ce695c131aa370a34054d78288a29bc78d155f9d25db509a426"
   },
   "chrome/browser/chrome_browser_main_mac.mm": {
     "before": "d4d7671a8befd46724bf25d861a53acec76e5de280ce9128dcba514cec3e3490",
@@ -349,11 +349,11 @@
   },
   "chrome/browser/ui/autofill/chrome_autofill_client.cc": {
     "before": "bf9dfe6bb0895142942eb83d407c35b5f35ea58b1d3e8fceeb6d48317fda4a20",
-    "after": "52b57fa3d87c476ce90352a7d28a785dedd64a37f9da84ed5f4ab4aaabb6b6b6"
+    "after": "ffb4a802131f2f34d897a61c186c3bcc213feab6c45432c18ac89cc4cf2ce939"
   },
   "chrome/browser/ui/autofill/payments/chrome_payments_autofill_client.cc": {
     "before": "834c86fd00ea0cfcbce82d530200c70ed2e16090481865d071cd562d46236e16",
-    "after": "87c26b8b96d08042bf1f57a1f86116c844aa5982b48c2fe3038ee535e3bcab88"
+    "after": "ac7a5a89cc194d4a1fd913d460e85f4e82a6553070b49f273be21159ebfab8c0"
   },
   "chrome/browser/extensions/api/extension_action/extension_action_api.cc": {
     "before": "57b072a833d3249d3841c922c4e39c6b51b5c5145a644d9bd868ed91b7d169c2",
@@ -402,6 +402,18 @@
   "chrome/browser/password_manager/chrome_password_manager_client.cc": {
     "before": "362984dc8a2c504c75ab7f6d4810d67bd459f2f4b232fdf2158d5da9fdde364b",
     "after": "a50cbb7f660472462ba0c7da20db8de88f17e8b7b08055ff16ff97d01d104d8f"
+  },
+  "content/public/browser/video_picture_in_picture_window_controller.h": {
+    "before": "413b259a9199e766cadacb3b4eb82ce154ebc9b6c96c3300b8d50c7eb0d5de47",
+    "after": "b54b1b8baef371de2b56d12a41adac11d39c82230e3a2f530d6f384e9b312547"
+  },
+  "content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.h": {
+    "before": "3cfa1c44c957f2de3d2f75295650b9a4226895b57b0d66ed21a3d23474752505",
+    "after": "80aac6ae074044e6d23f74f69694e4c0b2be9ef1c8cd7ac2e0b94995487c5c74"
+  },
+  "content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.cc": {
+    "before": "1901fac89378723459239b047613f7969922da26235f085ca6152c069d664ab9",
+    "after": "837d6f91b28897fbe9696ef5c0553c4fe925b6d526c60f03af9feb2154820c7c"
   },
   "services/network/BUILD.gn": {
     "before": "1e38a27be4dc0ddd09617493b68d2a6d31f8073a5e73e014739d60eed56561e9",
@@ -521,7 +533,7 @@
   },
   "chrome/renderer/chrome_content_renderer_client.cc": {
     "before": "51fceabd15f5f94cd22cd434425a4a5cedb4dc22ba7541a0da93bffeece39244",
-    "after": "41739d56241377251140d84c39a2916df479b680b2d957b25a3d0f9f0e4bd7a3"
+    "after": "61cfbf101b7e172fb9af2be5d1c926f141969f55a6c41b3c06b2a737a993adb1"
   },
   "content/browser/renderer_host/browser_compositor_view_mac.h": {
     "before": "0fb0c587ec1ea931b609b47c0206706700c37f6cb0ecf69245a97d812547c3dd",
@@ -531,16 +543,48 @@
     "before": "1579b8073ab9c8682f11edd12227324048bbf7c5ae6b3d6b924cb285d0eca665",
     "after": "710968c986105f73a0a01c95331c8049d007e1c9cffda35a21667118c3ecbdfd"
   },
-  "content/public/browser/video_picture_in_picture_window_controller.h": {
-    "before": "413b259a9199e766cadacb3b4eb82ce154ebc9b6c96c3300b8d50c7eb0d5de47",
-    "after": "b54b1b8baef371de2b56d12a41adac11d39c82230e3a2f530d6f384e9b312547"
+  "chrome/browser/chrome_content_browser_client_receiver_bindings.cc": {
+    "before": "247926287b50797456c7ebc8b2b0e2db2213a0a38e979dbbeb39e8d1500f3690",
+    "after": "75dd790c4470425bb34de37be8ca21d1d7d785eb7cf4f1fac33cf3a82ee93c15"
   },
-  "content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.h": {
-    "before": "3cfa1c44c957f2de3d2f75295650b9a4226895b57b0d66ed21a3d23474752505",
-    "after": "80aac6ae074044e6d23f74f69694e4c0b2be9ef1c8cd7ac2e0b94995487c5c74"
+  "content/public/browser/surface_embed_connector.h": {
+    "before": "cdfed6ba6e4631282987ac11bd49efc41e4f7744f78bda038697afab581057ec",
+    "after": "1ff52929a81a4d2fd69e9066cec2fac66ebbbd253f0222e1c3a37ba376f90745"
   },
-  "content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.cc": {
-    "before": "1901fac89378723459239b047613f7969922da26235f085ca6152c069d664ab9",
-    "after": "837d6f91b28897fbe9696ef5c0553c4fe925b6d526c60f03af9feb2154820c7c"
+  "content/browser/surface_embed/surface_embed_connector_impl.h": {
+    "before": "bb7fa9910817e9a3e3043780b5d9b8af3296dbbf1a7c59305520bab271b0683e",
+    "after": "8c30f066993f5daf7d9f2f0cf372bc68a0f6e3b3ce970eae6e781decf790e240"
+  },
+  "content/browser/surface_embed/surface_embed_connector_impl.cc": {
+    "before": "47a42edf8bc5b1bac9ca3cc7c1104a0002e4dbac441b9f50f4fad5d547991483",
+    "after": "c63fdb551c32a8141939cb73fef5483a85c51393a7f4d94359db7dc80d7173fe"
+  },
+  "components/surface_embed/browser/surface_embed_host.cc": {
+    "before": "e6bec8281ee912ba6d1db35e38cba892454d508bc96d375cf4c2692ec937b190",
+    "after": "6b159b028683da6f6c160811b63fb31c97d892786843f2c9fe4ac71fb6e5c7db"
+  },
+  "components/surface_embed/renderer/surface_embed_web_plugin.cc": {
+    "before": "4dc9a4d8926f77e010e5cc40751bf848b6b19fc80f3ae4411996d3992fc481dc",
+    "after": "cc65ad1c6f5e06c84cecc658e14676c95fc5706c154b3746d3d57eaffae3b37a"
+  },
+  "components/performance_manager/performance_manager_tab_helper.cc": {
+    "before": "b58a1f0649c18fb3c342fffe708096df4ad293bdf5ea689cdec00c687ce0b1f6",
+    "after": "a5000651dd2d80a8bbfaba0947203b5a7f4d0c9fa14bc61c0864bcdb36da214f"
+  },
+  "chrome/app/chrome_exe.rc": {
+    "before": "2ad48370adfcc2a4406132ca559773ec75cbc04a84e66111b5b0133cd9e1dca0",
+    "after": "0e9754825658e2c59fa01174e3a168f78135022bc0b77aab2045590962f4bb52"
+  },
+  "chrome/app/chrome_dll.rc": {
+    "before": "a9c034c151c9aaba5f3b2a60669b73ecfc2ec119613d669fc1cbf68987ecf399",
+    "after": "c298aefb419e23ae77714aa89f8594f075041d531898906201e7a8401390bdd6"
+  },
+  "chrome/install_static/chromium_install_modes.h": {
+    "before": "f1e173ce85627969b995e1844a9260d31aef8f4b27ccdca9ac728b60c4f23cd1",
+    "after": "6b6d5a71c5ced47ccdf9bc48d6c0e1cd2b034cf3c7d6bbd265ef81e4ef497887"
+  },
+  "chrome/browser/extensions/external_registry_loader_win.cc": {
+    "before": "a3668695e76ccd62a8a2ace1808b7e48c3d09e77e784e248d2f74d3c2fee7024",
+    "after": "71fa08f60860aa3607d72baaf3f68789f4a70c9bf3fc06e086b0b916722f4982"
   }
 }

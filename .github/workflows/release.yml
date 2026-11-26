@@ -724,3 +724,19 @@ jobs:
             "$RUNNER_TEMP/crest-updates-branch" \
             "$RUNNER_TEMP/Sparkle-2.9.6" \
             -depth -delete 2>/dev/null || true
+
+  # Crest for Windows joins the same release once the Mac app published it,
+  # with its own feed beside the Mac's on the updates branch. It waits for
+  # the repository variable until Windows builds ship.
+  windows:
+    name: Publish for Windows
+    needs: [preflight, release]
+    if: needs.preflight.outputs.should_publish == 'true' && needs.preflight.outputs.channel == 'development' && vars.CREST_WINDOWS_RELEASES == 'true'
+    uses: ./.github/workflows/windows-release.yml
+    secrets: inherit
+    with:
+      source_sha: ${{ needs.preflight.outputs.source_sha }}
+      build_number: ${{ needs.preflight.outputs.build_number }}
+      marketing_version: ${{ needs.preflight.outputs.marketing_version }}
+      release_tag: ${{ needs.preflight.outputs.release_tag }}
+      asset_base: ${{ needs.preflight.outputs.asset_base }}

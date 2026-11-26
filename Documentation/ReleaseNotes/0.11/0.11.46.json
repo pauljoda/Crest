@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "desktop-shell-macos-comparison",
+      "category": "internal",
+      "message": "Developers can compare the Windows interface with the native Mac app in isolated sessions and inspect their animation frames together."
+    },
+    {
+      "id": "windows-development-alpha-packaging",
+      "category": "internal",
+      "message": "Windows x64 alpha installers can be built for testing before enabling Development releases."
+    }
+  ]
+}
