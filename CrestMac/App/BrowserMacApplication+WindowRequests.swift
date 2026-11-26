@@ -76,8 +76,11 @@ extension BrowserMacApplication {
         let sourceWindowID = sourceWindow.flatMap { window in
             pools.first { $0.presentationWindow === window }?.windowID
         }
-        guard let windowID = sourceWindowID ?? source?.host?.windowID ?? stackedWindowIDs.first,
-            let host = hostWindow(windowID), let space = host.browser.shownSpace
+        let preferredWindowIDs = [source?.host?.windowID, sourceWindowID].compactMap { $0 }
+        guard
+            let host = preferredWindowIDs.lazy.compactMap(hostWindow).first
+                ?? stackedWindowIDs.lazy.compactMap(hostWindow).first,
+            let space = host.browser.shownSpace
         else { return }
         host.settings.present(
             BrowserSettingsDestinationRequest(
