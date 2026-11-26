@@ -1,0 +1,34 @@
+{
+  "entries": [
+    {
+      "id": "windows-per-user-installer",
+      "category": "internal",
+      "message": "Crest for Windows installs for one person without administrator rights, with a Start menu entry, an uninstaller that keeps browsing data unless asked, and Crest registered as a browser Windows can make the default"
+    },
+    {
+      "id": "windows-default-browser-row",
+      "category": "internal",
+      "message": "Settings and Setup on Windows show whether Crest is the default browser, and open Windows' Default apps on Crest's page to make it so"
+    },
+    {
+      "id": "windows-opens-links-from-other-apps",
+      "category": "internal",
+      "message": "Links and documents other apps open with Crest for Windows land in the running Crest window, in the Space and window the Mac would choose"
+    },
+    {
+      "id": "windows-software-updates",
+      "category": "internal",
+      "message": "Crest for Windows checks for updates on its channel, installs only an update signed with Crest's release key, and offers its Software updates settings under About"
+    },
+    {
+      "id": "windows-release-publishing",
+      "category": "internal",
+      "message": "Releases can publish Crest for Windows' installer and update feed beside the Mac's, and the Windows engine is published from a Windows build machine"
+    },
+    {
+      "id": "windows-external-extensions-own-key",
+      "category": "internal",
+      "message": "Crest for Windows reads extensions other software registers from Crest's own registry key, never Google Chrome's"
+    }
+  ]
+}

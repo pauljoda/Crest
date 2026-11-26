@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "late-read-model-catches-up-on-pages",
+      "category": "internal",
+      "message": "A desktop window whose interface loads again, or that opens late, shows the pages its engine still holds instead of asking for new ones: the core's catch-up answer now includes every open page."
+    }
+  ]
+}

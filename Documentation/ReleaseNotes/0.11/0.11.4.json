@@ -1,0 +1,189 @@
+{
+  "entries": [
+    {
+      "id": "content-filter-windows",
+      "category": "internal",
+      "message": "Build the content filter's Windows libraries on Windows, as its own archive under the lock's key beside the Apple one"
+    },
+    {
+      "id": "core-on-windows",
+      "category": "internal",
+      "message": "The core builds, tests and publishes for Windows, with Windows shortcut defaults, the system SQLite, a catch-up query for a window that starts late, and TypeScript contracts for the desktop interface"
+    },
+    {
+      "id": "chromium-windows-desktop-host",
+      "category": "internal",
+      "message": "Crest's Chromium builds for Windows and hosts Crest's own interface, which embeds each page's surface in the window"
+    },
+    {
+      "id": "windows-desktop-interface",
+      "category": "internal",
+      "message": "Crest's Windows interface draws the browser window in Crest's Chromium: the sidebar, Spaces and their pager, page cards, the command palette, the recent-tab switcher, downloads, prompts and settings"
+    },
+    {
+      "id": "windows-title-bar-moves-window",
+      "category": "internal",
+      "message": "Dragging a Crest window's title bar on Windows moves the window"
+    },
+    {
+      "id": "windows-sidebar-smooth-heavy-pages",
+      "category": "internal",
+      "message": "The sidebar slides smoothly on Windows over pages that take long to lay out, which follow it a few frames behind instead of holding it back"
+    },
+    {
+      "id": "windows-resize-drags-smooth-heavy-pages",
+      "category": "internal",
+      "message": "Dragging the sidebar's edge or a split's divider on Windows stays smooth over pages that take long to lay out"
+    },
+    {
+      "id": "windows-card-corners-clean",
+      "category": "internal",
+      "message": "Page cards on Windows no longer show a pale line along their rounded corners and top edge over dark pages"
+    },
+    {
+      "id": "windows-sidebar-rows-match-mac",
+      "category": "internal",
+      "message": "Sidebar rows on Windows match the Mac's size and spacing: 40-point rows in regular type, with the Mac's insets, icon size and nesting"
+    },
+    {
+      "id": "windows-sidebar-structure-match-mac",
+      "category": "internal",
+      "message": "The Windows sidebar is arranged as the Mac's: New Tab at the top of the current tabs, folders with their tab count, groups as a caption, splits without a card at rest, dimmed unloaded tabs, and renaming in place"
+    },
+    {
+      "id": "windows-address-field-pins-match-mac",
+      "category": "internal",
+      "message": "The Windows address field and pinned tabs match the Mac's: the site centred over its path, solid lock and Site Controls glyphs, the Space's colour filling the field while a page loads, and pinned tabs sharing the row with a ring in their site's colour"
+    },
+    {
+      "id": "windows-sidebar-text-placement-match-mac",
+      "category": "internal",
+      "message": "Sidebar text on Windows sits where the Mac's does: row titles and the Space name placed as SF places them, the Space name at the Mac's size and inset, and the Mac's spacing around saved tabs and an empty pinned area"
+    },
+    {
+      "id": "windows-page-card-frame-match-mac",
+      "category": "internal",
+      "message": "The Windows page card is framed as the Mac's: beside a docked sidebar, 9.5 points from the window's edges, with the Mac's smaller corner, lighter shadow and split focus ring"
+    },
+    {
+      "id": "windows-overlay-scrollbars",
+      "category": "internal",
+      "message": "Pages and the interface on Windows scroll with overlay scrollbars, hidden at rest as the Mac's, unless Windows is set to always show scrollbars"
+    },
+    {
+      "id": "windows-surfaces-match-mac",
+      "category": "internal",
+      "message": "The Windows command palette, Site Controls, find bar and page alerts take the Mac's surfaces: a neutral palette selection with the search engine's logo, Site Controls hung from its button with an arrow, a warm find bar that closes up when empty, and compact alerts with a blue default button"
+    },
+    {
+      "id": "windows-site-controls-content-match-mac",
+      "category": "internal",
+      "message": "Site Controls on Windows lists its sections in the Mac's order, with extensions after the quick actions, permission choices as blue menus, and the Mac's type sizes"
+    },
+    {
+      "id": "windows-menus-match-mac",
+      "category": "internal",
+      "message": "Windows' tab menus offer the Mac's Pull New Icon, Clear Icon and Change Icon, tabs can wear an emoji, and the sidebar's empty area offers Edit Space, with a new Space opening for editing"
+    },
+    {
+      "id": "windows-small-items-match-mac",
+      "category": "internal",
+      "message": "On Windows the page's navigation stands where the Mac's does as chevrons, palette shortcuts read in the system font, and tabs keep their site icons after a relaunch"
+    },
+    {
+      "id": "windows-motion-match-mac",
+      "category": "internal",
+      "message": "Crest's motion on Windows takes the Mac's quicker timings: every animation about a quarter shorter, a change of Space 0.28 s, Peek on its 240 ms spring, and the page stepping out as the sidebar hides"
+    },
+    {
+      "id": "windows-space-appearance-page",
+      "category": "internal",
+      "message": "A Space's Appearance page on Windows, opened by Edit Space: the Mac's thirteen palettes, starter crests, symbol and emoji icons, and the sidebar's pattern, strength, fade, folder colors, texture and text"
+    },
+    {
+      "id": "windows-space-color-popover",
+      "category": "internal",
+      "message": "A Space's colors on Windows open the Mac's color popover: a wheel with a handle for each color, Brightness and Texture, a spectrum, and up to three colors placed in harmony, moved together or apart, with their direction"
+    },
+    {
+      "id": "windows-space-crest-studio",
+      "category": "internal",
+      "message": "A Space's crest on Windows can be built part by part, as on the Mac: its shape, field, band, emblem, border and finish, each part's color from the stage, and Shuffle for a new crest and colors"
+    },
+    {
+      "id": "windows-crest-branding",
+      "category": "internal",
+      "message": "Crest's Windows build shows Crest's icon and name in the taskbar, Alt+Tab, Task Manager and Explorer, where it showed Chromium's"
+    },
+    {
+      "id": "windows-crest-setup",
+      "category": "internal",
+      "message": "A first launch on Windows opens Crest Setup before the browser: a welcome, then Your Space, Spaces and Make It Home, whose choices take effect when Start Browsing opens the window"
+    },
+    {
+      "id": "windows-crest-setup-preview",
+      "category": "internal",
+      "message": "Crest Setup on Windows shows Crest as each Space will look beside the steps, slides between them, and hands over to the browser window as it finishes"
+    },
+    {
+      "id": "windows-setup-rerun",
+      "category": "internal",
+      "message": "Settings on Windows has an Advanced page whose Setup section reruns Crest Setup from the welcome, or opens it to review and customize the Spaces"
+    },
+    {
+      "id": "windows-getting-started-guide",
+      "category": "internal",
+      "message": "Windows opens the Getting Started guide after Setup, with a practice Space on the real sidebar, its tabs and folders lessons, and Split View practice; the sidebar gains Clear on the open tabs' line"
+    },
+    {
+      "id": "windows-sidebar-more-tabs-space-menu",
+      "category": "internal",
+      "message": "The Windows sidebar shows the Mac's Show more tabs button and scroll indicator, and a Space's settings page has the Mac's actions menu with Reset Appearance and Artwork Credits"
+    },
+    {
+      "id": "windows-delete-lock-spaces",
+      "category": "internal",
+      "message": "Spaces on Windows can be deleted with their data, handing a group to a Sub-Space, and locked behind Windows Hello, locking again when Crest goes to the background"
+    },
+    {
+      "id": "windows-space-group-changes",
+      "category": "internal",
+      "message": "A Space's settings page on Windows shows its group's crests and can start a Sub-Space, make a Space a Sub-Space of another group, or separate it, each after the Mac's question"
+    },
+    {
+      "id": "windows-unchecked-shots-fixes",
+      "category": "internal",
+      "message": "Windows notices, questions, permission requests and Site Controls' pop-up card now look as the Mac's do, with red buttons for questions that delete"
+    },
+    {
+      "id": "windows-space-swipe-smoothness",
+      "category": "internal",
+      "message": "Swiping between Spaces on Windows starts without a stall, and a page a paused swipe carried partly off screen comes back whole instead of white"
+    },
+    {
+      "id": "windows-floating-sidebar-pace",
+      "category": "internal",
+      "message": "The floating sidebar on Windows comes out and goes on the Mac's springs"
+    },
+    {
+      "id": "windows-sidebar-edge-and-space-look",
+      "category": "internal",
+      "message": "The hidden sidebar on Windows comes out at its edge and as the pointer leaves the window there, and a change of Space carries each Space's look through the slide"
+    },
+    {
+      "id": "windows-click-space-switch",
+      "category": "internal",
+      "message": "Clicking a Space on Windows slides at once and switches as the strip lands, as a swipe does"
+    },
+    {
+      "id": "windows-shell-merges-main-0-11-1",
+      "category": "internal",
+      "message": "The Windows shell takes main up to 0.11.1: Chromium 158, the core's changes and the Mac's universal engine pipeline beside its own."
+    },
+    {
+      "id": "windows-shell-merges-main-chromium-158-0-8127-89",
+      "category": "internal",
+      "message": "The Windows shell takes main up to Chromium 158.0.8127.89."
+    }
+  ]
+}
