@@ -1,0 +1,115 @@
+--- a/chrome/browser/ui/webui/chrome_web_ui_configs.cc
++++ b/chrome/browser/ui/webui/chrome_web_ui_configs.cc
+@@ -90,6 +90,9 @@
+ #include "chrome/browser/contextual_cueing/internals/contextual_cueing_internals_ui.h"
+ #include "chrome/browser/ui/tabs/tab_group_home/tab_group_home_ui.h"
+ #include "chrome/browser/ui/webui/webui_toolbar/webui_toolbar_ui.h"
++#include "chrome/browser/ui/webui/crest_comparison_ui.h"
++#include "base/command_line.h"
++#include "content/public/browser/webui_config.h"
+ #include "chrome/browser/ui/webui_browser/webui_browser_ui.h"
+ #if !BUILDFLAG(IS_CHROMEOS)
+ #include "chrome/browser/ui/webui/app_home/app_home_ui.h"
+@@ -270,6 +273,9 @@
+ #endif  // BUILDFLAG(IS_CHROMEOS)
+
+   auto& map = content::WebUIConfigMap::GetInstance();
++  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-comparison-port"))
++    map.AddWebUIConfig(std::make_unique<content::DefaultWebUIConfig<CrestComparisonUI>>(
++        "chrome", "crest-comparison"));
+   map.AddWebUIConfig(std::make_unique<AccessibilityUIConfig>());
+   map.AddWebUIConfig(std::make_unique<AutofillInternalsUIConfig>());
+   map.AddWebUIConfig(std::make_unique<BluetoothInternalsUIConfig>());
+--- a/chrome/browser/chrome_content_browser_client_receiver_bindings.cc
++++ b/chrome/browser/chrome_content_browser_client_receiver_bindings.cc
+@@ -111,6 +111,7 @@
+ #include "chrome/browser/indigo/onboarding/indigo_onboarding_dialog.h"
+ #include "chrome/browser/password_manager/remote_actor/remote_actor_credential_sharing_impl.h"
+ #include "chrome/browser/record_replay/chrome_record_replay_client.h"
++#include "chrome/browser/ui/webui/crest_comparison_ui.h"
+ #include "chrome/browser/ui/webui_browser/webui_browser_ui.h"
+ #include "chrome/common/indigo/indigo.mojom.h"
+ #include "chrome/common/password_manager/remote_actor_credential_sharing_policy.h"
+@@ -452,7 +453,8 @@
+                    surface_embed::mojom::SurfaceEmbedHost> receiver) {
+               auto* web_ui = render_frame_host->GetWebUI();
+               if (!web_ui ||
+-                  !web_ui->GetController()->GetAs<WebUIBrowserUI>()) {
++                  (!web_ui->GetController()->GetAs<WebUIBrowserUI>() &&
++                   !web_ui->GetController()->GetAs<CrestComparisonUI>())) {
+                 return;
+               }
+               surface_embed::SurfaceEmbedHost::Create(render_frame_host,
+--- a/chrome/renderer/chrome_content_renderer_client.cc
++++ b/chrome/renderer/chrome_content_renderer_client.cc
+@@ -998,7 +998,7 @@
+   if (base::FeatureList::IsEnabled(surface_embed::features::kSurfaceEmbed)) {
+     GURL url = render_frame->GetWebFrame()->GetDocument().Url();
+     if (url.SchemeIs(content::kChromeUIScheme) &&
+-        url.host() == chrome::kChromeUIWebuiBrowserHost) {
++        (url.host() == chrome::kChromeUIWebuiBrowserHost || url.host() == "crest-comparison")) {
+       if (surface_embed::MaybeCreatePlugin(render_frame, params, plugin)) {
+         return true;
+       }
+--- a/chrome/browser/ui/webui/BUILD.gn
++++ b/chrome/browser/ui/webui/BUILD.gn
+@@ -34,10 +34,12 @@
+   public = [
+     "chrome_untrusted_web_ui_configs.h",
+     "chrome_web_ui_configs.h",
++    "crest_comparison_ui.h",
+   ]
+   sources = [
+     "chrome_untrusted_web_ui_configs.cc",
+     "chrome_web_ui_configs.cc",
++    "crest_comparison_ui.cc",
+   ]
+
+   deps = [
+@@ -46,6 +48,14 @@
+     ":ntp_tiles_internals_ui",
+     ":signin_internals_ui",
+     ":webui",
++    "//base",
++    "//chrome/browser/profiles:profile",
++    "//chrome/browser/profiles:profile_manager",
++    "//components/input",
++    "//components/surface_embed/browser",
++    "//content/public/browser",
++    "//services/network/public/mojom",
++    "//ui/events",
+     "//chrome/browser/actor/ui:actor_overlay",
+     "//chrome/browser/browser_actuator/internals",
+     "//chrome/browser/contextual_tasks:ui",
+--- a/chrome/browser/ui/startup/startup_browser_creator.cc
++++ b/chrome/browser/ui/startup/startup_browser_creator.cc
+@@ -28,6 +28,7 @@
+ #include "base/metrics/histogram_macros.h"
+ #include "base/metrics/statistics_recorder.h"
+ #include "base/scoped_multi_source_observation.h"
++#include "base/strings/string_number_conversions.h"
+ #include "base/strings/string_tokenizer.h"
+ #include "base/task/thread_pool.h"
+ #include "base/threading/scoped_blocking_call.h"
+@@ -397,11 +398,20 @@
+ #endif
+   GURL url(url_string);
+
++  // Only the compiled comparison UI may open as this build's guest host.
++  unsigned comparison_port = 0;
++  const bool comparison = url == GURL("chrome://crest-comparison/") &&
++      base::StringToUint(command_line.GetSwitchValueASCII("crest-comparison-port"), &comparison_port) &&
++      comparison_port > 0 && comparison_port <= 65535;
++  if (comparison)
++    url = GURL("chrome://crest-comparison/?compare&bridge=ws://127.0.0.1:" +
++               base::NumberToString(comparison_port) + "/core");
++
+   // Restrict allowed URLs for --app switch.
+   if (!url.is_empty() && url.is_valid()) {
+     content::ChildProcessSecurityPolicy* policy =
+         content::ChildProcessSecurityPolicy::GetInstance();
+-    if (policy->IsWebSafeScheme(url.GetScheme()) ||
++    if (comparison || policy->IsWebSafeScheme(url.GetScheme()) ||
+         url.SchemeIs(url::kFileScheme)) {
+       const content::WebContents* web_contents =
+           apps::OpenExtensionAppShortcutWindow(profile, url);

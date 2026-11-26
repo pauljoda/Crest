@@ -66,6 +66,11 @@ export class DevSocketTransport implements CoreTransport {
     this.#socket.addEventListener("message", (event) => this.#receive(new Uint8Array(event.data as ArrayBuffer)));
   }
 
+  /** Let the local launcher know the comparison window finished opening. */
+  comparisonReady(): void {
+    this.#socket.send("comparison-ready");
+  }
+
   create(fingerprint: Uint8Array, configuration: Uint8Array) {
     const prefix = new Uint8Array(4);
     new DataView(prefix.buffer).setUint32(0, fingerprint.byteLength, true);

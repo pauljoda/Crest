@@ -447,18 +447,26 @@
       ? { x: -trailing(natural), y: 0, page: pageWide }
       : { x: 0, y: 0, page: (pageEnd ?? (final === "docked" ? "beside" : "wide")) === "beside" ? pageBeside : pageWide };
     const startPage = from.page + insetChange;
-    const offsetsAt = (fraction: number): Offsets => ({
-      x: devicePixels(from.x + (to.x - from.x) * fraction),
-      y: devicePixels(from.y + (to.y - from.y) * fraction),
-      page: devicePixels(startPage + (to.page - startPage) * fraction),
-    });
+    const docking = kind === "drawer" && final === "docked";
+    const offsetsAt = (fraction: number): Offsets => {
+      const page = startPage + (to.page - startPage) * fraction;
+      // The native page column takes its last layout point when the drawer
+      // seats. Rounding to the nearest device pixel can give it that point
+      // several frames before the sidebar has finished moving.
+      return {
+        x: devicePixels(from.x + (to.x - from.x) * fraction),
+        y: devicePixels(from.y + (to.y - from.y) * fraction),
+        page: docking ? to.page - Math.ceil(to.page - page) : devicePixels(page),
+      };
+    };
     setOffsets(offsetsAt(0), shadowBase);
     const duration = spring.visualDuration * sidebarMotionFactor();
     if (duration === 0) {
       place(final);
       return;
     }
-    const curve = springCurve({ ...spring, visualDuration: duration }, 0.001);
+    // The dock holds its last whole-point inset a little longer than the free-moving card.
+    const curve = springCurve({ ...spring, visualDuration: duration }, docking ? 0.00075 : 0.001);
     const morph: Morph = { kind, final, frame: 0 };
     running = morph;
     // A step with one after it hands over once it has visibly arrived.

@@ -12,15 +12,20 @@ int port = int.Parse(Option("--port", "8787"), System.Globalization.CultureInfo.
 
 // Only the local interface that started this session may open its native bridge.
 var origin = new Uri(Option("--origin", "http://127.0.0.1:5173"));
-if (origin.Scheme != Uri.UriSchemeHttp || origin.Host != "127.0.0.1" || origin.PathAndQuery != "/" ||
+bool localInterface = origin.Scheme == Uri.UriSchemeHttp && origin.Host == "127.0.0.1";
+bool comparisonInterface = origin.Scheme == "chrome" && origin.Host == "crest-comparison" && origin.IsDefaultPort;
+if ((!localInterface && !comparisonInterface) || origin.PathAndQuery != "/" ||
     origin.UserInfo.Length != 0 || origin.Fragment.Length != 0)
-    throw new ArgumentException("--origin must be an HTTP origin on 127.0.0.1.");
+    throw new ArgumentException("--origin must identify the local interface or chrome://crest-comparison.");
 
 var builder = WebApplication.CreateSlimBuilder();
 builder.WebHost.UseUrls($"http://127.0.0.1:{port}");
 var host = builder.Build();
 host.UseWebSockets();
 host.MapGet("/health", () => Results.Ok());
+int readyWindows = 0;
+host.MapGet("/session", () => Volatile.Read(ref readyWindows) > 0
+    ? Results.Ok() : Results.StatusCode(StatusCodes.Status503ServiceUnavailable));
 
 host.Map("/core", async context => {
     if (!context.WebSockets.IsWebSocketRequest) {
@@ -33,10 +38,18 @@ host.Map("/core", async context => {
     }
     using var socket = await context.WebSockets.AcceptWebSocketAsync();
     await using var session = new CoreSession(socket);
+    bool ready = false;
+    void ComparisonReady() {
+        if (ready) return;
+        ready = true;
+        Interlocked.Increment(ref readyWindows);
+    }
     try {
-        await session.Serve(context.RequestAborted);
+        await session.Serve(context.RequestAborted, ComparisonReady);
     } catch (Exception error) when (error is OperationCanceledException or System.Net.WebSockets.WebSocketException) {
         // The interface went away.
+    } finally {
+        if (ready) Interlocked.Decrement(ref readyWindows);
     }
 });
 Console.WriteLine($"Crest core bridge on ws://127.0.0.1:{port}/core");

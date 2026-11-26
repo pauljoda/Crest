@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import platform
 import plistlib
+import shutil
 import signal
 import socket
 import subprocess
@@ -101,7 +102,10 @@ def main():
                            help="Build the native Chromium UI with an existing Crest-overlaid Chromium.app")
     parser.add_argument("--signing-identity", default="Apple Development",
                         help="Local code-signing identity for the isolated Chromium reference")
-    parser.add_argument("--browser", type=Path, default=Path("/Applications/Google Chrome.app"),
+    host = parser.add_mutually_exclusive_group()
+    host.add_argument("--guest-engine", type=Path,
+                      help="Run Svelte with real page surfaces using a Mac comparison Chromium.app")
+    host.add_argument("--browser", type=Path, default=Path("/Applications/Google Chrome.app"),
                         help="Chromium browser bundle for the Svelte interface")
     parser.add_argument("--no-build", action="store_true", help="Reuse this checkout's core, bridge and npm install")
     parser.add_argument("--optimized", action="store_true",
@@ -109,13 +113,14 @@ def main():
     args = parser.parse_args()
     if sys.platform != "darwin":
         parser.error("This comparison runs on macOS")
-    browser = executable(args.browser)
+    if args.guest_engine:
+        args.optimized = True
     if not args.no_build:
         build(args.native_app is None, args.optimized, args.chromium_engine)
     configuration = "Release" if args.optimized else "Debug"
     products = OUTPUT / "native/Build/Products" / configuration
     bridge_port, ui_port = ports()
-    origin = f"http://127.0.0.1:{ui_port}"
+    origin = "chrome://crest-comparison" if args.guest_engine else f"http://127.0.0.1:{ui_port}"
     url = f"{origin}/?compare&bridge=ws://127.0.0.1:{bridge_port}/core"
     env = {**os.environ, "CREST_ISOLATED_SESSION": "1", "CREST_USE_IN_MEMORY_CREDENTIALS": "1",
            "CREST_DESKTOP_COMPARISON": "1"}
@@ -142,19 +147,38 @@ def main():
         bridge = start(["dotnet", OUTPUT / "bridge/CrestDesktop.DevHost.dll", "--core",
                         OUTPUT / "core/CrestCore.Native.dylib", "--port", str(bridge_port), "--origin", origin])
         ready(bridge, f"http://127.0.0.1:{bridge_port}/health")
-        vite = start([UI / "node_modules/.bin/vite", *(["preview", "--outDir", OUTPUT / "ui"] if args.optimized else []),
-                      "--host", "127.0.0.1", "--port", str(ui_port), "--strictPort"], cwd=UI / "app")
-        ready(vite, origin)
+        processes = [bridge]
+        browser_flags = []
+        if args.guest_engine:
+            guest = Path(temporary) / "Chromium.app"
+            subprocess.run(["cp", "-cR", args.guest_engine.resolve(), guest], check=True)
+            shutil.copytree(OUTPUT / "ui", guest / "Contents/Resources/CrestComparison")
+            browser = executable(guest)
+            # Chromium suppresses its startup info bars in a test window.
+            browser_flags.extend(["--test-type", f"--crest-comparison-port={bridge_port}"])
+            register = Path("/System/Library/Frameworks/CoreServices.framework/Frameworks/"
+                            "LaunchServices.framework/Support/lsregister")
+            stack.callback(subprocess.run, [register, "-u", guest], check=False)
+        else:
+            browser = executable(args.browser)
+            vite = start([UI / "node_modules/.bin/vite", *(["preview", "--outDir", OUTPUT / "ui"] if args.optimized else []),
+                          "--host", "127.0.0.1", "--port", str(ui_port), "--strictPort"], cwd=UI / "app")
+            ready(vite, origin)
+            processes.append(vite)
         common = ["--no-first-run", "--no-default-browser-check", "--use-mock-keychain"]
         reference = start([native, *common, "--crest-control-plane", f"--user-data-dir={temporary}/native"])
-        desktop = start([browser, *common, "--disable-sync", "--disable-background-mode", "--disable-default-apps", f"--user-data-dir={temporary}/desktop", f"--app={url}"])
+        app_url = origin + "/" if args.guest_engine else url
+        desktop = start([browser, *common, *browser_flags, "--disable-sync", "--disable-background-mode", "--disable-default-apps", f"--user-data-dir={temporary}/desktop", f"--app={app_url}"])
+        if args.guest_engine:
+            ready(desktop, f"http://127.0.0.1:{bridge_port}/session")
         # Without Accessibility access the windows can still be arranged by hand.
         subprocess.run(["swift", ROOT / "Scripts/desktop-parity.swift", "arrange",
                         str(reference.pid), str(desktop.pid)], check=False)
         print(f"Native PID {reference.pid}, Svelte PID {desktop.pid}. Ctrl-C ends this comparison.", flush=True)
-        while all(p.poll() is None for p in (bridge, vite, reference, desktop)):
+        processes.extend([reference, desktop])
+        while all(p.poll() is None for p in processes):
             time.sleep(0.25)
-        for process in (bridge, vite, reference, desktop):
+        for process in processes:
             if process.poll() not in (None, 0):
                 raise RuntimeError(f"{process.args[0]} exited with {process.returncode}")
 

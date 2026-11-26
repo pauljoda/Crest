@@ -41,26 +41,33 @@
     return { pose: { opacity: 0 }, timing };
   }
 
-  // BrowserTransientMotion samples the spring for twice its perceptual duration.
-  // On the return journey the opacity falls linearly over 92% of that duration.
+  // Keep a reversing card at its presented scale. The compositor samples the
+  // same 120 Hz spring as BrowserTransientMotion while Svelte retains its DOM.
+  const frameInterval = 1000 / 120;
+  const stackAnimations = new WeakMap<Element, Animation>();
   function moveStack(node: Element, returning: boolean, exit?: PeekExit): TransitionConfig {
-    if (exit?.animates === false || snaps()) return { duration: 0 };
-    const length = peekTime.current;
-    const spring = springCurve({ type: "spring", visualDuration: length / 1000, bounce: 0.16 });
     const style = getComputedStyle(node);
     const from = returning ? (style.transform === "none" ? 1 : new DOMMatrixReadOnly(style.transform).a) : 0.08;
-    const to = returning ? 0.005 : 1;
     const opacity = Number(style.opacity);
-    return {
-      delay: exit?.pickup ?? 0,
-      duration: length * 2,
-      css: t => {
-        const elapsed = (returning ? 1 - t : t) * length * 2;
-        const scale = elapsed >= length * 2 ? to : Math.max(0.001, from + (to - from) * spring.position(elapsed / 1000));
-        const alpha = returning ? Math.max(0, 1 - elapsed / (length * 0.92)) * opacity : 1;
-        return `transform: scale(${scale}); opacity: ${alpha}`;
-      },
-    };
+    stackAnimations.get(node)?.cancel();
+    stackAnimations.delete(node);
+    if (exit?.animates === false || snaps()) return { duration: 0 };
+    const length = peekTime.current;
+    const duration = length * 2;
+    // A newly presented stack picks up on the next native display sample.
+    const delay = returning ? exit?.pickup ?? 0 : frameInterval / 2;
+    const spring = springCurve({ type: "spring", visualDuration: length / 1000, bounce: 0.16 });
+    const to = returning ? 0.005 : 1;
+    const count = Math.ceil(duration / frameInterval);
+    const frames = Array.from({ length: count + 1 }, (_, i) => {
+      const elapsed = duration * i / count;
+      const scale = i === count ? to : Math.max(0.001, from + (to - from) * spring.position(elapsed / 1000));
+      return { transform: `scale(${scale})`, opacity: returning ? Math.max(0, 1 - elapsed / (length * 0.92)) * opacity : 1 };
+    });
+    const animation = node.animate(frames, { duration, delay, fill: "both" });
+    stackAnimations.set(node, animation);
+    if (!returning) animation.onfinish = () => animation.cancel();
+    return { duration, delay };
   }
   const stackEntrance = (node: Element) => moveStack(node, false);
   const stackExit = (node: Element, exit?: PeekExit) => moveStack(node, true, exit);
@@ -91,13 +98,16 @@
    * keeps its page as a tab of the Space it came from, or of another Space
    * its menu names.
    */
-  let { session, peek, spaces, hidden, onClose, onOpenIn, exit }: {
+  let { session, peek, spaces, hidden, guestCommitted, painted, onClose, onEscape, onOpenIn, exit }: {
     session: Session;
     peek: Peek;
     spaces: readonly SpaceState[];
     /** Whether the Peek waits unseen while the window shows another tab than its link's. */
     hidden: boolean;
+    guestCommitted: boolean;
+    painted: boolean;
     onClose: () => void;
+    onEscape: () => void;
     onOpenIn: (spaceId: string) => void;
     /** How it goes, and what hears it gone. */
     exit?: PeekExit;
@@ -108,7 +118,6 @@
   const page = $derived(coreState(session).pages.get(peek.pageId));
   // The page shows once it has committed something, a moment after, as the Mac's reveal does.
   const framed = $derived((useEngineVersion(session), session.engine?.pages.get(peek.pageId)?.url));
-  const committed = $derived(!!page?.live.url);
   const tint = $derived(space ? backgroundColor(space.settings.look) : null);
   let menu = $state<HTMLButtonElement>();
   $effect(() => {
@@ -120,10 +129,11 @@
   let content = $state<string | null>(null);
   let element = $state<HTMLEmbedElement | HTMLIFrameElement>();
   let loadedFrame = $state<HTMLIFrameElement>();
+  let moving = $state(false);
   const live = $derived(page?.phase.name === "live");
   $effect(() => {
     const pageId = peek.pageId;
-    if (!session.shell || !live || content) return;
+    if (!(session.shell || session.guests) || !live || content) return;
     let current = true;
     void pageContentId(session, pageId).then((id) => {
       if (current && id) content = id;
@@ -133,18 +143,36 @@
     };
   });
   $effect(() => {
+    if (content && !hidden) return session.guests?.holdEscape(peek.pageId, onEscape);
+  });
+  $effect(() => {
     if (content) element?.focus();
   });
-  // It comes in unseen and fades in once the page has committed something,
-  // from wherever its fade stands.
-
+  // Native gives a committed document two frames to display. The inner page
+  // waits for contentful paint, or for its 1.5 s limit on documents with none.
+  const guest = $derived(!!(session.shell || session.guests));
+  let framesElapsed = $state(false);
+  let paintWaitEnded = $state(false);
+  let showStatus = $state(false);
+  $effect(() => {
+    if (!guestCommitted) return;
+    const frames = setTimeout(() => { framesElapsed = true; }, 34);
+    const limit = setTimeout(() => { paintWaitEnded = true; }, 1500);
+    return () => { clearTimeout(frames); clearTimeout(limit); };
+  });
+  const canReveal = $derived(guest ? framesElapsed && (painted || paintWaitEnded || !!page?.live.failure) : !!page?.live.url);
+  $effect(() => {
+    if (!guest || canReveal || page?.live.failure) return;
+    const timer = setTimeout(() => { showStatus = true; }, 400);
+    return () => clearTimeout(timer);
+  });
+  const host = $derived(URL.canParse(peek.url) ? new URL(peek.url).hostname : "");
   $effect(() => {
     const embed = element;
-    if (!embed || !committed || (embed instanceof HTMLIFrameElement && loadedFrame !== embed)) return;
-    const reduce = reducesMotion();
-    const { duration, delay, css: easing } = timed({ duration: 0.12, ease: "easeOut", delay: 0.034 });
+    if (!embed || !canReveal || (embed instanceof HTMLIFrameElement && loadedFrame !== embed)) return;
+    const { duration, css: easing } = timed({ duration: 0.12, ease: "easeOut" });
     const reveal = embed.animate([{ opacity: 0 }, { opacity: 1 }],
-      { duration: reduce ? 0 : duration, delay: reduce ? 0 : delay, easing, fill: "both" });
+      { duration: reducesMotion() ? 0 : duration, delay: guest || reducesMotion() ? 0 : 34, easing, fill: "both" });
     return () => reveal.cancel();
   });
 </script>
@@ -155,13 +183,15 @@
     in:presence={scrimEntrance()} out:presence={scrimExit(exit)}></div>
   <div class="peek-stack" role="dialog" aria-label={`Peek from ${(useCoreVersion(session), sourceTitle(session, peek))}`}
     style:--peek-share={peekSize.current / 100}
+    onintrostart={() => { moving = true; }} onintroend={() => { moving = false; }}
+    onoutrostart={() => { moving = true; }} onoutroend={() => { moving = false; }}
     in:stackEntrance out:stackExit={exit}>
     <div class="peek-bar">
       <button class="peek-close" aria-label="Close Peek" title="Close Peek (Esc or Ctrl+W)" onclick={onClose}>
         <SymbolIcon name="xmark" size={18} strokeWidth={2.4} />
       </button>
       <div class={`peek-destination${tint && toneOver(tint) === "light" ? " reads-light" : ""}`}
-        style:--peek-tint={tint ? css(tint, 0.72) : undefined}>
+        style:--peek-tint={tint ? css(tint) : undefined}>
         <button class="peek-open-in" aria-label="Open In…" {...{ "aria-description": space?.settings.name ?? "Space" }}
           title={`Open in ${space?.settings.name ?? "Space"}`} onclick={() => onOpenIn(peek.spaceId)}>
           {#if space}
@@ -180,13 +210,22 @@
             void showContextMenu(session.shell, { clientX: bounds.left, clientY: bounds.bottom },
               spaces.map((candidate) => ({ title: candidate.settings.name, run: () => onOpenIn(candidate.id) })));
           }}>
-          <SymbolIcon name="chevron.down" size={11} strokeWidth={2.6} />
+          <SymbolIcon name="chevron.down" size={13} strokeWidth={2.6} />
         </button>
       </div>
     </div>
     <div class="peek-card">
+      {#if guest}
+        <div class="peek-loading">
+          {#if !canReveal && showStatus && !page?.live.failure}
+            <div class="peek-loading-status" role="status"><span class="peek-spinner" aria-hidden="true"></span>
+              {host ? `Opening ${host}…` : "Opening page…"}</div>
+          {/if}
+        </div>
+      {/if}
       {#if content}
         <embed bind:this={element} class="page-frame" type="application/x-chromium-surface-embed" data-content-id={content}
+          data-live-resize={moving ? "" : undefined}
           tabindex={-1} />
       {:else if !session.shell && framed}
         {#key framed}

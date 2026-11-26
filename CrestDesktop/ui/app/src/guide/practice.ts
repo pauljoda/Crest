@@ -65,7 +65,7 @@ export class Practice {
       showingTabs: [], restoresTabs: true,
     }));
     const session: Session = {
-      core: base.core, workspaceId: opened.workspaceId, windowId, engine: null, shell: base.shell,
+      core: base.core, workspaceId: opened.workspaceId, windowId, engine: null, guests: base.guests, shell: base.shell,
       closing: { current: false }, setup: { current: null },
     };
     return new Practice(session, registerPracticeTabs(practiceSpace(session)));

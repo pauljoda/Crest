@@ -8,12 +8,12 @@ namespace CrestDesktop.DevHost;
 
 /// One interface connected over a WebSocket, and the core app it created.
 ///
-/// Every frame is binary. A request is `[op][id: u32]` and its payload; its
+/// Core frames are binary. A request is `[op][id: u32]` and its payload; its
 /// response is `[op | 0x80][id][status: i32]` and the core's bytes. The core's
 /// own changes arrive as `[0xF0][status]` and the drained batch after a wake,
 /// and an engine command as `[0xF1][engine: u64]` and the command. The bytes are
 /// the contract wire format, which the interface encodes and decodes itself:
-/// this host never reads them.
+/// this host never reads them. The comparison UI signals readiness with a text frame after boot.
 internal sealed class CoreSession : IAsyncDisposable {
     #region Types
 
@@ -55,7 +55,7 @@ internal sealed class CoreSession : IAsyncDisposable {
     #region Actions - Serving
 
     /// Answers the interface's requests until it disconnects.
-    public async Task Serve(CancellationToken cancellation) {
+    public async Task Serve(CancellationToken cancellation, Action comparisonReady) {
         var sending = Send(cancellation);
         var buffer = new byte[1 << 16];
         using var message = new MemoryStream();
@@ -72,6 +72,10 @@ internal sealed class CoreSession : IAsyncDisposable {
                 message.Write(buffer, 0, result.Count);
             } while (!result.EndOfMessage);
             byte[] frame = message.ToArray();
+            if (result.MessageType == WebSocketMessageType.Text) {
+                if (frame.AsSpan().SequenceEqual("comparison-ready"u8)) comparisonReady();
+                continue;
+            }
             await gate.WaitAsync(cancellation);
             try {
                 Reply(frame);

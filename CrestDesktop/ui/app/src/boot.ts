@@ -29,6 +29,7 @@ import {
 } from "@crest/contracts";
 import { CoreRejection, CrestCore, DevSocketTransport, ShellTransport } from "@crest/core-client";
 
+import { ComparisonGuests } from "./comparison-guests";
 import { DevEngine } from "./dev-engine";
 import { registerPracticeTabs } from "./guide/practice";
 import { startFilterListUpdates } from "./filter-lists";
@@ -42,6 +43,7 @@ export interface Session {
   readonly windowId: string;
   /** The development engine's frames, outside Crest's Chromium. */
   readonly engine: DevEngine | null;
+  readonly guests: ComparisonGuests | null;
   /** Crest's Chromium, which embeds each page's own surface. */
   readonly shell: ShellTransport | null;
   /** Set once the window is closing, when it opens no more pages. */
@@ -101,8 +103,11 @@ const chromiumCapabilities = [
  * stand in for the engine.
  */
 export async function boot(bridgeUrl: string): Promise<Session> {
-  const shell = ShellTransport.available() ? new ShellTransport() : null;
+  const guests = import.meta.env.MODE === "comparison" && location.protocol === "chrome:" && location.host === "crest-comparison"
+    ? new ComparisonGuests() : null;
+  const shell = !guests && ShellTransport.available() ? new ShellTransport() : null;
   let core: CrestCore;
+  let bridge: DevSocketTransport | null = null;
   let engine: DevEngine | null = null;
   let windowId: string;
   let workspaceKind = WorkspaceKind.practice;
@@ -123,8 +128,9 @@ export async function boot(bridgeUrl: string): Promise<Session> {
     workspaceKind = WorkspaceKind.persistent;
   } else {
     windowId = crypto.randomUUID();
-    core = await CrestCore.start(new DevSocketTransport(bridgeUrl), configuration);
-    engine = new DevEngine();
+    bridge = new DevSocketTransport(bridgeUrl);
+    core = await CrestCore.start(bridge, configuration);
+    const binding = guests ?? (engine = new DevEngine());
     await core.registerEngine(
       {
         kind: EngineKind.chromium,
@@ -136,7 +142,7 @@ export async function boot(bridgeUrl: string): Promise<Session> {
         ],
         isDefault: true,
       },
-      engine,
+      binding,
     );
   }
   const { changes: opened, created } = await openWorkspace(core, workspaceKind);
@@ -204,7 +210,8 @@ export async function boot(bridgeUrl: string): Promise<Session> {
     // An installed Crest updates itself; the launch's window checks on schedule.
     void softwareUpdates.start(shell, launches);
   }
-  return { core, engine, shell, workspaceId: workspace.workspaceId, windowId, closing, setup };
+  if (guests) bridge?.comparisonReady();
+  return { core, engine, guests, shell, workspaceId: workspace.workspaceId, windowId, closing, setup };
 }
 
 /**

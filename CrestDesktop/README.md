@@ -92,6 +92,30 @@ reuses the compiled products for the selected reference. `--native-app` accepts
 a specific reference bundle that supports isolated launches. Older reference
 builds use their own isolated launch fixture.
 
+### Compare real Chromium pages on Mac
+
+For Peek and page resizing, prepare a separate Mac Chromium source tree at the
+Crest engine revision with the Mac overlay and its normal build configuration.
+Apply the comparison controller to that tree, then build its browser target.
+The dedicated tree keeps the published engine's inputs and artifacts independent.
+
+```sh
+Scripts/prepare-comparison-guest.py /path/to/comparison/src
+ninja -C /path/to/comparison/src/out/CrestBaseline chrome
+Scripts/compare-desktop.py --chromium-engine /path/to/native/Chromium.app \
+  --guest-engine /path/to/comparison/src/out/CrestBaseline/Chromium.app
+```
+
+The launcher bundles the compiled Svelte interface in a temporary copy of the
+guest engine. Its local WebUI hosts each page in a separate Chromium
+`WebContents` and displays the page with the same surface embed as Windows.
+Each core profile has an in-memory Chromium profile. The core bridge accepts
+this WebUI's origin, and navigation commits come from
+the guest. Peek waits for the main frame’s first contentful paint, with the same
+1.5-second fallback as the native page. The comparison supports HTTP, HTTPS,
+HTML data pages and about:blank.
+Pass `--no-build` to reuse an already compiled Svelte bundle and bridge.
+
 To record an interaction, use the process IDs the launcher prints and a new
 folder outside the checkout. Start both windows in the same state and leave
 them idle while the recorder sends the shortcut to each one in turn.

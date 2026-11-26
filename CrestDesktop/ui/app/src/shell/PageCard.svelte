@@ -33,6 +33,7 @@
 
   /** The surface `pageId` embeds as, asked of the shell once and remembered, or null when it has none. */
   export async function pageContentId(session: Session, pageId: string): Promise<string | null> {
+    if (session.guests) return session.guests.surfaces.get(pageId) ?? null;
     const known = contentIds.get(pageId);
     if (known) return known;
     const content = await session.shell?.embed(pageId);
@@ -249,7 +250,7 @@
 {/snippet}
 
 <main bind:this={card} class={`page-card${clear ? " clear" : ""}${passive ? " passive" : ""}${still ? " still" : ""}`}>
-  {#if session.shell}
+  {#if session.shell || session.guests}
     {#if !waiting}
       <EmbeddedPage {session} {pageId} passive={passive || !focused} asleep={!!still} />
     {/if}

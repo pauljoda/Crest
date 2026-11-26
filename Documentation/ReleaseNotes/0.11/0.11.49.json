@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "desktop-peek-guest-comparison",
+      "category": "internal",
+      "message": "Developers can compare the native Mac interface and the desktop alpha with real Chromium pages in both windows."
+    },
+    {
+      "id": "desktop-peek-and-drawer-settling",
+      "category": "internal",
+      "message": "The desktop alpha reveals Peek pages after their first contentful paint and follows the native sidebar through its final layout point."
+    }
+  ]
+}

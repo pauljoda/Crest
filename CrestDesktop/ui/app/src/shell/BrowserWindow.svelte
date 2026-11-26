@@ -49,6 +49,7 @@
 <script lang="ts">
   import { presentationPickup } from "../motion";
   import {
+    AddContentScript,
     DiscardStagedLink,
     MovePage,
     NativeView,
@@ -106,6 +107,7 @@
   import PageColumns, { type ColumnCard } from "./PageColumns.svelte";
   import { usePagePresentation } from "./page-presentation.svelte";
   import { pageTools, usePageTools } from "./page-tools";
+  import { firstPaintHandler, firstPaintScript } from "./peek-paint";
   import { sampleAddress, setSamplePeek } from "./peek-sample";
   import PeekLayer, { type Peek, type PeekExit } from "./PeekLayer.svelte";
   import DownloadFlights from "./DownloadFlights.svelte";
@@ -221,10 +223,13 @@
   // its link lets its page go once it has, and one kept as a tab, or closed
   // by its page, leaves at once.
   let peek = $state.raw<Peek | null>(null);
+  let committedPeek = $state<string | null>(null);
+  let paintedPeek = $state<string | null>(null);
   let peekAnimates = $state(true);
   let peekExitPickup = 0;
   let returningPeek = $state.raw<Peek | null>(null);
   const releasing = new Set<string>();
+  const closePeekFromKeyboard = () => closePeek(true, true, presentationPickup.peekShortcut);
   const closePeek = (animated: boolean, releases = true, pickup = 0) => {
     const current = peek;
     if (!current) return;
@@ -286,6 +291,11 @@
     }
     peekAnimates = true;
     peek = { pageId, sourcePageId, sourceTabId, spaceId, url };
+    if (session.shell) {
+      await session.core.request(AddContentScript({ pageId, source: firstPaintScript, mainFrameOnly: true }))
+        .catch(() => false);
+      if (peek?.pageId !== pageId) return;
+    }
     void session.core.send(LoadAddress({ pageId, url })).catch(() => {});
   };
   const openPeek = (request: PeekRequested) => {
@@ -544,7 +554,6 @@
     // window holds while one shows, closes it too.
     const peekShown = () => !!peek && peek.sourceTabId === shown().tab?.id;
     const closeTab = handlers.closeTabOrWindow;
-    const closePeekFromKeyboard = () => closePeek(true, true, presentationPickup.peekShortcut);
     handlers.closeTabOrWindow = () => (peekShown() ? closePeekFromKeyboard() : closeTab?.());
     handlers.closePeek = () => peekShown() && closePeekFromKeyboard();
     // Most Recent Tab holds the switcher open while its keys are held, as
@@ -653,6 +662,13 @@
     shell.onPresentation = (bytes) => {
       const presentation = readEnginePresentation(new WireReader(bytes));
       if (presentation.$kind === "FindFinished") pageTools.finished(presentation);
+      if (presentation.$kind === "PageNavigationCommitted" && presentation.pageId === peek?.pageId) {
+        committedPeek = presentation.pageId;
+      }
+      if (presentation.$kind === "ContentMessagePosted" && presentation.handler === firstPaintHandler &&
+          presentation.frame.isMainFrame && presentation.body === "true" && presentation.pageId === peek?.pageId) {
+        paintedPeek = presentation.pageId;
+      }
       if (presentation.$kind === "PeekRequested") void openPeek(presentation);
       if (presentation.$kind === "PageCaptured") {
         pictures.received(presentation);
@@ -874,7 +890,9 @@
       {/snippet}
       {#each peek ? [peek] : [] as shownPeek (shownPeek.pageId)}
         <PeekLayer {session} peek={shownPeek} {spaces} hidden={!showsPeek}
-          onClose={() => closePeek(true)} onOpenIn={openPeekIn} exit={peekExit} />
+          guestCommitted={committedPeek === shownPeek.pageId || session.guests?.committed.has(shownPeek.pageId) === true}
+          painted={paintedPeek === shownPeek.pageId || session.guests?.painted.has(shownPeek.pageId) === true}
+          onClose={() => closePeek(true, true, presentationPickup.peekPointer)} onEscape={closePeekFromKeyboard} onOpenIn={openPeekIn} exit={peekExit} />
       {/each}
     </SpaceContentStrip>
     <!-- The sidebar's edge comes after the page area, whose margin moves the
