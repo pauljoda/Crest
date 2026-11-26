@@ -5,7 +5,7 @@ namespace CrestCore.Contracts;
 /// A tombstone spells its reason as the reason's `Name`, so a name never
 /// changes. A reason travels as its index in `All`, so `All` is append-only.
 public sealed class SyncDeletionReason {
-    #region Variables
+    #region Static Variables
 
     /// The person deleted it. Only this reason deletes a Space or a folder, and
     /// it wins every conflict with an edit.
@@ -16,6 +16,10 @@ public sealed class SyncDeletionReason {
     public static readonly SyncDeletionReason Retention = new(name: "retention", isExplicit: false);
 
     public static IReadOnlyList<SyncDeletionReason> All { get; } = [ExplicitDelete, Superseded, Retention];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

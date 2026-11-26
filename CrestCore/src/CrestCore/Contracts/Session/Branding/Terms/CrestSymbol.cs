@@ -3,7 +3,7 @@ namespace CrestCore.Contracts;
 /// A heraldic figure a crest can carry: its bundled artwork when it has any,
 /// else the system glyph that draws it.
 public sealed class CrestSymbol {
-    #region Variables
+    #region Static Variables
 
     // The Beetle draws the ladybug glyph and is named for it; Oak draws Leaf's
     // glyph, so it stays readable but isn't offered.
@@ -92,6 +92,10 @@ public sealed class CrestSymbol {
 
     /// The figure a crest draws when it names none this build can read.
     public static CrestSymbol Fallback => Mountain;
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

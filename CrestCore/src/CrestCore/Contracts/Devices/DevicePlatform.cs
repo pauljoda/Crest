@@ -4,7 +4,7 @@ namespace CrestCore.Contracts;
 /// and iPad. A platform carries every budget that differs by device, so a rule
 /// asks the platform rather than naming one.
 public sealed class DevicePlatform {
-    #region Variables
+    #region Static Variables
 
     /// The Mac gives back one page under warning pressure and half of the
     /// eligible pages, at least one, under critical pressure. A page on screen
@@ -36,6 +36,10 @@ public sealed class DevicePlatform {
         engineConditions: ["env_safari", "ext_ublock"]);
 
     public static IReadOnlyList<DevicePlatform> All { get; } = [Desktop, Mobile];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

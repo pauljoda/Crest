@@ -13,9 +13,13 @@ namespace CrestCore.Domain;
 /// rule throws `Rejected`. Nothing here is persisted or synced. Callers
 /// serialize access.
 public sealed class DownloadLedger {
-    #region Variables
+    #region Static Variables
 
     public const int MaximumItems = 10_000;
+
+    #endregion
+
+    #region Variables
 
     private readonly List<DownloadState> items = [];
 

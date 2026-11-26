@@ -5,7 +5,7 @@ namespace CrestCore.Contracts;
 ///
 /// A failure travels as its index in `All`, so `All` is append-only.
 public sealed class SyncStagingFailure {
-    #region Variables
+    #region Static Variables
 
     /// The session has more records than sync carries, or its journal would
     /// outgrow the size sync keeps.
@@ -23,6 +23,10 @@ public sealed class SyncStagingFailure {
         title: "Changes couldn’t be saved for sync.");
 
     public static IReadOnlyList<SyncStagingFailure> All { get; } = [TooLarge, InvalidSession, ClockExhausted, NotSaved];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

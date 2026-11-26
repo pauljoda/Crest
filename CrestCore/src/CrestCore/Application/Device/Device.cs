@@ -30,11 +30,15 @@ internal sealed record DeviceTurn(ChangeFeed Changes, DateTimeOffset Now, IIdSou
 /// The device lock is taken last: nothing is called on a session or on the
 /// host while it is held.
 internal sealed partial class Device {
-    #region Variables
+    #region Static Variables
 
     /// Saved window records beyond this many are forgotten, least recently
     /// used first, as the defaults store of earlier releases did.
     public const int MaximumSavedWindows = 16;
+
+    #endregion
+
+    #region Variables
 
     private readonly Lock gate = new();
     internal Lock Gate => gate;
@@ -353,11 +357,11 @@ internal sealed partial class Device {
         Agents = agents,
         ReopeningPages = reopeningPages,
         LaunchedRelease = launchedRelease,
-        ContentBlockingLevel = contentBlockingLevel,
-        FilterListChoices = new Dictionary<FilterList, bool>(filterListChoices),
-        BlockingSites = [.. keptBlockingSites],
-        CustomFilterLists = [.. customFilterLists],
-        CustomFilters = customFilters,
+        ContentBlockingLevel = contentBlocking.Level,
+        FilterListChoices = contentBlocking.FilterListChoices,
+        BlockingSites = contentBlocking.PersistentBlockingSites,
+        CustomFilterLists = contentBlocking.CustomFilterLists,
+        CustomFilters = contentBlocking.CustomFilters,
         Pages = pages,
         Downloads = [.. downloads],
         SyncsWithICloud = syncsWithICloud,

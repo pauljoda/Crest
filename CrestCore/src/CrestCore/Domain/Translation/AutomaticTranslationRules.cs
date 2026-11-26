@@ -6,12 +6,17 @@ namespace CrestCore.Domain;
 /// disabled, empty or same-language rules never translate, so no language is
 /// translated into the device language by default.
 public sealed class AutomaticTranslationRules {
-    #region Variables
+    #region Static Variables
 
     public const int MaximumSources = 128;
     public const int MaximumLanguageLength = 64;
 
     public static AutomaticTranslationRules Empty { get; } = new(new SortedDictionary<string, TranslationRule>(StringComparer.Ordinal));
+
+    #endregion
+
+    #region Variables
+
     /// Every rule, in ordinal order of its source language.
     public IReadOnlyList<TranslationRule> Rules { get; }
     private readonly SortedDictionary<string, TranslationRule> sources;

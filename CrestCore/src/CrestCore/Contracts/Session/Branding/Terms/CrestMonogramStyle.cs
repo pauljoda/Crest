@@ -9,12 +9,16 @@ public sealed class CrestMonogramStyle {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static readonly CrestMonogramStyle Serif = new(Kinds.Serif, "serif", "Serif", CrestVocabulary.Studio);
     public static readonly CrestMonogramStyle Sans = new(Kinds.Sans, "sans", "Sans", CrestVocabulary.Studio);
 
     public static IReadOnlyList<CrestMonogramStyle> All { get; } = [Serif, Sans];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

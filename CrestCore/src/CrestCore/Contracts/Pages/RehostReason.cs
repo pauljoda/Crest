@@ -3,7 +3,7 @@ namespace CrestCore.Contracts;
 /// Why a page moved to another engine. A reason travels as its index in
 /// `All`, so `All` is append-only.
 public sealed class RehostReason {
-    #region Variables
+    #region Static Variables
 
     /// The person chose another engine for the page (`RehostPage`).
     public static readonly RehostReason PersonAsked = new(name: "personAsked");
@@ -17,6 +17,10 @@ public sealed class RehostReason {
     public static readonly RehostReason ProtectedMedia = new(name: "protectedMedia");
 
     public static IReadOnlyList<RehostReason> All { get; } = [PersonAsked, SiteChoice, ProtectedMedia];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

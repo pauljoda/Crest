@@ -5,7 +5,7 @@ namespace CrestCore.Contracts;
 /// feature flags, inside Settings. A presentation travels as its index in
 /// `All`, so `All` is append-only.
 public sealed class TransientPresentation {
-    #region Variables
+    #region Static Variables
 
     /// A link a Peek opens in a new tab comes to the front, since the Peek is
     /// what the person is looking at.
@@ -20,6 +20,10 @@ public sealed class TransientPresentation {
     public static readonly TransientPresentation Settings = new(name: "settings", opensNewTabsInFront: false);
 
     public static IReadOnlyList<TransientPresentation> All { get; } = [Peek, QuickWindow, Settings];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

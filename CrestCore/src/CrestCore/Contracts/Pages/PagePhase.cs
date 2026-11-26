@@ -6,7 +6,7 @@ namespace CrestCore.Contracts;
 /// report changes nothing. A phase travels as its index in `All`, so `All` is
 /// append-only.
 public sealed class PagePhase {
-    #region Variables
+    #region Static Variables
 
     public static readonly PagePhase Opening = new(name: "opening", holdsEnginePage: true, follows: _ => false);
     public static readonly PagePhase Live = new(name: "live", holdsEnginePage: true, follows: phase => phase == Opening);
@@ -14,6 +14,10 @@ public sealed class PagePhase {
     public static readonly PagePhase Closed = new(name: "closed", holdsEnginePage: false, follows: phase => phase.HoldsEnginePage);
 
     public static IReadOnlyList<PagePhase> All { get; } = [Opening, Live, Failed, Closed];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

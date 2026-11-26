@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "harden-content-bridges-and-review-cleanups",
+      "category": "internal",
+      "message": "Harden edge cases in core-owned credentials, Reader Mode, and translation scripts, extract FilterPreferences from Device, and replace Picture in Picture bridge switch dispatch with message-owned types."
+    }
+  ]
+}

@@ -31,11 +31,15 @@ public sealed partial class NativeSessionAuthority {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     /// The shortest gap between two sweeps of one session. Windows becoming
     /// active together, or an activation landing on a periodic sweep, sweep once.
     private static readonly TimeSpan MinimumSweepSpacing = TimeSpan.FromMinutes(1);
+
+    #endregion
+
+    #region Variables
 
     /// The last sweep this session ran; null until it runs one.
     private SweepMark? lastSweep;

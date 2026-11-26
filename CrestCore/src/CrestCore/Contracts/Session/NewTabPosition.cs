@@ -5,13 +5,17 @@ namespace CrestCore.Contracts;
 /// position as its `Name`, so a name never changes. A position travels as its
 /// index in `All`, so `All` is append-only.
 public sealed class NewTabPosition {
-    #region Variables
+    #region Static Variables
 
     public static readonly NewTabPosition Top = new(name: "top", title: "Top", insertionIndex: null);
 
     public static readonly NewTabPosition Bottom = new(name: "bottom", title: "Bottom", insertionIndex: int.MaxValue);
 
     public static IReadOnlyList<NewTabPosition> All { get; } = [Top, Bottom];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

@@ -3,7 +3,7 @@ namespace CrestCore.Contracts;
 /// A feature an engine declares to the core when it registers, and to shared
 /// UI. A capability travels as its index in `All`, so `All` is append-only.
 public sealed class EngineCapability {
-    #region Variables
+    #region Static Variables
 
     public static readonly EngineCapability Pages = new(name: "pages", isRequired: true);
     public static readonly EngineCapability Navigation = new(name: "navigation", isRequired: true);
@@ -48,6 +48,10 @@ public sealed class EngineCapability {
 
     /// The capabilities an engine must support to register.
     public static IReadOnlyList<EngineCapability> Required { get; } = [.. All.Where(capability => capability.IsRequired)];
+
+    #endregion
+
+    #region Variables
 
     /// The capability's stored spelling, which platform settings name.
     public string Name { get; }

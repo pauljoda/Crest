@@ -11,13 +11,17 @@ public sealed class AutomaticDownloadAction {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static readonly AutomaticDownloadAction Allow = new(Kinds.Allow, name: "allow");
     public static readonly AutomaticDownloadAction Deny = new(Kinds.Deny, name: "deny");
     public static readonly AutomaticDownloadAction RequestPermission = new(Kinds.RequestPermission, name: "requestPermission");
 
     public static IReadOnlyList<AutomaticDownloadAction> All { get; } = [Allow, Deny, RequestPermission];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

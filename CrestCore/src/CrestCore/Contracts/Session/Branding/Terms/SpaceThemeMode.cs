@@ -9,12 +9,16 @@ public sealed class SpaceThemeMode {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static readonly SpaceThemeMode Banner = new(Kinds.Banner, "banner", "Banner");
     public static readonly SpaceThemeMode Gradient = new(Kinds.Gradient, "gradient", "Gradient");
 
     public static IReadOnlyList<SpaceThemeMode> All { get; } = [Banner, Gradient];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

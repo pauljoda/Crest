@@ -12,13 +12,17 @@ public sealed class SpaceGradientKind {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static readonly SpaceGradientKind Linear = new(Kinds.Linear, "linear", "Linear");
     public static readonly SpaceGradientKind Radial = new(Kinds.Radial, "radial", "Radial");
     public static readonly SpaceGradientKind Angular = new(Kinds.Angular, "angular", "Angular");
 
     public static IReadOnlyList<SpaceGradientKind> All { get; } = [Linear, Radial, Angular];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

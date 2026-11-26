@@ -12,6 +12,13 @@ namespace CrestCore.Contracts;
 /// options.
 public sealed record SearchProviderSettings(BuiltInSearchProvider Provider, bool IsEnabled, IReadOnlyList<string>? Shortcuts,
     IReadOnlyList<SearchOptionSetting> Options) {
+    #region Static Variables
+
+    /// The settings a device that never chose keeps for `provider`.
+    internal static SearchProviderSettings Starting(BuiltInSearchProvider provider) => new(provider, provider.IsEnabledByDefault, null, []);
+
+    #endregion
+
     #region Variables
 
     /// Collections are owned when constructed or replaced on a copy.
@@ -28,9 +35,6 @@ public sealed record SearchProviderSettings(BuiltInSearchProvider Provider, bool
 
     /// The shortcuts the provider answers to on this device.
     internal IReadOnlyList<string> Answers => Shortcuts ?? Provider.Shortcuts;
-
-    /// The settings a device that never chose keeps for `provider`.
-    internal static SearchProviderSettings Starting(BuiltInSearchProvider provider) => new(provider, provider.IsEnabledByDefault, null, []);
 
     #endregion
 

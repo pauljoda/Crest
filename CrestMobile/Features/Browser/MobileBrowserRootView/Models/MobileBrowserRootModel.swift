@@ -5,17 +5,20 @@ import SwiftUI
 @Observable
 @MainActor
 final class MobileBrowserRootModel {
+    // MARK: - Variables
+
     let browser: BrowserStore
     let sidebarInteraction: BrowserSidebarInteractionState
     let pages: MobileBrowserPageStore
     let navigation: MobileBrowserNavigationState
     let spaceAccess: BrowserSpaceAccessController
     let windowState: BrowserWindowStateStore?
-    private let layoutPersistence: BrowserWindowLayoutPersistence
+    let layoutPersistence: BrowserWindowLayoutPersistence
     let startupBehavior: StartupBehavior
 
     var address = ""
     var hasPreparedBrowser = false
+    var isBrowserPrepared: Bool { hasPreparedBrowser }
     let settings: MobileBrowserSettingsPresentation
 
     var showsSettings: Bool {
@@ -30,6 +33,8 @@ final class MobileBrowserRootModel {
     /// Whether the window's scene is active, where notices Crest posts for
     /// the window the person looks at show.
     @ObservationIgnored private var isSceneActive = false
+
+    // MARK: - Initializers
 
     init(
         browser: BrowserStore,
@@ -111,34 +116,6 @@ extension MobileBrowserRootModel {
     /// Releases moved pages and discards archived state for removed tabs.
     func reconcileResidentPages() {
         pages.reconcile()
-    }
-
-    func reconcileTabIcons() {
-        pages.reconcileTabIcons()
-    }
-
-    /// Applies current Space credential preferences to resident pages.
-    func reconcileCredentialAccess() {
-        pages.reconcileCredentialAccess()
-    }
-
-    func reconcileContentBlocking() {
-        guard hasPreparedBrowser else { return }
-        Task { await pages.reconcileContentBlocking() }
-    }
-
-    func reloadContentBlocking() {
-        guard hasPreparedBrowser else { return }
-        Task { await pages.reloadContentBlocking() }
-    }
-
-    func relockProtectedSpaces(_ spaceIDs: Set<UUID>) {
-        // The Space itself, not just its ID: relocking has to reach the
-        // profile its archived tab state is filed under, and that state
-        // outlives the resident pages an ID alone can find.
-        for space in browser.spaceModels where spaceIDs.contains(space.id) {
-            pages.relockProtectedSpace(space)
-        }
     }
 
     func regularSidebarPresentationChanged(
@@ -324,15 +301,6 @@ extension MobileBrowserRootModel {
         selectedPageActions?.activePage
     }
 
-    var selectedSpaceIsLocked: Bool {
-        guard let space = browser.shownSpace else { return false }
-        return spaceAccess.isLocked(space)
-    }
-
-    var lockedSpaceIDs: Set<UUID> {
-        Set(browser.spaceModels.filter(spaceAccess.isLocked).map(\.id))
-    }
-
     @discardableResult
     func synchronizeSelection(
         from previous: MobileBrowserRootSelectionSnapshot,
@@ -377,25 +345,6 @@ extension MobileBrowserRootModel {
 // MARK: - Sidebar
 
 extension MobileBrowserRootModel {
-    var sidebarWidth: CGFloat {
-        sidebarWidthTransaction.width
-    }
-
-    var sidebarWidthBinding: Binding<CGFloat> {
-        Binding(
-            get: { self.sidebarWidthTransaction.width },
-            set: { self.sidebarWidthTransaction.resize(to: $0) }
-        )
-    }
-
-    func restoreSidebarWidth(_ width: CGFloat) {
-        layoutPersistence.restoreSidebarWidth(width, transaction: &sidebarWidthTransaction)
-    }
-
-    func commitSidebarWidth(_ width: CGFloat) -> CGFloat? {
-        layoutPersistence.commitSidebarWidth(width, transaction: &sidebarWidthTransaction)
-    }
-
     func hideRegularSidebar(reduceMotion: Bool) {
         navigation.utilityPresentation.dismiss()
         withAnimation(accessibleAnimation(CrestMotion.chrome, reduceMotion)) {
@@ -442,42 +391,11 @@ extension MobileBrowserRootModel {
 // MARK: - Split Layout
 
 extension MobileBrowserRootModel {
-    /// The cards the content area presents, as the window's read model
-    /// publishes them, so SwiftUI observes what changes when membership does.
-    var presentedSplitMembers: [TabStateModel] {
-        browser.shownCards
-    }
-
-    /// The group the presented cards belong to, or `nil` when one tab presents
-    /// alone. Column fractions are stored per group, so a lone tab has no layout
-    /// to store.
-    var presentedSplitGroupID: UUID? {
-        browser.shownSpace.flatMap(browser.shownSplitGroupID(in:))
-    }
-
-    var splitWidthTransactionBinding: Binding<BrowserSplitWidthTransaction> {
-        Binding(
-            get: { self.splitWidthTransaction },
-            set: { self.splitWidthTransaction = $0 }
-        )
-    }
-
-    func seedSplitColumnFractions() {
-        layoutPersistence.seedSplitLayout(
-            groupID: presentedSplitGroupID, memberCount: presentedSplitMembers.count,
-            transaction: &splitWidthTransaction
-        )
-    }
-
     /// The widths the columns of `space`'s split take in this window, as
     /// fractions of its row, for a split another Space shows.
     func splitColumnFractions(in space: SpaceModel) -> [Double] {
         layoutPersistence.splitColumnFractions(
             groupID: browser.shownSplitGroupID(in: space), memberCount: browser.cards(in: space).count)
-    }
-
-    func commitSplitColumnFractions(_ fractions: [Double]) {
-        layoutPersistence.commitSplitLayout(fractions, groupID: presentedSplitGroupID)
     }
 
     func focusSplitCard(_ tabID: UUID) {
@@ -527,16 +445,6 @@ extension MobileBrowserRootModel {
 // MARK: - Command Palette
 
 extension MobileBrowserRootModel {
-    var selectedTabAssignment: BrowserTabRuntimeAssignment? {
-        browser.shownTabAssignment
-    }
-
-    func isPaletteSourceAvailable(
-        _ source: BrowserTabRuntimeAssignment
-    ) -> Bool {
-        browser.isPaletteSourceAvailable(source, accessController: spaceAccess)
-    }
-
     @discardableResult
     func selectPaletteTab(
         from source: BrowserTabRuntimeAssignment,
@@ -565,47 +473,20 @@ extension MobileBrowserRootModel {
         from source: BrowserTabRuntimeAssignment,
         opening: BrowserCommandPaletteOpening = .here
     ) -> Bool {
-        guard
-            browser.isPaletteSourceAvailable(source, accessController: spaceAccess)
-        else { return false }
-        return opening.open(url, from: source, with: MobilePaletteOpener(model: self, mode: mode))
+        guard isPaletteSourceAvailable(source) else { return false }
+        let opener = BrowserStandardPaletteOpener(
+            browser: browser,
+            mode: mode,
+            loadInShownPage: { [weak self] in self?.showLoading($0) }
+        )
+        return opening.open(url, from: source, with: opener)
     }
 
     /// Loads `url` in the page the window shows and shows it in the address field.
-    fileprivate func showLoading(_ url: URL) {
+    private func showLoading(_ url: URL) {
         pages.selectAndNavigate(to: url.absoluteString)
         address = url.absoluteString
     }
-}
-
-/// How an iPhone or iPad window opens an address from its palette: in place
-/// of the source tab, or in a new tab when the palette opened for one, or in
-/// a new tab behind or in front. Neither Split View nor a Quick Window opens
-/// from the palette here.
-@MainActor
-private struct MobilePaletteOpener: BrowserCommandPaletteOpener {
-    let model: MobileBrowserRootModel
-    let mode: BrowserCommandPaletteMode
-
-    func openHere(_ url: URL, from source: BrowserTabRuntimeAssignment) -> Bool {
-        if mode == .newTab { return openTab(url, from: source, selecting: true) }
-        model.browser.navigateSelectedTab(to: url.absoluteString)
-        model.showLoading(url)
-        return true
-    }
-
-    func openTab(_ url: URL, from source: BrowserTabRuntimeAssignment, selecting: Bool) -> Bool {
-        guard selecting else {
-            return model.browser.openBackgroundTab(url: url, in: source.spaceID, savesInSavedFolder: true) != nil
-        }
-        guard model.browser.openAddress(url, in: source.spaceID, placesAsNewTab: true) else { return false }
-        model.showLoading(url)
-        return true
-    }
-
-    func openInSplit(_ url: URL, from source: BrowserTabRuntimeAssignment) -> Bool { false }
-
-    func openInQuickWindow(_ url: URL, from source: BrowserTabRuntimeAssignment) -> Bool { false }
 }
 
 // MARK: - Animation
@@ -619,16 +500,4 @@ extension MobileBrowserRootModel {
     }
 }
 
-// MARK: - Downloads
-
-extension MobileBrowserRootModel {
-    var selectedUtilityDownloads: [DownloadState] {
-        guard let profileID = browser.shownSpace?.profileID else { return [] }
-        return pages.downloadCenter.items(for: profileID)
-    }
-
-    var newUtilityDownloads: [DownloadState] {
-        guard let profileID = browser.shownSpace?.profileID else { return [] }
-        return pages.downloadCenter.unacknowledgedItems(for: profileID)
-    }
-}
+extension MobileBrowserRootModel: BrowserWindowRootModel {}

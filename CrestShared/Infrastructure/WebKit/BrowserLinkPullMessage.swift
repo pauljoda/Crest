@@ -1,50 +1,83 @@
 import Foundation
 
-/// Decodes the shared fields of the desktop drag and mobile touch bridges.
-struct BrowserLinkPullMessage {
+/// Decodes the shared fields of the desktop drag and mobile touch bridges once
+/// at the script-message boundary into typed properties.
+struct BrowserLinkPullMessage: Sendable {
+    // MARK: - Types
+
+    private struct WirePayload: Decodable {
+        let version: Int?
+        let document: String?
+        let phase: String?
+        let token: String?
+        let label: String?
+        let href: String?
+        let time: Double?
+        let x: Double?
+        let y: Double?
+        let originX: Double?
+        let originY: Double?
+        let deltaX: Double?
+        let deltaY: Double?
+    }
+
+    // MARK: - Static Variables
+
     private static let protocolVersion = 1
     private static let maximumIdentifierLength = 100
     private static let maximumURLLength = 8192
 
+    // MARK: - Variables
+
     let document: String
     let phase: BrowserLinkPullPhase
-    private let body: [String: Any]
+    let token: String?
+    let label: String?
+    let time: TimeInterval?
+    let location: CGPoint?
+    let origin: CGPoint?
+    let dragOffset: CGPoint?
+    let url: URL?
+
+    // MARK: - Initializers
 
     init?(_ body: Any, requiresVersion: Bool = false) {
-        guard let body = body as? [String: Any],
-            !requiresVersion || (body["version"] as? NSNumber)?.intValue == Self.protocolVersion,
-            let document = Self.identifier(body["document"]),
-            let rawPhase = body["phase"] as? String, let phase = BrowserLinkPullPhase.named(rawPhase)
+        guard JSONSerialization.isValidJSONObject(body),
+            let data = try? JSONSerialization.data(withJSONObject: body),
+            let payload = try? JSONDecoder().decode(WirePayload.self, from: data),
+            !requiresVersion || payload.version == Self.protocolVersion,
+            let document = Self.identifier(payload.document),
+            let rawPhase = payload.phase, let phase = BrowserLinkPullPhase.named(rawPhase)
         else { return nil }
-        self.body = body
         self.document = document
         self.phase = phase
+        token = Self.identifier(payload.token)
+        label = payload.label
+        time = Self.finite(payload.time)
+        location = Self.point(x: payload.x, y: payload.y)
+        origin = Self.point(x: payload.originX, y: payload.originY)
+        dragOffset = Self.point(x: payload.deltaX ?? 0, y: payload.deltaY ?? 0)
+        if let href = payload.href, href.count <= Self.maximumURLLength {
+            url = URL(string: href)
+        } else {
+            url = nil
+        }
     }
 
-    var token: String? { Self.identifier(body["token"]) }
-    var label: String? { body["label"] as? String }
-    var time: TimeInterval? { number("time") }
-    var location: CGPoint? { point(x: "x", y: "y") }
-    var origin: CGPoint? { point(x: "originX", y: "originY") }
-    var dragOffset: CGPoint? { point(x: "deltaX", y: "deltaY", fallback: 0) }
+    // MARK: - Actions - Validation
 
-    var url: URL? {
-        guard let href = body["href"] as? String, href.count <= Self.maximumURLLength else { return nil }
-        return URL(string: href)
-    }
-
-    private static func identifier(_ value: Any?) -> String? {
-        guard let value = value as? String, value.count <= maximumIdentifierLength else { return nil }
+    private static func identifier(_ value: String?) -> String? {
+        guard let value, value.count <= maximumIdentifierLength else { return nil }
         return value
     }
 
-    private func number(_ key: String, fallback: Double? = nil) -> Double? {
-        guard let value = (body[key] as? NSNumber)?.doubleValue ?? fallback, value.isFinite else { return nil }
+    private static func finite(_ value: Double?) -> Double? {
+        guard let value, value.isFinite else { return nil }
         return value
     }
 
-    private func point(x: String, y: String, fallback: Double? = nil) -> CGPoint? {
-        guard let x = number(x, fallback: fallback), let y = number(y, fallback: fallback) else { return nil }
+    private static func point(x: Double?, y: Double?) -> CGPoint? {
+        guard let x = finite(x), let y = finite(y) else { return nil }
         return CGPoint(x: x, y: y)
     }
 }
