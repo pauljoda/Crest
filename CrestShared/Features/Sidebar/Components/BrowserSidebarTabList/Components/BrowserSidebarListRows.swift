@@ -294,6 +294,7 @@ private struct BrowserSidebarRecycledTabRun: View {
     private struct DragProjection {
         let isActive: Bool
         let liftedIndices: [Int]
+        let liftedSet: Set<Int>
         let liftOwnerIndex: Int?
         let gapAnchorIndex: Int?
         let gapInsertsBeforeAnchor: Bool
@@ -302,6 +303,7 @@ private struct BrowserSidebarRecycledTabRun: View {
         static let idle = DragProjection(
             isActive: false,
             liftedIndices: [],
+            liftedSet: [],
             liftOwnerIndex: nil,
             gapAnchorIndex: nil,
             gapInsertsBeforeAnchor: false,
@@ -326,21 +328,29 @@ private struct BrowserSidebarRecycledTabRun: View {
             return CGFloat(index - liftedBefore) * rowStride + gapBefore
         }
 
-        /// Converts a projected visible row position (after lifted rows collapse)
-        /// back to the corresponding item index so lifted rows above the viewport
-        /// never starve visible destination rows below.
-        func itemIndex(forProjectedRow projectedRow: Int, itemCount: Int) -> Int {
-            guard isActive, !liftedIndices.isEmpty else { return projectedRow }
-            if projectedRow <= 0 { return projectedRow }
-            var index = projectedRow
-            for lifted in liftedIndices {
-                if lifted <= index {
-                    index += 1
+        /// Converts a projected Y coordinate (in the same layout as `yOffset`,
+        /// accounting for collapsed lifted rows and any insertion gap of
+        /// arbitrary height) to the first non-lifted item index whose row
+        /// reaches `targetY`.
+        func firstVisibleItemIndex(at targetY: CGFloat, itemCount: Int, rowStride: CGFloat) -> Int {
+            guard itemCount > 0 else { return 0 }
+            guard isActive else {
+                return min(max(0, Int(floor(targetY / rowStride))), itemCount - 1)
+            }
+            var low = 0
+            var high = itemCount - 1
+            while low < high {
+                let mid = (low + high) / 2
+                if yOffset(for: mid, rowStride: rowStride) + rowStride < targetY {
+                    low = mid + 1
                 } else {
-                    break
+                    high = mid
                 }
             }
-            return min(index, max(0, itemCount - 1))
+            while low < itemCount - 1, liftedSet.contains(low) {
+                low += 1
+            }
+            return low
         }
     }
 
@@ -505,21 +515,71 @@ private struct BrowserSidebarRecycledTabRun: View {
             return (slots, overflow, 0..<0)
         }
         let windowCount = min(items.count, poolSize)
-        let projectedStart = Int(floor(localMinY / rowStride)) - Self.overscanRows
-        let idealStart = projection.itemIndex(forProjectedRow: projectedStart, itemCount: items.count)
-        let maxStart = max(0, items.count - windowCount)
-        let windowStart = min(max(0, idealStart), maxStart)
-        let windowEnd = windowStart + windowCount - 1
-        for itemIndex in windowStart...windowEnd {
+        let firstVisible = projection.firstVisibleItemIndex(
+            at: localMinY,
+            itemCount: items.count,
+            rowStride: rowStride
+        )
+        if !projection.isActive || projection.liftedSet.isEmpty {
+            let idealStart = firstVisible - Self.overscanRows
+            let maxStart = max(0, items.count - windowCount)
+            let windowStart = min(max(0, idealStart), maxStart)
+            let windowEnd = windowStart + windowCount - 1
+            for itemIndex in windowStart...windowEnd {
+                if itemIndex == liftOwnerIndex { continue }
+                let slot = itemIndex % poolSize
+                if slot == pinnedSlot {
+                    overflow = itemIndex
+                } else {
+                    slots[slot] = itemIndex
+                }
+            }
+            return (slots, overflow, windowStart..<(windowEnd + 1))
+        }
+
+        // During an active lift, skip collapsed lifted rows when filling pool
+        // slots so every visible destination row receives a slot.
+        var startIndex = firstVisible
+        var backedUp = 0
+        while startIndex > 0, backedUp < Self.overscanRows {
+            startIndex -= 1
+            if !projection.liftedSet.contains(startIndex) {
+                backedUp += 1
+            }
+        }
+        var assignedIndices: [Int] = []
+        assignedIndices.reserveCapacity(poolSize)
+        var cursor = startIndex
+        while cursor < items.count, assignedIndices.count < poolSize {
+            if !projection.liftedSet.contains(cursor) {
+                assignedIndices.append(cursor)
+            }
+            cursor += 1
+        }
+        // If near the bottom of the run, backfill earlier non-lifted rows so
+        // the pool covers the viewport cleanly.
+        cursor = startIndex - 1
+        while cursor >= 0, assignedIndices.count < poolSize {
+            if !projection.liftedSet.contains(cursor) {
+                assignedIndices.insert(cursor, at: 0)
+            }
+            cursor -= 1
+        }
+        for itemIndex in assignedIndices {
             if itemIndex == liftOwnerIndex { continue }
             let slot = itemIndex % poolSize
             if slot == pinnedSlot {
                 overflow = itemIndex
-            } else {
+            } else if slots[slot] == nil {
                 slots[slot] = itemIndex
+            } else if let freeSlot = slots.firstIndex(where: { $0 == nil }) {
+                slots[freeSlot] = itemIndex
             }
         }
-        return (slots, overflow, windowStart..<(windowEnd + 1))
+        guard let firstAssigned = assignedIndices.first, let lastAssigned = assignedIndices.last else {
+            return (slots, overflow, 0..<0)
+        }
+        return (slots, overflow, firstAssigned..<(lastAssigned + 1))
     }
 
     private func dragProjection(in state: BrowserSidebarReorderState?) -> DragProjection {
@@ -558,6 +618,7 @@ private struct BrowserSidebarRecycledTabRun: View {
         return DragProjection(
             isActive: true,
             liftedIndices: liftedIndices,
+            liftedSet: Set(liftedIndices),
             liftOwnerIndex: liftOwnerIndex,
             gapAnchorIndex: gapAnchorIndex,
             gapInsertsBeforeAnchor: gapInsertsBeforeAnchor,
