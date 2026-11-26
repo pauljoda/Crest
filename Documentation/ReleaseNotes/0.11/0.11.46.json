@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-120fps-recycled-scrolling",
+      "category": "improved",
+      "message": "Sidebar scrolling stays smooth at up to 120 fps across hundreds and thousands of tabs, including fast flicks and open folders."
+    }
+  ]
+}

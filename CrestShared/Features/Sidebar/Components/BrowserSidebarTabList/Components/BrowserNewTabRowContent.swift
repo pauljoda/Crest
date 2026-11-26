@@ -39,7 +39,7 @@ struct BrowserNewTabRowContent: View {
             .frame(minHeight: rowHeight, maxHeight: metrics.usesFixedHeight ? rowHeight : nil)
             .frame(
                 maxWidth: .infinity,
-                maxHeight: metrics.usesFixedHeight ? .infinity : nil,
+                maxHeight: metrics.usesFixedHeight ? rowHeight : nil,
                 alignment: .leading
             )
             .contentShape(.rect)

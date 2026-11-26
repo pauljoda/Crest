@@ -161,32 +161,71 @@ final class BrowserSidebarReorderState {
 
     // MARK: - Geometry registration
 
+    @discardableResult
     func register(
         row: BrowserSidebarReorderRow,
         owner: UUID,
-        scrollRegionID: UUID? = nil
-    ) {
+        scrollRegionID: UUID? = nil,
+        isContentRelative: Bool = false
+    ) -> BrowserSidebarReorderRow {
+        let globalRow = geometry.globalRow(
+            row, scrollRegionID: scrollRegionID, isContentRelative: isContentRelative)
         // Freeze transformed rows during a lift; accept newly revealed lazy rows.
         // What a frozen row measures is kept for when the lift ends.
         guard !isDragging || geometry.row(row.id, in: row.space) == nil else {
-            geometry.hold(row: row, owner: owner, scrollRegionID: scrollRegionID)
-            return
+            geometry.hold(
+                row: row, owner: owner, scrollRegionID: scrollRegionID,
+                isContentRelative: isContentRelative)
+            return globalRow
         }
-        geometry.register(row: row, owner: owner, scrollRegionID: scrollRegionID)
+        geometry.register(
+            row: row, owner: owner, scrollRegionID: scrollRegionID,
+            isContentRelative: isContentRelative)
         // A Sub-Space beside this one lists the pins its group shares too.
-        if needsLandingMeasurement, var preview = landingPreview, preview.item.id == row.id,
-            row.space == preview.item.spaceAssignment,
-            owner != landingDepartingOwner, !row.frame.isEmpty, landingSection == nil || landingSection == row.section,
-            preview.landing?.frame != row.frame, preview.landing?.isRevealing != true
+        if needsLandingMeasurement, var preview = landingPreview, preview.item.id == globalRow.id,
+            globalRow.space == preview.item.spaceAssignment,
+            owner != landingDepartingOwner, !globalRow.frame.isEmpty,
+            landingSection == nil || landingSection == globalRow.section,
+            preview.landing?.frame != globalRow.frame, preview.landing?.isRevealing != true
         {
             preview.landing = BrowserSidebarReorderLanding(
-                frame: row.frame, contentIndent: contentIndent(of: row.section, in: row.space))
+                frame: globalRow.frame, contentIndent: contentIndent(of: globalRow.section, in: globalRow.space))
             landingPreview = preview
         }
+        return globalRow
     }
 
     func removeRow(_ id: BrowserSidebarReorderItemID, owner: UUID) {
         geometry.removeRow(id, owner: owner)
+    }
+
+    func register(virtualRun run: BrowserSidebarReorderGeometry.VirtualRowRun) {
+        geometry.register(virtualRun: run)
+        if needsLandingMeasurement, var preview = landingPreview,
+            run.space == preview.item.spaceAssignment,
+            landingSection == nil || landingSection == run.section,
+            let resolved = run.itemIndexByID[preview.item.id].map({
+                geometry.globalRow(run.row(at: $0), scrollRegionID: run.scrollRegionID, isContentRelative: true)
+            }),
+            !resolved.frame.isEmpty,
+            preview.landing?.frame != resolved.frame, preview.landing?.isRevealing != true
+        {
+            preview.landing = BrowserSidebarReorderLanding(
+                frame: resolved.frame, contentIndent: contentIndent(of: resolved.section, in: resolved.space))
+            landingPreview = preview
+        }
+    }
+
+    func updateVirtualRunVisibleIndices(
+        _ visibleIndices: Range<Int>,
+        for id: UUID,
+        in space: BrowserSpaceRuntimeAssignment
+    ) {
+        geometry.updateVirtualRunVisibleIndices(visibleIndices, for: id, in: space)
+    }
+
+    func removeVirtualRun(for id: UUID, in space: BrowserSpaceRuntimeAssignment) {
+        geometry.removeVirtualRun(for: id, in: space)
     }
 
     private func registeredRows(in space: BrowserSpaceRuntimeAssignment) -> [BrowserSidebarReorderRow] {
@@ -201,14 +240,80 @@ final class BrowserSidebarReorderState {
         zone: BrowserSidebarReorderZone,
         for id: UUID,
         sidebarViewportID: UUID? = nil,
-        scrollRegionID: UUID? = nil
+        scrollRegionID: UUID? = nil,
+        isContentRelative: Bool = false
     ) {
         guard !isDragging || geometry.zones[id] == nil else {
-            geometry.hold(zone: zone, for: id, sidebarViewportID: sidebarViewportID, scrollRegionID: scrollRegionID)
+            geometry.hold(
+                zone: zone, for: id, sidebarViewportID: sidebarViewportID, scrollRegionID: scrollRegionID,
+                isContentRelative: isContentRelative)
             return
         }
         geometry.register(
-            zone: zone, for: id, sidebarViewportID: sidebarViewportID, scrollRegionID: scrollRegionID)
+            zone: zone, for: id, sidebarViewportID: sidebarViewportID, scrollRegionID: scrollRegionID,
+            isContentRelative: isContentRelative)
+    }
+
+    func register(scrollContentOrigin origin: CGPoint, for id: UUID) {
+        geometry.register(scrollContentOrigin: origin, for: id)
+    }
+
+    /// Where the scroll viewport `id` names shows its rows, the part of them
+    /// a click can reach.
+    func scrollRegionFrame(for id: UUID) -> CGRect? { geometry.scrollRegions[id] }
+
+    func register(
+        selectionTarget itemID: BrowserSelectionItemID,
+        in space: BrowserSpaceRuntimeAssignment,
+        frame: CGRect,
+        for id: UUID,
+        sidebarViewportID: UUID? = nil,
+        scrollRegionID: UUID? = nil,
+        isContentRelative: Bool = false
+    ) {
+        geometry.register(
+            selectionTarget: itemID,
+            in: space,
+            frame: frame,
+            for: id,
+            sidebarViewportID: sidebarViewportID,
+            scrollRegionID: scrollRegionID,
+            isContentRelative: isContentRelative
+        )
+    }
+
+    func removeSelectionTarget(for id: UUID) {
+        geometry.removeSelectionTarget(for: id)
+    }
+
+    func selectionItem(
+        at globalPoint: CGPoint,
+        in space: BrowserSpaceRuntimeAssignment
+    ) -> BrowserSelectionItemID? {
+        geometry.selectionItem(at: globalPoint, in: space)
+    }
+
+    func setRowSelectionDisabled(
+        _ disabled: Bool,
+        for itemID: BrowserSidebarReorderItemID,
+        in space: BrowserSpaceRuntimeAssignment
+    ) {
+        geometry.setRowSelectionDisabled(disabled, for: itemID, in: space)
+    }
+
+    func setRowAuxiliaryClick(
+        _ perform: (@MainActor () -> Void)?,
+        for itemID: BrowserSidebarReorderItemID,
+        in space: BrowserSpaceRuntimeAssignment
+    ) {
+        geometry.setRowAuxiliaryClick(perform, for: itemID, in: space)
+    }
+
+    func auxiliaryClickTarget(
+        at globalPoint: CGPoint,
+        in space: BrowserSpaceRuntimeAssignment
+    ) -> (id: AnyHashable, perform: @MainActor () -> Void)? {
+        geometry.auxiliaryClickTarget(at: globalPoint, in: space)
     }
 
     func register(sidebarViewport frame: CGRect, for id: UUID) {
@@ -228,10 +333,6 @@ final class BrowserSidebarReorderState {
         if isDragging { resolveTarget() }
     }
 
-    /// Where the scroll viewport `id` names shows its rows, the part of them
-    /// a click can reach.
-    func scrollRegionFrame(for id: UUID) -> CGRect? { geometry.scrollRegions[id] }
-
     func scrollableContentDidMove(in id: UUID, by offsetY: CGFloat) {
         guard isDragging, offsetY != 0 else { return }
         geometry.scrollableContentDidMove(in: id, by: offsetY)
@@ -241,7 +342,7 @@ final class BrowserSidebarReorderState {
 
     private var visibleZones: [BrowserSidebarReorderZone] {
         let pinned = pinnedGeometry
-        return geometry.zones.values.compactMap { registration in
+        var result = geometry.resolvedZones.compactMap { registration -> BrowserSidebarReorderZone? in
             let projected: CGRect?
             if case .section(let section) = registration.zone.target, section.usesGridOrdering,
                 let pinned, registration.zone.frame.intersects(pinned.frame)
@@ -272,6 +373,33 @@ final class BrowserSidebarReorderState {
             zone.frame = frame
             return zone
         }
+        // Synthesize current-tab nesting zones directly from already-measured
+        // current tab rows so rows do not need a second geometry observer.
+        if let lift {
+            for registration in geometry.rows(in: lift.item.spaceAssignment).values {
+                let row = registration.row
+                guard row.parentItemID == nil,
+                    case .tab(let tabID) = row.id,
+                    case .tabs(placement: .current, folderID: nil) = row.section,
+                    let projected = layout.frame(for: row)
+                else { continue }
+                var frame = BrowserSidebarReorderZone.nestingFrame(for: projected)
+                if let regionID = registration.scrollRegionID {
+                    guard let viewport = geometry.scrollRegions[regionID] else { continue }
+                    frame = frame.intersection(viewport)
+                }
+                guard !frame.isNull, !frame.isEmpty else { continue }
+                result.append(
+                    BrowserSidebarReorderZone(
+                        target: .currentTab(tabID),
+                        frame: frame,
+                        minimumHeight: 0,
+                        supportsTouch: false
+                    )
+                )
+            }
+        }
+        return result
     }
 
     func pinnedLayout(ids: [BrowserSidebarReorderItemID], in space: BrowserSpaceRuntimeAssignment)
@@ -361,6 +489,7 @@ final class BrowserSidebarReorderState {
             sessionGeneration &+= 1
         }
         if let id = landingPreview?.landing?.id { finishLanding(id) }
+        geometry.freezeScrollOrigins()
         let frame = frame(ofRow: item.id, in: item.spaceAssignment)
         let rowIDs = item.selectionRowIDs
         lift = Lift(
@@ -470,6 +599,7 @@ final class BrowserSidebarReorderState {
             lastPointerEvent = nil
             if lift != nil, suppressReleaseActivation { suppressActivation() }
             lift = nil
+            geometry.unfreezeScrollOrigins()
             geometry.registerHeld()
             stagedLift = nil
             cancelStagedLiftExpiration()
@@ -494,6 +624,7 @@ final class BrowserSidebarReorderState {
         if let id = landingPreview?.landing?.id { finishLanding(id) }
         if lift != nil { suppressActivation() }
         lift = nil
+        geometry.unfreezeScrollOrigins()
         geometry.registerHeld()
         stagedLift = nil
         cancelStagedLiftExpiration()

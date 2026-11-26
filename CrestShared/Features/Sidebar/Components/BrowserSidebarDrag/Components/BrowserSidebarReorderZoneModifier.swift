@@ -26,6 +26,7 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
     @State private var identity = UUID()
     @Environment(\.browserInteractionCapabilities) private var capabilities
     @Environment(\.browserSidebarScrollRegionID) private var scrollRegionID
+    @Environment(\.browserSidebarScrollContentSpace) private var scrollContentSpace
     @Environment(\.browserSidebarDropViewportID) private var sidebarViewportID
     @Environment(\.sidebarSpaceIsSelected) private var isSelected
 
@@ -39,12 +40,18 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
         let minimumHeight = minimumHeight
         let visibleRegion = visibleRegion
         let supportsTouch = capabilities.supportsTouch
+        let contentSpace = visibleRegion == nil ? scrollContentSpace : nil
         return
             content
             .onGeometryChange(for: BrowserSidebarReorderZone?.self) { proxy in
                 guard isActive else { return nil }
-                var frame = Self.resolvedFrame(
-                    proxy.frame(in: BrowserSidebarReorderSpace.globalSpace), target: target, topInset: topInset)
+                let measuredFrame =
+                    if let contentSpace {
+                        proxy.frame(in: contentSpace)
+                    } else {
+                        proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
+                    }
+                var frame = Self.resolvedFrame(measuredFrame, target: target, topInset: topInset)
                 if let visibleRegion {
                     frame = frame.intersection(visibleRegion)
                     guard !frame.isNull, !frame.isEmpty else { return nil }
@@ -63,7 +70,8 @@ struct BrowserSidebarReorderZoneModifier: ViewModifier {
                     zone: zone,
                     for: identity,
                     sidebarViewportID: sidebarViewportID,
-                    scrollRegionID: scrollRegionID
+                    scrollRegionID: scrollRegionID,
+                    isContentRelative: contentSpace != nil
                 )
             }
             .onDisappear {

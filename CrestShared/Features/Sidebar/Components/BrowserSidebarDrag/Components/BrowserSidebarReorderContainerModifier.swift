@@ -11,6 +11,8 @@ struct BrowserSidebarReorderContainerModifier: ViewModifier {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.browserSidebarScrollRegionID) private var scrollRegionID
+    @Environment(\.browserSidebarScrollContentSpace) private var scrollContentSpace
+    @Environment(\.browserSidebarUsesVirtualRowGeometry) private var usesVirtualRowGeometry
     @Environment(\.browserSidebarWindowDrop) private var windowDrop
 
     /// Identity for this row's registration. A row that changes section keeps
@@ -40,71 +42,79 @@ struct BrowserSidebarReorderContainerModifier: ViewModifier {
     private var isRevealing: Bool { isEnabled && state.isRevealing(item.id) }
 
     func body(content: Content) -> some View {
-        VStack(spacing: 0) {
-            BrowserSidebarReorderGap(height: topSpace)
+        let topGap = topSpace
+        let bottomGap = bottomSpace
+        let measured =
             content
-                // Keep the gesture's content alive at its lifted dimensions while
-                // its layout slot closes. Removing the view would cancel the drag.
-                .frame(
-                    height: isLifted && state.layout.isActive && !section.usesGridOrdering
-                        ? state.frame(ofRow: item.id, in: item.spaceAssignment)?.height : nil,
-                    alignment: .top
+            // Keep the gesture's content alive at its lifted dimensions while
+            // its layout slot closes. Removing the view would cancel the drag.
+            .frame(
+                height: isLifted && state.layout.isActive && !section.usesGridOrdering
+                    ? state.frame(ofRow: item.id, in: item.spaceAssignment)?.height : nil,
+                alignment: .top
+            )
+            .modifier(
+                BrowserSidebarReorderRowGeometryObserver(
+                    item: item,
+                    section: section,
+                    state: state,
+                    parentItemID: parentItemID,
+                    isEnabled: isEnabled,
+                    isLifted: isLifted,
+                    identity: identity,
+                    scrollRegionID: scrollRegionID,
+                    scrollContentSpace: scrollContentSpace,
+                    windowDrop: windowDrop,
+                    usesVirtualRowGeometry: usesVirtualRowGeometry
                 )
-                .onGeometryChange(for: BrowserSidebarReorderRow?.self) { proxy in
-                    // Availability participates in the measured value so an
-                    // unchanged frame is registered again when its Space returns.
-                    guard isEnabled else { return nil }
-                    return BrowserSidebarReorderRow(
-                        id: item.id, space: item.spaceAssignment, section: section,
-                        frame: proxy.frame(in: BrowserSidebarReorderSpace.globalSpace), parentItemID: parentItemID)
-                } action: { row in
-                    guard let row else {
-                        state.removeRow(item.id, owner: identity)
-                        return
-                    }
-                    // While lifted, this row's reported frame follows the pointer.
-                    // Registering it would re-sort the section under the drag and
-                    // corrupt the slot indices, so keep the frame it lifted from.
-                    guard !isLifted else { return }
-                    state.register(
-                        row: row,
-                        owner: identity,
-                        scrollRegionID: scrollRegionID
-                    )
-                    windowDrop?.didMeasureRow(row)
+            )
+        measured
+            .offset(x: displacement.width, y: displacement.height)
+            .opacity(hidesSource && !isRevealing ? 0 : 1)
+            .animation(nil, value: hidesSource)
+            .animation(
+                Animation.easeOut(duration: 0.10).unlessReducingMotion(reduceMotion),
+                value: isRevealing
+            )
+            .frame(
+                height: isLifted && state.layout.isActive && !section.usesGridOrdering ? 0 : nil, alignment: .top
+            )
+            .overlay(alignment: indicatorAlignment) {
+                if let indicator {
+                    BrowserSidebarReorderIndicatorLine(indicator: indicator)
                 }
-                .onDisappear {
-                    state.removeRow(item.id, owner: identity)
+            }
+            .padding(.top, topGap)
+            .padding(.bottom, bottomGap)
+            .overlay(alignment: .top) {
+                if topGap > 0 {
+                    BrowserSidebarReorderGap(height: topGap)
                 }
-                .offset(x: displacement.width, y: displacement.height)
-                .opacity(hidesSource && !isRevealing ? 0 : 1)
-                .animation(nil, value: hidesSource)
-                .animation(
-                    Animation.easeOut(duration: 0.10).unlessReducingMotion(reduceMotion),
-                    value: isRevealing
+            }
+            .overlay(alignment: .bottom) {
+                if bottomGap > 0 {
+                    BrowserSidebarReorderGap(height: bottomGap)
+                }
+            }
+            // Layout capacity moves with the gap, across section boundaries.
+            .animation(
+                CrestMotion.dragSource.unlessReducingMotion(reduceMotion),
+                value: ReorderGapAnimationState(
+                    topSpace: topGap,
+                    bottomSpace: bottomGap,
+                    liftedHeight: isLifted ? state.layout.height : 0
                 )
-                .frame(
-                    height: isLifted && state.layout.isActive && !section.usesGridOrdering ? 0 : nil, alignment: .top
-                )
-                .overlay(alignment: indicatorAlignment) {
-                    if let indicator {
-                        BrowserSidebarReorderIndicatorLine(indicator: indicator)
-                    }
-                }
-            BrowserSidebarReorderGap(height: bottomSpace)
-        }
-        // Layout capacity moves with the gap, across section boundaries.
-        .animation(
-            CrestMotion.dragSource.unlessReducingMotion(reduceMotion),
-            value: [
-                topSpace, bottomSpace,
-                isLifted ? state.layout.height : 0,
-            ]
-        )
-        .animation(
-            CrestMotion.dragSource.unlessReducingMotion(reduceMotion),
-            value: displacement
-        )
+            )
+            .animation(
+                CrestMotion.dragSource.unlessReducingMotion(reduceMotion),
+                value: displacement
+            )
+    }
+
+    private struct ReorderGapAnimationState: Equatable {
+        let topSpace: CGFloat
+        let bottomSpace: CGFloat
+        let liftedHeight: CGFloat
     }
 
     private var indicatorAlignment: Alignment {
@@ -131,4 +141,69 @@ extension View {
             BrowserSidebarReorderContainerModifier(
                 item: item, section: section, reorder: reorder, parentItemID: parentItemID, isEnabled: isEnabled))
     }
+}
+
+private struct BrowserSidebarReorderRowGeometryObserver: ViewModifier {
+    let item: BrowserSidebarReorderItem
+    let section: BrowserSidebarReorderSection
+    let state: BrowserSidebarReorderState
+    let parentItemID: BrowserSidebarReorderItemID?
+    let isEnabled: Bool
+    let isLifted: Bool
+    let identity: UUID
+    let scrollRegionID: UUID?
+    let scrollContentSpace: NamedCoordinateSpace?
+    let windowDrop: BrowserSidebarWindowDrop?
+    let usesVirtualRowGeometry: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if usesVirtualRowGeometry {
+            content
+        } else {
+            content
+                .onGeometryChange(for: BrowserSidebarReorderRow?.self) { proxy in
+                    // Availability participates in the measured value so an
+                    // unchanged frame is registered again when its Space returns.
+                    guard isEnabled else { return nil }
+                    let frame =
+                        if let scrollContentSpace {
+                            proxy.frame(in: scrollContentSpace)
+                        } else {
+                            proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
+                        }
+                    return BrowserSidebarReorderRow(
+                        id: item.id, space: item.spaceAssignment, section: section,
+                        frame: frame, parentItemID: parentItemID)
+                } action: { row in
+                    guard let row else {
+                        state.removeRow(item.id, owner: identity)
+                        return
+                    }
+                    // While lifted, this row's reported frame follows the pointer.
+                    // Registering it would re-sort the section under the drag and
+                    // corrupt the slot indices, so keep the frame it lifted from.
+                    guard !isLifted else { return }
+                    let globalRow = state.register(
+                        row: row,
+                        owner: identity,
+                        scrollRegionID: scrollRegionID,
+                        isContentRelative: scrollContentSpace != nil
+                    )
+                    windowDrop?.didMeasureRow(globalRow)
+                }
+                .onChange(of: item.id) { oldID, _ in
+                    state.removeRow(oldID, owner: identity)
+                }
+                .onDisappear {
+                    state.removeRow(item.id, owner: identity)
+                }
+        }
+    }
+}
+
+extension EnvironmentValues {
+    /// True inside a recycled fixed-stride tab run whose container registers
+    /// row frames and hit targets once for the run instead of per row.
+    @Entry var browserSidebarUsesVirtualRowGeometry = false
 }

@@ -68,6 +68,11 @@ struct BrowserSidebarListRows<Trailing: View>: View {
     /// could be on screen.
     private static var deferredFolderDistance: Int { 40 }
 
+    /// Minimum tab count in a fixed-height lazy run before switching from a
+    /// `LazyVStack` to a fixed-pool recycled run, eliminating per-row view
+    /// creation and teardown during fast flicks and long jumps.
+    private static var recycledRunMinimumCount: Int { 40 }
+
     // MARK: - Variables
 
     let list: SidebarListModel
@@ -82,13 +87,51 @@ struct BrowserSidebarListRows<Trailing: View>: View {
     /// the band an empty run keeps.
     @ViewBuilder var trailing: ([BrowserSidebarListItem]) -> Trailing
 
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction: BrowserSidebarInteractionState?
+    @Environment(\.browserSidebarVisibleBand) private var visibleBand
+    @Environment(\.accessibilityVoiceOverEnabled) private var isVoiceOverEnabled
+    @Environment(\.accessibilitySwitchControlEnabled) private var isSwitchControlEnabled
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var fixedTabRowStride: CGFloat? {
+        guard context.capabilities.tabRowMetrics.fillsRowHeight else { return nil }
+        let appearance = BrowserDeviceAppearanceStore.shared
+        let rowHeight = context.capabilities.tabRowHeight(
+            tabScale: appearance.tabScale,
+            dynamicTypeSize: dynamicTypeSize
+        )
+        let separation = BrowserSidebarDensity.current.rowSeparation(
+            hasBorders: appearance.tabs.borders == .all
+        )
+        return rowHeight + separation
+    }
+
     var body: some View {
         let items = BrowserSidebarListItem.items(of: list, in: context.space).filter(isShown)
         let deferrals = defersDistantFolders && keptTabIDs == nil ? Self.deferredFolders(of: items) : []
+        let rowStride = fixedTabRowStride
+        let lazyStackRowStride =
+            sidebarInteraction?.sidebarReorderState.layout.isActive == true ? nil : rowStride
         VStack(spacing: 0) {
             ForEach(Run.runs(of: items)) { run in
                 if run.isLazy {
-                    LazyVStack(spacing: 0) { rows(run.items, deferrals: deferrals) }
+                    if let rowStride, let visibleBand, !isVoiceOverEnabled, !isSwitchControlEnabled,
+                        run.items.count > Self.recycledRunMinimumCount
+                    {
+                        BrowserSidebarRecycledTabRun(
+                            items: run.items,
+                            itemsRevision: UUID(),
+                            rowStride: rowStride,
+                            context: context,
+                            visibleBand: visibleBand
+                        )
+                    } else {
+                        LazyVStack(spacing: 0) { rows(run.items, deferrals: deferrals) }
+                            .frame(
+                                height: lazyStackRowStride.map { CGFloat(run.items.count) * $0 },
+                                alignment: .top
+                            )
+                    }
                 } else {
                     rows(run.items, deferrals: deferrals)
                 }
@@ -96,6 +139,7 @@ struct BrowserSidebarListRows<Trailing: View>: View {
             trailing(items)
         }
         .crestCollectionMotion(ids: items.map(\.collectionMotionID))
+        .environment(\.browserInteractionCapabilities, context.capabilities)
     }
 
     // MARK: - Actions - Rows
@@ -239,6 +283,366 @@ private struct BrowserSidebarFolderRowIndent: ViewModifier {
                 .transition(transition ?? .opacity.combined(with: .move(edge: .top)))
         } else {
             content
+        }
+    }
+}
+
+/// Renders a long fixed-height run of tab rows with a fixed ring of recycled
+/// SwiftUI view slots rather than creating and tearing down row subgraphs as
+/// tabs enter and leave the viewport.
+private struct BrowserSidebarRecycledTabRun: View {
+    private struct DragProjection {
+        let isActive: Bool
+        let liftedIndices: [Int]
+        let liftedSet: Set<Int>
+        let liftOwnerIndex: Int?
+        let gapAnchorIndex: Int?
+        let gapInsertsBeforeAnchor: Bool
+        let gapHeight: CGFloat
+
+        static let idle = DragProjection(
+            isActive: false,
+            liftedIndices: [],
+            liftedSet: [],
+            liftOwnerIndex: nil,
+            gapAnchorIndex: nil,
+            gapInsertsBeforeAnchor: false,
+            gapHeight: 0
+        )
+
+        func totalHeight(itemCount: Int, rowStride: CGFloat) -> CGFloat {
+            guard isActive else { return CGFloat(itemCount) * rowStride }
+            let remaining = max(0, itemCount - liftedIndices.count)
+            return CGFloat(remaining) * rowStride + (gapAnchorIndex != nil ? gapHeight : 0)
+        }
+
+        func yOffset(for index: Int, rowStride: CGFloat) -> CGFloat {
+            guard isActive else { return CGFloat(index) * rowStride }
+            var liftedBefore = 0
+            for lifted in liftedIndices where lifted < index {
+                liftedBefore += 1
+            }
+            let shiftsForGap =
+                gapAnchorIndex.map { gapInsertsBeforeAnchor ? index >= $0 : index > $0 } ?? false
+            let gapBefore: CGFloat = shiftsForGap ? gapHeight : 0
+            return CGFloat(index - liftedBefore) * rowStride + gapBefore
+        }
+
+        /// Converts a projected Y coordinate (in the same layout as `yOffset`,
+        /// accounting for collapsed lifted rows and any insertion gap of
+        /// arbitrary height) to the first non-lifted item index whose row
+        /// reaches `targetY`.
+        func firstVisibleItemIndex(at targetY: CGFloat, itemCount: Int, rowStride: CGFloat) -> Int {
+            guard itemCount > 0 else { return 0 }
+            guard isActive else {
+                return min(max(0, Int(floor(targetY / rowStride))), itemCount - 1)
+            }
+            var low = 0
+            var high = itemCount - 1
+            while low < high {
+                let mid = (low + high) / 2
+                if yOffset(for: mid, rowStride: rowStride) + rowStride < targetY {
+                    low = mid + 1
+                } else {
+                    high = mid
+                }
+            }
+            while low < itemCount - 1, liftedSet.contains(low) {
+                low += 1
+            }
+            return low
+        }
+    }
+
+    private static let overscanRows = 2
+    private static let defaultPoolCapacity = 24
+
+    let items: [BrowserSidebarListItem]
+    let itemsRevision: UUID
+    let rowStride: CGFloat
+    let context: BrowserSidebarListContext
+    let visibleBand: BrowserSidebarVisibleBand
+
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction: BrowserSidebarInteractionState?
+    @Environment(\.browserSidebarScrollRegionID) private var scrollRegionID
+    @State private var runFrame: CGRect = .zero
+    @State private var virtualRunID = UUID()
+    @State private var poolCapacity = defaultPoolCapacity
+
+    private var spaceAssignment: BrowserSpaceRuntimeAssignment {
+        BrowserSpaceRuntimeAssignment(space: context.space)
+    }
+
+    var body: some View {
+        let visibleRange = visibleBand.viewport.visibleRange ?? 0...900
+        let reorderState = sidebarInteraction?.sidebarReorderState
+        let isDragging = reorderState?.isDragging == true
+        let projection = dragProjection(in: reorderState)
+        let totalHeight = projection.totalHeight(itemCount: items.count, rowStride: rowStride)
+        let viewportHeight = max(rowStride, visibleRange.upperBound - visibleRange.lowerBound)
+        let neededPool = Int(ceil(viewportHeight / rowStride)) + Self.overscanRows * 2
+        let effectivePool = isDragging ? poolCapacity : max(poolCapacity, neededPool)
+
+        let localMinY = visibleRange.lowerBound - runFrame.minY
+        let localMaxY = visibleRange.upperBound - runFrame.minY
+        let overscanHeight = CGFloat(Self.overscanRows) * rowStride
+        let isNearViewport = localMaxY >= -overscanHeight && localMinY <= totalHeight + overscanHeight
+
+        let assignment = slotAssignments(
+            poolSize: effectivePool,
+            localMinY: localMinY,
+            isNearViewport: isNearViewport,
+            projection: projection
+        )
+        let _ = reorderState?.updateVirtualRunVisibleIndices(
+            assignment.visibleRange,
+            for: virtualRunID,
+            in: spaceAssignment
+        )
+
+        ZStack(alignment: .top) {
+            ForEach(0..<effectivePool, id: \.self) { slot in
+                if let itemIndex = assignment.slots[slot] {
+                    BrowserSidebarRecycledTabSlot(
+                        item: items[itemIndex],
+                        yOffset: projection.yOffset(for: itemIndex, rowStride: rowStride),
+                        context: context
+                    )
+                    .equatable()
+                }
+            }
+            if let overflowItemIndex = assignment.overflow {
+                BrowserSidebarRecycledTabSlot(
+                    item: items[overflowItemIndex],
+                    yOffset: projection.yOffset(for: overflowItemIndex, rowStride: rowStride),
+                    context: context
+                )
+                .equatable()
+            }
+        }
+        .environment(\.browserSidebarUsesVirtualRowGeometry, true)
+        .frame(maxWidth: .infinity)
+        .frame(height: totalHeight, alignment: .top)
+        .onGeometryChange(for: CGRect.self) { proxy in
+            proxy.frame(in: BrowserSidebarVisibleBand.contentSpace)
+        } action: { frame in
+            if abs(runFrame.minX - frame.minX) > 0.5 || abs(runFrame.minY - frame.minY) > 0.5
+                || abs(runFrame.width - frame.width) > 0.5 || abs(runFrame.height - frame.height) > 0.5
+            {
+                runFrame = frame
+                registerVirtualRun(frame: frame, visibleRange: assignment.visibleRange)
+            }
+        }
+        .onChange(of: itemsRevision) { _, _ in
+            registerVirtualRun(frame: runFrame, visibleRange: assignment.visibleRange)
+        }
+        .onChange(of: rowStride) { _, _ in
+            registerVirtualRun(frame: runFrame, visibleRange: assignment.visibleRange)
+        }
+        .onChange(of: spaceAssignment) { oldSpace, _ in
+            reorderState?.removeVirtualRun(for: virtualRunID, in: oldSpace)
+            registerVirtualRun(frame: runFrame, visibleRange: assignment.visibleRange)
+        }
+        .onChange(of: effectivePool) { _, next in
+            if next > poolCapacity {
+                poolCapacity = next
+            }
+        }
+        .onDisappear {
+            reorderState?.removeVirtualRun(for: virtualRunID, in: spaceAssignment)
+        }
+    }
+
+    private func registerVirtualRun(frame: CGRect, visibleRange: Range<Int>) {
+        guard let reorderState = sidebarInteraction?.sidebarReorderState,
+            !frame.isEmpty,
+            let firstItem = items.first,
+            case .tab(let firstTab) = firstItem.content
+        else { return }
+        let itemIDs = items.map(\.id)
+        var indexByID: [BrowserSidebarReorderItemID: Int] = [:]
+        indexByID.reserveCapacity(itemIDs.count)
+        for (index, id) in itemIDs.enumerated() {
+            indexByID[id] = index
+        }
+        let section = BrowserSidebarReorderSection.tabs(
+            placement: firstTab.placement,
+            folderID: firstTab.folderID
+        )
+        let capturedContext = context
+        reorderState.register(
+            virtualRun: BrowserSidebarReorderGeometry.VirtualRowRun(
+                id: virtualRunID,
+                space: spaceAssignment,
+                section: section,
+                scrollRegionID: scrollRegionID,
+                frame: frame,
+                rowStride: rowStride,
+                itemIDs: itemIDs,
+                itemIndexByID: indexByID,
+                visibleIndices: visibleRange,
+                auxiliaryClick: { tabID in
+                    guard let tab = capturedContext.space.tabs.model(tabID) else { return }
+                    let configuration = BrowserSidebarTabRowConfiguration(
+                        tab: tab,
+                        context: capturedContext,
+                        isSelected: capturedContext.window.shownTabIDs.contains(tabID),
+                        isLoaded: capturedContext.isLoaded(tabID),
+                        isSplitGroupMember: false,
+                        spacePresentation: nil
+                    )
+                    guard configuration.isCurrentAndUnlocked else { return }
+                    BrowserTabMiddleClickAction(for: tab.placement).perform(on: configuration)
+                }
+            )
+        )
+    }
+
+    private func slotAssignments(
+        poolSize: Int,
+        localMinY: CGFloat,
+        isNearViewport: Bool,
+        projection: DragProjection
+    ) -> (slots: [Int?], overflow: Int?, visibleRange: Range<Int>) {
+        var slots = [Int?](repeating: nil, count: poolSize)
+        var overflow: Int?
+        let liftOwnerIndex = projection.liftOwnerIndex
+        let pinnedSlot = liftOwnerIndex.map { $0 % poolSize }
+        if let liftOwnerIndex, let pinnedSlot {
+            slots[pinnedSlot] = liftOwnerIndex
+        }
+        guard isNearViewport, !items.isEmpty else {
+            return (slots, overflow, 0..<0)
+        }
+        let windowCount = min(items.count, poolSize)
+        let firstVisible = projection.firstVisibleItemIndex(
+            at: localMinY,
+            itemCount: items.count,
+            rowStride: rowStride
+        )
+        if !projection.isActive || projection.liftedSet.isEmpty {
+            let idealStart = firstVisible - Self.overscanRows
+            let maxStart = max(0, items.count - windowCount)
+            let windowStart = min(max(0, idealStart), maxStart)
+            let windowEnd = windowStart + windowCount - 1
+            for itemIndex in windowStart...windowEnd {
+                if itemIndex == liftOwnerIndex { continue }
+                let slot = itemIndex % poolSize
+                if slot == pinnedSlot {
+                    overflow = itemIndex
+                } else {
+                    slots[slot] = itemIndex
+                }
+            }
+            return (slots, overflow, windowStart..<(windowEnd + 1))
+        }
+
+        // During an active lift, skip collapsed lifted rows when filling pool
+        // slots so every visible destination row receives a slot.
+        var startIndex = firstVisible
+        var backedUp = 0
+        while startIndex > 0, backedUp < Self.overscanRows {
+            startIndex -= 1
+            if !projection.liftedSet.contains(startIndex) {
+                backedUp += 1
+            }
+        }
+        var assignedIndices: [Int] = []
+        assignedIndices.reserveCapacity(poolSize)
+        var cursor = startIndex
+        while cursor < items.count, assignedIndices.count < poolSize {
+            if !projection.liftedSet.contains(cursor) {
+                assignedIndices.append(cursor)
+            }
+            cursor += 1
+        }
+        // If near the bottom of the run, backfill earlier non-lifted rows so
+        // the pool covers the viewport cleanly.
+        cursor = startIndex - 1
+        while cursor >= 0, assignedIndices.count < poolSize {
+            if !projection.liftedSet.contains(cursor) {
+                assignedIndices.insert(cursor, at: 0)
+            }
+            cursor -= 1
+        }
+        for itemIndex in assignedIndices {
+            if itemIndex == liftOwnerIndex { continue }
+            let slot = itemIndex % poolSize
+            if slot == pinnedSlot {
+                overflow = itemIndex
+            } else if slots[slot] == nil {
+                slots[slot] = itemIndex
+            } else if let freeSlot = slots.firstIndex(where: { $0 == nil }) {
+                slots[freeSlot] = itemIndex
+            }
+        }
+        guard let firstAssigned = assignedIndices.first, let lastAssigned = assignedIndices.last else {
+            return (slots, overflow, 0..<0)
+        }
+        return (slots, overflow, firstAssigned..<(lastAssigned + 1))
+    }
+
+    private func dragProjection(in state: BrowserSidebarReorderState?) -> DragProjection {
+        guard let state, state.layout.isActive else { return .idle }
+        let liftOwnerID = state.lift?.item.id
+        let gapAnchor = state.layout.gap?.anchor
+        var liftedIndices: [Int] = []
+        var liftOwnerIndex: Int?
+        var gapAnchorIndex: Int?
+        var gapInsertsBeforeAnchor = false
+        for index in items.indices {
+            let itemID = items[index].id
+            if state.isLifted(itemID) {
+                liftedIndices.append(index)
+            }
+            if itemID == liftOwnerID {
+                liftOwnerIndex = index
+            }
+            if let gapAnchor {
+                switch gapAnchor {
+                case .before(let id):
+                    if id == itemID {
+                        gapAnchorIndex = index
+                        gapInsertsBeforeAnchor = true
+                    }
+                case .after(let id):
+                    if id == itemID {
+                        gapAnchorIndex = index
+                        gapInsertsBeforeAnchor = false
+                    }
+                case .emptySection:
+                    break
+                }
+            }
+        }
+        return DragProjection(
+            isActive: true,
+            liftedIndices: liftedIndices,
+            liftedSet: Set(liftedIndices),
+            liftOwnerIndex: liftOwnerIndex,
+            gapAnchorIndex: gapAnchorIndex,
+            gapInsertsBeforeAnchor: gapInsertsBeforeAnchor,
+            gapHeight: state.layout.gapHeight
+        )
+    }
+}
+
+private struct BrowserSidebarRecycledTabSlot: View, @MainActor Equatable {
+    let item: BrowserSidebarListItem
+    let yOffset: CGFloat
+    let context: BrowserSidebarListContext
+
+    static func == (lhs: BrowserSidebarRecycledTabSlot, rhs: BrowserSidebarRecycledTabSlot) -> Bool {
+        lhs.item == rhs.item && lhs.yOffset == rhs.yOffset && lhs.context == rhs.context
+    }
+
+    var body: some View {
+        if case .tab(let tab) = item.content {
+            BrowserSidebarTabRow(tab: tab, context: context)
+                .equatable()
+                .modifier(BrowserSidebarFolderRowIndent(depth: item.depth))
+                .environment(\.sidebarLayerDepth, item.depth)
+                .offset(y: yOffset)
         }
     }
 }

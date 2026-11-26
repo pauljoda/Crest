@@ -1,35 +1,49 @@
 import SwiftUI
 
-/// Registers the live bounds of a sidebar row, tile or folder header for
-/// selection clicks, without intercepting input. See
-/// `BrowserTabSelectionTargets`.
+/// Registers live bounds for sidebar selection without creating per-row AppKit
+/// views or intercepting input. Inside a scrolling list, frames are measured
+/// in content space so scrolling fires zero per-row geometry callbacks.
 struct BrowserPlatformTabSelectionTarget: ViewModifier {
     let itemID: BrowserSelectionItemID?
     let browser: BrowserStore?
     let assignment: BrowserSpaceRuntimeAssignment
     let isEnabled: Bool
 
+    @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction: BrowserSidebarInteractionState?
     @Environment(\.browserSidebarScrollRegionID) private var scrollRegionID
-    /// Identity for this view's registration, so a row the sidebar builds
-    /// again never takes away the target of the one that replaced it.
+    @Environment(\.browserSidebarScrollContentSpace) private var scrollContentSpace
+    @Environment(\.browserSidebarDropViewportID) private var sidebarViewportID
     @State private var identity = UUID()
 
     func body(content: Content) -> some View {
-        let itemID = isEnabled && browser != nil ? itemID : nil
+        let itemID = isEnabled ? itemID : nil
+        let contentSpace = scrollContentSpace
+        let state = sidebarInteraction?.sidebarReorderState
         content
             .onGeometryChange(for: CGRect?.self) { proxy in
-                itemID == nil ? nil : proxy.frame(in: .global)
+                guard itemID != nil, state != nil else { return nil }
+                if let contentSpace {
+                    return proxy.frame(in: contentSpace)
+                }
+                return proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
             } action: { frame in
-                BrowserTabSelectionTargets.shared.register(
-                    frame.flatMap { frame in
-                        itemID.map {
-                            BrowserTabSelectionTargets.Target(
-                                itemID: $0, browser: browser, assignment: assignment, frame: frame,
-                                scrollRegionID: scrollRegionID)
-                        }
-                    },
-                    for: identity)
+                guard let state else { return }
+                guard let itemID, let frame, !frame.isEmpty else {
+                    state.removeSelectionTarget(for: identity)
+                    return
+                }
+                state.register(
+                    selectionTarget: itemID,
+                    in: assignment,
+                    frame: frame,
+                    for: identity,
+                    sidebarViewportID: sidebarViewportID,
+                    scrollRegionID: scrollRegionID,
+                    isContentRelative: contentSpace != nil
+                )
             }
-            .onDisappear { BrowserTabSelectionTargets.shared.register(nil, for: identity) }
+            .onDisappear {
+                state?.removeSelectionTarget(for: identity)
+            }
     }
 }

@@ -22,18 +22,20 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
     let openNewTab: () -> Void
     @ViewBuilder let content: () -> Content
 
+    @State private var scrollRegionID = UUID()
+    @State private var lastScrollContentOrigin: CGPoint?
+
     var body: some View {
         GeometryReader { geometry in
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 0) {
-                        VStack(spacing: 0) {
-                            content()
-                        }
-                        .fixedSize(horizontal: false, vertical: true)
-                        .sidebarScrollContent()
-                        .padding(.bottom, CrestSpacing.small)
-
+                        content()
+                    }
+                    .sidebarScrollContent()
+                    .padding(.bottom, CrestSpacing.small)
+                    .frame(maxWidth: .infinity, minHeight: geometry.size.height, alignment: .top)
+                    .background {
                         Color.clear
                             .contentShape(.rect)
                             .modifier(
@@ -44,8 +46,36 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                             )
                             .accessibilityHidden(true)
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: geometry.size.height, alignment: .top)
+                    .coordinateSpace(BrowserSidebarVisibleBand.contentSpace)
+                    .environment(\.browserSidebarScrollContentSpace, BrowserSidebarVisibleBand.contentSpace)
+                    .background(alignment: .topLeading) {
+                        Color.clear
+                            .frame(width: 1, height: 1)
+                            .onGeometryChange(for: CGPoint.self) { proxy in
+                                proxy.frame(in: BrowserSidebarReorderSpace.globalSpace).origin
+                            } action: { origin in
+                                handleScrollContentOriginChange(origin)
+                            }
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .environment(\.browserSidebarScrollRegionID, scrollRegionID)
+                .background {
+                    Color.clear
+                        .onGeometryChange(for: CGRect.self) { proxy in
+                            proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
+                        } action: { frame in
+                            sidebarInteraction.sidebarReorderState.register(
+                                scrollRegionFrame: frame,
+                                for: scrollRegionID
+                            )
+                        }
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+                .onDisappear {
+                    sidebarInteraction.sidebarReorderState.removeScrollRegion(for: scrollRegionID)
                 }
                 // Named before the scroll affordance, so its "Show more tabs"
                 // button keeps its own label and identifier.
@@ -77,6 +107,21 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                 }
             }
         }
+    }
+
+    /// Forwards live scroll-origin changes and lift-time scroll movement to
+    /// the reorder state so frozen-origin hit testing stays aligned while
+    /// scrolling during a lift.
+    private func handleScrollContentOriginChange(_ origin: CGPoint) {
+        let reorderState = sidebarInteraction.sidebarReorderState
+        reorderState.register(scrollContentOrigin: origin, for: scrollRegionID)
+        if let previous = lastScrollContentOrigin, reorderState.isDragging {
+            let visualOffset = origin.y - previous.y
+            if visualOffset != 0 {
+                reorderState.scrollableContentDidMove(in: scrollRegionID, by: visualOffset)
+            }
+        }
+        lastScrollContentOrigin = origin
     }
 
     /// Where the page the window shows would grow out of, which reads only the

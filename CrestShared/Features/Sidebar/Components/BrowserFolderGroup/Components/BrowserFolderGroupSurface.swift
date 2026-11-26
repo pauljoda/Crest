@@ -37,11 +37,7 @@ struct BrowserFolderGroupSurface: View {
             configuration: configuration,
             interaction: interaction
         )
-        .onGeometryChange(for: CGRect.self) { proxy in
-            proxy.frame(in: .global)
-        } action: { frame in
-            headerFrame.value = frame
-        }
+        .modifier(BrowserFolderHeaderFrameObserver(isEnabled: holdOpensCard, headerFrame: headerFrame))
         .modifier(
             BrowserFolderMenuOrCard(opensCard: holdOpensCard, hold: showCardForHold) {
                 if configuration.capabilities.supportsOrganization {
@@ -71,38 +67,14 @@ struct BrowserFolderGroupSurface: View {
         .onChange(of: presentsFromHeader) { _, presents in
             if presents { dismissHeldCard() }
         }
-        .crestPopover(
-            isPresented: interaction.isChoosingColor,
-            arrowEdge: .trailing
-        ) {
-            BrowserFolderColorPicker(color: interaction.folderColor, title: folder.kind.colorTitle)
-                .presentationCompactAdaptation(.popover)
-        }
-        .browserIconCustomizationPopover(
-            BrowserIconCustomizationPresentation(
-                isPresented: interaction.isChoosingIcon,
-                title: "Folder Icon",
-                currentEmoji: BrowserIconSymbol.emoji(from: folder.displaySymbol),
-                currentSystemSymbol: BrowserIconSymbol.emoji(from: folder.displaySymbol) == nil
-                    ? folder.displaySymbol : nil,
-                showsReset: folder.displaySymbol != "folder" && folder.displaySymbol != "folder.fill",
-                resetTitle: "Use Folder Icon",
-                setEmoji: { interaction.folderSymbol.wrappedValue = BrowserIconSymbol.symbol(forEmoji: $0) },
-                setSystemSymbol: { interaction.folderSymbol.wrappedValue = $0 },
-                reset: { interaction.folderSymbol.wrappedValue = "folder" }
-            )
-        )
-        .confirmationDialog(
-            "Delete \(folder.shownTitle)?",
-            isPresented: interaction.isConfirmingDeletion,
-            titleVisibility: .visible
-        ) {
-            Button("Delete Folder", role: .destructive) {
-                interaction.deleteFolder()
+        .overlay {
+            if presentsFromHeader {
+                BrowserDeferredFolderHeaderPresentations(
+                    folder: folder,
+                    space: configuration.context.space,
+                    interaction: interaction
+                )
             }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            BrowserFolderDeletionMessage(folder: folder, space: configuration.context.space)
         }
         .animation(
             CrestMotion.collection.unlessReducingMotion(reduceMotion),
@@ -165,6 +137,26 @@ private struct BrowserFolderMenuOrCard<MenuItems: View>: ViewModifier {
 /// redraws nothing.
 private final class BrowserFolderHeaderFrame {
     var value: CGRect?
+}
+
+/// Measures a folder header's global frame only on shells where holding the
+/// header opens a preview card, avoiding per-scroll-frame work everywhere else.
+private struct BrowserFolderHeaderFrameObserver: ViewModifier {
+    let isEnabled: Bool
+    let headerFrame: BrowserFolderHeaderFrame
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content.onGeometryChange(for: CGRect.self) { proxy in
+                proxy.frame(in: .global)
+            } action: { frame in
+                headerFrame.value = frame
+            }
+        } else {
+            content
+        }
+    }
 }
 
 /// macOS keeps visibility in the retained Space host; mobile retains its
@@ -248,6 +240,66 @@ private struct BrowserFolderCollapsedVisibilityUpdates: ViewModifier {
             )
         }
     #endif
+}
+
+/// Mounts a folder header's popovers and deletion dialog only while one is
+/// actually requested, avoiding three idle presentation modifiers on every
+/// mounted folder during scrolling.
+private struct BrowserDeferredFolderHeaderPresentations: View {
+    let folder: FolderStateModel
+    let space: SpaceModel
+    let interaction: BrowserFolderGroupInteractionContext
+
+    @State private var isReady = false
+
+    var body: some View {
+        Color.clear
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .crestPopover(
+                isPresented: gated(interaction.isChoosingColor),
+                arrowEdge: .trailing
+            ) {
+                BrowserFolderColorPicker(color: interaction.folderColor, title: folder.kind.colorTitle)
+                    .presentationCompactAdaptation(.popover)
+            }
+            .browserIconCustomizationPopover(
+                BrowserIconCustomizationPresentation(
+                    isPresented: gated(interaction.isChoosingIcon),
+                    title: "Folder Icon",
+                    currentEmoji: BrowserIconSymbol.emoji(from: folder.displaySymbol),
+                    currentSystemSymbol: BrowserIconSymbol.emoji(from: folder.displaySymbol) == nil
+                        ? folder.displaySymbol : nil,
+                    showsReset: folder.displaySymbol != "folder" && folder.displaySymbol != "folder.fill",
+                    resetTitle: "Use Folder Icon",
+                    setEmoji: { interaction.folderSymbol.wrappedValue = BrowserIconSymbol.symbol(forEmoji: $0) },
+                    setSystemSymbol: { interaction.folderSymbol.wrappedValue = $0 },
+                    reset: { interaction.folderSymbol.wrappedValue = "folder" }
+                )
+            )
+            .confirmationDialog(
+                "Delete \(folder.shownTitle)?",
+                isPresented: gated(interaction.isConfirmingDeletion),
+                titleVisibility: .visible
+            ) {
+                Button("Delete Folder", role: .destructive) {
+                    interaction.deleteFolder()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                BrowserFolderDeletionMessage(folder: folder, space: space)
+            }
+            .onAppear { isReady = true }
+    }
+
+    private func gated(_ binding: Binding<Bool>) -> Binding<Bool> {
+        Binding(
+            get: { isReady && binding.wrappedValue },
+            set: { next in
+                if !next { binding.wrappedValue = false }
+            }
+        )
+    }
 }
 
 /// What deleting a folder takes with it: every tab and folder inside it,

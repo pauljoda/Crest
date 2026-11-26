@@ -28,6 +28,7 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
 
     let configuration: BrowserSidebarTabRowConfiguration
     let interaction: BrowserSidebarTabRowInteractionContext
+    var statusMarks: [BrowserTabStatusMark]? = nil
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.browserSidebarRowJoinsReorder) private var joinsReorder
@@ -36,12 +37,16 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
     func body(content: Content) -> some View {
         content
             .frame(maxWidth: .infinity)
-            .frame(minHeight: minHeight)
+            .frame(
+                minHeight: minHeight,
+                maxHeight: configuration.metrics.fillsRowHeight ? minHeight : nil
+            )
             .contentShape(.rect)
             .modifier(
                 BrowserSidebarTabRowAppearance(
                     configuration: configuration,
-                    isHovering: interaction.isHovering
+                    isHovering: interaction.isHovering,
+                    statusMarks: statusMarks
                 )
             )
             .padding(
@@ -50,14 +55,14 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
                     hasBorders: BrowserDeviceAppearanceStore.shared.tabs.borders == .all) / 2
             )
             .browserTabPromotionDestination(
-                id: configuration.promotionID,
-                in: configuration.promotionNamespace,
+                id: usesMatchedGeometryPromotion ? configuration.promotionID : "",
+                in: usesMatchedGeometryPromotion ? configuration.promotionNamespace : nil,
                 isActive: usesMatchedGeometryPromotion
             )
             .modifier(
                 BrowserPlatformTabPromotionSourceModifier(
-                    id: configuration.promotionID,
-                    namespace: configuration.promotionNamespace,
+                    id: configuration.isPromotionSource ? configuration.promotionID : "",
+                    namespace: configuration.isPromotionSource ? configuration.promotionNamespace : nil,
                     usesNativeNavigationTransition:
                         configuration.capabilities.usesNativeNavigationTransition,
                     isEnabled: configuration.isPromotionSource
@@ -65,19 +70,18 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
             )
             .padding(.horizontal, configuration.surfaceHorizontalInset)
             .modifier(
-                BrowserTabSelectionTarget(
-                    tabID: configuration.tab.id, browser: configuration.browser,
-                    assignment: BrowserSpaceRuntimeAssignment(
-                        spaceID: configuration.spaceID, profileID: configuration.profileID),
-                    isEnabled: configuration.isAvailableForDisplay && !interaction.isRenaming)
+                BrowserSidebarTabRowContainerHitTargets(
+                    tabID: configuration.tab.id,
+                    browser: configuration.browser,
+                    assignment: configuration.assignment,
+                    state: sidebarInteraction.sidebarReorderState,
+                    joinsReorder: joinsReorder,
+                    isSelectionEnabled: configuration.isAvailableForDisplay && !interaction.isRenaming,
+                    dismissFromAuxiliaryClick: interaction.dismissFromAuxiliaryClick
+                )
             )
             .contentShape(.rect)
             .onHover { interaction.isHovering.wrappedValue = $0 }
-            .modifier(
-                BrowserPlatformRowAuxiliaryClickModifier(
-                    perform: interaction.dismissFromAuxiliaryClick
-                )
-            )
             .browserTabDraggable(
                 tab: configuration.tab,
                 favicons: configuration.favicons,
@@ -97,19 +101,16 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
                 requiresSelectedSpace: true,
                 isTabSelected: configuration.isSelected
             )
-            .browserSidebarReorderZone(
-                .currentTab(configuration.tab.id),
-                state: sidebarInteraction.sidebarReorderState,
-                isActive: configuration.tab.splitGroupID == nil
-                    && !configuration.tab.placement.isDurable
-                    && configuration.tab.folderID == nil
-                    && configuration.isAvailableForDisplay && joinsReorder,
-                requiresSelectedSpace: true
+            .modifier(
+                BrowserSidebarCurrentTabNestTarget(
+                    tabID: configuration.tab.id,
+                    state: sidebarInteraction.sidebarReorderState,
+                    isEnabled: configuration.tab.splitGroupID == nil
+                        && !configuration.tab.placement.isDurable
+                        && configuration.tab.folderID == nil
+                        && configuration.isAvailableForDisplay && joinsReorder
+                )
             )
-            .overlay {
-                BrowserFolderNestDropHighlight(
-                    state: sidebarInteraction.sidebarReorderState, target: .currentTab(configuration.tab.id))
-            }
             .crestCollectionItemTransition()
             .accessibilityElement(children: .contain)
             .modifier(
@@ -165,19 +166,23 @@ struct BrowserSidebarTabRowSurface: ViewModifier {
 private struct BrowserSidebarTabRowAppearance: ViewModifier {
     let configuration: BrowserSidebarTabRowConfiguration
     @Binding var isHovering: Bool
+    var statusMarks: [BrowserTabStatusMark]? = nil
     @Environment(\.sidebarLayerDepth) private var depth
 
     func body(content: Content) -> some View {
         content
             .background {
-                BrowserTabStatusSurfaces(
-                    tab: BrowserTabStatusSource(
-                        tabID: configuration.tab.id, context: configuration.context,
-                        canAct: { configuration.isCurrentAndUnlocked }),
-                    style: BrowserTabStatusSurfaceStyle(
-                        accent: accent, cornerRadius: BrowserSidebarMetrics.layerCornerRadius(depth: depth),
-                        barOpacity: CrestOpacity.statusSurface)
-                )
+                if statusMarks?.isEmpty != true {
+                    BrowserTabStatusSurfaces(
+                        tab: BrowserTabStatusSource(
+                            tabID: configuration.tab.id, context: configuration.context,
+                            canAct: { configuration.isCurrentAndUnlocked }),
+                        style: BrowserTabStatusSurfaceStyle(
+                            accent: accent, cornerRadius: BrowserSidebarMetrics.layerCornerRadius(depth: depth),
+                            barOpacity: CrestOpacity.statusSurface),
+                        precomputedMarks: statusMarks
+                    )
+                }
             }
             .modifier(
                 BrowserTabAppearanceSurface(
@@ -235,4 +240,102 @@ extension EnvironmentValues {
     /// sidebar, as a folder's card draws its tabs, joins it only while the
     /// sidebar shows no row of the same tab, which would otherwise share it.
     @Entry var browserSidebarRowJoinsReorder = true
+}
+
+private struct BrowserSidebarCurrentTabNestTarget: ViewModifier {
+    let tabID: UUID
+    let state: BrowserSidebarReorderState
+    let isEnabled: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isEnabled, state.isDragging {
+            content
+                .overlay {
+                    BrowserFolderNestDropHighlight(
+                        state: state, target: .currentTab(tabID))
+                }
+        } else {
+            content
+        }
+    }
+}
+
+/// Reuses the tab row's already-measured reorder frame for multi-selection and
+/// middle-click hit testing inside a sidebar, avoiding duplicate geometry
+/// observers and per-row AppKit gesture bridges during scrolling.
+private struct BrowserSidebarTabRowContainerHitTargets: ViewModifier {
+    let tabID: UUID
+    let browser: BrowserStore
+    let assignment: BrowserSpaceRuntimeAssignment
+    let state: BrowserSidebarReorderState
+    let joinsReorder: Bool
+    let isSelectionEnabled: Bool
+    let dismissFromAuxiliaryClick: @MainActor () -> Void
+
+    @Environment(\.browserSidebarUsesVirtualRowGeometry) private var usesVirtualRowGeometry
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if joinsReorder, usesVirtualRowGeometry {
+            content
+                .onChange(of: isSelectionEnabled, initial: true) { _, enabled in
+                    if !enabled {
+                        state.setRowSelectionDisabled(true, for: .tab(tabID), in: assignment)
+                    } else {
+                        state.setRowSelectionDisabled(false, for: .tab(tabID), in: assignment)
+                    }
+                }
+                .onChange(of: tabID) { oldTabID, newTabID in
+                    guard !isSelectionEnabled else { return }
+                    state.setRowSelectionDisabled(false, for: .tab(oldTabID), in: assignment)
+                    state.setRowSelectionDisabled(true, for: .tab(newTabID), in: assignment)
+                }
+                .onDisappear {
+                    if !isSelectionEnabled {
+                        state.setRowSelectionDisabled(false, for: .tab(tabID), in: assignment)
+                    }
+                }
+        } else if joinsReorder {
+            content
+                .onAppear {
+                    state.setRowAuxiliaryClick(dismissFromAuxiliaryClick, for: .tab(tabID), in: assignment)
+                    if !isSelectionEnabled {
+                        state.setRowSelectionDisabled(true, for: .tab(tabID), in: assignment)
+                    }
+                }
+                .onChange(of: tabID) { oldTabID, newTabID in
+                    state.setRowAuxiliaryClick(nil, for: .tab(oldTabID), in: assignment)
+                    state.setRowSelectionDisabled(false, for: .tab(oldTabID), in: assignment)
+                    state.setRowAuxiliaryClick(dismissFromAuxiliaryClick, for: .tab(newTabID), in: assignment)
+                    state.setRowSelectionDisabled(!isSelectionEnabled, for: .tab(newTabID), in: assignment)
+                }
+                .onChange(of: assignment) { oldAssignment, newAssignment in
+                    state.setRowAuxiliaryClick(nil, for: .tab(tabID), in: oldAssignment)
+                    state.setRowSelectionDisabled(false, for: .tab(tabID), in: oldAssignment)
+                    state.setRowAuxiliaryClick(dismissFromAuxiliaryClick, for: .tab(tabID), in: newAssignment)
+                    state.setRowSelectionDisabled(!isSelectionEnabled, for: .tab(tabID), in: newAssignment)
+                }
+                .onChange(of: isSelectionEnabled) { _, enabled in
+                    state.setRowSelectionDisabled(!enabled, for: .tab(tabID), in: assignment)
+                }
+                .onDisappear {
+                    state.setRowAuxiliaryClick(nil, for: .tab(tabID), in: assignment)
+                    state.setRowSelectionDisabled(false, for: .tab(tabID), in: assignment)
+                }
+        } else {
+            content
+                .modifier(
+                    BrowserTabSelectionTarget(
+                        tabID: tabID, browser: browser,
+                        assignment: assignment,
+                        isEnabled: isSelectionEnabled)
+                )
+                .modifier(
+                    BrowserPlatformRowAuxiliaryClickModifier(
+                        perform: dismissFromAuxiliaryClick
+                    )
+                )
+        }
+    }
 }

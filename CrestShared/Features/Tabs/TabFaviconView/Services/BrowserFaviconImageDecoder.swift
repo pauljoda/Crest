@@ -4,9 +4,14 @@ import ImageIO
 enum BrowserFaviconImageDecoder {
     static let maximumPixelSizeLimit = 512
 
-    static func decode(_ data: Data, maximumPixelSize: Int) async -> CGImage? {
+    static func decode(
+        _ data: Data,
+        payloadIdentity: BrowserFaviconPayloadIdentity? = nil,
+        maximumPixelSize: Int
+    ) async -> CGImage? {
         await BrowserFaviconImageCache.shared.image(
             for: data,
+            payloadIdentity: payloadIdentity,
             maximumPixelSize: min(
                 max(1, maximumPixelSize),
                 maximumPixelSizeLimit

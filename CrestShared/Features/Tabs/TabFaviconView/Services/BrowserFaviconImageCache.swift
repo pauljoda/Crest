@@ -1,14 +1,28 @@
+import CoreGraphics
 import Foundation
 import ImageIO
+import Synchronization
 
 actor BrowserFaviconImageCache {
+    // MARK: - Types
+
+    private struct Storage: @unchecked Sendable {
+        var entries: [BrowserFaviconImageCacheKey: (image: CGImage, tick: UInt64)] = [:]
+        var tick: UInt64 = 0
+    }
+
+    // MARK: - Static Variables
+
     static let shared = BrowserFaviconImageCache()
-    static let maximumCachedImageCount = 256
+    static let maximumCachedImageCount = 1024
+
+    // MARK: - Variables
 
     private let decode: @Sendable (Data, Int) -> CGImage?
-    private var images: [BrowserFaviconImageCacheKey: CGImage] = [:]
-    private var recency: [BrowserFaviconImageCacheKey] = []
+    private let storage = Mutex(Storage())
     private var requests = BrowserFaviconImageCacheRequestRegistry()
+
+    // MARK: - Initializers
 
     init(
         decode: @escaping @Sendable (Data, Int) -> CGImage? =
@@ -17,54 +31,94 @@ actor BrowserFaviconImageCache {
         self.decode = decode
     }
 
-    func image(for data: Data, maximumPixelSize: Int) async -> CGImage? {
-        // Fingerprinting here, on the cache's own executor rather than the main
-        // actor, is what lets two tabs that show the same icon share one decode.
-        let key = BrowserFaviconImageCacheKey(
-            payload: BrowserFaviconPayloadIdentity(hashing: data),
-            maximumPixelSize: maximumPixelSize
+    // MARK: - Actions - Reading
+
+    /// Returns a previously decoded image synchronously without hopping to the
+    /// cache actor, so scrolling rows avoid placeholder flashes and async task
+    /// churn on cache hits.
+    nonisolated func cachedImage(
+        for payload: BrowserFaviconPayloadIdentity,
+        maximumPixelSize: Int
+    ) -> CGImage? {
+        let clampedSize = min(
+            max(1, maximumPixelSize),
+            BrowserFaviconImageDecoder.maximumPixelSizeLimit
         )
-        if let image = images[key] {
-            recordAccess(to: key)
-            return image
+        let key = BrowserFaviconImageCacheKey(
+            payload: payload,
+            maximumPixelSize: clampedSize
+        )
+        return storage.withLock { state in
+            guard let entry = state.entries[key] else { return nil }
+            state.tick &+= 1
+            state.entries[key] = (entry.image, state.tick)
+            return entry.image
+        }
+    }
+
+    func image(
+        for data: Data,
+        payloadIdentity: BrowserFaviconPayloadIdentity? = nil,
+        maximumPixelSize: Int
+    ) async -> CGImage? {
+        let clampedSize = min(
+            max(1, maximumPixelSize),
+            BrowserFaviconImageDecoder.maximumPixelSizeLimit
+        )
+        // Reuse the precomputed fingerprint when available; otherwise hash on
+        // the cache actor rather than the main actor.
+        let payload = payloadIdentity ?? BrowserFaviconPayloadIdentity(hashing: data)
+        if let cached = cachedImage(for: payload, maximumPixelSize: clampedSize) {
+            return cached
         }
 
+        let key = BrowserFaviconImageCacheKey(
+            payload: payload,
+            maximumPixelSize: clampedSize
+        )
         let lease = requests.lease(for: key) {
             let decode = decode
             return Task.detached(priority: .utility) {
-                decode(data, maximumPixelSize)
+                decode(data, clampedSize)
             }
         }
 
         let decodedImage = await lease.task.value
         guard requests.isCurrent(lease) else { return nil }
-        guard requests.complete(lease, for: key) else { return images[key] }
+        guard requests.complete(lease, for: key) else {
+            return cachedImage(for: payload, maximumPixelSize: clampedSize)
+        }
         guard let decodedImage else { return nil }
         insert(decodedImage, for: key)
         return decodedImage
     }
 
+    // MARK: - Actions - Changes
+
     func removeAll() {
-        images.removeAll(keepingCapacity: true)
-        recency.removeAll(keepingCapacity: true)
+        storage.withLock { state in
+            state.entries.removeAll(keepingCapacity: true)
+            state.tick = 0
+        }
         for lease in requests.removeAll() {
             lease.task.cancel()
         }
     }
 
     private func insert(_ image: CGImage, for key: BrowserFaviconImageCacheKey) {
-        images[key] = image
-        recordAccess(to: key)
-        while images.count > Self.maximumCachedImageCount,
-            let leastRecent = recency.first
-        {
-            recency.removeFirst()
-            images[leastRecent] = nil
+        storage.withLock { state in
+            state.tick &+= 1
+            state.entries[key] = (image, state.tick)
+            if state.entries.count > Self.maximumCachedImageCount {
+                let overflow = state.entries.count - Self.maximumCachedImageCount
+                let evictedKeys = state.entries
+                    .sorted { $0.value.tick < $1.value.tick }
+                    .prefix(overflow)
+                    .map(\.key)
+                for evictedKey in evictedKeys {
+                    state.entries[evictedKey] = nil
+                }
+            }
         }
-    }
-
-    private func recordAccess(to key: BrowserFaviconImageCacheKey) {
-        recency.removeAll { $0 == key }
-        recency.append(key)
     }
 }

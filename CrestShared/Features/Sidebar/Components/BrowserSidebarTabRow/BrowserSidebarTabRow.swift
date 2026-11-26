@@ -25,6 +25,9 @@ struct BrowserSidebarTabRow: View {
     var body: some View {
         let configuration = self.configuration
         let interaction = self.interaction
+        let statusSource = BrowserTabStatusSource(
+            tabID: tab.id, context: context, canAct: { configuration.isCurrentAndUnlocked })
+        let statusMarks = BrowserTabStatus.marks(of: statusSource)
         BrowserSidebarTabRowContent(
             configuration: configuration,
             interaction: interaction
@@ -32,17 +35,19 @@ struct BrowserSidebarTabRow: View {
         .modifier(
             BrowserSidebarTabRowSurface(
                 configuration: configuration,
-                interaction: interaction
+                interaction: interaction,
+                statusMarks: statusMarks
             )
         )
-        .browserTabPreviewSource(.tab(tab), in: context)
+        .browserTabPreviewSource(.tab(tab), in: context, isPointerOver: isHovering)
         .modifier(
             BrowserTabStatusBadgeHost(
-                tab: BrowserTabStatusSource(
-                    tabID: tab.id, context: context, canAct: { configuration.isCurrentAndUnlocked }))
+                tab: statusSource,
+                precomputedMarks: statusMarks
+            )
         )
-        .environment(\.browserInteractionCapabilities, context.capabilities)
         .onChange(of: runtimeAssignment) { _, assignment in
+            isHovering = false
             guard renameRequest != assignment else { return }
             cancelTitleEditing()
             iconRequest = nil
@@ -57,7 +62,12 @@ struct BrowserSidebarTabRow: View {
                 }
             )
         )
-        .keepsSidebarFolderDrawn(hasPendingActions)
+        .modifier(
+            BrowserSidebarTabFolderHold(
+                isInFolder: tab.folderID != nil,
+                keepsDrawn: hasPendingActions
+            )
+        )
     }
 
     /// Whether a rename or an icon choice is under way, which the row's view
@@ -196,5 +206,19 @@ extension BrowserSidebarTabRow: @MainActor Equatable {
     /// SwiftUI compares a view's inputs: a list that redraws leaves them be.
     static func == (lhs: BrowserSidebarTabRow, rhs: BrowserSidebarTabRow) -> Bool {
         lhs.tab === rhs.tab && lhs.context == rhs.context && lhs.isSplitGroupMember == rhs.isSplitGroupMember
+    }
+}
+
+private struct BrowserSidebarTabFolderHold: ViewModifier {
+    let isInFolder: Bool
+    let keepsDrawn: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isInFolder {
+            content.keepsSidebarFolderDrawn(keepsDrawn)
+        } else {
+            content
+        }
     }
 }
