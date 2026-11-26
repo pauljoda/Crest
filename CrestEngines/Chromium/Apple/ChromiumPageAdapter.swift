@@ -24,9 +24,16 @@
             handle: { [weak self] event in self?.page?.handleLinkDrag(event) })
         private(set) lazy var pictureInPicture: (any BrowserPagePictureInPictureController)? =
             ChromiumPictureInPicturePageController(page: enginePage)
-        // Chromium presents favicons and its error pages itself; reader is
-        // unavailable.
-        var readerModeSession: BrowserReaderModeSession? { nil }
+        /// Reader Mode runs through the engine's content scripting, sharing the
+        /// exact same core-owned script and session as WebKit.
+        private(set) lazy var readerModeSession: BrowserReaderModeSession? = page.map {
+            BrowserReaderModeSession(
+                document: BrowserContentReaderModeDocument(
+                    mainFrameOf: native,
+                    url: { [weak self] in self?.native.currentURL },
+                    translation: $0.translation))
+        }
+        // Chromium presents favicons and its error pages itself.
         var faviconSession: BrowserFaviconSession? { nil }
         /// The engine's request filter blocks for the document the page shows
         /// when the core says its Space blocks on that site.

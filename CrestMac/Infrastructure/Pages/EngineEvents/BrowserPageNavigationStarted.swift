@@ -6,6 +6,7 @@ struct BrowserPageNavigationStarted: BrowserPageEngineEvent {
     func apply(to page: BrowserPage) {
         page.hasCommittedNavigationAwaitingCompletion = false
         page.translation.reset()
+        page.readerModeSession?.invalidate()
         page.linkDrag?.beginNavigation()
         page.linkHover?.beginNavigation()
         page.credentialState.didStartNavigation()

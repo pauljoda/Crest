@@ -119,7 +119,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored let spaceName: String
     @ObservationIgnored private let findSession = BrowserFindSession()
     @ObservationIgnored lazy var readerModeSession = BrowserReaderModeSession(
-        document: BrowserWebKitReaderModeDocument(webView: webView, translation: translation)
+        document: BrowserContentReaderModeDocument(webView: webView, translation: translation)
     )
     @ObservationIgnored lazy var faviconSession = BrowserFaviconSession(
         document: BrowserWebKitFaviconDocument(webView: webView, profileID: profileID),

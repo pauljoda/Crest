@@ -72,15 +72,38 @@ final class BrowserHTTPAuthenticationSession {
             return .performDefaultHandling
         }
 
-        let rejectedCredential = rejectedCredential(
-            for: protectionSpace,
-            previousFailureCount: challenge.previousFailureCount
-        )
-        if allowsCredentialSaving,
-            challenge.previousFailureCount == 0,
-            protectionSpace.origin.isSecure,
-            let stored = try? await loadCredential(protectionSpace)
-        {
+        let isSecureOrigin = protectionSpace.origin.isSecure
+        let stored: BrowserCredential? =
+            if allowsCredentialSaving, challenge.previousFailureCount == 0, isSecureOrigin {
+                try? await loadCredential(protectionSpace)
+            } else {
+                nil
+            }
+        let attemptedSameProtectionSpace = attemptedProtectionSpace == protectionSpace
+        let plan = try? CrestCore.answer(
+            HttpAuthenticationChallengePlan(
+                allowsCredentialSaving: allowsCredentialSaving,
+                isSecureOrigin: isSecureOrigin,
+                previousFailureCount: challenge.previousFailureCount,
+                hasStoredCredential: stored != nil,
+                attemptedSameProtectionSpace: attemptedSameProtectionSpace,
+                proposedUsername: challenge.proposedUsername,
+                attemptedUsername: attemptedStoredCredential?.descriptor.username
+            ))
+        guard let plan else {
+            authenticationFailed()
+            return .cancel
+        }
+
+        let rejectedCredential: BrowserCredential?
+        if plan.storedCredentialRejected {
+            rejectedCredential = attemptedStoredCredential
+            reset()
+        } else {
+            rejectedCredential = nil
+        }
+
+        if plan.usesStoredCredential, let stored {
             attemptedStoredCredential = stored
             attemptedProtectionSpace = protectionSpace
             pendingSaveRequest = BrowserHTTPAuthenticationSaveRequest(
@@ -98,11 +121,8 @@ final class BrowserHTTPAuthenticationSession {
         let response = await prompt(
             BrowserHTTPAuthenticationPrompt(
                 descriptor: challenge.descriptor,
-                suggestedUsername:
-                    challenge.proposedUsername
-                    ?? rejectedCredential?.descriptor.username,
-                allowsSaving:
-                    allowsCredentialSaving && protectionSpace.origin.isSecure
+                suggestedUsername: plan.suggestedUsername,
+                allowsSaving: plan.allowsSaving
             )
         )
         guard let response else {
@@ -110,19 +130,20 @@ final class BrowserHTTPAuthenticationSession {
             return .cancel
         }
 
-        if allowsCredentialSaving,
-            response.shouldSave,
-            protectionSpace.origin.isSecure
-        {
-            let replacing =
-                rejectedCredential?.descriptor.username == response.username
-                ? rejectedCredential?.descriptor
-                : nil
+        let saveDecision = try? CrestCore.answer(
+            HttpAuthenticationSavePlan(
+                allowsCredentialSaving: allowsCredentialSaving,
+                isSecureOrigin: isSecureOrigin,
+                userRequestedSave: response.shouldSave,
+                submittedUsername: response.username,
+                rejectedUsername: rejectedCredential?.descriptor.username
+            ))
+        if saveDecision?.shouldSave == true {
             pendingSaveRequest = BrowserHTTPAuthenticationSaveRequest(
                 protectionSpace: protectionSpace,
                 username: response.username,
                 password: response.password,
-                replacing: replacing
+                replacing: saveDecision?.replacesRejectedCredential == true ? rejectedCredential?.descriptor : nil
             )
         } else {
             pendingSaveRequest = nil
@@ -133,22 +154,6 @@ final class BrowserHTTPAuthenticationSession {
             username: response.username,
             password: response.password
         )
-    }
-
-    private func rejectedCredential(
-        for protectionSpace: BrowserHTTPAuthenticationProtectionSpace,
-        previousFailureCount: Int
-    ) -> BrowserCredential? {
-        guard previousFailureCount > 0,
-            attemptedProtectionSpace == protectionSpace
-        else {
-            return nil
-        }
-        let rejected = attemptedStoredCredential
-        attemptedStoredCredential = nil
-        attemptedProtectionSpace = nil
-        pendingSaveRequest = nil
-        return rejected
     }
 
     private func credentialResolution(
