@@ -5,7 +5,6 @@ struct TabFaviconView: View {
     var profileID: UUID? = nil
     var size: CGFloat = TabFaviconMetrics.defaultSize
 
-    @State private var renderState = BrowserFaviconRenderState()
     @Environment(\.browserSpaceContentIsLocked) private var isLocked
 
     init(subject: BrowserTabFaviconSubject, profileID: UUID? = nil, size: CGFloat = TabFaviconMetrics.defaultSize) {
@@ -18,11 +17,53 @@ struct TabFaviconView: View {
         let request = subject.renderRequest(
             profileID: profileID, maximumPixelSize: TabFaviconMetrics.maximumDecodedPixelSize(for: size),
             isUnlocked: !isLocked)
+        if let shown = BrowserFaviconShownImages.shared.image(for: request) {
+            TabFaviconContent(
+                subject: subject,
+                size: size,
+                requestIdentity: request.identity,
+                renderedImage: BrowserFaviconRenderedImage(requestIdentity: request.identity, image: shown)
+            )
+            .frame(width: size, height: size)
+            .accessibilityHidden(true)
+        } else if let cached = BrowserFaviconRenderLoader.cachedImage(for: request) {
+            let rendered = Image(decorative: cached, scale: TabFaviconMetrics.renderedImageScale)
+            TabFaviconContent(
+                subject: subject,
+                size: size,
+                requestIdentity: request.identity,
+                renderedImage: BrowserFaviconRenderedImage(requestIdentity: request.identity, image: rendered)
+            )
+            .frame(width: size, height: size)
+            .accessibilityHidden(true)
+        } else if request.payload != nil || request.fallbackPageURL != nil {
+            TabFaviconAsyncView(subject: subject, size: size, request: request)
+        } else {
+            TabFaviconContent(
+                subject: subject,
+                size: size,
+                requestIdentity: request.identity,
+                renderedImage: nil
+            )
+            .frame(width: size, height: size)
+            .accessibilityHidden(true)
+        }
+    }
+}
+
+private struct TabFaviconAsyncView: View {
+    let subject: BrowserTabFaviconSubject
+    let size: CGFloat
+    let request: BrowserFaviconRenderRequest
+
+    @State private var renderState = BrowserFaviconRenderState()
+
+    var body: some View {
         TabFaviconContent(
             subject: subject,
             size: size,
             requestIdentity: request.identity,
-            renderedImage: shownImage(for: request)
+            renderedImage: renderState.renderedImage
         )
         .frame(width: size, height: size)
         .accessibilityHidden(true)
@@ -31,20 +72,9 @@ struct TabFaviconView: View {
         }
     }
 
-    /// The icon this view renders for `request`, or the one an icon view
-    /// drew before for the same image while this one renders its own.
-    private func shownImage(for request: BrowserFaviconRenderRequest) -> BrowserFaviconRenderedImage? {
-        if renderState.renderedImage?.image(matching: request.identity) != nil { return renderState.renderedImage }
-        return BrowserFaviconShownImages.shared.image(for: request).map {
-            BrowserFaviconRenderedImage(requestIdentity: request.identity, image: $0)
-        }
-    }
-
     private func loadRenderedImage(for request: BrowserFaviconRenderRequest) async {
         guard !Task.isCancelled else { return }
         renderState.begin(request.identity, isCancelled: Task.isCancelled)
-        // An icon drawn before is already on screen. The view keeps it as its
-        // own, so it still draws it after the shared images let it go.
         if let shown = BrowserFaviconShownImages.shared.image(for: request) {
             renderState.publish(shown, for: request.identity, isCancelled: Task.isCancelled)
             return

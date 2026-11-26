@@ -1,3 +1,4 @@
+import Observation
 import SwiftUI
 
 /// Draws a folder well below the screen as a block of the height it had
@@ -21,16 +22,6 @@ import SwiftUI
 struct BrowserFolderOffscreenPlaceholder: ViewModifier {
     // MARK: - Types
 
-    /// Raised by a row with work in progress that its view holds, so the
-    /// folders around it stay drawn until the work ends.
-    struct KeepsDrawnKey: PreferenceKey {
-        static let defaultValue = false
-
-        static func reduce(value: inout Bool, nextValue: () -> Bool) {
-            value = value || nextValue()
-        }
-    }
-
     /// What a folder's height follows. A block drawn for one shape is wrong
     /// for any other.
     struct Shape: Equatable {
@@ -47,6 +38,15 @@ struct BrowserFolderOffscreenPlaceholder: ViewModifier {
         let hasBorders: Bool
     }
 
+    // MARK: - Static Variables
+
+    /// Minimum rows inside a folder before replacing it with an offscreen
+    /// placeholder saves more work than the synchronous rebuild hitch when it
+    /// scrolls back into range. Small folders keep their rows cheap to scroll
+    /// past once laid out, whereas tearing them down and rebuilding all rows
+    /// at once stalls a 120 Hz frame.
+    private static let minimumPlaceholderElementCount = 40
+
     // MARK: - Variables
 
     let folder: FolderStateModel
@@ -55,21 +55,25 @@ struct BrowserFolderOffscreenPlaceholder: ViewModifier {
     var isEnabled = true
 
     @Environment(\.browserSidebarVisibleBand) private var band
+    @Environment(\.sidebarFolderHoldScope) private var parentHoldScope
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
     @Environment(\.accessibilityVoiceOverEnabled) private var isVoiceOverEnabled
     @Environment(\.accessibilitySwitchControlEnabled) private var isSwitchControlEnabled
 
     /// The height the folder had when it was last drawn, for the shape it had.
     @State private var drawn: (height: CGFloat, shape: Shape)?
-    /// Whether a row inside has work in progress.
-    @State private var keepsDrawn = false
+    /// Direct ref-counted hold scope for descendants with work in progress,
+    /// avoiding per-row PreferenceKey propagation on every scroll frame.
+    @State private var holdScope = BrowserSidebarFolderHoldScope()
 
     @ViewBuilder
     func body(content: Content) -> some View {
         if let band {
             let shape = shape
+            let isLargeEnoughToRelease = shape.elements.count >= Self.minimumPlaceholderElementCount
             let canLetGo =
-                isEnabled && drawn != nil && !keepsDrawn && !isVoiceOverEnabled && !isSwitchControlEnabled
+                isEnabled && isLargeEnoughToRelease && drawn != nil && !holdScope.isHeld && !isVoiceOverEnabled
+                && !isSwitchControlEnabled
             let drawsPlaceholder = canLetGo && band.slot(for: folder.id).isPlaceholder && drawn?.shape == shape
             Group {
                 if drawsPlaceholder, let drawn {
@@ -80,6 +84,7 @@ struct BrowserFolderOffscreenPlaceholder: ViewModifier {
                 } else {
                     content
                         .environment(\.sidebarFolderIsDrawnAgain, band.slot(for: folder.id).wasLetGo)
+                        .environment(\.sidebarFolderHoldScope, holdScope)
                         .onGeometryChange(for: CGFloat.self) {
                             $0.size.height
                         } action: { height in
@@ -88,7 +93,8 @@ struct BrowserFolderOffscreenPlaceholder: ViewModifier {
                 }
             }
             .transaction(value: drawsPlaceholder) { $0.animation = nil }
-            .onPreferenceChange(KeepsDrawnKey.self) { keepsDrawn = $0 }
+            .onAppear { holdScope.parent = parentHoldScope }
+            .onChange(of: parentHoldScope?.id) { _, _ in holdScope.parent = parentHoldScope }
             .onGeometryChange(for: CGRect.self) {
                 $0.frame(in: BrowserSidebarVisibleBand.contentSpace)
             } action: { frame in
@@ -191,7 +197,57 @@ struct BrowserFolderOffscreenPlaceholder: ViewModifier {
 extension View {
     /// Keeps the folders around this view drawn while `keeps` is true.
     func keepsSidebarFolderDrawn(_ keeps: Bool) -> some View {
-        transformPreference(BrowserFolderOffscreenPlaceholder.KeepsDrawnKey.self) { $0 = $0 || keeps }
+        modifier(BrowserFolderKeepsDrawnModifier(keeps: keeps))
+    }
+}
+
+/// Ref-counted hold state for a folder's placeholder eligibility, chained up
+/// through ancestor folders so rows with pending actions hold every enclosing
+/// folder without propagating a SwiftUI `PreferenceKey` on every layout pass.
+@Observable
+@MainActor
+final class BrowserSidebarFolderHoldScope: Identifiable {
+    let id = UUID()
+    @ObservationIgnored weak var parent: BrowserSidebarFolderHoldScope?
+    private(set) var isHeld = false
+    @ObservationIgnored private var count = 0
+
+    func acquire() {
+        count += 1
+        if count == 1 { isHeld = true }
+        parent?.acquire()
+    }
+
+    func release() {
+        guard count > 0 else { return }
+        count -= 1
+        if count == 0 { isHeld = false }
+        parent?.release()
+    }
+}
+
+private struct BrowserFolderKeepsDrawnModifier: ViewModifier {
+    let keeps: Bool
+
+    @Environment(\.sidebarFolderHoldScope) private var scope
+    @State private var isAcquired = false
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: keeps, initial: true) { _, next in
+                guard next != isAcquired else { return }
+                isAcquired = next
+                if next {
+                    scope?.acquire()
+                } else {
+                    scope?.release()
+                }
+            }
+            .onDisappear {
+                guard isAcquired else { return }
+                isAcquired = false
+                scope?.release()
+            }
     }
 }
 
@@ -199,4 +255,7 @@ extension EnvironmentValues {
     /// Whether the folder group under it is drawn again after a block stood
     /// in for it, so it draws what it holds at once.
     @Entry var sidebarFolderIsDrawnAgain = false
+
+    /// The nearest enclosing folder's offscreen-placeholder hold scope.
+    @Entry var sidebarFolderHoldScope: BrowserSidebarFolderHoldScope? = nil
 }

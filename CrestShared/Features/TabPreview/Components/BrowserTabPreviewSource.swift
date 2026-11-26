@@ -13,13 +13,20 @@ struct BrowserTabPreviewSource: ViewModifier {
 
     let subject: BrowserTabPreviewSubject
     let context: BrowserSidebarListContext?
+    /// External pointer-hover state supplied by a row that already installs its
+    /// own `.onHover`, avoiding duplicate tracking areas per row.
+    var externalPointerOver: Bool? = nil
 
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction: BrowserSidebarInteractionState?
     @Environment(\.browserTabPreviewState) private var previewOverride
-    @State private var isPointerOver = false
+    @State private var internalPointerOver = false
     /// The tab or folder as it was reported entered, until it is reported
     /// left.
     @State private var entered: BrowserTabPreviewKey?
+
+    private var isPointerOver: Bool {
+        externalPointerOver ?? internalPointerOver
+    }
 
     /// The preview this row reports to: its window's, or a folder card's own
     /// for the rows that card lists.
@@ -48,7 +55,12 @@ struct BrowserTabPreviewSource: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .onHover { isPointerOver = $0 }
+            .modifier(
+                BrowserTabPreviewHoverTracker(
+                    isEnabled: externalPointerOver == nil,
+                    isPointerOver: $internalPointerOver
+                )
+            )
             .background {
                 if isRested {
                     GeometryReader { proxy in
@@ -62,6 +74,9 @@ struct BrowserTabPreviewSource: ViewModifier {
                             .onChange(of: isRestedByKeyboard) { report(frame) }
                     }
                 }
+            }
+            .onChange(of: subject.item) { _, _ in
+                leave()
             }
             .onChange(of: isRested) { _, isRested in
                 if !isRested { leave() }
@@ -111,21 +126,61 @@ extension EnvironmentValues {
 extension View {
     /// Reports this row or tile of `subject` to the window's tab preview.
     func browserTabPreviewSource(
-        _ subject: BrowserTabPreviewSubject, in context: BrowserSidebarListContext?
+        _ subject: BrowserTabPreviewSubject,
+        in context: BrowserSidebarListContext?,
+        isPointerOver: Bool? = nil
     ) -> some View {
-        modifier(BrowserTabPreviewSource(subject: subject, context: context))
+        modifier(
+            BrowserTabPreviewSource(
+                subject: subject,
+                context: context,
+                externalPointerOver: isPointerOver
+            )
+        )
     }
 
     /// Gives VoiceOver what a preview card adds about `tab`: its site, and
-    /// when it was last viewed.
+    /// when it was last viewed. Only evaluates domain parsing and relative-date
+    /// formatting while assistive technology is active.
     func browserTabPreviewAccessibility(_ tab: TabStateModel) -> some View {
-        self
-            .accessibilityCustomContent(
-                AccessibilityCustomContentKey("Site"),
-                tab.address.map { Text(BrowserAddressPresentation($0.absoluteString).domain) }
-            )
-            .accessibilityCustomContent(
-                AccessibilityCustomContentKey("Last viewed"),
-                Text(tab.lastActivatedAt, format: .relative(presentation: .named, unitsStyle: .wide)))
+        modifier(BrowserTabPreviewAccessibilityModifier(tab: tab))
+    }
+}
+
+private struct BrowserTabPreviewHoverTracker: ViewModifier {
+    let isEnabled: Bool
+    @Binding var isPointerOver: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content.onHover { isPointerOver = $0 }
+        } else {
+            content
+        }
+    }
+}
+
+private struct BrowserTabPreviewAccessibilityModifier: ViewModifier {
+    let tab: TabStateModel
+
+    @Environment(\.accessibilityVoiceOverEnabled) private var isVoiceOverEnabled
+    @Environment(\.accessibilitySwitchControlEnabled) private var isSwitchControlEnabled
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isVoiceOverEnabled || isSwitchControlEnabled {
+            content
+                .accessibilityCustomContent(
+                    AccessibilityCustomContentKey("Site"),
+                    tab.address.map { Text(BrowserAddressPresentation($0.absoluteString).domain) }
+                )
+                .accessibilityCustomContent(
+                    AccessibilityCustomContentKey("Last viewed"),
+                    Text(tab.lastActivatedAt, format: .relative(presentation: .named, unitsStyle: .wide))
+                )
+        } else {
+            content
+        }
     }
 }

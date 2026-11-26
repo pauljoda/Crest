@@ -15,36 +15,39 @@ struct BrowserTabStatusSurfaces: View {
     /// The tab's page, where the host can read it.
     let tab: BrowserTabStatusSource?
     let style: BrowserTabStatusSurfaceStyle
+    var precomputedMarks: [BrowserTabStatusMark]? = nil
 
     @State private var iconPalette: BrowserFaviconPalette?
 
     var body: some View {
         if let tab {
-            let marks = BrowserTabStatus.marks(of: tab)
-            let surfaces = marks.compactMap(\.surface)
-            let outline = marks.first { $0.surface?.outlineWidth != nil }
-            let shape = RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous)
-            let drawsEqualizer =
-                surfaces.contains(where: \.drawsEqualizer)
-                && BrowserDeviceAppearanceStore.shared.tabs.showsAudioVisualizer
-            ZStack {
-                if drawsEqualizer {
-                    BrowserTabEqualizer(
-                        color: barColor(of: tab).opacity(style.barOpacity), spectrum: tab.audioSpectrum
-                    )
-                    .clipShape(shape)
+            let marks = precomputedMarks ?? BrowserTabStatus.marks(of: tab)
+            if !marks.isEmpty {
+                let surfaces = marks.compactMap(\.surface)
+                let outline = marks.first { $0.surface?.outlineWidth != nil }
+                let shape = RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous)
+                let drawsEqualizer =
+                    surfaces.contains(where: \.drawsEqualizer)
+                    && BrowserDeviceAppearanceStore.shared.tabs.showsAudioVisualizer
+                ZStack {
+                    if drawsEqualizer {
+                        BrowserTabEqualizer(
+                            color: barColor(of: tab).opacity(style.barOpacity), spectrum: tab.audioSpectrum
+                        )
+                        .clipShape(shape)
+                    }
+                    if let outline, let width = outline.surface?.outlineWidth {
+                        shape.strokeBorder(outline.tint, lineWidth: width)
+                    }
                 }
-                if let outline, let width = outline.surface?.outlineWidth {
-                    shape.strokeBorder(outline.tint, lineWidth: width)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+                .task(id: drawsEqualizer ? tab.favicon?.identity : nil) {
+                    guard drawsEqualizer, let favicon = tab.favicon else { return }
+                    let palette = await BrowserFaviconPaletteLoader.shared.palette(for: favicon.data)
+                    guard !Task.isCancelled else { return }
+                    iconPalette = palette
                 }
-            }
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-            .task(id: drawsEqualizer ? tab.favicon?.identity : nil) {
-                guard drawsEqualizer, let favicon = tab.favicon else { return }
-                let palette = await BrowserFaviconPaletteLoader.shared.palette(for: favicon.data)
-                guard !Task.isCancelled else { return }
-                iconPalette = palette
             }
         }
     }

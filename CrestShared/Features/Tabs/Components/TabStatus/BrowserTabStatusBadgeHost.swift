@@ -20,6 +20,10 @@ extension EnvironmentValues {
     /// Whether a status shows in place of a tab's favicon, so the favicon
     /// steps aside.
     @Entry var tabFaviconIsReplaced = false
+
+    /// Whether the enclosing status host actually needs the favicon's anchor
+    /// bounds (true only while a tab carries an active status mark).
+    @Entry var tabFaviconNeedsBounds = false
 }
 
 /// Shows the first status a tab's page is in, in the order the statuses list
@@ -37,31 +41,47 @@ struct BrowserTabStatusBadgeHost: ViewModifier {
     /// Where the badge hangs when it sits beside the favicon.
     var anchor = BrowserTabStatusBadgeAnchor.favicon
 
+    /// Optional precomputed marks so a row drawing both badge and surface does
+    /// not evaluate `BrowserTabStatus.marks(of:)` twice per body pass.
+    var precomputedMarks: [BrowserTabStatusMark]? = nil
+
     private var iconScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
+    @ViewBuilder
     func body(content: Content) -> some View {
-        let mark = tab.flatMap { BrowserTabStatus.marks(of: $0).first }
-        let replacesIcon = BrowserDeviceAppearanceStore.shared.tabs.statusStyle == .icon
-        content
-            .environment(\.tabFaviconBadgeIsTaken, mark != nil && !replacesIcon && anchor.takesFaviconCorner)
-            .environment(\.tabFaviconIsReplaced, mark != nil && replacesIcon)
-            .overlayPreferenceValue(TabFaviconBoundsKey.self) { iconBounds in
-                if let iconBounds, let mark, let tab {
-                    GeometryReader { proxy in
-                        let icon = proxy[iconBounds]
-                        let scale = BrowserSidebarDensity(iconScale).contentScale
-                        if replacesIcon {
-                            BrowserTabStatusBadge(mark: mark, tab: tab, diameter: min(icon.width, icon.height))
-                                .position(x: icon.midX, y: icon.midY)
-                        } else {
-                            let diameter = BrowserTabStatusBadge.diameter * scale
-                            BrowserTabStatusBadge(mark: mark, tab: tab, diameter: diameter)
-                                .position(
-                                    anchor.center(
-                                        icon, proxy.size, diameter, scale, BrowserSidebarMetrics.layerCornerRadius()))
+        let mark =
+            if let precomputedMarks {
+                precomputedMarks.first
+            } else {
+                tab.flatMap { BrowserTabStatus.marks(of: $0).first }
+            }
+        if let mark, let tab {
+            let replacesIcon = BrowserDeviceAppearanceStore.shared.tabs.statusStyle == .icon
+            content
+                .environment(\.tabFaviconBadgeIsTaken, !replacesIcon && anchor.takesFaviconCorner)
+                .environment(\.tabFaviconIsReplaced, replacesIcon)
+                .environment(\.tabFaviconNeedsBounds, true)
+                .overlayPreferenceValue(TabFaviconBoundsKey.self) { iconBounds in
+                    if let iconBounds {
+                        GeometryReader { proxy in
+                            let icon = proxy[iconBounds]
+                            let scale = BrowserSidebarDensity(iconScale).contentScale
+                            if replacesIcon {
+                                BrowserTabStatusBadge(mark: mark, tab: tab, diameter: min(icon.width, icon.height))
+                                    .position(x: icon.midX, y: icon.midY)
+                            } else {
+                                let diameter = BrowserTabStatusBadge.diameter * scale
+                                BrowserTabStatusBadge(mark: mark, tab: tab, diameter: diameter)
+                                    .position(
+                                        anchor.center(
+                                            icon, proxy.size, diameter, scale,
+                                            BrowserSidebarMetrics.layerCornerRadius()))
+                            }
                         }
                     }
                 }
-            }
+        } else {
+            content
+        }
     }
 }
