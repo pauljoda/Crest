@@ -47,7 +47,6 @@ struct BrowserTabStatusBadgeHost: ViewModifier {
 
     private var iconScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
 
-    @ViewBuilder
     func body(content: Content) -> some View {
         let mark =
             if let precomputedMarks {
@@ -55,33 +54,30 @@ struct BrowserTabStatusBadgeHost: ViewModifier {
             } else {
                 tab.flatMap { BrowserTabStatus.marks(of: $0).first }
             }
-        if let mark, let tab {
-            let replacesIcon = BrowserDeviceAppearanceStore.shared.tabs.statusStyle == .icon
-            content
-                .environment(\.tabFaviconBadgeIsTaken, !replacesIcon && anchor.takesFaviconCorner)
-                .environment(\.tabFaviconIsReplaced, replacesIcon)
-                .environment(\.tabFaviconNeedsBounds, true)
-                .overlayPreferenceValue(TabFaviconBoundsKey.self) { iconBounds in
-                    if let iconBounds {
-                        GeometryReader { proxy in
-                            let icon = proxy[iconBounds]
-                            let scale = BrowserSidebarDensity(iconScale).contentScale
-                            if replacesIcon {
-                                BrowserTabStatusBadge(mark: mark, tab: tab, diameter: min(icon.width, icon.height))
-                                    .position(x: icon.midX, y: icon.midY)
-                            } else {
-                                let diameter = BrowserTabStatusBadge.diameter * scale
-                                BrowserTabStatusBadge(mark: mark, tab: tab, diameter: diameter)
-                                    .position(
-                                        anchor.center(
-                                            icon, proxy.size, diameter, scale,
-                                            BrowserSidebarMetrics.layerCornerRadius()))
-                            }
+        let hasActiveBadge = mark != nil && tab != nil
+        let replacesIcon = hasActiveBadge && BrowserDeviceAppearanceStore.shared.tabs.statusStyle == .icon
+        content
+            .environment(\.tabFaviconBadgeIsTaken, hasActiveBadge && !replacesIcon && anchor.takesFaviconCorner)
+            .environment(\.tabFaviconIsReplaced, replacesIcon)
+            .environment(\.tabFaviconNeedsBounds, hasActiveBadge)
+            .overlayPreferenceValue(TabFaviconBoundsKey.self) { iconBounds in
+                if let mark, let tab, let iconBounds {
+                    GeometryReader { proxy in
+                        let icon = proxy[iconBounds]
+                        let scale = BrowserSidebarDensity(iconScale).contentScale
+                        if replacesIcon {
+                            BrowserTabStatusBadge(mark: mark, tab: tab, diameter: min(icon.width, icon.height))
+                                .position(x: icon.midX, y: icon.midY)
+                        } else {
+                            let diameter = BrowserTabStatusBadge.diameter * scale
+                            BrowserTabStatusBadge(mark: mark, tab: tab, diameter: diameter)
+                                .position(
+                                    anchor.center(
+                                        icon, proxy.size, diameter, scale,
+                                        BrowserSidebarMetrics.layerCornerRadius()))
                         }
                     }
                 }
-        } else {
-            content
-        }
+            }
     }
 }

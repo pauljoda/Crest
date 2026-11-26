@@ -23,6 +23,7 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     @State private var scrollRegionID = UUID()
+    @State private var lastScrollContentOrigin: CGPoint?
 
     var body: some View {
         GeometryReader { geometry in
@@ -53,10 +54,7 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                             .onGeometryChange(for: CGPoint.self) { proxy in
                                 proxy.frame(in: BrowserSidebarReorderSpace.globalSpace).origin
                             } action: { origin in
-                                sidebarInteraction.sidebarReorderState.register(
-                                    scrollContentOrigin: origin,
-                                    for: scrollRegionID
-                                )
+                                handleScrollContentOriginChange(origin)
                             }
                             .allowsHitTesting(false)
                             .accessibilityHidden(true)
@@ -109,6 +107,21 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                 }
             }
         }
+    }
+
+    /// Forwards live scroll-origin changes and lift-time scroll movement to
+    /// the reorder state so frozen-origin hit testing stays aligned while
+    /// scrolling during a lift.
+    private func handleScrollContentOriginChange(_ origin: CGPoint) {
+        let reorderState = sidebarInteraction.sidebarReorderState
+        reorderState.register(scrollContentOrigin: origin, for: scrollRegionID)
+        if let previous = lastScrollContentOrigin, reorderState.isDragging {
+            let visualOffset = origin.y - previous.y
+            if visualOffset != 0 {
+                reorderState.scrollableContentDidMove(in: scrollRegionID, by: visualOffset)
+            }
+        }
+        lastScrollContentOrigin = origin
     }
 
     /// Where the page the window shows would grow out of, which reads only the

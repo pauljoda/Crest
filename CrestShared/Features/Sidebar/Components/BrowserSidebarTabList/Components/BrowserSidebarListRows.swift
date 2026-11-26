@@ -296,6 +296,7 @@ private struct BrowserSidebarRecycledTabRun: View {
         let liftedIndices: [Int]
         let liftOwnerIndex: Int?
         let gapAnchorIndex: Int?
+        let gapInsertsBeforeAnchor: Bool
         let gapHeight: CGFloat
 
         static let idle = DragProjection(
@@ -303,6 +304,7 @@ private struct BrowserSidebarRecycledTabRun: View {
             liftedIndices: [],
             liftOwnerIndex: nil,
             gapAnchorIndex: nil,
+            gapInsertsBeforeAnchor: false,
             gapHeight: 0
         )
 
@@ -318,8 +320,27 @@ private struct BrowserSidebarRecycledTabRun: View {
             for lifted in liftedIndices where lifted < index {
                 liftedBefore += 1
             }
-            let gapBefore: CGFloat = (gapAnchorIndex.map { index > $0 } ?? false) ? gapHeight : 0
+            let shiftsForGap =
+                gapAnchorIndex.map { gapInsertsBeforeAnchor ? index >= $0 : index > $0 } ?? false
+            let gapBefore: CGFloat = shiftsForGap ? gapHeight : 0
             return CGFloat(index - liftedBefore) * rowStride + gapBefore
+        }
+
+        /// Converts a projected visible row position (after lifted rows collapse)
+        /// back to the corresponding item index so lifted rows above the viewport
+        /// never starve visible destination rows below.
+        func itemIndex(forProjectedRow projectedRow: Int, itemCount: Int) -> Int {
+            guard isActive, !liftedIndices.isEmpty else { return projectedRow }
+            if projectedRow <= 0 { return projectedRow }
+            var index = projectedRow
+            for lifted in liftedIndices {
+                if lifted <= index {
+                    index += 1
+                } else {
+                    break
+                }
+            }
+            return min(index, max(0, itemCount - 1))
         }
     }
 
@@ -361,7 +382,7 @@ private struct BrowserSidebarRecycledTabRun: View {
             poolSize: effectivePool,
             localMinY: localMinY,
             isNearViewport: isNearViewport,
-            liftOwnerIndex: projection.liftOwnerIndex
+            projection: projection
         )
         let _ = reorderState?.updateVirtualRunVisibleIndices(
             assignment.visibleRange,
@@ -471,10 +492,11 @@ private struct BrowserSidebarRecycledTabRun: View {
         poolSize: Int,
         localMinY: CGFloat,
         isNearViewport: Bool,
-        liftOwnerIndex: Int?
+        projection: DragProjection
     ) -> (slots: [Int?], overflow: Int?, visibleRange: Range<Int>) {
         var slots = [Int?](repeating: nil, count: poolSize)
         var overflow: Int?
+        let liftOwnerIndex = projection.liftOwnerIndex
         let pinnedSlot = liftOwnerIndex.map { $0 % poolSize }
         if let liftOwnerIndex, let pinnedSlot {
             slots[pinnedSlot] = liftOwnerIndex
@@ -483,7 +505,8 @@ private struct BrowserSidebarRecycledTabRun: View {
             return (slots, overflow, 0..<0)
         }
         let windowCount = min(items.count, poolSize)
-        let idealStart = Int(floor(localMinY / rowStride)) - Self.overscanRows
+        let projectedStart = Int(floor(localMinY / rowStride)) - Self.overscanRows
+        let idealStart = projection.itemIndex(forProjectedRow: projectedStart, itemCount: items.count)
         let maxStart = max(0, items.count - windowCount)
         let windowStart = min(max(0, idealStart), maxStart)
         let windowEnd = windowStart + windowCount - 1
@@ -506,6 +529,7 @@ private struct BrowserSidebarRecycledTabRun: View {
         var liftedIndices: [Int] = []
         var liftOwnerIndex: Int?
         var gapAnchorIndex: Int?
+        var gapInsertsBeforeAnchor = false
         for index in items.indices {
             let itemID = items[index].id
             if state.isLifted(itemID) {
@@ -516,8 +540,16 @@ private struct BrowserSidebarRecycledTabRun: View {
             }
             if let gapAnchor {
                 switch gapAnchor {
-                case .before(let id), .after(let id):
-                    if id == itemID { gapAnchorIndex = index }
+                case .before(let id):
+                    if id == itemID {
+                        gapAnchorIndex = index
+                        gapInsertsBeforeAnchor = true
+                    }
+                case .after(let id):
+                    if id == itemID {
+                        gapAnchorIndex = index
+                        gapInsertsBeforeAnchor = false
+                    }
                 case .emptySection:
                     break
                 }
@@ -528,6 +560,7 @@ private struct BrowserSidebarRecycledTabRun: View {
             liftedIndices: liftedIndices,
             liftOwnerIndex: liftOwnerIndex,
             gapAnchorIndex: gapAnchorIndex,
+            gapInsertsBeforeAnchor: gapInsertsBeforeAnchor,
             gapHeight: state.layout.gapHeight
         )
     }

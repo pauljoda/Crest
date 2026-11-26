@@ -36,6 +36,15 @@ struct BrowserSidebarTabActivationButton: View {
         .frame(maxWidth: .infinity, maxHeight: maxHeight)
         .contentShape(.rect)
         .onTapGesture(perform: select)
+        .focusable(interactions: .activate)
+        .onKeyPress(.space) {
+            select()
+            return .handled
+        }
+        .onKeyPress(.return) {
+            select()
+            return .handled
+        }
         #if os(macOS)
             .modifier(
                 BrowserSavedTabDoubleClickRestore(

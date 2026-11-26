@@ -204,7 +204,9 @@ final class BrowserSidebarReorderState {
         if needsLandingMeasurement, var preview = landingPreview,
             run.space == preview.item.spaceAssignment,
             landingSection == nil || landingSection == run.section,
-            let resolved = geometry.row(preview.item.id, in: run.space)?.row,
+            let resolved = run.itemIndexByID[preview.item.id].map({
+                geometry.globalRow(run.row(at: $0), scrollRegionID: run.scrollRegionID, isContentRelative: true)
+            }),
             !resolved.frame.isEmpty,
             preview.landing?.frame != resolved.frame, preview.landing?.isRevealing != true
         {
