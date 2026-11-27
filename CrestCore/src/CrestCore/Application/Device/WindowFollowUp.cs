@@ -3,13 +3,15 @@ namespace CrestCore.Application;
 /// What a session command chose for the window that issued it to show next:
 /// the Space to move to, the tab to show in each Space whose shown tab it
 /// changed (null to show none), the tabs it dismissed, which that window's
-/// history forgets, and the tabs other windows gave up to it. The device
-/// applies it when the command commits; other windows are only repaired.
+/// history forgets, the tabs it opened behind the one it shows, and the tabs
+/// other windows gave up to it. The device applies it when the command
+/// commits; other windows are only repaired.
 internal sealed class WindowFollowUp(Window? window) {
     #region Variables
 
     private readonly Dictionary<Guid, Guid?> tabs = [];
     private readonly List<(Guid SpaceId, Guid TabId)> dismissed = [];
+    private readonly List<(Guid SpaceId, Guid TabId)> behind = [];
     private readonly List<(Guid WindowId, Guid SpaceId, Guid TabId)> departed = [];
 
     /// The window that issued the command, as the command read it; null for a
@@ -18,6 +20,10 @@ internal sealed class WindowFollowUp(Window? window) {
     public Guid? SpaceId { get; private set; }
     public IReadOnlyDictionary<Guid, Guid?> Tabs => tabs;
     public IReadOnlyList<(Guid SpaceId, Guid TabId)> Dismissed => dismissed;
+
+    /// The tabs the command opened behind the tab the window shows in their
+    /// Space, which remember it as their opener; see `Window.OpenBehind`.
+    public IReadOnlyList<(Guid SpaceId, Guid TabId)> Behind => behind;
 
     /// The tabs another window gave up to the window that issued the command,
     /// which that window's recent tabs forget.
@@ -37,6 +43,11 @@ internal sealed class WindowFollowUp(Window? window) {
     public WindowFollowUp ShowTab(Guid spaceId, Guid? tabId) {
         if (Window?.Tab(spaceId) == tabId) tabs.Remove(spaceId);
         else tabs[spaceId] = tabId;
+        return this;
+    }
+
+    public WindowFollowUp OpenBehind(Guid spaceId, Guid tabId) {
+        behind.Add((spaceId, tabId));
         return this;
     }
 
@@ -60,6 +71,12 @@ internal sealed class WindowFollowUp(Window? window) {
         Dismiss(spaceId, tabId);
         return shown.DismissalFallback(spaceId, tabId, available);
     }
+
+    /// The tabs the window opened behind the same tab as `tabId` and has not
+    /// shown since, when it would go back to that tab, `returnsTo`: see
+    /// `Window.UnvisitedSiblings`. None for a command issued without a window.
+    public IReadOnlySet<Guid> UnvisitedSiblings(Guid spaceId, Guid tabId, Guid? returnsTo, IReadOnlySet<Guid> available) =>
+        Window?.UnvisitedSiblings(spaceId, tabId, returnsTo, available) ?? new HashSet<Guid>();
 
     /// The tab to show in `spaceId` after the tabs `tabIds` leave it together:
     /// see `Window.DismissalFallback`. Only a window that shows one of them
