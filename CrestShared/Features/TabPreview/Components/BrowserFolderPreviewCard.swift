@@ -32,6 +32,10 @@ struct BrowserFolderPreviewCard: View {
     /// offers none.
     let menu: BrowserFolderOrganizationMenu?
 
+    #if os(macOS)
+        @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction:
+            BrowserSidebarInteractionState?
+    #endif
     @Environment(\.browserInteractionCapabilities) private var capabilities
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.browserTabPreviewOpeningTime) private var openingTime
@@ -158,9 +162,22 @@ struct BrowserFolderPreviewCard: View {
 
     /// Whether the sidebar shows no row of `tab`, so the card's row can stand
     /// in for it in the sidebar's reorder layout: the folder is collapsed, and
-    /// the tab isn't the one shown, which a collapsed folder may keep in view.
+    /// the tab is neither the one shown nor kept visible by the collapsed folder.
     private func isHiddenInSidebar(_ tab: TabStateModel) -> Bool {
-        folder.isCollapsed && !context.window.shownTabIDs.contains(tab.id)
+        guard folder.isCollapsed, !context.window.shownTabIDs.contains(tab.id) else { return false }
+        #if os(macOS)
+            guard let sidebarInteraction else { return true }
+            let keptTabIDs = sidebarInteraction.collapsedFolderVisibility(
+                for: BrowserFolderRuntimeAssignment(
+                    folderID: folder.id,
+                    spaceID: context.space.id,
+                    profileID: context.space.profileID
+                )
+            ).state.keptTabIDs
+            return !keptTabIDs.contains(tab.id)
+        #else
+            return true
+        #endif
     }
 
     // MARK: - Actions - Choosing

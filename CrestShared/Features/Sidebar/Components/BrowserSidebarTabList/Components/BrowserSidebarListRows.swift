@@ -503,7 +503,6 @@ private struct BrowserSidebarRecycledTabRun: View {
             placement: firstTab.placement,
             folderID: firstTab.folderID
         )
-        let capturedContext = context
         reorderState.register(
             virtualRun: BrowserSidebarReorderGeometry.VirtualRowRun(
                 id: virtualRunID,
@@ -514,20 +513,7 @@ private struct BrowserSidebarRecycledTabRun: View {
                 rowStride: rowStride,
                 itemIDs: itemIDs,
                 itemIndexByID: indexByID,
-                visibleIndices: visibleRange,
-                auxiliaryClick: { tabID in
-                    guard let tab = capturedContext.space.tabs.model(tabID) else { return }
-                    let configuration = BrowserSidebarTabRowConfiguration(
-                        tab: tab,
-                        context: capturedContext,
-                        isSelected: capturedContext.window.shownTabIDs.contains(tabID),
-                        isLoaded: capturedContext.isLoaded(tabID),
-                        isSplitGroupMember: false,
-                        spacePresentation: nil
-                    )
-                    guard configuration.isCurrentAndUnlocked else { return }
-                    BrowserTabMiddleClickAction(for: tab.placement).perform(on: configuration)
-                }
+                visibleIndices: visibleRange
             )
         )
     }

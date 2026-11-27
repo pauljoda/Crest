@@ -262,8 +262,10 @@ private struct BrowserSidebarCurrentTabNestTarget: ViewModifier {
 }
 
 /// Reuses the tab row's already-measured reorder frame for multi-selection and
-/// middle-click hit testing inside a sidebar, avoiding duplicate geometry
-/// observers and per-row AppKit gesture bridges during scrolling.
+/// middle-click hit testing inside a scrolling sidebar list, avoiding duplicate
+/// geometry observers and per-row AppKit gesture bridges during scrolling.
+/// Rows drawn outside the scrolling sidebar list (such as a folder preview
+/// card) attach their own selection and auxiliary-click modifiers directly.
 private struct BrowserSidebarTabRowContainerHitTargets: ViewModifier {
     let tabID: UUID
     let browser: BrowserStore
@@ -273,55 +275,28 @@ private struct BrowserSidebarTabRowContainerHitTargets: ViewModifier {
     let isSelectionEnabled: Bool
     let dismissFromAuxiliaryClick: @MainActor () -> Void
 
-    @Environment(\.browserSidebarUsesVirtualRowGeometry) private var usesVirtualRowGeometry
+    @Environment(\.browserSidebarScrollContentSpace) private var scrollContentSpace
+    @State private var owner = UUID()
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if joinsReorder, usesVirtualRowGeometry {
+        if joinsReorder, scrollContentSpace != nil {
             content
                 .onChange(of: isSelectionEnabled, initial: true) { _, enabled in
-                    if !enabled {
-                        state.setRowSelectionDisabled(true, for: .tab(tabID), in: assignment)
-                    } else {
-                        state.setRowSelectionDisabled(false, for: .tab(tabID), in: assignment)
-                    }
+                    state.setRowSelectionDisabled(!enabled, for: .tab(tabID), in: assignment, owner: owner)
                 }
                 .onChange(of: tabID) { oldTabID, newTabID in
-                    guard !isSelectionEnabled else { return }
-                    state.setRowSelectionDisabled(false, for: .tab(oldTabID), in: assignment)
-                    state.setRowSelectionDisabled(true, for: .tab(newTabID), in: assignment)
-                }
-                .onDisappear {
-                    if !isSelectionEnabled {
-                        state.setRowSelectionDisabled(false, for: .tab(tabID), in: assignment)
-                    }
-                }
-        } else if joinsReorder {
-            content
-                .onAppear {
-                    state.setRowAuxiliaryClick(dismissFromAuxiliaryClick, for: .tab(tabID), in: assignment)
-                    if !isSelectionEnabled {
-                        state.setRowSelectionDisabled(true, for: .tab(tabID), in: assignment)
-                    }
-                }
-                .onChange(of: tabID) { oldTabID, newTabID in
-                    state.setRowAuxiliaryClick(nil, for: .tab(oldTabID), in: assignment)
-                    state.setRowSelectionDisabled(false, for: .tab(oldTabID), in: assignment)
-                    state.setRowAuxiliaryClick(dismissFromAuxiliaryClick, for: .tab(newTabID), in: assignment)
-                    state.setRowSelectionDisabled(!isSelectionEnabled, for: .tab(newTabID), in: assignment)
+                    state.setRowSelectionDisabled(false, for: .tab(oldTabID), in: assignment, owner: owner)
+                    state.setRowSelectionDisabled(
+                        !isSelectionEnabled, for: .tab(newTabID), in: assignment, owner: owner)
                 }
                 .onChange(of: assignment) { oldAssignment, newAssignment in
-                    state.setRowAuxiliaryClick(nil, for: .tab(tabID), in: oldAssignment)
-                    state.setRowSelectionDisabled(false, for: .tab(tabID), in: oldAssignment)
-                    state.setRowAuxiliaryClick(dismissFromAuxiliaryClick, for: .tab(tabID), in: newAssignment)
-                    state.setRowSelectionDisabled(!isSelectionEnabled, for: .tab(tabID), in: newAssignment)
-                }
-                .onChange(of: isSelectionEnabled) { _, enabled in
-                    state.setRowSelectionDisabled(!enabled, for: .tab(tabID), in: assignment)
+                    state.setRowSelectionDisabled(false, for: .tab(tabID), in: oldAssignment, owner: owner)
+                    state.setRowSelectionDisabled(
+                        !isSelectionEnabled, for: .tab(tabID), in: newAssignment, owner: owner)
                 }
                 .onDisappear {
-                    state.setRowAuxiliaryClick(nil, for: .tab(tabID), in: assignment)
-                    state.setRowSelectionDisabled(false, for: .tab(tabID), in: assignment)
+                    state.setRowSelectionDisabled(false, for: .tab(tabID), in: assignment, owner: owner)
                 }
         } else {
             content
