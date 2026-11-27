@@ -3,7 +3,7 @@
     {
       "id": "palette-keeps-keys-typed-right-away",
       "category": "fixed",
-      "message": "Everything you type straight after Command-T or Command-L lands in the command palette, in order. The first letters no longer go missing or get replaced by the next one.",
+      "message": "When Command-T or Command-L opens the command palette, everything you type straight after lands in it, in order. The first letters no longer go missing or get replaced by the next one.",
       "platforms": ["mac"]
     },
     {

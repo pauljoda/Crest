@@ -76,7 +76,7 @@ final class BrowserCommandPaletteModel {
     @ObservationIgnored private var shownSequence = 0
     @ObservationIgnored private var answerTask: Task<Void, Never>?
     /// A key pressed before the answer to what was typed arrived, and the
-    /// wait that runs it on the rows already shown.
+    /// wait after which the palette asks for that answer on the main thread.
     @ObservationIgnored private var waitingKey: (() -> Void)?
     @ObservationIgnored private var keyWaitTask: Task<Void, Never>?
     /// Where the pointer last stood over the palette, in window coordinates,
@@ -234,6 +234,8 @@ final class BrowserCommandPaletteModel {
     // MARK: - Actions - Completion
 
     func updateCompletionEditing(text: String, selection: NSRange, isComposing: Bool) {
+        // A key pressed for the text before this edit never acts on the answer to it.
+        if !isComposing, text != query { dropWaitingKey() }
         let couldPropose = completionEditing.canPropose(for: query)
         completionEditing.update(text: text, selection: selection, isComposing: isComposing)
         if !isComposing { query = text }
@@ -309,7 +311,8 @@ final class BrowserCommandPaletteModel {
     /// The answer comes off the main thread; after a short wait the palette
     /// asks for it on the main thread instead, so a key never acts on rows
     /// that answer an earlier keystroke, such as the search for half a typed
-    /// address.
+    /// address. A key whose text has no answer, or that the person typed past,
+    /// does nothing.
     private func waitForAnswer(_ key: @escaping () -> Void) {
         guard shownSequence != sequence else {
             key()
@@ -319,11 +322,18 @@ final class BrowserCommandPaletteModel {
         keyWaitTask?.cancel()
         keyWaitTask = Task { [weak self] in
             try? await Task.sleep(for: Self.keyWait)
-            guard !Task.isCancelled, let self, waitingKey != nil,
-                let answer = try? browser.core.query(question(for: query))
-            else { return }
+            guard !Task.isCancelled, let self, waitingKey != nil else { return }
+            guard let answer = try? browser.core.query(question(for: query)) else {
+                dropWaitingKey()
+                return
+            }
             show(answer, for: sequence)
         }
+    }
+
+    private func dropWaitingKey() {
+        keyWaitTask?.cancel()
+        waitingKey = nil
     }
 
     private func runWaitingKey() {
