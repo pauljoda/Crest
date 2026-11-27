@@ -9,7 +9,9 @@ namespace CrestCore.Contracts;
 /// the tab shows `ReturnTabId` next while the Space holds it, as a tab going
 /// back past its first page returns to the tab that opened it, and otherwise
 /// returns to the tab it showed before, or to the tab beside it in the
-/// sidebar when none it showed before is left. Refused with `LastStartPage` for the
+/// sidebar when none it showed before is left. A tab the window opened behind
+/// the tab it would return to first gives way to the nearest tab opened
+/// behind it too that the window has not shown yet. Refused with `LastStartPage` for the
 /// Start Page when it is its Space's only tab, which leaves only the window
 /// to close.
 public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid TabId, Guid? ReturnTabId = null)
@@ -48,7 +50,8 @@ public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Gui
                 SavedImages = restoresImage ? [new(tab.Id, TabSavedImageChange.Restore, tab.State.SavedFaviconUrl)] : null
             };
         } else {
-            var fallback = Fallback(followUp, space, space.Tabs.Select(candidate => candidate.Id).ToHashSet());
+            var fallback = Fallback(followUp, space, space.Tabs.Select(candidate => candidate.Id).ToHashSet(),
+                walksSiblings: tab.SplitGroupId is null);
             selected = edited.DismissTabs([tab.Id], shown, fallback, turn.Now, ArchiveReason.Closed, ensureSelection: false);
             edited.PruneSplitMetadata();
         }
@@ -57,15 +60,19 @@ public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Gui
     }
 
     /// The tab a window that showed the closed tab shows next among
-    /// `available`: `ReturnTabId` when it is one, or else the one the window
-    /// showed before, or with none left, the one beside it in the sidebar.
-    /// None for a window that did not show it.
-    private Guid? Fallback(WindowFollowUp followUp, SpaceState space, IReadOnlySet<Guid> available) {
+    /// `available`: `ReturnTabId` when it is one; else, when `walksSiblings`
+    /// and the window would go back to the tab it opened the closed one
+    /// behind, the nearest tab in the sidebar it opened behind that tab too
+    /// and has not shown yet; else the one it showed before, or with none
+    /// left, the one beside it in the sidebar. None for a window that did not
+    /// show it.
+    private Guid? Fallback(WindowFollowUp followUp, SpaceState space, IReadOnlySet<Guid> available, bool walksSiblings = false) {
         var before = followUp.FallbackAfterDismissing(space.Id, TabId, available);
         if (followUp.Window?.Tab(space.Id) != TabId) return before;
-        return ReturnTabId is { } returning && returning != TabId && available.Contains(returning)
-            ? returning
-            : before ?? space.Neighbor(TabId, available);
+        if (ReturnTabId is { } returning && returning != TabId && available.Contains(returning)) return returning;
+        if (walksSiblings && followUp.UnvisitedSiblings(space.Id, TabId, before, available) is { Count: > 0 } siblings
+            && space.Neighbor(TabId, siblings) is { } sibling) return sibling;
+        return before ?? space.Neighbor(TabId, available);
     }
 
     #endregion

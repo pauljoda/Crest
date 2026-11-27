@@ -4,6 +4,11 @@
       "id": "close-tab-shows-neighbour",
       "category": "fixed",
       "message": "Closing a tab when the window has no earlier tab to go back to, as right after a relaunch, now shows the tab beside it instead of leaving the window empty."
+    },
+    {
+      "id": "close-tab-walks-background-tabs",
+      "category": "improved",
+      "message": "After you open links in background tabs and read the first one, closing it moves on to the next of those tabs you haven't looked at yet, and back to the page you opened them from after the last one."
     }
   ]
 }

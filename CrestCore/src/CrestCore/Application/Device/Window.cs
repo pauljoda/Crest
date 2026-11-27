@@ -5,9 +5,10 @@ namespace CrestCore.Application;
 
 /// One of this device's windows and what it shows: the Space on screen, the
 /// tab it shows in each Space it has shown (or none), the column shares of the
-/// split groups it resized, and each Space's recently shown tabs, which choose
-/// the tab to show when the shown one is dismissed. The device serializes
-/// every call.
+/// split groups it resized, each Space's recently shown tabs, which choose
+/// the tab to show when the shown one is dismissed, and the tabs it opened
+/// behind the one it showed, which a dismissal walks through before it returns
+/// to that tab. The device serializes every call.
 internal sealed class Window {
     #region Static Variables
 
@@ -27,6 +28,11 @@ internal sealed class Window {
     private readonly HashSet<(Guid SpaceId, Guid TabId)> unseen;
     /// The tabs in `recent`, by Space, that another window took over.
     private readonly HashSet<(Guid SpaceId, Guid TabId)> departed;
+    /// The tabs the window opened behind the tab it showed, by Space, with
+    /// that tab, their opener. Kept in memory only.
+    private readonly Dictionary<(Guid SpaceId, Guid TabId), Guid> openers;
+    /// The tabs in `openers` the window has not shown since it opened them.
+    private readonly HashSet<(Guid SpaceId, Guid TabId)> unvisited;
 
     public Guid Id { get; }
     public Guid WorkspaceId { get; }
@@ -43,7 +49,8 @@ internal sealed class Window {
 
     private Window(Guid id, Guid workspaceId, bool saved, Guid shownSpaceId, Dictionary<Guid, Guid?> tabs,
         Dictionary<Guid, IReadOnlyList<double>> shares, Dictionary<Guid, List<Guid>> recent,
-        HashSet<(Guid SpaceId, Guid TabId)> unseen, HashSet<(Guid SpaceId, Guid TabId)> departed) {
+        HashSet<(Guid SpaceId, Guid TabId)> unseen, HashSet<(Guid SpaceId, Guid TabId)> departed,
+        Dictionary<(Guid SpaceId, Guid TabId), Guid> openers, HashSet<(Guid SpaceId, Guid TabId)> unvisited) {
         Id = id;
         WorkspaceId = workspaceId;
         Saved = saved;
@@ -53,16 +60,18 @@ internal sealed class Window {
         this.recent = recent;
         this.unseen = unseen;
         this.departed = departed;
+        this.openers = openers;
+        this.unvisited = unvisited;
     }
 
     /// A window that shows what `record` kept.
     public static Window Restoring(SavedWindow record, Guid workspaceId) => new(record.Id, workspaceId, saved: true,
         record.ShownSpaceId, record.Tabs.ToDictionary(tab => tab.SpaceId, tab => tab.TabId),
-        record.Shares.ToDictionary(group => group.GroupId, group => group.Shares), [], [], []);
+        record.Shares.ToDictionary(group => group.GroupId, group => group.Shares), [], [], [], [], []);
 
     /// A window that starts as `other` shows, without its split columns.
     public static Window Copying(Window other, Guid id, bool saved) =>
-        new(id, other.WorkspaceId, saved, other.ShownSpaceId, new(other.tabs), [], [], [], []);
+        new(id, other.WorkspaceId, saved, other.ShownSpaceId, new(other.tabs), [], [], [], [], [], []);
 
     /// A window on `session`'s launch Space: its default Space unless that is
     /// being deleted, else the first Space. `legacyTabs` are the tabs an older
@@ -72,7 +81,7 @@ internal sealed class Window {
         var launch = LaunchSpace(session);
         var window = new Window(id, workspaceId, saved, launch?.Id ?? Guid.Empty,
             legacyTabs.Where(entry => session.ViewedSpace(entry.Key) is { } space && Contains(space, entry.Value))
-                .ToDictionary(entry => entry.Key, entry => (Guid?)entry.Value), [], [], [], []);
+                .ToDictionary(entry => entry.Key, entry => (Guid?)entry.Value), [], [], [], [], [], []);
         if (launch is not null) window.ShowSpace(launch);
         return window;
     }
@@ -126,7 +135,8 @@ internal sealed class Window {
 
     /// A copy a command reads while the device keeps editing the window.
     public Window Snapshot() => new(Id, WorkspaceId, Saved, ShownSpaceId, new(tabs), new(shares),
-        recent.ToDictionary(entry => entry.Key, entry => new List<Guid>(entry.Value)), [.. unseen], [.. departed]);
+        recent.ToDictionary(entry => entry.Key, entry => new List<Guid>(entry.Value)), [.. unseen], [.. departed],
+        new(openers), [.. unvisited]);
 
     #endregion
 
@@ -222,6 +232,8 @@ internal sealed class Window {
         recent.Clear();
         unseen.Clear();
         departed.Clear();
+        openers.Clear();
+        unvisited.Clear();
     }
 
     /// Shows `tabId` in its Space, moving the window there when `moves`, or
@@ -248,10 +260,31 @@ internal sealed class Window {
     public void Depart(Guid spaceId, Guid tabId) {
         if (recent.TryGetValue(spaceId, out var history)) history.Remove(tabId);
         departed.Add((spaceId, tabId));
+        openers.Remove((spaceId, tabId));
+        unvisited.Remove((spaceId, tabId));
+    }
+
+    /// Records that the window opened `tabId` in `spaceId` behind the tab it
+    /// shows there, its opener, and has not shown it yet.
+    public void OpenBehind(Guid spaceId, Guid tabId) {
+        if (Tab(spaceId) is not { } opener || opener == tabId) return;
+        openers[(spaceId, tabId)] = opener;
+        unvisited.Add((spaceId, tabId));
+    }
+
+    /// The tabs `available` holds that the window opened behind the same tab
+    /// as `dismissed` and has not shown since, when `returnsTo`, the tab the
+    /// window would go back to once `dismissed` leaves `spaceId`, is that
+    /// opener; none otherwise.
+    public IReadOnlySet<Guid> UnvisitedSiblings(Guid spaceId, Guid dismissed, Guid? returnsTo, IReadOnlySet<Guid> available) {
+        if (!openers.TryGetValue((spaceId, dismissed), out var opener) || returnsTo != opener) return new HashSet<Guid>();
+        return unvisited.Where(entry => entry.SpaceId == spaceId && entry.TabId != dismissed && available.Contains(entry.TabId)
+            && openers.GetValueOrDefault(entry) == opener).Select(entry => entry.TabId).ToHashSet();
     }
 
     /// Applies what a command chose for this window to show next.
     public void Apply(WindowFollowUp followUp) {
+        foreach (var (spaceId, tabId) in followUp.Behind) OpenBehind(spaceId, tabId);
         foreach (var (spaceId, tabId) in followUp.Dismissed)
             if (recent.TryGetValue(spaceId, out var history)) history.Remove(tabId);
         foreach (var (spaceId, tabId) in followUp.Tabs) {
@@ -304,6 +337,11 @@ internal sealed class Window {
             if (!spaces.TryGetValue(spaceId, out var space)) recent.Remove(spaceId);
             else history.RemoveAll(tabId => !Contains(space, tabId));
         }
+        foreach (var opened in openers.Keys.ToArray())
+            if (!spaces.TryGetValue(opened.SpaceId, out var space) || !Contains(space, opened.TabId)) {
+                openers.Remove(opened);
+                unvisited.Remove(opened);
+            }
         foreach (var spaceId in tabs.Keys) Remember(spaceId);
     }
 
@@ -323,6 +361,7 @@ internal sealed class Window {
     private void Remember(Guid spaceId) {
         if (tabs.GetValueOrDefault(spaceId) is not { } tabId) return;
         unseen.Remove((spaceId, tabId));
+        unvisited.Remove((spaceId, tabId));
         if (!recent.TryGetValue(spaceId, out var history)) recent[spaceId] = history = [];
         if (history.Count > 0 && history[^1] == tabId) return;
         history.Remove(tabId);
