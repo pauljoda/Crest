@@ -8,13 +8,14 @@ struct BrowserTabSelectionMonitor: View {
     let spaceAccess: BrowserSpaceAccessController
     let assignment: BrowserSpaceRuntimeAssignment
     let activate: (UUID) -> Void
+    var auxiliaryClick: ((UUID) -> Void)? = nil
     var ownsFocus = false
 
     var body: some View {
         GeometryReader { proxy in
             Bridge(
                 browser: browser, sidebarInteraction: sidebarInteraction, spaceAccess: spaceAccess,
-                assignment: assignment, activate: activate, ownsFocus: ownsFocus,
+                assignment: assignment, activate: activate, auxiliaryClick: auxiliaryClick, ownsFocus: ownsFocus,
                 globalFrame: proxy.frame(in: .global))
         }
     }
@@ -25,6 +26,7 @@ struct BrowserTabSelectionMonitor: View {
         let spaceAccess: BrowserSpaceAccessController
         let assignment: BrowserSpaceRuntimeAssignment
         let activate: (UUID) -> Void
+        let auxiliaryClick: ((UUID) -> Void)?
         let ownsFocus: Bool
         let globalFrame: CGRect
 
@@ -36,6 +38,7 @@ struct BrowserTabSelectionMonitor: View {
             view.spaceAccess = spaceAccess
             view.assignment = assignment
             view.activate = activate
+            view.auxiliaryClick = auxiliaryClick
             view.globalFrame = globalFrame
             if ownsFocus, browser.selectedSpaceID == assignment.spaceID,
                 view.window?.attachedSheet == nil,
@@ -58,11 +61,12 @@ struct BrowserTabSelectionMonitor: View {
         weak var spaceAccess: BrowserSpaceAccessController?
         var assignment: BrowserSpaceRuntimeAssignment?
         var activate: ((UUID) -> Void)?
+        var auxiliaryClick: ((UUID) -> Void)?
         var globalFrame: CGRect = .zero
         private var monitor: Any?
         private var windowObservers: [NSObjectProtocol] = []
         private var consumedDown = false
-        private var pressedAuxiliaryTargetID: AnyHashable?
+        private var pressedAuxiliaryTabID: UUID?
         override var acceptsFirstResponder: Bool { true }
         override var isFlipped: Bool { true }
         override func hitTest(_ point: NSPoint) -> NSView? { nil }
@@ -146,14 +150,14 @@ struct BrowserTabSelectionMonitor: View {
                 guard event.buttonNumber == 2 else { return event }
                 let local = convert(event.locationInWindow, from: nil)
                 let globalPoint = CGPoint(x: globalFrame.minX + local.x, y: globalFrame.minY + local.y)
-                let hit = sidebarInteraction.sidebarReorderState.auxiliaryClickTarget(
+                let hitTabID = sidebarInteraction.sidebarReorderState.auxiliaryClickTabID(
                     at: globalPoint, in: assignment)
                 if event.type == .otherMouseDown {
-                    pressedAuxiliaryTargetID = hit?.id
-                } else if let pressedID = pressedAuxiliaryTargetID {
-                    pressedAuxiliaryTargetID = nil
-                    if let hit, hit.id == pressedID {
-                        hit.perform()
+                    pressedAuxiliaryTabID = hitTabID
+                } else if let pressedID = pressedAuxiliaryTabID {
+                    pressedAuxiliaryTabID = nil
+                    if let hitTabID, hitTabID == pressedID {
+                        auxiliaryClick?(hitTabID)
                     }
                 }
                 return event

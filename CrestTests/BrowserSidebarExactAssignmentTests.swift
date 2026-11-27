@@ -1,4 +1,6 @@
+import AppKit
 import Foundation
+import SwiftUI
 import XCTest
 
 @testable import Crest
@@ -57,14 +59,14 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
             rowStride: rowStride,
             itemIDs: itemIDs,
             itemIndexByID: indexByID,
-            visibleIndices: 28..<50,
-            auxiliaryClick: nil
+            visibleIndices: 28..<50
         )
         state.register(virtualRun: run)
 
         // Row 35 sits at content y = 1260, so global y = 100 - 1080 + 1260 = 280.
         let pickedFrame = try XCTUnwrap(state.frame(ofRow: .tab(tabIDs[35]), in: space))
         XCTAssertEqual(pickedFrame.minY, 280, accuracy: 0.5)
+        XCTAssertEqual(state.auxiliaryClickTabID(at: CGPoint(x: 120, y: pickedFrame.midY), in: space), tabIDs[35])
 
         let pickedItem = BrowserSidebarReorderItem.tab(
             BrowserTabDragItem(tabID: tabIDs[35], spaceID: space.spaceID, profileID: space.profileID)
@@ -97,6 +99,177 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
         XCTAssertNotNil(state.layout.gap)
 
         state.cancel()
+    }
+
+    func testFolderTabAuxiliaryClickSurvivesMoveCollapseAndOwnerOverlap() throws {
+        let folderID = UUID()
+        let subFolderID = UUID()
+        let collapsedFolderID = UUID()
+        let folderTabID = UUID()
+        let collapsedFolderTabID = UUID()
+        let unfiledSavedTabID = UUID()
+        let currentTabID = UUID()
+        let url = try XCTUnwrap(URL(string: "https://example.com"))
+        let folder = FolderState.Seed(id: folderID, title: "Work", location: .saved, isCollapsed: false)
+        let subFolder = FolderState.Seed(
+            id: subFolderID, title: "Sub", location: .saved, parentID: folderID, isCollapsed: false)
+        let collapsedFolder = FolderState.Seed(
+            id: collapsedFolderID, title: "Collapsed", location: .saved, isCollapsed: true)
+        let folderTab = TabState.Seed(
+            id: folderTabID, title: "Folder Tab", url: url, placement: .saved, folderID: folderID)
+        let collapsedFolderTab = TabState.Seed(
+            id: collapsedFolderTabID, title: "Collapsed Folder Tab", url: url, placement: .saved,
+            folderID: collapsedFolderID)
+        let unfiledSavedTab = TabState.Seed(id: unfiledSavedTabID, title: "Unfiled Saved", url: url, placement: .saved)
+        let currentTab = TabState.Seed(id: currentTabID, title: "Current Tab", url: url, placement: .current)
+        var space = SpaceState.Seed.blank(number: 1)
+        space.folders = [folder, subFolder, collapsedFolder]
+        space.tabs = [folderTab, collapsedFolderTab, unfiledSavedTab, currentTab]
+
+        let browser = BrowserStore.hostingPages(
+            SessionState.Seed(spaces: [space]),
+            showing: space.id,
+            tabs: [space.id: currentTabID]
+        )
+        let pages = BrowserPagePool(browser: browser)
+        let spaceAccess = BrowserSpaceAccessController()
+        let interaction = BrowserSidebarInteractionState.connected(to: browser)
+        let liveSpace = try XCTUnwrap(browser.shownSpace)
+        let assignment = BrowserSpaceRuntimeAssignment(space: liveSpace)
+        let capabilities = BrowserInteractionCapabilities()
+
+        var unloadedTabIDs: [UUID] = []
+        let pageAccess = BrowserSidebarPageAccess(
+            containsResidentPage: { id in
+                id == folderTabID || id == collapsedFolderTabID || id == unfiledSavedTabID || id == currentTabID
+            },
+            containsResidentPageMatching: {
+                $0.tabID == folderTabID || $0.tabID == collapsedFolderTabID || $0.tabID == unfiledSavedTabID
+                    || $0.tabID == currentTabID
+            },
+            siteThemeIconAccent: { _ in nil },
+            residencyRevision: { 1 },
+            selectPages: {},
+            deactivatePagePresentation: {},
+            unloadPages: { ids, _ in unloadedTabIDs.append(contentsOf: ids) },
+            pullFavicon: { _, _ in nil },
+            downloadCenter: BrowserDownloadCenter()
+        )
+        let tabActions = BrowserSidebarTabActions(
+            assignment: assignment,
+            browser: browser,
+            reorderState: interaction.sidebarReorderState,
+            pages: pages,
+            spaceAccess: spaceAccess
+        )
+        let windowModel = try XCTUnwrap(browser.windowModel)
+        let listContext = BrowserSidebarListContext(
+            space: liveSpace,
+            window: windowModel,
+            favicons: browser.core.state.favicons,
+            browser: browser,
+            spaceAccess: spaceAccess,
+            pageAccess: pageAccess,
+            tabActions: tabActions,
+            capabilities: capabilities,
+            select: { _ in }
+        )
+
+        let rootView = VStack(spacing: 0) {
+            Color.clear.frame(height: 100)
+            SpaceSidebarTabListScroll(browser: browser) {
+                Color.clear
+            } content: {
+                BrowserSidebarTabList(
+                    context: listContext,
+                    alwaysShowsSavedTabs: true,
+                    showsClearAction: false,
+                    openNewTab: {}
+                )
+            }
+        }
+        .environment(interaction)
+        .environment(\.sidebarSpacePresentation, SidebarSpacePresentation(space: liveSpace, isUnlocked: true))
+        .environment(\.sidebarSpaceIsSelected, true)
+        .frame(width: 260, height: 600)
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 100, y: 100, width: 260, height: 600),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        let hosting = NSHostingView(rootView: rootView)
+        hosting.frame = NSRect(x: 0, y: 0, width: 260, height: 600)
+        window.contentView = hosting
+        window.orderFront(nil)
+        defer { window.orderOut(nil) }
+
+        func pump(_ ticks: Int = 10) {
+            for _ in 0..<ticks { RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.04)) }
+        }
+        pump()
+
+        let state = interaction.sidebarReorderState
+
+        // Moving an unfiled saved tab into a folder must keep auxiliary-click hit-testing intact.
+        browser.moveTab(unfiledSavedTabID, to: .saved, folderID: folderID, before: nil)
+        pump(12)
+        let movedFrame = try XCTUnwrap(state.frame(ofRow: .tab(unfiledSavedTabID), in: assignment))
+        let movedMid = CGPoint(x: movedFrame.midX, y: movedFrame.midY)
+        XCTAssertEqual(state.auxiliaryClickTabID(at: movedMid, in: assignment), unfiledSavedTabID)
+        XCTAssertEqual(state.selectionItem(at: movedMid, in: assignment), .tab(unfiledSavedTabID))
+
+        // Running the middle-click action unloads the moved saved tab inside the folder.
+        let movedTab = try XCTUnwrap(liveSpace.tabs.model(unfiledSavedTabID))
+        let movedConfig = BrowserSidebarTabRowConfiguration(
+            tab: movedTab, context: listContext, isSelected: false, isLoaded: true, isSplitGroupMember: false)
+        BrowserTabMiddleClickAction(for: movedTab.placement).perform(on: movedConfig)
+        XCTAssertEqual(unloadedTabIDs, [unfiledSavedTabID])
+
+        // Expanding a collapsed folder resolves its tabs for auxiliary clicks.
+        browser.setFolderCollapsed(collapsedFolderID, in: liveSpace.id, isCollapsed: false)
+        pump(12)
+        let expandedFrame = try XCTUnwrap(state.frame(ofRow: .tab(collapsedFolderTabID), in: assignment))
+        XCTAssertEqual(
+            state.auxiliaryClickTabID(at: CGPoint(x: expandedFrame.midX, y: expandedFrame.midY), in: assignment),
+            collapsedFolderTabID)
+
+        // Collapsing a folder with a subfolder keeps its loaded tab hit-testable.
+        browser.setFolderCollapsed(folderID, in: liveSpace.id, isCollapsed: true)
+        pump(12)
+        let keptFrame = try XCTUnwrap(state.frame(ofRow: .tab(folderTabID), in: assignment))
+        XCTAssertEqual(
+            state.auxiliaryClickTabID(at: CGPoint(x: keptFrame.midX, y: keptFrame.midY), in: assignment),
+            folderTabID)
+
+        // Departing owner clearing selection-disabled must not unmask a surviving owner.
+        let ownerA = UUID()
+        let ownerB = UUID()
+        state.setRowSelectionDisabled(true, for: .tab(folderTabID), in: assignment, owner: ownerA)
+        state.setRowSelectionDisabled(true, for: .tab(folderTabID), in: assignment, owner: ownerB)
+        state.setRowSelectionDisabled(false, for: .tab(folderTabID), in: assignment, owner: ownerA)
+        XCTAssertNil(state.selectionItem(at: CGPoint(x: keptFrame.midX, y: keptFrame.midY), in: assignment))
+        state.setRowSelectionDisabled(false, for: .tab(folderTabID), in: assignment, owner: ownerB)
+        XCTAssertEqual(
+            state.selectionItem(at: CGPoint(x: keptFrame.midX, y: keptFrame.midY), in: assignment),
+            .tab(folderTabID))
+
+        // Non-content-relative rows (e.g. pinned tiles or folder preview cards) must not double-match.
+        let externalTabID = UUID()
+        let externalOwner = UUID()
+        let externalFrame = CGRect(x: 300, y: 120, width: 220, height: 36)
+        state.register(
+            row: BrowserSidebarReorderRow(
+                id: .tab(externalTabID), space: assignment,
+                section: .tabs(placement: .saved, folderID: collapsedFolderID), frame: externalFrame),
+            owner: externalOwner,
+            scrollRegionID: nil,
+            isContentRelative: false
+        )
+        XCTAssertNil(
+            state.auxiliaryClickTabID(at: CGPoint(x: externalFrame.midX, y: externalFrame.midY), in: assignment))
+        state.removeRow(.tab(externalTabID), owner: externalOwner)
     }
 
     private func makeContext(sourceIsProtected: Bool = false) -> (

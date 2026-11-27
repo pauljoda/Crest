@@ -116,6 +116,7 @@ struct SpaceSidebarBrowsingContent: View {
             BrowserTabSelectionMonitor(
                 browser: browser, spaceAccess: spaceAccess,
                 assignment: BrowserSpaceRuntimeAssignment(space: space), activate: activate,
+                auxiliaryClick: { dismissTabFromAuxiliaryClick($0, in: listContext) },
                 ownsFocus: browser.tabMultiSelection.isEngaged && browser.tabMultiSelection.ownsKeyboardFocus)
         }
         // What the core refused is information, not a decision: it shows in
@@ -160,6 +161,21 @@ struct SpaceSidebarBrowsingContent: View {
         // Select the tab before presenting its page.
         browser.selectTab(tabID)
         pages.select()
+    }
+
+    /// Runs the sidebar tab row's auxiliary-button action (closing a current
+    /// tab or unloading a saved one) directly from the live list context.
+    private func dismissTabFromAuxiliaryClick(_ tabID: UUID, in context: BrowserSidebarListContext) {
+        guard let tab = context.space.tabs.model(tabID) else { return }
+        let configuration = BrowserSidebarTabRowConfiguration(
+            tab: tab,
+            context: context,
+            isSelected: context.window.shownTabIDs.contains(tabID),
+            isLoaded: context.isLoaded(tabID),
+            isSplitGroupMember: tab.splitGroupID != nil
+        )
+        guard configuration.isCurrentAndUnlocked else { return }
+        BrowserTabMiddleClickAction(for: tab.placement).perform(on: configuration)
     }
 
     private func restoreSavedLocation(_ tabID: UUID) {

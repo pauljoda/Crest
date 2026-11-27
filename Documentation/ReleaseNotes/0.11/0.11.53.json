@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-folder-middle-click-unload",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "Middle-clicking a saved tab inside a folder or folder preview card now reliably unloads it, including after moving tabs or collapsing and reopening folders."
+    }
+  ]
+}

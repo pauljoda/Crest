@@ -49,7 +49,6 @@ final class BrowserSidebarReorderGeometry {
         var itemIDs: [BrowserSidebarReorderItemID]
         var itemIndexByID: [BrowserSidebarReorderItemID: Int]
         var visibleIndices: Range<Int>
-        var auxiliaryClick: (@MainActor (UUID) -> Void)?
 
         func row(at index: Int) -> BrowserSidebarReorderRow {
             BrowserSidebarReorderRow(
@@ -114,15 +113,11 @@ final class BrowserSidebarReorderGeometry {
     @ObservationIgnored private var rowSpaces: [UUID: BrowserSpaceRuntimeAssignment] = [:]
     @ObservationIgnored private(set) var zones: [UUID: RegisteredZone] = [:]
     @ObservationIgnored private var selectionTargets: [UUID: RegisteredSelectionTarget] = [:]
-    /// Per-tab auxiliary click handlers registered by `BrowserSidebarTabRow`,
-    /// hit-tested against the row's already-measured reorder frame so tab rows
-    /// need neither a duplicate geometry observer nor a per-row gesture bridge.
-    @ObservationIgnored private var rowAuxiliaryClickHandlers:
-        [BrowserSpaceRuntimeAssignment: [BrowserSidebarReorderItemID: @MainActor () -> Void]] = [:]
     /// Per-tab selection overrides when a tab row is disabled for selection
-    /// (for example while renaming).
+    /// (for example while renaming), keyed by registering view owner so a
+    /// departing view never clears a surviving view's disabled state.
     @ObservationIgnored private var disabledSelectionRows:
-        [BrowserSpaceRuntimeAssignment: Set<BrowserSidebarReorderItemID>] = [:]
+        [BrowserSpaceRuntimeAssignment: [BrowserSidebarReorderItemID: Set<UUID>]] = [:]
     /// Fixed-stride recycled tab runs, keyed by Space and run ID.
     @ObservationIgnored private var virtualRuns: [BrowserSpaceRuntimeAssignment: [UUID: VirtualRowRun]] = [:]
     @ObservationIgnored private(set) var scrollRegions: [UUID: CGRect] = [:]
@@ -439,26 +434,19 @@ final class BrowserSidebarReorderGeometry {
     func setRowSelectionDisabled(
         _ disabled: Bool,
         for itemID: BrowserSidebarReorderItemID,
-        in space: BrowserSpaceRuntimeAssignment
+        in space: BrowserSpaceRuntimeAssignment,
+        owner: UUID
     ) {
         if disabled {
-            disabledSelectionRows[space, default: []].insert(itemID)
+            disabledSelectionRows[space, default: [:]][itemID, default: []].insert(owner)
         } else {
-            disabledSelectionRows[space]?.remove(itemID)
-            if disabledSelectionRows[space]?.isEmpty == true { disabledSelectionRows[space] = nil }
-        }
-    }
-
-    func setRowAuxiliaryClick(
-        _ perform: (@MainActor () -> Void)?,
-        for itemID: BrowserSidebarReorderItemID,
-        in space: BrowserSpaceRuntimeAssignment
-    ) {
-        if let perform {
-            rowAuxiliaryClickHandlers[space, default: [:]][itemID] = perform
-        } else {
-            rowAuxiliaryClickHandlers[space]?[itemID] = nil
-            if rowAuxiliaryClickHandlers[space]?.isEmpty == true { rowAuxiliaryClickHandlers[space] = nil }
+            disabledSelectionRows[space]?[itemID]?.remove(owner)
+            if disabledSelectionRows[space]?[itemID]?.isEmpty == true {
+                disabledSelectionRows[space]?[itemID] = nil
+            }
+            if disabledSelectionRows[space]?.isEmpty == true {
+                disabledSelectionRows[space] = nil
+            }
         }
     }
 
@@ -484,9 +472,9 @@ final class BrowserSidebarReorderGeometry {
         }
         let disabled = disabledSelectionRows[space]
         if let spaceRows = rows[space] {
-            for registration in spaceRows.values {
+            for registration in spaceRows.values where registration.isContentRelative {
                 guard case .tab(let tabID) = registration.row.id else { continue }
-                if disabled?.contains(registration.row.id) == true { continue }
+                if disabled?[registration.row.id]?.isEmpty == false { continue }
                 guard !registration.row.frame.isEmpty else { continue }
                 guard
                     let visibleFrame = visibleGlobalFrame(
@@ -516,7 +504,7 @@ final class BrowserSidebarReorderGeometry {
                 let index = Int(floor((globalPoint.y - origin.y - run.frame.minY) / run.rowStride))
                 guard run.itemIDs.indices.contains(index),
                     case .tab(let tabID) = run.itemIDs[index],
-                    disabled?.contains(run.itemIDs[index]) != true
+                    disabled?[run.itemIDs[index]]?.isEmpty != false
                 else { continue }
                 let area = run.frame.width * run.rowStride
                 if best == nil || area < best!.area {
@@ -527,14 +515,16 @@ final class BrowserSidebarReorderGeometry {
         return best?.itemID
     }
 
-    func auxiliaryClickTarget(
+    func auxiliaryClickTabID(
         at globalPoint: CGPoint,
         in space: BrowserSpaceRuntimeAssignment
-    ) -> (id: AnyHashable, perform: @MainActor () -> Void)? {
-        var best: (id: AnyHashable, area: CGFloat, perform: @MainActor () -> Void)?
-        if let spaceRows = rows[space], let handlers = rowAuxiliaryClickHandlers[space] {
-            for (itemID, perform) in handlers {
-                guard let registration = spaceRows[itemID], !registration.row.frame.isEmpty else { continue }
+    ) -> UUID? {
+        var best: (tabID: UUID, area: CGFloat)?
+        if let spaceRows = rows[space] {
+            for registration in spaceRows.values where registration.isContentRelative {
+                guard case .tab(let tabID) = registration.row.id,
+                    !registration.row.frame.isEmpty
+                else { continue }
                 guard
                     let visibleFrame = visibleGlobalFrame(
                         registration.row.frame,
@@ -545,13 +535,13 @@ final class BrowserSidebarReorderGeometry {
                 else { continue }
                 let area = registration.row.frame.width * registration.row.frame.height
                 if best == nil || area < best!.area {
-                    best = (AnyHashable(itemID), area, perform)
+                    best = (tabID, area)
                 }
             }
         }
         if let spaceRuns = virtualRuns[space] {
             for run in spaceRuns.values where run.rowStride > 0 && !run.frame.isEmpty {
-                guard let handler = run.auxiliaryClick,
+                guard
                     let visibleFrame = visibleGlobalFrame(
                         run.frame,
                         scrollRegionID: run.scrollRegionID,
@@ -566,12 +556,11 @@ final class BrowserSidebarReorderGeometry {
                 else { continue }
                 let area = run.frame.width * run.rowStride
                 if best == nil || area < best!.area {
-                    best = (AnyHashable(run.itemIDs[index]), area, { handler(tabID) })
+                    best = (tabID, area)
                 }
             }
         }
-        guard let best else { return nil }
-        return (best.id, best.perform)
+        return best?.tabID
     }
 
     private func visibleGlobalFrame(

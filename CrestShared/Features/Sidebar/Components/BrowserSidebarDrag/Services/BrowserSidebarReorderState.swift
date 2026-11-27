@@ -300,24 +300,17 @@ final class BrowserSidebarReorderState {
     func setRowSelectionDisabled(
         _ disabled: Bool,
         for itemID: BrowserSidebarReorderItemID,
-        in space: BrowserSpaceRuntimeAssignment
+        in space: BrowserSpaceRuntimeAssignment,
+        owner: UUID
     ) {
-        geometry.setRowSelectionDisabled(disabled, for: itemID, in: space)
+        geometry.setRowSelectionDisabled(disabled, for: itemID, in: space, owner: owner)
     }
 
-    func setRowAuxiliaryClick(
-        _ perform: (@MainActor () -> Void)?,
-        for itemID: BrowserSidebarReorderItemID,
-        in space: BrowserSpaceRuntimeAssignment
-    ) {
-        geometry.setRowAuxiliaryClick(perform, for: itemID, in: space)
-    }
-
-    func auxiliaryClickTarget(
+    func auxiliaryClickTabID(
         at globalPoint: CGPoint,
         in space: BrowserSpaceRuntimeAssignment
-    ) -> (id: AnyHashable, perform: @MainActor () -> Void)? {
-        geometry.auxiliaryClickTarget(at: globalPoint, in: space)
+    ) -> UUID? {
+        geometry.auxiliaryClickTabID(at: globalPoint, in: space)
     }
 
     func register(sidebarViewport frame: CGRect, for id: UUID) {
