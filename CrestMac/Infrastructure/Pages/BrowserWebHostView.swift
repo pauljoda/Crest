@@ -301,6 +301,8 @@ enum BrowserPagePresentation {
 @MainActor
 protocol BrowserNativePageSurfaceLifecycle: AnyObject {
     func didAttach(to host: BrowserWebHostView)
+    /// The view leaves `host`, for another host or out of its window. A view
+    /// moving to another host in the same window stays on screen throughout.
     func willDetach(from host: BrowserWebHostView)
     /// The host showing this view changed how it shows its page, as its
     /// Space did, while the view stayed in it; see
@@ -334,6 +336,16 @@ extension BrowserNativePageSurfaceLifecycle {
 /// page again. A host the window does not draw gives the view to the newest
 /// one it does: the Spaces of a group each hold a host for a pinned tab they
 /// share, and its page shows in the one on screen, whichever claimed it last.
+///
+/// A page view moving between hosts of one window never leaves the window,
+/// which would hide its page from its engine and take its focus: a page shown
+/// again draws nothing for a few frames, and an engine that kept the page
+/// focused while AppKit took focus away can leave it unable to follow the
+/// pointer. SwiftUI makes a host before it places it in a window, and can
+/// dismantle the host it replaces before it makes the new one, as when a page
+/// enters or leaves full screen. A host claiming a view while it has no window
+/// shows it once it joins one, and a dismantled host leaves the view in the
+/// window, out of sight, for the host that takes its place.
 @MainActor
 final class BrowserWebHostView: NSView {
     // MARK: - Static Variables
@@ -347,6 +359,16 @@ final class BrowserWebHostView: NSView {
     /// replaced it: about 42 ms at 120 Hz, longer than the frames a page
     /// shown again takes to draw.
     private static let replacementHoldFrames = 5
+    /// Page views a dismantled host let go of, kept in their window out of
+    /// sight until a host there shows them, each with the number of its keep;
+    /// see `keep(_:in:)`.
+    private static let keptWebViews = NSMapTable<NSView, NSNumber>.weakToStrongObjects()
+    /// The number of keeps so far, which tells a keep's wait from a later one.
+    private static var keepCount = 0
+    /// How long a kept page view waits for a host before it leaves its
+    /// window: longer than SwiftUI takes to make and place the host replacing
+    /// a dismantled one, which can take several turns of the main queue.
+    private static let keptWebViewWait = Duration.milliseconds(500)
 
     // MARK: - Variables
 
@@ -367,6 +389,9 @@ final class BrowserWebHostView: NSView {
     private var focusRestorationAttemptGeneration = 0
     /// When this host claimed `hostedWebView`: the newest claim is the largest.
     private var claim = 0
+    /// Whether this host claimed `hostedWebView` while the view was in a
+    /// window and this host was not, and shows it once it joins one.
+    private var awaitsWindow = false
     /// The page view this host showed before `hostedWebView`, still shown
     /// above it while the new one draws its first frames; see
     /// `holdsReplacedPageUntilDrawn`.
@@ -390,6 +415,10 @@ final class BrowserWebHostView: NSView {
             return
         }
         if hostedWebView === webView {
+            if awaitsWindow {
+                self.focusRestoration = focusRestoration
+                return
+            }
             if webView.superview === self {
                 self.focusRestoration = focusRestoration
                 return
@@ -433,22 +462,39 @@ final class BrowserWebHostView: NSView {
         claim = Self.claimCount
         hostedWebView = webView
         Self.claimants.add(self)
+        // Taken into a host outside any window, a view on screen would leave
+        // its window; it waits where it is until this host joins one.
+        guard window != nil || webView.window == nil else {
+            awaitsWindow = true
+            self.focusRestoration = focusRestoration
+            return
+        }
         show(webView, focusRestoration: focusRestoration, below: replaced)
         if let replaced { holdUntilReplacementDraws(replaced) }
     }
 
     /// Lets go of the view this host claimed. When it was showing it, the view
-    /// leaves and moves to the newest other host in its window that still
-    /// claims it.
+    /// moves to the newest other host in its window that still claims it, or
+    /// else leaves the window.
     func detach() {
+        detach(keepingInWindow: false)
+    }
+
+    /// SwiftUI took this host down. A view it showed stays in the window, out
+    /// of sight, for the host SwiftUI puts in its place, which it makes and
+    /// places only after it dismantles this one. A page its host kept off
+    /// screen leaves the window as it did: kept out of sight, it would count
+    /// as presented, and its engine would show it and give it focus.
+    func dismantle() {
+        detach(keepingInWindow: true)
+    }
+
+    private func detach(keepingInWindow: Bool) {
         releaseReplacedWebView()
+        awaitsWindow = false
         guard let hostedWebView else { return }
         Self.claimants.remove(self)
         let showsHostedWebView = hostedWebView.superview === self
-        if showsHostedWebView {
-            (hostedWebView as? any BrowserNativePageSurfaceLifecycle)?.willDetach(from: self)
-            hostedWebView.removeFromSuperview()
-        }
         let focusRestoration = focusRestoration
         let placement = window ?? lastWindow
         self.hostedWebView = nil
@@ -456,7 +502,15 @@ final class BrowserWebHostView: NSView {
         isPageActive = false
         focusRestorationAttemptGeneration &+= 1
         guard showsHostedWebView else { return }
-        Self.successor(for: hostedWebView, in: placement)?.show(hostedWebView, focusRestoration: focusRestoration)
+        (hostedWebView as? any BrowserNativePageSurfaceLifecycle)?.willDetach(from: self)
+        let successor = Self.successor(for: hostedWebView, in: placement)
+        if let successor, successor.window != nil || hostedWebView.window == nil {
+            successor.show(hostedWebView, focusRestoration: focusRestoration)
+        } else if let window = hostedWebView.window, presentation != .hidden, successor != nil || keepingInWindow {
+            Self.keep(hostedWebView, in: window)
+        } else {
+            hostedWebView.removeFromSuperview()
+        }
     }
 
     /// Whether this host is in `window`, or either has yet to join one.
@@ -478,6 +532,35 @@ final class BrowserWebHostView: NSView {
             .max { ($0.isDrawn ? 1 : 0, $0.claim) < ($1.isDrawn ? 1 : 0, $1.claim) }
     }
 
+    /// Keeps `webView`, which a host in `window` let go of, in the window out
+    /// of sight, for a host there that has yet to show it: one waiting to join
+    /// the window, or one SwiftUI has yet to make. A view no host showed
+    /// within `keptWebViewWait` goes to the window's newest host still
+    /// claiming it, or else leaves the window.
+    private static func keep(_ webView: NSView, in window: NSWindow) {
+        guard let content = window.contentView, let frame = content.superview else {
+            webView.removeFromSuperview()
+            return
+        }
+        keepCount &+= 1
+        let keep = keepCount
+        keptWebViews.setObject(NSNumber(value: keep), forKey: webView)
+        webView.alphaValue = 0
+        frame.addSubview(webView, positioned: .below, relativeTo: content)
+        Task { @MainActor [weak webView] in
+            try? await Task.sleep(for: keptWebViewWait)
+            guard let webView, keptWebViews.object(forKey: webView)?.intValue == keep else { return }
+            if let host = successor(for: webView, in: webView.window), host.window != nil {
+                host.show(webView, focusRestoration: nil)
+                if host.isPageActive { host.scheduleFocusRestoration() }
+            } else {
+                keptWebViews.removeObject(forKey: webView)
+                webView.removeFromSuperview()
+                webView.alphaValue = 1
+            }
+        }
+    }
+
     /// Moves `webView` from the host showing it, which the window no longer
     /// draws, to the newest host claiming it that the window does draw.
     private static func showWhereDrawn(_ webView: NSView) {
@@ -486,7 +569,6 @@ final class BrowserWebHostView: NSView {
         else { return }
         let focusRestoration = showing.focusRestoration
         (webView as? any BrowserNativePageSurfaceLifecycle)?.willDetach(from: showing)
-        webView.removeFromSuperview()
         host.show(webView, focusRestoration: focusRestoration)
         if host.isPageActive { host.scheduleFocusRestoration() }
     }
@@ -509,6 +591,7 @@ final class BrowserWebHostView: NSView {
     /// Lets go of `webView` as `detach` does, but leaves it on screen.
     private func letGo(keepingOnScreen webView: NSView) {
         Self.claimants.remove(self)
+        awaitsWindow = false
         hostedWebView = nil
         focusRestoration = nil
         isPageActive = false
@@ -551,15 +634,24 @@ final class BrowserWebHostView: NSView {
         _ webView: NSView, focusRestoration: BrowserWebFocusRestorationController?, below replaced: NSView? = nil
     ) {
         self.focusRestoration = focusRestoration ?? self.focusRestoration
+        awaitsWindow = false
 
-        let removeInterval = Self.lifecycleSignposter.beginInterval(
-            "Remove Page View From Parent"
-        )
-        webView.removeFromSuperview()
-        Self.lifecycleSignposter.endInterval(
-            "Remove Page View From Parent",
-            removeInterval
-        )
+        // A view in this host's window, in another host or kept for one,
+        // moves straight across without leaving the window.
+        if window == nil || webView.window !== window {
+            let removeInterval = Self.lifecycleSignposter.beginInterval(
+                "Remove Page View From Parent"
+            )
+            webView.removeFromSuperview()
+            Self.lifecycleSignposter.endInterval(
+                "Remove Page View From Parent",
+                removeInterval
+            )
+        }
+        if Self.keptWebViews.object(forKey: webView) != nil {
+            Self.keptWebViews.removeObject(forKey: webView)
+            webView.alphaValue = 1
+        }
 
         // WebKit temporarily reparents rendering surfaces for features such as
         // the docked Web Inspector. Frame-based layout lets those surfaces keep
@@ -723,9 +815,22 @@ final class BrowserWebHostView: NSView {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if let window { lastWindow = window }
+        if window != nil, awaitsWindow { showAwaitedWebView() }
         trackTitleBarPointer()
         guard isPageActive else { return }
         scheduleFocusRestoration()
+    }
+
+    /// Shows the view this host claimed before it was in a window, now that
+    /// it is in one, unless a newer claim shows it in any window: that host
+    /// keeps it until it lets go, as a stale update never takes it back.
+    private func showAwaitedWebView() {
+        awaitsWindow = false
+        guard let hostedWebView, hostedWebView.superview !== self else { return }
+        if let showing = hostedWebView.superview as? BrowserWebHostView, showing.claim > claim, showing.isDrawn {
+            return
+        }
+        show(hostedWebView, focusRestoration: focusRestoration)
     }
 
     override func viewDidHide() {
