@@ -67,10 +67,14 @@ once, as its `marketing_version` output, and passes it to both `xcodebuild`
 runs and the release notes, so the Development, Nightly, and Stable builds of
 one commit share it. An experimental build takes the version of its branch's
 merge base with `main`, so the Development build it hands over to is always
-newer. A Stable tag must be `v` plus its commit's version, on a commit on
-main's first-parent history. Xcode Cloud computes the same version for the
-commit it archives and stamps it into its ephemeral checkout. Local and Xcode
-builds show the anchor version with build `1`.
+newer. Crest refuses an update that isn't newer than the copy it runs, so the
+preflight stops a publication whose version isn't above everything the
+channel's appcast offers, unless the commit is the one the channel already
+publishes; an experimental build is compared only with its own branch's builds,
+which it may tie. A Stable tag must be `v` plus its commit's version, on a
+commit on main's first-parent history. Xcode Cloud computes the same version
+for the commit it archives and stamps it into its ephemeral checkout. Local and
+Xcode builds show the anchor version with build `1`.
 
 Distributed build numbers add the GitHub Actions run number to Crest's
 public-repository build epoch. The epoch keeps Sparkle ordering strictly

@@ -103,13 +103,16 @@ class ReleasePreflightTests(unittest.TestCase):
             check=True, capture_output=True, text=True,
         ).stdout.strip()
 
-    def publish_appcast(self, channel: str, commit: str, tag: str, build: int = 1060) -> None:
+    def publish_appcast(
+        self, channel: str, commit: str, tag: str, build: int = 1060, version: str | None = None,
+    ) -> None:
         self.git("checkout", "updates")
         filename = "appcast-development.xml" if channel == "development" else "appcast.xml"
+        short_version = f"<sparkle:shortVersionString>{version}</sparkle:shortVersionString>" if version else ""
         (self.repository / filename).write_text(
             '<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">'
             f"<channel><item><sparkle:channel>{channel}</sparkle:channel>"
-            f"<sparkle:version>{build}</sparkle:version>"
+            f"<sparkle:version>{build}</sparkle:version>{short_version}"
             f'<enclosure url="https://github.com/crest-browser/Crest/releases/download/{tag}/'
             f'Installer-Crest-0.5.25-{channel}-2026-09-03-{commit[:7]}.dmg" />'
             "</item></channel></rss>"
@@ -164,6 +167,23 @@ class ReleasePreflightTests(unittest.TestCase):
         self.assertNotEqual(branch.returncode, 0)
         self.assertIn("not on main's first-parent history", branch.stderr)
         self.assertEqual(outputs, {})
+
+    def test_a_channel_only_publishes_a_version_newer_than_it_offers(self) -> None:
+        # This commit is 0.5.26. Crest refuses an update that isn't newer, so a
+        # channel already at or past it from another commit stops the run.
+        for published in ("0.5.27", "0.5.26"):
+            with self.subTest(published=published):
+                self.publish_appcast("nightly", self.previous_commit, "nightly-build", version=published)
+                result, outputs = self.preflight()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(f"Crest 0.5.26 is not newer than {published}", result.stderr)
+                self.assertEqual(outputs, {})
+
+        # The commit the channel already publishes keeps its version.
+        self.publish_appcast("nightly", self.current_commit, "nightly-current", version="0.5.26")
+        unchanged, outputs = self.preflight()
+        self.assertEqual(unchanged.returncode, 0, unchanged.stderr)
+        self.assertEqual(outputs["should_publish"], "false")
 
     def test_interrupted_publications_cannot_reuse_another_runs_release_tag(self) -> None:
         self.publish_appcast("nightly", self.previous_commit, "nightly-build", build=1070)
