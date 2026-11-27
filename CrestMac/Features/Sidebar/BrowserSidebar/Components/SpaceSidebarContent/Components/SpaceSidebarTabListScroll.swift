@@ -44,8 +44,7 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
                     content()
                 }
                 .sidebarScrollContent()
-                .frame(maxWidth: .infinity, minHeight: geometry.size.height, alignment: .top)
-                .background {
+                .sidebarRemainderBackground(viewportHeight: geometry.size.height) {
                     background()
                 }
                 .coordinateSpace(BrowserSidebarVisibleBand.contentSpace)
