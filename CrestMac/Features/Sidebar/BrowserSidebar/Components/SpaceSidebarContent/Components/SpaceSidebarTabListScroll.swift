@@ -22,10 +22,14 @@ import SwiftUI
 /// coordinates, so an open folder well away from it can be drawn as a block
 /// of its own height rather than built in full. See
 /// `BrowserFolderOffscreenPlaceholder`.
+///
+/// And it brings a tab the window just opened into view, from the frames the
+/// rows register for reordering, so no row does any work for it.
 struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
     @Environment(BrowserSidebarInteractionState.self) private var sidebarInteraction
 
     let browser: BrowserStore
+    let space: SpaceModel
     @ViewBuilder let background: () -> Background
     @ViewBuilder let content: () -> Content
 
@@ -73,7 +77,13 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
             .onChange(of: sidebarInteraction.sidebarReorderState.hasLiftInFlight, initial: true) { _, isLifting in
                 visibleBand.hold(isLifting)
             }
-            .modifier(SidebarScrollAffordance(isDragging: sidebarInteraction.sidebarReorderState.isDragging))
+            .modifier(
+                SidebarScrollAffordance(
+                    isDragging: sidebarInteraction.sidebarReorderState.isDragging,
+                    reveal: reveal,
+                    didTakeReveal: { sidebarInteraction.revealRequest = nil }
+                )
+            )
             .scrollClipDisabled(
                 !BrowserSidebarReorderVisuals.clipsScrollableRegionWhenIdle
             )
@@ -96,6 +106,46 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Saved and current tabs")
     }
+
+    // MARK: - Revealing
+
+    /// The reveal this Space's list takes: the window's request for a tab it
+    /// opened here, while the request is fresh. The list moves without
+    /// motion while the sidebar is away, so the tab is in view when it
+    /// comes back.
+    private var reveal: SidebarScrollReveal? {
+        guard let request = sidebarInteraction.revealRequest, request.spaceID == space.id, !request.isStale else {
+            return nil
+        }
+        let interaction = sidebarInteraction
+        let space = space
+        let regionID = scrollRegionID
+        let viewport = viewport
+        return SidebarScrollReveal(
+            id: request.id,
+            animates: interaction.tabPreview.isSidebarShown,
+            locate: {
+                request.location(in: space, reorder: interaction.sidebarReorderState, scrollRegionID: regionID)
+            },
+            isHeld: { Self.isHeld(by: interaction, in: viewport.scrollView) }
+        )
+    }
+
+    /// Whether the person is busy with the list in a way a reveal must not
+    /// move it under: dragging from it, naming a folder, or typing in a field
+    /// inside `scrollView`, such as a row's title, which its window keeps
+    /// editing while Crest is in the background.
+    private static func isHeld(by interaction: BrowserSidebarInteractionState, in scrollView: NSScrollView?) -> Bool {
+        if interaction.sidebarReorderState.hasLiftInFlight || interaction.tabDragState.item != nil
+            || interaction.folderDragState.item != nil || interaction.editingFolderRequest != nil
+        {
+            return true
+        }
+        guard let scrollView, let editor = scrollView.window?.firstResponder as? NSTextView, editor.isFieldEditor,
+            let field = editor.delegate as? NSView
+        else { return false }
+        return field.isDescendant(of: scrollView)
+    }
 }
 
 /// Only the measurement and native bridge observe the viewport. Moving a Space
@@ -108,6 +158,8 @@ private final class BrowserSidebarScrollViewport {
     /// tracking so scrolling updates `scrollContentOrigin` without invalidating
     /// views that only depend on the stationary viewport `frame`.
     @ObservationIgnored var visibleOrigin = CGPoint.zero
+    /// The scroll view that hosts the list, once the bridge inside it found it.
+    @ObservationIgnored weak var scrollView: NSScrollView?
 
     func publishScrollContentOrigin(for regionID: UUID, to state: BrowserSidebarReorderState) {
         guard !frame.isEmpty else { return }
@@ -151,6 +203,7 @@ private struct BrowserSidebarDragAutoscrollObserver: View {
         // use the viewport measured by the stationary outer background.
         BrowserSidebarDragAutoscrollBridge(
             regionID: regionID,
+            scrollViewport: viewport,
             viewport: viewport.frame,
             pointer: state.pointer,
             isDragging: state.isDragging,
@@ -161,6 +214,8 @@ private struct BrowserSidebarDragAutoscrollObserver: View {
 
 private struct BrowserSidebarDragAutoscrollBridge: NSViewRepresentable {
     let regionID: UUID
+    /// Where the bridge leaves the scroll view it finds, which a reveal reads.
+    let scrollViewport: BrowserSidebarScrollViewport
     let viewport: CGRect
     let pointer: CGPoint
     let isDragging: Bool
@@ -176,6 +231,7 @@ private struct BrowserSidebarDragAutoscrollBridge: NSViewRepresentable {
     ) {
         nsView.update(
             regionID: regionID,
+            scrollViewport: scrollViewport,
             viewport: viewport,
             pointer: pointer,
             isDragging: isDragging,
@@ -198,6 +254,7 @@ private final class BrowserSidebarDragAutoscrollObserverView: NSView {
     private static let autoscrollMaximumStep: CGFloat = 14
 
     private weak var reorderState: BrowserSidebarReorderState?
+    private weak var scrollViewport: BrowserSidebarScrollViewport?
     private weak var observedClipView: NSClipView?
     private var boundsObserver: NSObjectProtocol?
     private var clipViewWasPostingBoundsChanges = false
@@ -263,12 +320,15 @@ private final class BrowserSidebarDragAutoscrollObserverView: NSView {
 
     func update(
         regionID: UUID,
+        scrollViewport: BrowserSidebarScrollViewport,
         viewport: CGRect,
         pointer: CGPoint,
         isDragging: Bool,
         state: BrowserSidebarReorderState
     ) {
         self.regionID = regionID
+        self.scrollViewport = scrollViewport
+        if let scrollView = observedClipView?.enclosingScrollView { scrollViewport.scrollView = scrollView }
         self.viewport = viewport
         self.pointer = pointer
         self.isDragging = isDragging
@@ -294,6 +354,7 @@ private final class BrowserSidebarDragAutoscrollObserverView: NSView {
             return
         }
         let clipView = scrollView.contentView
+        scrollViewport?.scrollView = scrollView
         guard observedClipView !== clipView else { return }
 
         stopObservingBounds()

@@ -266,6 +266,18 @@ final class BrowserSidebarReorderState {
     /// a click can reach.
     func scrollRegionFrame(for id: UUID) -> CGRect? { geometry.scrollRegions[id] }
 
+    /// Where the row of `item` in `space` is now, in the sidebar's global
+    /// space, while it scrolls in the region `scrollRegionID` names; nil while
+    /// no row of it is laid out there.
+    func registeredFrame(
+        of item: BrowserSidebarReorderItemID, in space: BrowserSpaceRuntimeAssignment, scrollRegionID: UUID
+    ) -> CGRect? {
+        guard let registered = geometry.row(item, in: space), registered.scrollRegionID == scrollRegionID else {
+            return nil
+        }
+        return registered.row.frame
+    }
+
     func register(
         selectionTarget itemID: BrowserSelectionItemID,
         in space: BrowserSpaceRuntimeAssignment,

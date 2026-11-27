@@ -33,7 +33,8 @@ public sealed record OpenTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid
             edited.JoinFolderOf(from, tab.Id, turn.Now, SavesInSavedFolder);
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId));
         if (Shows) followUp.ShowTab(space.Id, tab.Id).ShowSpace(space.Id);
-        return new(turn.Basis.Replacing(edited.Capture(space)), SyncStaging.Creation, followUp);
+        return new(turn.Basis.Replacing(edited.Capture(space)), SyncStaging.Creation, followUp,
+            SessionTabEvents.None.Opening(WindowId, space.Id, tab.Id));
     }
 
     #endregion

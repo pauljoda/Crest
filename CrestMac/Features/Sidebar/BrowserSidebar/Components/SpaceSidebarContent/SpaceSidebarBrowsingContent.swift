@@ -76,7 +76,7 @@ struct SpaceSidebarBrowsingContent: View {
             )
         )
 
-        SpaceSidebarTabListScroll(browser: browser) {
+        SpaceSidebarTabListScroll(browser: browser, space: space) {
             BrowserSidebarBackgroundInteractionView(
                 editSpace: editSpace,
                 collapseAllFolders: { _ = tabActions.collapseAllFolders() },

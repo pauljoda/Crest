@@ -157,4 +157,34 @@ public sealed partial class BrowserContractsTests {
             Assert.Equal(ranked, open.FallbackTab());
         }
     }
+
+    [Fact]
+    public void OnlyTheWindowThatOpensATabHearsItOpenedAndNeverForAMoveOrAnImport() {
+        var fixture = new BatchSpace();
+        using var device = new TestDevice(fixture.Session);
+        var window = device.Open(fixture.Space, (fixture.Space, fixture.Open));
+        var other = device.Open(fixture.Space);
+        var opened = Guid.NewGuid();
+
+        var changes = device.Send(new OpenTab(device.Workspace, window, fixture.Space, opened,
+            new TabContent("https://opened.example/", View: null, Title: null), TabPlacement.Current, AfterTabId: null, Shows: false));
+        Assert.Equal([new OpenedTab(fixture.Space, opened)], changes.OfType<TabsOpened>().Single(change => change.WindowId == window).Tabs);
+        Assert.DoesNotContain(changes.OfType<TabsOpened>(), change => change.WindowId == other);
+
+        // A copy and a closed tab brought back are opened too.
+        var copied = device.Send(new DuplicateTab(device.Workspace, window, fixture.Space, opened, Placement: null, Shows: false));
+        Assert.Equal(copied.OfType<TabCopied>().Single().CopyTabId, copied.OfType<TabsOpened>().Single().Tabs.Single().TabId);
+        device.Send(new CloseTab(device.Workspace, window, fixture.Space, opened));
+        Assert.Equal([new OpenedTab(fixture.Space, opened)],
+            device.Send(new ReopenClosedTab(device.Workspace, window, fixture.Space)).OfType<TabsOpened>().Single().Tabs);
+
+        // A tab that only moves to another Space did not open.
+        Assert.Empty(device.Send(new MoveTabToSpace(device.Workspace, window, fixture.Space, opened, fixture.Other, null, null, null))
+            .OfType<TabsOpened>());
+
+        // An imported Space's tabs are the import's, not the window's.
+        Assert.Empty(device.Send(new ImportSpaces(device.Workspace, window, ReadSpaces(fixture.Session["spaces"]![0]!)))
+            .OfType<TabsOpened>());
+    }
+
 }
