@@ -6,28 +6,28 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.11.69</title>
-            <pubDate>Fri, 27 Nov 2026 08:35:11 +0000</pubDate>
+            <title>0.11.70</title>
+            <pubDate>Fri, 27 Nov 2026 09:31:46 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1731</sparkle:version>
-            <sparkle:shortVersionString>0.11.69</sparkle:shortVersionString>
+            <sparkle:version>1732</sparkle:version>
+            <sparkle:shortVersionString>0.11.70</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
+### Improved
 
-- A new Sites before search option in Settings › Search › Typing lets one typed word lead the command palette with the best matching site you know, such as an open, pinned or saved tab or a page in your history, with the search right below it. A space after the word searches first again. Thanks to Gustavo Lima (@athousanddetails).
+- When you open a tab whose row is out of view, such as a link opened in the background, the sidebar scrolls just far enough to show it, landing on the last tab when several open at once. It never moves while you scroll, drag or rename. Thanks to Bruno Mengaldo (@brnom).
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[Release notes](https://crestbrowser.com/releases/mac/development/0.11.69/) · [View all changes](https://github.com/crest-browser/Crest/compare/e911857bfc7c66042d62111933c47a317af5bb44...a3bc61d162523ba28aa5918dd525e9856834111d) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.11.69-2026-11-27-1731-r731.1/Installer-Crest-0.11.69-development-2026-11-27-a3bc61d.dmg)
+[Release notes](https://crestbrowser.com/releases/mac/development/0.11.70/) · [View all changes](https://github.com/crest-browser/Crest/compare/a3bc61d162523ba28aa5918dd525e9856834111d...f06d271bf773849de5d79c71dcc5ab3d9856024f) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.11.70-2026-11-27-1732-r732.1/Installer-Crest-0.11.70-development-2026-11-27-f06d271.dmg)
 
 [Browse Development releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.11.69-2026-11-27-1731-r731.1/Installer-Crest-0.11.69-development-2026-11-27-a3bc61d.dmg" length="414911478" type="application/octet-stream" sparkle:edSignature="VtICc798W0x9bKGtVt2fBHT6takP2nMPnCSdzUpGHJYwPfGUUMSyIUNv0yPqtSV7kO3rOcYYATYq/bn73fjpAA=="/>
+            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.11.70-2026-11-27-1732-r732.1/Installer-Crest-0.11.70-development-2026-11-27-f06d271.dmg" length="414993398" type="application/octet-stream" sparkle:edSignature="f4958xn6wd2O69Tvj2DmMB186C7HG7St4XidLnaZ80fwMG5IHoSdr9u8OSQpPD3DhBzmhQaRBwpvit/BjDTcBg=="/>
         </item>
         <item>
             <title>0.10.138</title>
@@ -89,6 +89,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: XjXyCYnVDzDc2Y7jBCKtiN6jA62rAjNRCnA6d6EeokTO7Tr1OwIn2PSUjrbKolpAZ4pDkHYr5cjV3700dqBFAA==
-length: 7059
+edSignature: lIwVeXQFqvYWiF/eW8qROMtA1cpPqAmRcmTcyXwGXlVP//fsFu1JVwC6vndbuZ5pO8a0vx7gYtGY5vWVlN6FDw==
+length: 6999
 -->

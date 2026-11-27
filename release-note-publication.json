@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-11-new-look",
-    "development": "palette-sites-before-search",
+    "development": "sidebar-reveals-opened-tab",
     "nightly": "picture-in-picture-settings-window-fallback"
   }
 }
