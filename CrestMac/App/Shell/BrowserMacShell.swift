@@ -118,14 +118,15 @@ final class BrowserMacShell {
             let window = NSApp.keyWindow
             let stage: BrowserMacKeyStage =
                 BrowserWebHostView.isPageContent(window?.firstResponder) ? .beforePage : .beforeCrestView
+            let handled = self?.handleShortcut(event, at: stage) == true
             // A key the page takes may edit it, so its own Undo comes first
             // again; see `BrowserMacWindowUndo`.
-            if stage == .beforePage, let browserWindow = window as? BrowserMacWindow,
+            if !handled, stage == .beforePage, let browserWindow = window as? BrowserMacWindow,
                 !BrowserMacWindowUndo.isUndoOrRedo(event)
             {
                 browserWindow.undoLeadsPage = false
             }
-            return self?.handleShortcut(event, at: stage) == true ? nil : event
+            return handled ? nil : event
         }
         quickWindowShortcut = BrowserMacGlobalShortcut(
             binding: { application.shortcuts.shortcut(for: .newQuickWindow) },

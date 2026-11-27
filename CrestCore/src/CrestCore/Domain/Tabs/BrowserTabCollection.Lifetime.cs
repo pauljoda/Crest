@@ -81,7 +81,8 @@ public sealed partial class BrowserTabCollection {
     /// Puts back the folders of `before` that the tabs `returning` sat in,
     /// and the folders above them, that this Space no longer holds: each as it
     /// stood, after the folder it followed there, at the top level once the
-    /// folder it sat in is gone or lies in another section.
+    /// folder it sat in is gone, lies in another section or became a group,
+    /// which holds only tabs.
     private void RestoreFolders(IReadOnlyList<FolderState> before, IReadOnlyList<TabState> returning) {
         var parents = before.ToDictionary(folder => folder.Id, folder => folder.ParentId);
         HashSet<Guid> wanted = [];
@@ -95,7 +96,8 @@ public sealed partial class BrowserTabCollection {
         }
         for (int index = 0; index < folders.Count; index++) {
             if (folders[index].ParentId is not { } parent || !wanted.Contains(folders[index].Id)) continue;
-            if (folders.FirstOrDefault(kept => kept.Id == parent) is not { } holder || holder.Location != folders[index].Location)
+            if (folders.FirstOrDefault(kept => kept.Id == parent) is not { } holder || holder.Location != folders[index].Location
+                || holder.IsGroup)
                 folders[index] = folders[index] with { ParentId = null };
         }
         new FolderTree(folders).Validate();

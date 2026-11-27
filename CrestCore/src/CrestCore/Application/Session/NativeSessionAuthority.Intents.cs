@@ -51,14 +51,14 @@ public sealed partial class NativeSessionAuthority {
             edit = Edit(intent, Stamp(now), ids, pages);
             if (edit is null) return;
             if (edit.Sweep is { } sweep) lastSweep = sweep;
-            if (edit.Clears is { } clear) Remember(clear);
             previous = session;
             if (edit.Next.Equals(previous)) {
                 if (edit.Events is null && edit.FollowUp is null) return;
             } else if (edit.Staging is { Urgency.StagesWithSave: true }) {
-                reserved = Reserve(edit.Next, edit.Completes, edit.FollowUp, edit.Events);
+                reserved = Reserve(edit.Next, edit.Completes, edit.FollowUp, edit.Events, edit.Clears);
             } else {
                 if (edit.Completes is { } completed) completedTransients.Add(completed);
+                if (edit.Clears is { } clear) Remember(clear);
                 _ = Accept(edit.Next);
             }
         }

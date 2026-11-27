@@ -33,8 +33,8 @@ public sealed partial class NativeSessionAuthority {
     /// caller holds the gate.
     internal ClearMark? RememberedClear(Guid id) => clears.FirstOrDefault(mark => mark.Id == id);
 
-    /// Remembers `mark` as the latest clear, forgetting the oldest past the
-    /// limit. The caller holds the gate.
+    /// Remembers `mark`, a clear whose state just committed, as the latest
+    /// clear, forgetting the oldest past the limit. The caller holds the gate.
     private void Remember(ClearMark mark) {
         clears.RemoveAll(remembered => remembered.Id == mark.Id);
         clears.Add(mark);
