@@ -14,7 +14,7 @@ namespace CrestCore.Native;
 public static class ContractCodec {
     /// <summary>SHA-256 of the canonical contract schema.</summary>
     public static ReadOnlySpan<byte> Fingerprint => [
-        0xd2, 0x38, 0x05, 0x22, 0x37, 0x63, 0x80, 0x36, 0x6e, 0xdf, 0x3f, 0x35, 0x53, 0xc5, 0xb2, 0x55, 0xc2, 0x54, 0xa0, 0x63, 0x3d, 0x1a, 0x73, 0x47, 0xa1, 0x4b, 0x1a, 0x67, 0x4a, 0x8f, 0x11, 0x39
+        0x3d, 0xc2, 0x1e, 0xc5, 0xcc, 0xf8, 0x61, 0x52, 0x27, 0x1a, 0xbe, 0xb1, 0x7d, 0x5c, 0x50, 0xb9, 0x10, 0xd8, 0xa3, 0xa1, 0x2c, 0xd0, 0xc2, 0x06, 0xcd, 0x0b, 0x78, 0x71, 0xa7, 0xf0, 0x9b, 0x8a
     ];
 
     /// <summary>SHA-256 of the engine contract alone, which an engine binding registers with.</summary>
@@ -5434,6 +5434,7 @@ public static class ContractCodec {
             reader.ReadBool(),
             ReadNewTabPosition(reader),
             reader.ReadBool(),
+            reader.ReadBool(),
             ReadPalettePreferences(reader),
             reader.ReadBool(),
             reader.ReadBool(),
@@ -5462,6 +5463,7 @@ public static class ContractCodec {
         writer.WriteBool(value.ShowsRecentTabs);
         WriteNewTabPosition(writer, value.NewTabPosition);
         writer.WriteBool(value.NewTabsJoinFolder);
+        writer.WriteBool(value.ConfirmsQuit);
         WritePalettePreferences(writer, value.Palette);
         writer.WriteBool(value.FloatsVideoOnAppSwitch);
         writer.WriteBool(value.FloatsVideoOnDesktopSwitch);

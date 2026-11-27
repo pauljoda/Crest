@@ -75,6 +75,9 @@ final class BrowserRootModel {
     /// Injectable phase timing for sidebar transitions.
     @ObservationIgnored
     var sidebarMorphWait: SidebarMorphWait = { try await Task.sleep(for: $0) }
+    /// Puts away the sidebar a Space shortcut brought out, once it has shown
+    /// long enough; nil when no shortcut is showing it.
+    @ObservationIgnored private var spaceShortcutSidebarTask: Task<Void, Never>?
     var isWindowFocused: Bool {
         get { observed(\.isWindowFocusedStorage, as: \.isWindowFocused) }
         set { publish(newValue, into: \.isWindowFocusedStorage, as: \.isWindowFocused) }
@@ -211,9 +214,16 @@ extension BrowserRootModel {
     /// Shows the address the page of the tab the window shows reads in the
     /// core, or its tab's, in the address field, unless the person is editing
     /// it, the Space is locked or no page shows that tab; another window's or
-    /// Space's page never replaces what the field holds.
+    /// Space's page never replaces what the field holds. While a Peek is open
+    /// over the tab, the field shows the Peek's address instead, once it has
+    /// one.
     func synchronizePageMetadata() {
         guard !isAddressEditing, !selectedSpaceIsLocked, let page = selectedPage else { return }
+        if let peekPage = pages.peekPage {
+            guard let url = peekPage.live.displayURL else { return }
+            address = url.absoluteString
+            return
+        }
         address = (page.live.displayURL ?? browser.shownTab?.address)?.absoluteString ?? ""
     }
 
@@ -368,6 +378,7 @@ extension BrowserRootModel {
 
     func dockSidebar(reduceMotion: Bool) {
         isFloatingSidebarRevealedByPointer = false
+        endSpaceShortcutSidebarHold()
         let slide = BrowserSidebarSlide.chosen
         guard !reduceMotion, !slide.snaps else {
             cancelSidebarMorph()
@@ -438,6 +449,28 @@ extension BrowserRootModel {
         isFloatingSidebarRevealedByPointer = true
     }
 
+    /// Floats a hidden sidebar over the page for a moment after a shortcut
+    /// moved the window to another Space, when the person asked for that.
+    /// Another shortcut while it shows keeps it out longer; a sidebar that is
+    /// docked or docking, or that something else brought out, is left as it
+    /// is. The pointer passing over it during the hold does not put it away
+    /// early, and one resting on it keeps it out afterwards, as usual.
+    func revealSidebarForSpaceShortcut(reduceMotion: Bool) {
+        guard SidebarSpaceShortcutRevealPreference.isEnabled,
+            sidebarPresentation == .collapsed || spaceShortcutSidebarTask != nil
+        else { return }
+        presentFloatingSidebar(reduceMotion: reduceMotion)
+        spaceShortcutSidebarTask?.cancel()
+        spaceShortcutSidebarTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            try? await self.sidebarMorphWait(CrestMotion.spaceShortcutSidebarHold)
+            guard !Task.isCancelled else { return }
+            self.spaceShortcutSidebarTask = nil
+            guard self.sidebarPresentation == .floating else { return }
+            self.dismissFloatingSidebarIfInteractionAllows(reduceMotion: reduceMotion)
+        }
+    }
+
     func dismissFloatingSidebar(reduceMotion: Bool) {
         cancelSidebarMorph()
         isFloatingSidebarRevealedByPointer = false
@@ -486,6 +519,7 @@ extension BrowserRootModel {
     func floatingSidebarPresentationChanged() {
         guard !isFloatingSidebarPresented else { return }
         isFloatingSidebarRevealedByPointer = false
+        endSpaceShortcutSidebarHold()
     }
 
     func columnVisibilityChanged(reduceMotion: Bool) {
@@ -514,11 +548,17 @@ extension BrowserRootModel {
         // the sidebar before the card reports it, and the card keeps the
         // sidebar out as it would once it does.
         guard !isSidebarMorphing,
+            spaceShortcutSidebarTask == nil,
             !isSidebarSurfaceHovered,
             !chrome.utilityPresentation.isSidebarInteractionActive,
             !sidebarInteraction.tabPreview.isPointerOnShownCard
         else { return }
         dismissFloatingSidebar(reduceMotion: reduceMotion)
+    }
+
+    private func endSpaceShortcutSidebarHold() {
+        spaceShortcutSidebarTask?.cancel()
+        spaceShortcutSidebarTask = nil
     }
 
     @discardableResult

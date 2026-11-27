@@ -155,7 +155,9 @@ struct BrowserTabOrganizationMenuContent: View {
                 Group {
                     Button("New Folder", systemImage: "folder.badge.plus") {
                         performIfCurrent {
-                            browser.createTabFolder([tab.id], in: assignment.spaceID)
+                            guard let folder = browser.createTabFolder([tab.id], in: assignment.spaceID)
+                            else { return }
+                            sidebarInteraction?.beginRenaming(folder: folder, in: context.space)
                         }
                     }
                     let folders = context.space.folderChoices(in: [.current]).map(\.folder).filter { !$0.isGroup }

@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "return-to-saved-url-command",
+      "category": "new",
+      "message": "Return to Saved URL sends a pinned or saved tab you've moved away from back to its saved address, from the Tabs menu, the command palette, or keys you choose in Settings › Shortcuts. Thanks to @hader00.",
+      "platforms": ["mac"]
+    }
+  ]
+}

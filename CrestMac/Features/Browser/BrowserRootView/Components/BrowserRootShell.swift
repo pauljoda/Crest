@@ -140,6 +140,9 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         .onChange(of: revealsSidebarOverFullscreenPage, initial: true) { _, reveals in
             model.fullscreenSidebarRevealChanged(reveals)
         }
+        .onChange(of: model.chrome.spaceShortcutSidebarRequest) {
+            model.revealSidebarForSpaceShortcut(reduceMotion: reduceMotion)
+        }
         .onChange(of: transientBrowsing.orphanedPeeks(in: model.browser), initial: true) {
             transientBrowsing.reconcilePeeks(in: model.browser)
         }

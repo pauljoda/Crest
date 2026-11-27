@@ -22,6 +22,7 @@ struct CrestColorSlider: View {
 
     @State private var isDragging = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     // MARK: - Actions - Drawing
 
@@ -33,8 +34,7 @@ struct CrestColorSlider: View {
                 LinearGradient(colors: track.map(\.color), startPoint: .leading, endPoint: .trailing)
                     .overlay {
                         if showsGrain {
-                            CrestGrain()
-                                .blendMode(.softLight)
+                            CrestTextureGrain(reducesTransparency: reduceTransparency)
                                 .opacity(CrestGrainMetrics.fullOpacity)
                                 .mask(
                                     LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: .trailing))

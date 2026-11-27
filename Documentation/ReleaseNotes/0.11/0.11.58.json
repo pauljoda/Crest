@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "tab-menu-new-folder-name-ready-to-type",
+      "category": "improved",
+      "message": "A folder you make from a tab's menu opens with its name ready to type, as New Folder in the sidebar does. A new saved folder opens the saved section first, so its name is in view. Thanks to Sunny Tamang (@SunnyTamang)."
+    }
+  ]
+}

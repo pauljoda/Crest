@@ -125,6 +125,12 @@ final class BrowserAppPreferenceStore {
         set { set { $0.newTabsJoinFolder = newValue } }
     }
 
+    /// Whether quitting from the keyboard or the Quit menu item asks first.
+    var confirmsQuit: Bool {
+        get { preferences.confirmsQuit }
+        set { set { $0.confirmsQuit = newValue } }
+    }
+
     /// Whether the sidebar offers Tidy for open tabs. Off until the person
     /// turns it on.
     var offersTabTidying: Bool {

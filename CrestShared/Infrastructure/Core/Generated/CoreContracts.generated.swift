@@ -2543,6 +2543,7 @@ struct AppPreferences: Equatable, Sendable {
         showsRecentTabs: true,
         newTabPosition: NewTabPosition.top,
         newTabsJoinFolder: false,
+        confirmsQuit: false,
         palette: PalettePreferences(
             layout: PaletteLayout.sections,
             sources: [
@@ -2588,6 +2589,7 @@ struct AppPreferences: Equatable, Sendable {
     var showsRecentTabs: Bool
     var newTabPosition: NewTabPosition
     var newTabsJoinFolder: Bool
+    var confirmsQuit: Bool
     var palette: PalettePreferences
     var floatsVideoOnAppSwitch: Bool
     var floatsVideoOnDesktopSwitch: Bool
@@ -22313,6 +22315,7 @@ struct ShortcutCommand: Hashable, Sendable {
         case copyPageTitle
         case showPageQRCode
         case openPageInPrivateWindow
+        case returnToSavedAddress
     }
 
     let tag: Int
@@ -24630,6 +24633,25 @@ struct ShortcutCommand: Hashable, Sendable {
         isReservedFromPages: false,
         defaultPreference: ShortcutPreference.preferWebsite
     )
+    static let returnToSavedAddress = ShortcutCommand(
+        tag: 83,
+        kind: .returnToSavedAddress,
+        name: "returnToSavedAddress",
+        section: ShortcutSection.tabs,
+        title: LocalizedStringResource("Return to Saved URL"),
+        searchTerms: LocalizedStringResource("reset tab original pinned saved home address"),
+        menuTitle: nil,
+        symbol: "arrow.uturn.backward",
+        requiredCapability: nil,
+        selects: nil,
+        number: nil,
+        defaultShortcuts: [],
+        paletteRest: nil,
+        offersInPalette: true,
+        isOptionAlternate: false,
+        isReservedFromPages: false,
+        defaultPreference: ShortcutPreference.useBoth
+    )
 
     static let all: [ShortcutCommand] = [
         newWindow,
@@ -24714,7 +24736,8 @@ struct ShortcutCommand: Hashable, Sendable {
         collapseAllFolders,
         copyPageTitle,
         showPageQRCode,
-        openPageInPrivateWindow
+        openPageInPrivateWindow,
+        returnToSavedAddress
     ]
 
     static func named(_ name: String?) -> ShortcutCommand? {
@@ -24852,6 +24875,7 @@ struct ShortcutMenu: Hashable, Sendable {
             [
                 ShortcutCommand.toggleSelectedTabPinned,
                 ShortcutCommand.toggleSelectedTabSaved,
+                ShortcutCommand.returnToSavedAddress,
                 ShortcutCommand.duplicateTab,
                 ShortcutCommand.reopenClosedTab,
                 ShortcutCommand.clearOtherTabs,

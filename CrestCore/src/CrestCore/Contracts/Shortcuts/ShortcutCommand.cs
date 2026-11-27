@@ -87,7 +87,8 @@ public sealed class ShortcutCommand {
         CollapseAllFolders,
         CopyPageTitle,
         ShowPageQRCode,
-        OpenPageInPrivateWindow
+        OpenPageInPrivateWindow,
+        ReturnToSavedAddress
     }
 
     #endregion
@@ -365,6 +366,15 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand OpenPageInPrivateWindow = new(Kinds.OpenPageInPrivateWindow,
         name: "openPageInPrivateWindow", ShortcutSection.Page, title: "Open Page in Private Window", symbol: "eyeglasses",
         searchTerms: "incognito private browsing open again", availableWhen: facts => ShowingWebPage(facts) && !facts.IsPrivate);
+    // A pinned or saved tab that has wandered goes back to its saved address,
+    // as the sidebar's Return to Saved URL does. Pages report navigations
+    // without republishing the window, so the platform checks the live tab.
+    // It came after people could customize, so it waits for the keys a person
+    // chooses.
+    public static readonly ShortcutCommand ReturnToSavedAddress = new(Kinds.ReturnToSavedAddress,
+        name: "returnToSavedAddress", ShortcutSection.Tabs, title: "Return to Saved URL", symbol: "arrow.uturn.backward",
+        searchTerms: "reset tab original pinned saved home address",
+        availableWhen: facts => facts.ShownTab is { SavedAddress: not null }, whenPageUsesKeys: ShortcutPreference.UseBoth);
 
     public static IReadOnlyList<ShortcutCommand> All { get; } = [
         NewWindow, NewBlankWindow, NewTab, NewQuickWindow, NewPrivateWindow, CloseTabOrWindow, CloseWindow, OpenLocation, Back,
@@ -377,7 +387,8 @@ public sealed class ShortcutCommand {
         SplitWithNextTab, FocusNextSplitCard, FocusPreviousSplitCard, RemoveTabFromSplit, SeparateSplitTabs,
         MoveSplitCardLeft, MoveSplitCardRight, ToggleDeveloperToolbar, ToggleTranslationToolbar, OpenFile, FindNext,
         FindPrevious, CapturePage, MostRecentTabBackward, ClearSiteCookies, ClearSiteCache, ToggleSelectedTabSaved,
-        OpenNextExtension, ClearAllTabs, CollapseAllFolders, CopyPageTitle, ShowPageQRCode, OpenPageInPrivateWindow
+        OpenNextExtension, ClearAllTabs, CollapseAllFolders, CopyPageTitle, ShowPageQRCode, OpenPageInPrivateWindow,
+        ReturnToSavedAddress
     ];
 
     #endregion

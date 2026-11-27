@@ -32,10 +32,8 @@ struct CrestGrain: View {
 }
 
 enum CrestGrainMetrics {
-    /// How strongly a full grain lies over the colors under it, and while
-    /// the system reduces transparency.
+    /// How strongly a full grain lies over the colors under it.
     static let fullOpacity = 0.38
-    static let reducedTransparencyOpacity = 0.24
     /// One speck to every 24 square points, as a sidebar has always had.
     static let density = 1.0 / 24
 }

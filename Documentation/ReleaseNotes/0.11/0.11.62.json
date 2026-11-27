@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-shows-after-space-shortcut",
+      "category": "new",
+      "message": "Turn on Show sidebar when switching Spaces with shortcuts in Settings › Appearance, and a hidden sidebar slides out for a moment when you change Space from the keyboard, so you can see where you landed. Thanks to Mathias Balling (@MathiasBalling).",
+      "platforms": ["mac"]
+    }
+  ]
+}

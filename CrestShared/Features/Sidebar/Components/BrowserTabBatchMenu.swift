@@ -156,21 +156,29 @@ struct BrowserTabBatchMenu: View {
     /// The two folders the selection can move into that don't exist yet.
     @ViewBuilder
     private var newFolderActions: some View {
-        action(
-            "New Current Tabs Folder", systemImage: "folder.badge.plus",
-            browser.filingInNewFolder(request, in: .current))
-        action("New Saved Folder", systemImage: "folder.badge.plus", browser.filingInNewFolder(request, in: .saved))
+        newFolderAction("New Current Tabs Folder", systemImage: "folder.badge.plus", in: .current)
+        newFolderAction("New Saved Folder", systemImage: "folder.badge.plus", in: .saved)
     }
 
     /// Files the selection into a new group, whose name then starts editing.
     private var newGroupAction: some View {
-        let batch = browser.filingInNewFolder(request, in: .current, isGroup: true)
-        return Button("New Group", systemImage: "rectangle.stack.badge.plus") {
+        newFolderAction("New Group", systemImage: "rectangle.stack.badge.plus", in: .current, isGroup: true)
+    }
+
+    /// Files the selection into a new folder or group in `placement`, whose
+    /// name then starts editing, as the Space's own New Folder does. The
+    /// saved section opens once the folder exists, so its name never edits
+    /// out of sight, and a refused action leaves the section as it was.
+    private func newFolderAction(
+        _ title: LocalizedStringKey, systemImage: String, in placement: TabPlacement, isGroup: Bool = false
+    ) -> some View {
+        let batch = browser.filingInNewFolder(request, in: placement, isGroup: isGroup)
+        return Button(title, systemImage: systemImage) {
             let before = Set(browser.spaceModel(request.spaceID)?.folders.models.map(\.id) ?? [])
-            actions.perform(batch, for: request)
-            guard let space = browser.spaceModel(request.spaceID),
-                let made = space.folders.models.first(where: { $0.isGroup && !before.contains($0.id) })
+            guard actions.perform(batch, for: request), let space = browser.spaceModel(request.spaceID),
+                let made = space.folders.models.first(where: { !before.contains($0.id) })
             else { return }
+            if placement == .saved { browser.setSavedTabsExpanded(true, matching: request.assignment) }
             sidebarInteraction.beginRenaming(folder: made.id, in: space)
         }
         .disabled(!actions.isAvailable(batch))

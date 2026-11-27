@@ -49,7 +49,7 @@ extension BrowserMacShell {
             let shortcut = BrowserShortcut(event: event), shortcut.isValid
         else { return false }
         if shortcut == BrowserShortcut(key: .character("q"), modifiers: .command) {
-            NSApp.terminate(nil)
+            confirmPersonsQuit()
             return true
         }
         guard !isQuitting else { return true }

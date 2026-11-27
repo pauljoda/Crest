@@ -16,6 +16,9 @@ final class BrowserCommandPaletteModel {
     /// How long Return, Tab or Down wait for the answer to what was typed
     /// before they act on the rows already shown.
     private static let keyWait: Duration = .milliseconds(300)
+    /// How far apart, in points, the palette and a row may place one pointer
+    /// position, as each converts it into window coordinates.
+    private static let samePointerTolerance: CGFloat = 0.5
 
     // MARK: - Variables
 
@@ -76,6 +79,15 @@ final class BrowserCommandPaletteModel {
     /// wait that runs it on the rows already shown.
     @ObservationIgnored private var waitingKey: (() -> Void)?
     @ObservationIgnored private var keyWaitTask: Task<Void, Never>?
+    /// Where the pointer last stood over the palette, in window coordinates,
+    /// on a row or off them, or nil until the palette hears of it.
+    @ObservationIgnored private var lastPointer: CGPoint?
+    /// Where the pointer last moved to over the palette, until the row there
+    /// takes the selection, or nil since the rows or the keyboard's row last
+    /// changed.
+    @ObservationIgnored private var movedPointer: CGPoint?
+    /// The row the pointer last stood over, as that row reports it, and where.
+    @ObservationIgnored private var pointerRow: (index: Int, point: CGPoint)?
     /// The text on the pasteboard when the palette opened, offered with
     /// Paste and Go while the text is still what the palette opened with, or
     /// nil.
@@ -370,6 +382,7 @@ final class BrowserCommandPaletteModel {
         guard shownSequence == sequence, !items.isEmpty else { return }
         selectedResultIndex = (selectedResultIndex + offset + items.count) % items.count
         keyboardSelectionRevision &+= 1
+        forgetPointerMovement()
     }
 
     /// Moves to the first row of the next or previous section.
@@ -381,12 +394,61 @@ final class BrowserCommandPaletteModel {
         else { return }
         selectedResultIndex = first.index
         keyboardSelectionRevision &+= 1
+        forgetPointerMovement()
     }
 
     func selectResult(at index: Int) {
         rejectURLCompletion()
         guard shownSequence == sequence, items.indices.contains(index) else { return }
         selectedResultIndex = index
+    }
+
+    /// Notes the pointer at `point` over the palette, in window coordinates.
+    /// Somewhere other than where it last stood, the pointer moved there, and
+    /// the row there takes the selection.
+    func pointerMoved(to point: CGPoint) {
+        defer { lastPointer = point }
+        guard let lastPointer, point != lastPointer else { return }
+        movedPointer = point
+        selectRowUnderMovedPointer()
+    }
+
+    /// Notes that the pointer at `point`, in window coordinates, stands over
+    /// the row at `index`, which takes the selection when the pointer moved
+    /// there: within the row, or onto it from elsewhere on the palette. A row
+    /// that appears or scrolls under a resting pointer, as when the palette
+    /// opens, its rows change or the keyboard moves through them, leaves the
+    /// selection to the keyboard.
+    func pointerMoved(to point: CGPoint, over index: Int) {
+        pointerRow = (index, point)
+        selectRowUnderMovedPointer()
+    }
+
+    /// Selects the row under the pointer once the palette heard the pointer
+    /// move to where that row reports it, whichever of the two hears it first.
+    /// A move selects once, so a row that later scrolls under the resting
+    /// pointer leaves the selection where it is.
+    private func selectRowUnderMovedPointer() {
+        guard let pointerRow, let movedPointer,
+            abs(pointerRow.point.x - movedPointer.x) < Self.samePointerTolerance,
+            abs(pointerRow.point.y - movedPointer.y) < Self.samePointerTolerance
+        else { return }
+        self.movedPointer = nil
+        selectResult(at: pointerRow.index)
+    }
+
+    /// Forgets the pointer's last move when the results scroll, which can
+    /// bring a row under the resting pointer: only the pointer's next move
+    /// selects.
+    func resultsScrolled() {
+        movedPointer = nil
+    }
+
+    /// Forgets the pointer's last move and the row it stood over, so only its
+    /// next move selects.
+    private func forgetPointerMovement() {
+        movedPointer = nil
+        pointerRow = nil
     }
 
     /// Forgets the row the person moved to: a row whose kind forgets from
@@ -571,6 +633,8 @@ final class BrowserCommandPaletteModel {
         shownSequence = asked
         groups = BrowserCommandPaletteGroup.groups(of: answer)
         items = groups.flatMap(\.items)
+        // New rows may stand under a resting pointer; only a later move selects.
+        forgetPointerMovement()
         completionProposal = answer.completion
         offeredSearch = answer.offeredSearch
         matchingProviders = answer.matchingProviders

@@ -18,6 +18,7 @@ enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     case sidebarRevealDelay
     case sidebarSlideDuration
     case fullScreenSidebarReveal
+    case spaceShortcutSidebarReveal
     case defaultPageZoom
     case cornerRadius
     case tabScale
@@ -64,7 +65,8 @@ enum BrowserAppearanceSetting: Hashable, Sendable, CaseIterable {
     /// The rows the page shows; More Customization holds the rest.
     static let onPage: Set<BrowserAppearanceSetting> = [
         .sidebarOnRight, .appearanceMode, .followSpaceAccent, .spacePageMotion, .sidebarRevealDelay,
-        .sidebarSlideDuration, .fullScreenSidebarReveal, .defaultPageZoom, .cornerRadius, .tabScale, .sidebarSpacing,
+        .sidebarSlideDuration, .fullScreenSidebarReveal, .spaceShortcutSidebarReveal, .defaultPageZoom, .cornerRadius,
+        .tabScale, .sidebarSpacing,
         .pinLayout, .websitePinColors, .dimUnloadedTabs, .tabStatus, .addressDisplay, .commandPaletteAccent,
         .copyURLButton, .superCopy,
         .folderIconOnly, .folderTabCounts, .groupTabCounts, .appIcon, .tabHoverPreview, .folderHoverPreview,

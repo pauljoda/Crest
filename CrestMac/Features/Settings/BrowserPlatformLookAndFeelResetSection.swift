@@ -1,12 +1,15 @@
 import SwiftUI
 
 /// The desktop's Reset All: the shared choices, plus Space page motion, the
-/// sidebar's hover area, hover delay and slide time, and the Dock icon.
+/// sidebar's hover area, hover delay and slide time, whether it shows over a
+/// full-screen page or after a Space shortcut, and the Dock icon.
 struct BrowserPlatformLookAndFeelResetSection: View {
     @AppStorage(SpacePageMotionPreference.key)
     private var animatesSpacePages = SpacePageMotionPreference.defaultValue
     @AppStorage(SidebarFullscreenRevealPreference.key, store: BrowserChromeAppearancePreference.defaults)
     private var revealsSidebarInFullscreen = SidebarFullscreenRevealPreference.defaultValue
+    @AppStorage(SidebarSpaceShortcutRevealPreference.key, store: BrowserChromeAppearancePreference.defaults)
+    private var revealsSidebarOnSpaceShortcut = SidebarSpaceShortcutRevealPreference.defaultValue
 
     var body: some View {
         BrowserLookAndFeelResetFooter {
@@ -15,6 +18,7 @@ struct BrowserPlatformLookAndFeelResetSection: View {
             BrowserDeviceAppearanceStore.shared.sidebarRevealDelay = SidebarRevealDelayPreference.defaultValue
             BrowserDeviceAppearanceStore.shared.sidebarSlideDuration = BrowserSidebarSlide.defaultValue
             revealsSidebarInFullscreen = SidebarFullscreenRevealPreference.defaultValue
+            revealsSidebarOnSpaceShortcut = SidebarSpaceShortcutRevealPreference.defaultValue
             _ = BrowserMacDockTile.shared.select("")
         }
     }

@@ -52,6 +52,13 @@ struct BrowserCommandPaletteResultList: View {
             .defaultScrollAnchor(listsUpward ? .bottom : .top)
             // The scroll bar stays clear of the card's rounded corners.
             .contentMargins(.vertical, BrowserCommandPaletteMetrics.resultContentPadding, for: .scrollIndicators)
+            // Scrolling can bring a row under a resting pointer, which only
+            // the pointer's next move may select.
+            .onScrollGeometryChange(for: CGFloat.self) {
+                $0.contentOffset.y
+            } action: { _, _ in
+                model.resultsScrolled()
+            }
             .frame(height: resultAreaHeight)
             .clipped()
             .onChange(of: model.keyboardSelectionRevision) { _, _ in

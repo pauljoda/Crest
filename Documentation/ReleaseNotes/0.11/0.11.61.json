@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-texture-visible-with-reduce-transparency",
+      "category": "fixed",
+      "message": "With Reduce Transparency on, a Space's sidebar texture shows as a fine film grain instead of all but disappearing, and the Texture slider previews it the same way. Thanks to Peppe Bergqvist (@peppelorum)."
+    }
+  ]
+}

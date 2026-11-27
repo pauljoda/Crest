@@ -135,7 +135,9 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
 
     /// Shows the stop or Space a numbered selection leads to.
     func select(_ selection: NumberedSelection) {
+        let spaceID = browser.selectedSpaceID
         selection.select(on: self)
+        if browser.selectedSpaceID != spaceID { chrome.requestSpaceShortcutSidebar() }
     }
 
     /// The page the page commands act on: a Quick Window's in front, or else
@@ -482,6 +484,20 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         pages.select()
     }
 
+    /// Sends the pinned or saved tab this window shows back to the address it
+    /// was saved at, as the sidebar's Return to Saved URL does.
+    func returnSelectedTabToSavedAddress() {
+        guard let assignment = browser.shownTabAssignment else { return }
+        BrowserSavedLocationRestoreAction(
+            browser: browser, pages: pages, spaceAccess: spaceAccess,
+            show: { [browser, pages] assignment in
+                browser.selectTab(assignment.tabID)
+                pages.select()
+                return pages.activePage(matching: assignment)
+            }
+        ).perform(assignment)
+    }
+
     func duplicateSelectedTab() {
         guard browser.duplicateSelectedTab() != nil else { return }
         pages.reconcile()
@@ -680,6 +696,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     func selectAdjacentSpace(_ direction: AdjacentDirection) {
         guard browser.selectAdjacentSpace(direction) != nil else { return }
         pages.selectSpace(in: browser)
+        chrome.requestSpaceShortcutSidebar()
     }
 
     func selectSpace(_ spaceID: UUID) {
