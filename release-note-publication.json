@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-11-new-look",
-    "development": "sidebar-reveals-opened-tab",
+    "development": "recent-tab-switcher-close-highlighted-tab",
     "nightly": "picture-in-picture-settings-window-fallback"
   }
 }
