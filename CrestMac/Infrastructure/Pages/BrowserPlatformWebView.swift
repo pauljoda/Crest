@@ -51,7 +51,7 @@ struct BrowserPlatformWebView: NSViewRepresentable {
     }
 
     static func dismantleNSView(_ host: BrowserWebHostView, coordinator: Void) {
-        host.detach()
+        host.dismantle()
     }
 
     private var allowsAttachment: Bool {

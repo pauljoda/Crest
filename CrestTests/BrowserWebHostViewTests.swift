@@ -41,6 +41,47 @@ final class BrowserWebHostViewTests: XCTestCase {
         XCTAssertFalse(BrowserWebHostView.isPageContent(nil))
     }
 
+    /// A page view moving between hosts of one window never leaves it, which
+    /// would hide its page from its engine and take its focus. SwiftUI makes
+    /// the host a page moves to before it places it, and can dismantle the
+    /// host the page leaves first, as when a page enters or leaves full
+    /// screen; an older claim placed late never takes the view from a newer
+    /// host.
+    func testPageViewStaysInItsWindowAsItMovesBetweenHosts() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 640, height: 480), styleMask: [.titled], backing: .buffered,
+            defer: true)
+        let root = NSView(frame: NSRect(x: 0, y: 0, width: 640, height: 480))
+        window.contentView = root
+        let page = BrowserWindowDepartureProbe(frame: root.bounds)
+        let standard = BrowserWebHostView(frame: root.bounds)
+        root.addSubview(standard)
+        standard.attach(page)
+        XCTAssertTrue(window.makeFirstResponder(page))
+
+        let fullScreen = BrowserWebHostView(frame: root.bounds)
+        fullScreen.attach(page)
+        standard.dismantle()
+        standard.removeFromSuperview()
+        root.addSubview(fullScreen)
+        XCTAssertTrue(page.superview === fullScreen)
+
+        fullScreen.dismantle()
+        fullScreen.removeFromSuperview()
+        let late = BrowserWebHostView(frame: root.bounds)
+        late.attach(page)
+        let returning = BrowserWebHostView(frame: root.bounds)
+        returning.attach(page)
+        root.addSubview(returning)
+        root.addSubview(late)
+        XCTAssertTrue(page.superview === returning)
+
+        XCTAssertEqual(page.windowDepartures, 0)
+        XCTAssertTrue(window.firstResponder === page)
+        returning.detach()
+        late.detach()
+    }
+
     private func keyboardFallbackEvent(
         in window: NSWindow,
         type: NSEvent.EventType = .keyDown,
@@ -185,6 +226,18 @@ private final class BrowserKeyboardHandlerProbe: NSResponder {
     override func keyDown(with event: NSEvent) {
         events.append(event)
         onKeyDown?()
+    }
+}
+
+@MainActor
+private final class BrowserWindowDepartureProbe: NSView {
+    var windowDepartures = 0
+
+    override var acceptsFirstResponder: Bool { true }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window == nil { windowDepartures += 1 }
     }
 }
 

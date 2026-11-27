@@ -495,7 +495,11 @@
         /// A Chromium page shown again composes a new frame before it draws
         /// anything; see `BrowserNativePageSurfaceLifecycle`.
         var holdsReplacedPageUntilDrawn: Bool { true }
-        func willDetach(from host: BrowserWebHostView) { page?.detach() }
+        /// Leaving a host changes nothing for the page by itself: the page
+        /// hides when its view leaves the window, and a view moving to another
+        /// host in the window stays shown, or hides, as `didAttach(to:)` finds
+        /// that host presenting it.
+        func willDetach(from host: BrowserWebHostView) {}
         func presentationDidChange(in host: BrowserWebHostView) {
             page?.presentationDidChange(takingFocus: host.allowsPageFocus)
         }

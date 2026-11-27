@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "id": "page-stays-drawn-through-full-screen",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "A page stays on screen and keeps drawing as a video goes into or out of full screen, or as a Peek opens as a tab, instead of being hidden and shown again. Thanks to HC (@hcbille)."
+    }
+  ]
+}
