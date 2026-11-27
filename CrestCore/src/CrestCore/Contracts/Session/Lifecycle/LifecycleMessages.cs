@@ -32,6 +32,18 @@ public sealed record CannotPinSplit(Guid TabId) : Rejection {
     #endregion
 }
 
+/// The workspace no longer remembers the clear `ClearId`, or none of the tabs
+/// it archived is left in the archive to bring back.
+public sealed record ClearedTabsGone(Guid ClearId) : Rejection {
+    #region Variables
+
+    /// What the person is told.
+    [Localized]
+    public string Message => "The cleared tabs are no longer in the Archive.";
+
+    #endregion
+}
+
 /// The tab shows the Start Page and is its Space's only tab, so closing it
 /// leaves nothing but its window to close.
 public sealed record LastStartPage(Guid TabId) : Rejection;

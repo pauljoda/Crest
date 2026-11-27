@@ -115,9 +115,18 @@ final class BrowserMacShell {
         windows.openLaunchWindows(activation: background ? .background : .key)
         menuBar.install()
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            let window = NSApp.keyWindow
             let stage: BrowserMacKeyStage =
-                BrowserWebHostView.isPageContent(NSApp.keyWindow?.firstResponder) ? .beforePage : .beforeCrestView
-            return self?.handleShortcut(event, at: stage) == true ? nil : event
+                BrowserWebHostView.isPageContent(window?.firstResponder) ? .beforePage : .beforeCrestView
+            let handled = self?.handleShortcut(event, at: stage) == true
+            // A key the page takes may edit it, so its own Undo comes first
+            // again; see `BrowserMacWindowUndo`.
+            if !handled, stage == .beforePage, let browserWindow = window as? BrowserMacWindow,
+                !BrowserMacWindowUndo.isUndoOrRedo(event)
+            {
+                browserWindow.undoLeadsPage = false
+            }
+            return handled ? nil : event
         }
         quickWindowShortcut = BrowserMacGlobalShortcut(
             binding: { application.shortcuts.shortcut(for: .newQuickWindow) },

@@ -12,6 +12,10 @@ final class BrowserMacWindow: NSWindow {
     /// What the window's content does with a mouse's Back and Forward buttons
     /// and with swipes, while content that knows its pages is shown.
     weak var pointerNavigation: (any BrowserMacWindowPointerNavigation)?
+    /// Whether the window's own latest undo, such as a clear of a Space's
+    /// tabs, came after its focused page last took a key, so Edit › Undo takes
+    /// it back before a page that keeps its own; see `BrowserMacWindowUndo`.
+    var undoLeadsPage = false
     private var frameBeforeZoom: NSRect?
     private(set) var wasZoomedBeforeFullScreen = false
 

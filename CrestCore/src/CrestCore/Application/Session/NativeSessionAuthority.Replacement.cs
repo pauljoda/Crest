@@ -44,6 +44,7 @@ public sealed partial class NativeSessionAuthority {
                 previous = session;
                 session = value.Session; Revision = value.Revision;
                 if (value.TransientCompletion is { } completed) completedTransients.Add(completed);
+                if (value.Clear is { } clear) Remember(clear);
                 storage?.Enqueue(session, Revision);
             }
             replacement = null;
@@ -109,11 +110,13 @@ public sealed partial class NativeSessionAuthority {
     /// Reserves `next`, an intent's state, while it is saved: other writers
     /// are refused until it commits or is disposed. What it completes, what
     /// the window that issued it shows next and what it did that the states
-    /// cannot tell are published with it. The caller holds the gate.
-    private NativeSessionReplacement Reserve(SessionState next, Guid? completes, WindowFollowUp? followUp, SessionTabEvents? events) {
+    /// cannot tell are published with it, and the clear it made is remembered
+    /// once it commits. The caller holds the gate.
+    private NativeSessionReplacement Reserve(SessionState next, Guid? completes, WindowFollowUp? followUp, SessionTabEvents? events,
+        ClearMark? clear = null) {
         var checkpoint = new NativeSessionCheckpoint(next);
         _ = checkpoint.Read(NativeSessionCheckpoint.CorePart);
-        var reserved = new NativeSessionReplacement(this, next, checked(Revision + 1), checkpoint, completes, followUp, events);
+        var reserved = new NativeSessionReplacement(this, next, checked(Revision + 1), checkpoint, completes, followUp, events, clear);
         replacement = reserved;
         return reserved;
     }
