@@ -8,7 +8,8 @@ namespace CrestCore.Contracts;
 /// its saved address when the app's preferences say so for its section. A window that showed
 /// the tab shows `ReturnTabId` next while the Space holds it, as a tab going
 /// back past its first page returns to the tab that opened it, and otherwise
-/// returns to the tab it showed before. Refused with `LastStartPage` for the
+/// returns to the tab it showed before, or to the tab beside it in the
+/// sidebar when none it showed before is left. Refused with `LastStartPage` for the
 /// Start Page when it is its Space's only tab, which leaves only the window
 /// to close.
 public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid TabId, Guid? ReturnTabId = null)
@@ -35,7 +36,7 @@ public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Gui
         SessionTabEvents? events = null;
         if (action.KeepsTab) {
             var group = tab.SplitGroupId;
-            var fallback = Fallback(followUp, space.Id, space.Tabs
+            var fallback = Fallback(followUp, space, space.Tabs
                 .Where(candidate => candidate.Id != tab.Id && (group is null || candidate.SplitGroupId != group))
                 .Select(candidate => candidate.Id).ToHashSet());
             var returns = workspace.ClosePolicy(turn.Basis, tab.Placement) == SavedTabClosePolicy.ReturnToSavedUrl
@@ -47,7 +48,7 @@ public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Gui
                 SavedImages = restoresImage ? [new(tab.Id, TabSavedImageChange.Restore, tab.State.SavedFaviconUrl)] : null
             };
         } else {
-            var fallback = Fallback(followUp, space.Id, space.Tabs.Select(candidate => candidate.Id).ToHashSet());
+            var fallback = Fallback(followUp, space, space.Tabs.Select(candidate => candidate.Id).ToHashSet());
             selected = edited.DismissTabs([tab.Id], shown, fallback, turn.Now, ArchiveReason.Closed, ensureSelection: false);
             edited.PruneSplitMetadata();
         }
@@ -57,13 +58,14 @@ public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Gui
 
     /// The tab a window that showed the closed tab shows next among
     /// `available`: `ReturnTabId` when it is one, or else the one the window
-    /// showed before. None for a window that did not show it.
-    private Guid? Fallback(WindowFollowUp followUp, Guid spaceId, IReadOnlySet<Guid> available) {
-        var before = followUp.FallbackAfterDismissing(spaceId, TabId, available);
-        return followUp.Window?.Tab(spaceId) == TabId && ReturnTabId is { } returning && returning != TabId
-            && available.Contains(returning)
-                ? returning
-                : before;
+    /// showed before, or with none left, the one beside it in the sidebar.
+    /// None for a window that did not show it.
+    private Guid? Fallback(WindowFollowUp followUp, SpaceState space, IReadOnlySet<Guid> available) {
+        var before = followUp.FallbackAfterDismissing(space.Id, TabId, available);
+        if (followUp.Window?.Tab(space.Id) != TabId) return before;
+        return ReturnTabId is { } returning && returning != TabId && available.Contains(returning)
+            ? returning
+            : before ?? space.Neighbor(TabId, available);
     }
 
     #endregion

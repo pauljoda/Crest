@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "close-tab-shows-neighbour",
+      "category": "fixed",
+      "message": "Closing a tab when the window has no earlier tab to go back to, as right after a relaunch, now shows the tab beside it instead of leaving the window empty."
+    }
+  ]
+}

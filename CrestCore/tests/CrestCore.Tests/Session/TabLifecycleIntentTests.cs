@@ -46,6 +46,27 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void ClosingTheOnlyTabAWindowShowedShowsTheTabBesideIt() {
+        var fixture = new BatchSpace();
+        using var device = new TestDevice(fixture.Session);
+
+        // A window that has shown nothing else in the Space, as after a
+        // relaunch, shows the tab below the one it closed rather than none,
+        // and the other side of a split it closed one side of.
+        var window = device.Open(fixture.Space, (fixture.Space, fixture.Open));
+        device.Send(new CloseTab(device.Workspace, window, fixture.Space, fixture.Open));
+        Assert.Equal(fixture.Left, device.Tab(window, fixture.Space));
+        device.Send(new CloseTab(device.Workspace, window, fixture.Space, fixture.Left));
+        Assert.Equal(fixture.Right, device.Tab(window, fixture.Space));
+
+        // A tab the window showed before still comes first.
+        device.Send(new ShowTab(window, fixture.Space, fixture.Pinned));
+        device.Send(new ShowTab(window, fixture.Space, fixture.Last));
+        device.Send(new CloseTab(device.Workspace, window, fixture.Space, fixture.Last));
+        Assert.Equal(fixture.Pinned, device.Tab(window, fixture.Space));
+    }
+
+    [Fact]
     public void PuttingAwaySavedTabsTogetherReturnsTheWindowToATabOutsideThem() {
         using var device = new TestDevice(MaximalDocument());
         var core = device.Authority;

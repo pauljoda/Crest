@@ -250,6 +250,38 @@ public sealed record SidebarOutline(IReadOnlyList<SidebarList> Lists) {
         return reached == shown ? null : stops[reached].Members[0];
     }
 
+    /// <summary>The tab beside <paramref name="tabId"/> among the <see cref="Stops"/> that
+    /// <paramref name="available"/> holds, which a window that shows it shows once it goes and
+    /// nothing it showed before is left: another card of the stop that shows it, else the first
+    /// card of the nearest stop after it, else the last card of the nearest stop before it,
+    /// never wrapping. A tab no stop shows looks from where it lives, inside a collapsed folder
+    /// or section. Null for a tab with no place there, as a Start Page has none, and when no
+    /// stop shows an available tab.</summary>
+    public Guid? Neighbor(Guid tabId, IReadOnlySet<Guid> available, IReadOnlyList<FolderState> folders,
+        Func<TabPlacement, bool> isSectionExpanded) {
+        ArgumentNullException.ThrowIfNull(available);
+        var stops = Stops(folders, isSectionExpanded);
+        int shown = -1;
+        for (int index = 0; index < stops.Count && shown < 0; index++)
+            if (stops[index].Members.Contains(tabId)) shown = index;
+        int after;
+        if (shown >= 0) {
+            if (Available(stops[shown].Members.Where(member => member != tabId)).FirstOrDefault() is { } partner) return partner;
+            after = shown + 1;
+        } else {
+            var positions = Positions();
+            if (!positions.TryGetValue(tabId, out int place)) return null;
+            after = stops.Count(stop => positions[stop.Members[0]] < place);
+        }
+        for (int index = after; index < stops.Count; index++)
+            if (Available(stops[index].Members).FirstOrDefault() is { } next) return next;
+        for (int index = (shown >= 0 ? shown : after) - 1; index >= 0; index--)
+            if (Available(stops[index].Members).LastOrDefault() is { } previous) return previous;
+        return null;
+
+        IEnumerable<Guid?> Available(IEnumerable<Guid> members) => members.Where(available.Contains).Cast<Guid?>();
+    }
+
     /// <summary>The tab a swipe in <paramref name="direction"/> from the shown tab
     /// <paramref name="shownTabId"/> reaches among the <see cref="Stops"/>, which stops at
     /// both ends: the next card of the split that shows it, or past its last card, the

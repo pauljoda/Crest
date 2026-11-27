@@ -123,6 +123,10 @@ public sealed record SpaceState(
     /// or null; see <see cref="SidebarOutline.Step"/>.</summary>
     public Guid? Step(Guid shownTabId, AdjacentDirection direction) => Sidebar.Step(shownTabId, direction, Folders, Shows);
 
+    /// <summary>The tab beside <paramref name="tabId"/> that <paramref name="available"/> holds,
+    /// or null; see <see cref="SidebarOutline.Neighbor"/>.</summary>
+    public Guid? Neighbor(Guid tabId, IReadOnlySet<Guid> available) => Sidebar.Neighbor(tabId, available, Folders, Shows);
+
     /// <summary>The tab a swipe in <paramref name="direction"/> from the shown tab reaches,
     /// or null at either end; see <see cref="SidebarOutline.Swipe"/>.</summary>
     public Guid? Swipe(Guid shownTabId, AdjacentDirection direction) => Sidebar.Swipe(shownTabId, direction, Folders, Shows);
