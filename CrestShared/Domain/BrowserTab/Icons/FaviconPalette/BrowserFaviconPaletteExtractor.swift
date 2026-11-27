@@ -209,8 +209,13 @@ struct BrowserFaviconPaletteExtractor: Sendable {
                         totalWeight: totalWeight
                     )
             } ?? backgroundIndex
+        let prominent = colors.indices
+            .filter { weights[$0] / totalWeight >= BrowserFaviconPalette.prominentShare }
+            .sorted { weights[$0] > weights[$1] }
+            .map { BrowserFaviconColor(perceptualComponents: colors[$0]) }
         return BrowserFaviconPalette(
-            primary: BrowserFaviconColor(perceptualComponents: colors[primaryIndex])
+            primary: BrowserFaviconColor(perceptualComponents: colors[primaryIndex]),
+            prominent: prominent
         )
     }
 

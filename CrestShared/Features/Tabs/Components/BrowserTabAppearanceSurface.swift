@@ -1,5 +1,13 @@
 import SwiftUI
 
+// MARK: - Types
+
+extension EnvironmentValues {
+    /// The color a tab's surface shows under its content, which an icon on it
+    /// has to stand out from; nil outside a tab's surface.
+    @Entry var browserTabSurfaceGround: Color? = nil
+}
+
 /// Appearance only; selection, promotion and drag owners remain on the row.
 ///
 /// Pins rest on the device's material, as the address field does. A selected
@@ -8,6 +16,8 @@ import SwiftUI
 /// selected pins, or a layer of the device's material. A selected pin keeps
 /// its accent edge as well.
 struct BrowserTabAppearanceSurface: ViewModifier {
+    // MARK: - Variables
+
     let appearance: BrowserTabAppearance
     let accent: Color
     let isPinned: Bool
@@ -20,6 +30,14 @@ struct BrowserTabAppearanceSurface: ViewModifier {
     @Environment(\.deviceColorScheme) private var deviceColorScheme
     @Environment(\.sidebarLayerDepth) private var depth
 
+    /// The scheme the device's material draws in here, whose glass a selection
+    /// on the material lifts and edges, whatever scheme the surroundings read.
+    private var materialScheme: ColorScheme {
+        CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme)
+    }
+
+    // MARK: - Body
+
     func body(content: Content) -> some View {
         let radius = BrowserSidebarMetrics.layerCornerRadius(depth: depth)
         let showsBorder = appearance.borders == .all || (isPinned && appearance.borders == .pinned)
@@ -30,6 +48,7 @@ struct BrowserTabAppearanceSurface: ViewModifier {
         let hover = isHovering ? BrowserTabAppearance.intensity(appearance.hoverFill) : 0
         let style = isSelected ? appearance.selectedTabStyle : .standard
         content
+            .environment(\.browserTabSurfaceGround, ground(style: style, fill: fill))
             .modifier(
                 CrestInteractiveSurfaceModifier(
                     isSelected: isSelected, selectionEmphasis: selectionEmphasis,
@@ -56,6 +75,8 @@ struct BrowserTabAppearanceSurface: ViewModifier {
             }
     }
 
+    // MARK: - Actions - Drawing
+
     /// The sheet a selection in `style` lies on, or nil on the material: as
     /// opaque as the person chose, or solid where transparency is reduced.
     /// Where the person tints selected pins, a pin's sheet lies over the pin's
@@ -76,11 +97,43 @@ struct BrowserTabAppearanceSurface: ViewModifier {
         guard isPinned else {
             return !style.liesOnPaper && materialScheme == .dark ? CrestColor.darkSelectionLift : nil
         }
-        guard !reduceTransparency else { return nil }
+        return selectedPinTint(style: style, fill: fill).map { accent.opacity($0) }
+    }
+
+    /// How strongly a selected pin wears its accent over its sheet, or nil
+    /// where it wears none.
+    private func selectedPinTint(style: BrowserSelectedTabStyle, fill: Double) -> Double? {
+        guard isPinned, !reduceTransparency else { return nil }
         let tint = style.liesOnPaper && appearance.tintsSelectedPins ? CrestOpacity.selectedPinTint : 0
         // Two washes of the one accent, laid one over the other.
         let strength = 1 - (1 - tint) * (1 - fill * 0.5)
-        return strength > 0 ? accent.opacity(strength) : nil
+        return strength > 0 ? strength : nil
+    }
+
+    /// The color the surface shows under its content, laid as the layers
+    /// above draw it: the resting surface with its pin fill, and, selected,
+    /// the sheet of paper over the pin's color or the material, with the
+    /// accent washed over it, each laid over the one below as layers
+    /// composite. The device's material takes its color from what lies
+    /// behind it, so it counts as Crest's surface in the scheme the material
+    /// draws in.
+    private func ground(style: BrowserSelectedTabStyle, fill: Double) -> Color {
+        let material = Self.surface(in: materialScheme)
+        let resting =
+            isPinned && fill > 0 && !reduceTransparency
+            ? material.mix(with: accent, by: fill * 0.2, in: .device) : material
+        guard isSelected else { return resting }
+        var selected = material
+        if let paper = paper(style: style) {
+            selected = (paper.ground ?? resting).mix(with: Self.surface(in: .light), by: paper.opacity, in: .device)
+        }
+        guard let tint = selectedPinTint(style: style, fill: fill) else { return selected }
+        return selected.mix(with: accent, by: tint, in: .device)
+    }
+
+    /// Crest's surface in `scheme`: paper in the light, charcoal in the dark.
+    private static func surface(in scheme: ColorScheme) -> Color {
+        (scheme == .dark ? CrestBrandTheme.surfaceDarkComponents : CrestBrandTheme.surfaceLightComponents).color
     }
 
     /// A selected pin's edge is its accent, as is a selected row's where the
@@ -96,11 +149,5 @@ struct BrowserTabAppearanceSurface: ViewModifier {
         }
         if showsBorder { return accent }
         return contrast == .increased ? CrestColor.selectedBorder : .clear
-    }
-
-    /// The scheme the device's material draws in here, whose glass a selection
-    /// on the material lifts and edges, whatever scheme the surroundings read.
-    private var materialScheme: ColorScheme {
-        CrestSurfaceTone.shownScheme(over: colorScheme, window: deviceColorScheme)
     }
 }
