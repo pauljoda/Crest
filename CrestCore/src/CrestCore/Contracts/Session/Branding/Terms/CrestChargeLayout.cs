@@ -9,7 +9,7 @@ public sealed class CrestChargeLayout {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static readonly CrestChargeLayout Single = new(Kinds.Single, "single", "One", CrestVocabulary.Baseline);
     public static readonly CrestChargeLayout Paired = new(Kinds.Paired, "paired", "Two", CrestVocabulary.Baseline);
@@ -18,6 +18,10 @@ public sealed class CrestChargeLayout {
     public static readonly CrestChargeLayout Ring = new(Kinds.Ring, "ring", "Ring", CrestVocabulary.Studio);
 
     public static IReadOnlyList<CrestChargeLayout> All { get; } = [Single, Paired, Trio, Quad, Ring];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

@@ -7,7 +7,7 @@ namespace CrestCore.Contracts;
 /// core never answers it. A status travels as its index in `All`, so `All` is
 /// append-only.
 public sealed class PasskeyAccessStatus {
-    #region Variables
+    #region Static Variables
 
     public static readonly PasskeyAccessStatus ManagedCapabilityRequired = new(name: "managedCapabilityRequired",
         title: "Awaiting Apple approval",
@@ -34,6 +34,10 @@ public sealed class PasskeyAccessStatus {
 
     public static IReadOnlyList<PasskeyAccessStatus> All { get; } =
         [ManagedCapabilityRequired, DeviceNotConfigured, NotDetermined, Authorized, Denied, Checking];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

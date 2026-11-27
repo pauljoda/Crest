@@ -5,7 +5,7 @@ namespace CrestCore.Contracts;
 /// The stored session spells a choice as its `Name`, so a name never changes.
 /// A choice travels as its index in `All`, so `All` is append-only.
 public sealed class CurrentTabCleanup {
-    #region Variables
+    #region Static Variables
 
     public static readonly CurrentTabCleanup After12Hours = new(name: "after12Hours", title: "After 12 Hours",
         lifetime: TimeSpan.FromHours(12));
@@ -18,6 +18,10 @@ public sealed class CurrentTabCleanup {
 
     /// The choices, in the order the settings offer them.
     public static IReadOnlyList<CurrentTabCleanup> All { get; } = [After12Hours, After24Hours, After7Days, After30Days, Never];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

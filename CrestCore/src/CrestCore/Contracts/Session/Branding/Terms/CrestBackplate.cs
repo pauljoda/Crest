@@ -12,7 +12,7 @@ public sealed class CrestBackplate {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static readonly CrestBackplate None = new(Kinds.None, "none", "None", CrestVocabulary.Baseline);
     public static readonly CrestBackplate Circle = new(Kinds.Circle, "circle", "Round", CrestVocabulary.Baseline);
@@ -38,6 +38,10 @@ public sealed class CrestBackplate {
     public static IReadOnlyList<CrestBackplate> All { get; } =
         [None, Circle, Shield, FrenchShield, Diamond, Seal, Hexagon, Octagon, RoundedSquare, Oval, Banner, Badge, SoftShield, SoftHexagon,
             Ribbon];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

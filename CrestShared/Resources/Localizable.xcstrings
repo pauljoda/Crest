@@ -2902,6 +2902,9 @@
     "Automatic Downloads" : {
 
     },
+    "Automatic Picture in Picture" : {
+
+    },
     "Automatic Pop-ups" : {
 
     },
@@ -10340,7 +10343,13 @@
     "Phone" : {
 
     },
-    "Picture in Picture when switching tabs" : {
+    "Picture in Picture" : {
+
+    },
+    "Picture in Picture Settings" : {
+
+    },
+    "Picture in Picture preview" : {
 
     },
     "Pile" : {
@@ -11897,7 +11906,13 @@
         }
       }
     },
+    "Return to Tab" : {
+
+    },
     "Return to your tabs" : {
+
+    },
+    "Return video when its tab regains focus" : {
 
     },
     "Returns the page to its actual size" : {
@@ -13092,6 +13107,9 @@
     "Show Blocked Elements" : {
 
     },
+    "Show border" : {
+
+    },
     "Show Code" : {
 
     },
@@ -13843,6 +13861,9 @@
       }
     },
     "Square" : {
+
+    },
+    "Square corners" : {
 
     },
     "Stable" : {
@@ -16097,6 +16118,9 @@
     "Use a public search engine host, not a local or numeric address." : {
 
     },
+    "Use App Settings" : {
+
+    },
     "Use Both" : {
 
     },
@@ -16489,6 +16513,15 @@
           }
         }
       }
+    },
+    "When leaving Crest’s desktop" : {
+
+    },
+    "When switching apps" : {
+
+    },
+    "When switching tabs" : {
+
     },
     "When URL" : {
 

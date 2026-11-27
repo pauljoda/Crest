@@ -12,7 +12,7 @@ import Foundation
 actor KeychainCredentialVault: CredentialVault {
     // MARK: - Variables
 
-    private let store: any CredentialKeychainStoring
+    nonisolated let store: any CredentialKeychainStoring
     nonisolated let servicePrefix: String
     private let codec = CredentialKeychainCodec()
     /// Whether passwords saved for each origin fill a page at the first, in

@@ -13,10 +13,15 @@ namespace CrestCore.Application;
 /// tab a window shows is window state, so selection fields in an older session are
 /// dropped here and never written. Intents read what the window shows as context.
 public sealed partial class NativeSessionAuthority {
-    #region Variables
+    #region Static Variables
 
     public const int MaximumBytes = MessageLimitAttribute.SessionBytes;
     internal static readonly object Gate = new();
+
+    #endregion
+
+    #region Variables
+
     private SessionState session;
     internal SessionState AcceptedSession => session;
     /// The identities `session` holds, which each edit's state is checked against.

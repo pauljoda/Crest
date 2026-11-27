@@ -6,7 +6,7 @@ namespace CrestCore.Contracts;
 ///
 /// A failure travels as its index in `All`, so `All` is append-only.
 public sealed class DownloadFailure {
-    #region Variables
+    #region Static Variables
 
     public static readonly DownloadFailure Interrupted = new(name: "interrupted", message: "The download was interrupted.");
     public static readonly DownloadFailure Network = new(name: "network",
@@ -25,6 +25,10 @@ public sealed class DownloadFailure {
 
     public static IReadOnlyList<DownloadFailure> All { get; } =
         [Interrupted, Network, Server, NoSpace, FileAccess, FolderUnavailable, BlockedUnsafe, BlockedInsecure, BlockedByPolicy];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

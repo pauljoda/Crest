@@ -37,27 +37,26 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(spacing: 0) {
-                    VStack(spacing: 0) {
-                        content()
-                    }
-                    .fixedSize(horizontal: false, vertical: true)
-                    .sidebarScrollContent()
-
-                    background()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    content()
                 }
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: geometry.size.height, alignment: .top)
+                .sidebarScrollContent()
+                .frame(maxWidth: .infinity, minHeight: geometry.size.height, alignment: .top)
+                .background {
+                    background()
+                }
                 .coordinateSpace(BrowserSidebarVisibleBand.contentSpace)
                 .environment(\.browserSidebarVisibleBand, visibleBand)
-                .background {
+                .environment(\.browserSidebarScrollContentSpace, BrowserSidebarVisibleBand.contentSpace)
+                .background(alignment: .topLeading) {
                     // A ScrollView's outer background is a native sibling of
-                    // its NSScrollView. The bridge needs the document ancestry.
+                    // its NSScrollView. The bridge needs the document ancestry,
+                    // kept at 1x1 so it never adds a document-tall NSView.
                     BrowserSidebarDragAutoscrollObserver(
                         regionID: scrollRegionID,
                         viewport: viewport,
                         state: sidebarInteraction.sidebarReorderState
                     )
+                    .frame(width: 1, height: 1)
                 }
             }
             .environment(\.browserSidebarScrollRegionID, scrollRegionID)
@@ -65,6 +64,11 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
                 $0.visibleRect
             } action: { _, rect in
                 visibleBand.follow(rect)
+                viewport.visibleOrigin = rect.origin
+                viewport.publishScrollContentOrigin(
+                    for: scrollRegionID,
+                    to: sidebarInteraction.sidebarReorderState
+                )
             }
             .onChange(of: sidebarInteraction.sidebarReorderState.hasLiftInFlight, initial: true) { _, isLifting in
                 visibleBand.hold(isLifting)
@@ -100,6 +104,18 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
 @MainActor
 private final class BrowserSidebarScrollViewport {
     var frame = CGRect.zero
+    /// Live scroll offset in content coordinates, kept outside `@Observable`
+    /// tracking so scrolling updates `scrollContentOrigin` without invalidating
+    /// views that only depend on the stationary viewport `frame`.
+    @ObservationIgnored var visibleOrigin = CGPoint.zero
+
+    func publishScrollContentOrigin(for regionID: UUID, to state: BrowserSidebarReorderState) {
+        guard !frame.isEmpty else { return }
+        state.register(
+            scrollContentOrigin: CGPoint(x: frame.minX - visibleOrigin.x, y: frame.minY - visibleOrigin.y),
+            for: regionID
+        )
+    }
 }
 
 private struct BrowserSidebarScrollViewportObserver: View {
@@ -114,6 +130,7 @@ private struct BrowserSidebarScrollViewportObserver: View {
             } action: { frame in
                 viewport.frame = frame
                 state.register(scrollRegionFrame: frame, for: regionID)
+                viewport.publishScrollContentOrigin(for: regionID, to: state)
             }
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -132,15 +149,13 @@ private struct BrowserSidebarDragAutoscrollObserver: View {
     var body: some View {
         // The bridge lives inside the scrolling document, but its edge bands
         // use the viewport measured by the stationary outer background.
-        GeometryReader { _ in
-            BrowserSidebarDragAutoscrollBridge(
-                regionID: regionID,
-                viewport: viewport.frame,
-                pointer: state.pointer,
-                isDragging: state.isDragging,
-                state: state
-            )
-        }
+        BrowserSidebarDragAutoscrollBridge(
+            regionID: regionID,
+            viewport: viewport.frame,
+            pointer: state.pointer,
+            isDragging: state.isDragging,
+            state: state
+        )
     }
 }
 

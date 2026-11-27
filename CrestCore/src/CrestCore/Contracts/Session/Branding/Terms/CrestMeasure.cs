@@ -4,7 +4,7 @@ namespace CrestCore.Contracts;
 /// renderer draws it in, the value it takes unless set, and the crests it
 /// shapes at all.
 public sealed class CrestMeasure {
-    #region Variables
+    #region Static Variables
 
     public static readonly CrestMeasure PlateScale = new("plateScale", 0.7, 1.15, 1, crest => crest.PlateScale);
     public static readonly CrestMeasure EdgeWidth = new("edgeWidth", 0, 1, 0, crest => crest.EdgeWidth);
@@ -22,6 +22,10 @@ public sealed class CrestMeasure {
 
     public static IReadOnlyList<CrestMeasure> All { get; } =
         [PlateScale, EdgeWidth, DivisionCount, OrdinaryWidth, TrimWeight, TrimDetail, ChargeScale, ChargeOffset, SheenAngle, SealTeeth];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
     public double Minimum { get; }

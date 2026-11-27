@@ -21,7 +21,10 @@ struct BrowserPageNavigationCommitted: BrowserPageEngineEvent {
         page.linkHover?.didCommitNavigation()
         page.mediaSessionCoordinator?.didCommitNavigation()
         page.committedNavigationCount += 1
-        if !isLoading { page.completedNavigationCount += 1 }
+        if !isLoading {
+            page.completedNavigationCount += 1
+            Task { [weak page] in await page?.refreshReaderModeAvailability() }
+        }
         let authentication = page.httpAuthenticationSession
         Task { await authentication.authenticationSucceeded() }
         page.synchronizePopupPermission(for: url)

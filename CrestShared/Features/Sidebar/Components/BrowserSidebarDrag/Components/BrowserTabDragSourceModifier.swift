@@ -26,20 +26,37 @@ struct BrowserTabDragSourceModifier: ViewModifier {
             profileID: profileID
         )
         let isDragging = isEnabled && reorder == nil && dragState.isDragging(item)
-        content
-            .modifier(BrowserDragSourceLiftStyle(isDragging: isDragging))
-            .modifier(
-                BrowserPlatformTabDragSourceModifier(
-                    tab: tab,
-                    favicons: favicons,
-                    profileID: profileID,
-                    spaceID: spaceID,
-                    dragState: dragState,
-                    reorder: reorder,
-                    parentSplitGroupID: parentSplitGroupID,
-                    isEnabled: isEnabled,
-                    isTabSelected: isTabSelected
+        if reorder != nil {
+            content
+                .modifier(
+                    BrowserPlatformTabDragSourceModifier(
+                        tab: tab,
+                        favicons: favicons,
+                        profileID: profileID,
+                        spaceID: spaceID,
+                        dragState: dragState,
+                        reorder: reorder,
+                        parentSplitGroupID: parentSplitGroupID,
+                        isEnabled: isEnabled,
+                        isTabSelected: isTabSelected
+                    )
                 )
-            )
+        } else {
+            content
+                .modifier(BrowserDragSourceLiftStyle(isDragging: isDragging))
+                .modifier(
+                    BrowserPlatformTabDragSourceModifier(
+                        tab: tab,
+                        favicons: favicons,
+                        profileID: profileID,
+                        spaceID: spaceID,
+                        dragState: dragState,
+                        reorder: reorder,
+                        parentSplitGroupID: parentSplitGroupID,
+                        isEnabled: isEnabled,
+                        isTabSelected: isTabSelected
+                    )
+                )
+        }
     }
 }

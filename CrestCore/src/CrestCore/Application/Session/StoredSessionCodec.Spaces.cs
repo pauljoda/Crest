@@ -6,7 +6,7 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 internal static partial class StoredSessionCodec {
-    #region Variables
+    #region Static Variables
 
     internal static readonly StoredSpellings<SpaceAccessPolicy> SpaceAccessPolicies = new([
         (SpaceAccessPolicy.Open, "open"), (SpaceAccessPolicy.DeviceOwnerAuthentication, "deviceOwnerAuthentication")

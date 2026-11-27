@@ -2,6 +2,18 @@ import Foundation
 
 /// The frame asks for the person's position once, or to watch it.
 struct BrowserGeolocationPositionRequest: BrowserGeolocationMessage {
+    // MARK: - Types
+
+    private struct WireOptions: Decodable {
+        let enableHighAccuracy: Bool?
+        let maximumAge: Double?
+    }
+
+    private struct WirePayload: Decodable {
+        let identifier: String
+        let options: WireOptions?
+    }
+
     // MARK: - Static Variables
 
     /// Each action this message answers, with whether it watches the position.
@@ -17,15 +29,16 @@ struct BrowserGeolocationPositionRequest: BrowserGeolocationMessage {
 
     init?(action: String, body: [String: Any]) {
         guard let watchesPosition = Self.watchesPositionByAction[action],
-            let identifier = body["identifier"] as? String,
-            Self.isValid(identifier)
+            JSONSerialization.isValidJSONObject(body),
+            let data = try? JSONSerialization.data(withJSONObject: body),
+            let payload = try? JSONDecoder().decode(WirePayload.self, from: data),
+            Self.isValid(payload.identifier)
         else { return nil }
-        self.identifier = identifier
+        identifier = payload.identifier
         self.watchesPosition = watchesPosition
-        let options = body["options"] as? [String: Any]
-        let maximumAgeMilliseconds = options?["maximumAge"] as? Double ?? 0
-        self.options = BrowserGeolocationRequestOptions(
-            enablesHighAccuracy: options?["enableHighAccuracy"] as? Bool ?? false,
+        let maximumAgeMilliseconds = payload.options?.maximumAge ?? 0
+        options = BrowserGeolocationRequestOptions(
+            enablesHighAccuracy: payload.options?.enableHighAccuracy ?? false,
             maximumAge: maximumAgeMilliseconds / 1_000
         )
     }

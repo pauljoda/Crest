@@ -1,8 +1,12 @@
 import AppKit
 import SwiftUI
 
-struct BrowserShortcutRecorder: NSViewRepresentable {
+/// Displays a command's shortcut as a lightweight SwiftUI button while idle
+/// and mounts the AppKit `ShortcutRecorderButton` only while actively
+/// recording a new chord, avoiding dozens of `NSButton` bridges during scroll.
+struct BrowserShortcutRecorder: View {
     @Environment(\.locale) private var locale
+    @State private var isRecording = false
 
     let identifier: String
     let title: String
@@ -10,10 +14,63 @@ struct BrowserShortcutRecorder: NSViewRepresentable {
     let record: (BrowserShortcut?) -> Void
     let reportInvalidShortcut: () -> Void
 
+    var body: some View {
+        if isRecording {
+            BrowserShortcutRecorderBridge(
+                identifier: identifier,
+                title: title,
+                shortcut: shortcut,
+                record: record,
+                reportInvalidShortcut: reportInvalidShortcut,
+                onEndRecording: { isRecording = false }
+            )
+        } else {
+            Button {
+                isRecording = true
+            } label: {
+                Text(verbatim: displayTitle)
+                    .font(
+                        .system(
+                            size: BrowserShortcutSettingsMetrics.recorderFontSize, weight: .medium, design: .monospaced)
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.regular)
+            .accessibilityIdentifier(BrowserShortcutSettingsAccessibilityID.recorderPrefix + identifier)
+            .accessibilityLabel(
+                Text(BrowserShortcutSettingsPresentation.recorderAccessibilityLabel(title: title))
+            )
+            .accessibilityValue(
+                shortcut.map { Text(verbatim: $0.displayString(locale: locale)) }
+                    ?? Text(BrowserShortcutSettingsPresentation.unassigned)
+            )
+            .accessibilityHint(Text(BrowserShortcutSettingsPresentation.recorderHelp))
+            .help(Text(BrowserShortcutSettingsPresentation.recorderHelp))
+        }
+    }
+
+    private var displayTitle: String {
+        shortcut?.displayString(locale: locale)
+            ?? BrowserShortcutSettingsPresentation.emptyShortcutGlyph
+    }
+}
+
+private struct BrowserShortcutRecorderBridge: NSViewRepresentable {
+    @Environment(\.locale) private var locale
+
+    let identifier: String
+    let title: String
+    let shortcut: BrowserShortcut?
+    let record: (BrowserShortcut?) -> Void
+    let reportInvalidShortcut: () -> Void
+    let onEndRecording: () -> Void
+
     func makeCoordinator() -> BrowserShortcutRecorderCoordinator {
         BrowserShortcutRecorderCoordinator(
             record: record,
-            reportInvalidShortcut: reportInvalidShortcut
+            reportInvalidShortcut: reportInvalidShortcut,
+            onEndRecording: onEndRecording
         )
     }
 
@@ -37,6 +94,11 @@ struct BrowserShortcutRecorder: NSViewRepresentable {
             locale: locale
         )
         button.eventHandler = context.coordinator.handle
+        button.onEndRecording = context.coordinator.didEndRecording
+        applyAccessibility(to: button)
+        DispatchQueue.main.async { [weak button] in
+            button?.beginRecording()
+        }
         return button
     }
 
@@ -46,7 +108,8 @@ struct BrowserShortcutRecorder: NSViewRepresentable {
     ) {
         context.coordinator.update(
             record: record,
-            reportInvalidShortcut: reportInvalidShortcut
+            reportInvalidShortcut: reportInvalidShortcut,
+            onEndRecording: onEndRecording
         )
         button.restingTitle =
             shortcut?.displayString(locale: locale)
@@ -56,10 +119,14 @@ struct BrowserShortcutRecorder: NSViewRepresentable {
             locale: locale
         )
         button.eventHandler = context.coordinator.handle
+        button.onEndRecording = context.coordinator.didEndRecording
+        applyAccessibility(to: button)
+    }
+
+    private func applyAccessibility(to button: ShortcutRecorderButton) {
         button.setAccessibilityLabel(
             BrowserShortcutLocalization.string(
-                BrowserShortcutSettingsPresentation
-                    .recorderAccessibilityLabel(title: title),
+                BrowserShortcutSettingsPresentation.recorderAccessibilityLabel(title: title),
                 locale: locale
             )
         )
@@ -83,25 +150,34 @@ struct BrowserShortcutRecorder: NSViewRepresentable {
 final class BrowserShortcutRecorderCoordinator: NSObject {
     private var record: (BrowserShortcut?) -> Void
     private var reportInvalidShortcut: () -> Void
+    private var onEndRecording: () -> Void
 
     init(
         record: @escaping (BrowserShortcut?) -> Void,
-        reportInvalidShortcut: @escaping () -> Void
+        reportInvalidShortcut: @escaping () -> Void,
+        onEndRecording: @escaping () -> Void
     ) {
         self.record = record
         self.reportInvalidShortcut = reportInvalidShortcut
+        self.onEndRecording = onEndRecording
     }
 
     func update(
         record: @escaping (BrowserShortcut?) -> Void,
-        reportInvalidShortcut: @escaping () -> Void
+        reportInvalidShortcut: @escaping () -> Void,
+        onEndRecording: @escaping () -> Void
     ) {
         self.record = record
         self.reportInvalidShortcut = reportInvalidShortcut
+        self.onEndRecording = onEndRecording
     }
 
     @objc func beginRecording(_ sender: ShortcutRecorderButton) {
         sender.beginRecording()
+    }
+
+    func didEndRecording() {
+        onEndRecording()
     }
 
     func handle(_ event: NSEvent, sender: ShortcutRecorderButton) {
@@ -156,6 +232,7 @@ final class ShortcutRecorderButton: NSButton {
     }
 
     var eventHandler: ((NSEvent, ShortcutRecorderButton) -> Void)?
+    var onEndRecording: (() -> Void)?
 
     private(set) var isRecording = false
     private var eventMonitor: Any?
@@ -189,15 +266,18 @@ final class ShortcutRecorderButton: NSButton {
         bezelColor = nil
         removeEventMonitor()
         window?.makeFirstResponder(nil)
+        onEndRecording?()
     }
 
     override func resignFirstResponder() -> Bool {
         let resigned = super.resignFirstResponder()
         if resigned {
+            let wasRecording = isRecording
             isRecording = false
             title = restingTitle
             bezelColor = nil
             removeEventMonitor()
+            if wasRecording { onEndRecording?() }
         }
         return resigned
     }

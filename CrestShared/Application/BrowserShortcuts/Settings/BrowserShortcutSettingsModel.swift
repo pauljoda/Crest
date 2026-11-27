@@ -11,6 +11,11 @@ final class BrowserShortcutSettingsModel {
     var pendingConflict: BrowserShortcutPendingConflict?
 
     @ObservationIgnored private var searchProvider: any BrowserShortcutSearchProviding
+    @ObservationIgnored private var cachedGroupsQuery: String?
+    @ObservationIgnored private var cachedGroupsShortcuts: [BrowserShortcut?] = []
+    @ObservationIgnored private var cachedGroupsRevision = 0
+    @ObservationIgnored private var cachedGroupsCachedRevision = -1
+    @ObservationIgnored private var cachedGroups: [BrowserShortcutCommandGroup]?
 
     init(
         shortcuts: BrowserShortcutStore,
@@ -56,27 +61,51 @@ final class BrowserShortcutSettingsModel {
     }
 
     var commandGroups: [BrowserShortcutCommandGroup] {
-        let matches = shortcuts.offeredCommands.filter {
-            searchProvider.matches(
-                $0,
-                currentShortcut: shortcuts.shortcut(for: $0),
-                query: searchText
-            )
+        // Observe searchText and shortcut store changes so SwiftUI invalidates
+        // when filtering or bindings change, while caching the grouped array
+        // across scroll-time reads.
+        let query = searchText
+        let offered = shortcuts.offeredCommands
+        let currentShortcuts = offered.map { shortcuts.shortcut(for: $0) }
+        if let cachedGroups, cachedGroupsQuery == query,
+            cachedGroupsCachedRevision == cachedGroupsRevision,
+            cachedGroupsShortcuts == currentShortcuts
+        {
+            return cachedGroups
         }
-        return ShortcutSection.all.compactMap { section in
-            let commands = matches.filter { $0.section == section }
-            guard !commands.isEmpty else { return nil }
-            return BrowserShortcutCommandGroup(
-                section: section,
-                commands: commands
-            )
+        let matches: [ShortcutCommand]
+        if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            matches = offered
+        } else {
+            matches = zip(offered, currentShortcuts).compactMap { command, shortcut in
+                searchProvider.matches(
+                    command,
+                    currentShortcut: shortcut,
+                    query: query
+                ) ? command : nil
+            }
         }
+        var bySection: [ShortcutSection: [ShortcutCommand]] = [:]
+        for command in matches {
+            bySection[command.section, default: []].append(command)
+        }
+        let groups = ShortcutSection.all.compactMap { section -> BrowserShortcutCommandGroup? in
+            guard let commands = bySection[section], !commands.isEmpty else { return nil }
+            return BrowserShortcutCommandGroup(section: section, commands: commands)
+        }
+        cachedGroupsQuery = query
+        cachedGroupsShortcuts = currentShortcuts
+        cachedGroupsCachedRevision = cachedGroupsRevision
+        cachedGroups = groups
+        return groups
     }
 
     func updateSearchProvider(
         _ searchProvider: any BrowserShortcutSearchProviding
     ) {
         self.searchProvider = searchProvider
+        cachedGroupsRevision &+= 1
+        cachedGroups = nil
     }
 
     func record(

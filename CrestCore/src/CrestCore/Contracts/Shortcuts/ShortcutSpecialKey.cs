@@ -8,7 +8,7 @@ namespace CrestCore.Contracts;
 /// The device store and the shortcut choices earlier releases kept spell a key
 /// as its `Name`, so a name never changes. `All` is append-only.
 public sealed class ShortcutSpecialKey {
-    #region Variables
+    #region Static Variables
 
     public static readonly ShortcutSpecialKey Tab = new(name: "tab", glyph: "⇥", spokenName: "tab");
     public static readonly ShortcutSpecialKey LeftArrow = new(name: "leftArrow", glyph: "←", spokenName: "left arrow");
@@ -50,6 +50,10 @@ public sealed class ShortcutSpecialKey {
         Tab, LeftArrow, RightArrow, UpArrow, DownArrow, Escape, ReturnKey, Delete, ForwardDelete, Home, End, PageUp, PageDown,
         Space, F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12, F13, F14, F15, F16, F17, F18, F19, F20
     ];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

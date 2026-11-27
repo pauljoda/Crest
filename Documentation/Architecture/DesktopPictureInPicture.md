@@ -1,10 +1,26 @@
 # Desktop Picture in Picture
 
-On WebKit pages, Crest uses macOS's native video Picture in Picture
-presentation, including its system window and controls; Chromium pages use
-Chromium's own Picture in Picture window. Automatic entry is enabled by default
-and can be disabled in Settings → General → Video. Manual entry remains
-available when automatic entry is disabled.
+Crest hosts WebKit and Chromium video in the same floating Picture in Picture
+window, with playback, return, settings and close controls. Drag the window
+to place it freely, flick it toward a corner to snap it there, or drag from a
+resize cursor at an edge or corner. The settings button opens General →
+Picture in Picture in Crest’s Settings tab. The optional border uses the
+source Space’s theme and the device’s window border width. The Settings
+preview updates as you change the border or choose square corners. The same
+section has separate automatic entry options for switching tabs, switching apps, and
+leaving Crest's macOS desktop. Tab switching and returning video on focus are
+enabled by default. Site Controls → Site Settings can block automatic entry
+for a site in the page's Space. Manual entry is available regardless of these
+settings.
+
+The Mac shell receives the live video view from each engine through the native
+picture-in-picture presentation entry point. It preserves the engine's playback
+and presentation callbacks while hosting the view in its own AppKit panel.
+Placement, gesture state and border appearance belong to the shell.
+The panel refreshes the hosted video at its settled size and after app or
+desktop transitions, including transitions that leave its geometry unchanged.
+The core owns behavior preferences and routes the return to the source page. When the presentation
+bridge is unavailable, the system presenter handles the video.
 
 ## WebKit integration
 
@@ -33,10 +49,24 @@ Reference implementation and definitions:
 - [Native PiP control routing](https://github.com/WebKit/WebKit/blob/main/Source/WebCore/platform/mac/VideoPresentationInterfaceMac.mm)
 - [Inline-return delegate dispatch](https://github.com/WebKit/WebKit/blob/main/Source/WebKit/UIProcess/Cocoa/UIDelegate.mm)
 
+## Chromium integration
+
+The Crest host implements Chromium's video overlay window interface through the
+shared picture-in-picture presentation entry point. A dedicated compositor
+embeds the video's Viz surface and sends its Core Animation layers to the panel.
+The source tab keeps its own player and media session. Blink renders WebVTT
+outside the video surface, so the host reads the showing caption and subtitle
+cues from the active PiP document and displays their text in the floating view.
+The host stops reading cues when the presentation ends. The playback
+and close callbacks go through Chromium's existing video controller and window
+manager. Crest resolves the system controller at runtime and Chromium declines
+video PiP when it is unavailable. Website-created Document Picture in Picture
+continues to host the document and its page-defined controls.
+
 ## Ownership and tab transitions
 
-`BrowserPagePool` requests automatic entry only for pages leaving the visible
-tab set. Moving focus between cards in a visible split does not enter PiP.
+On tab switches, `BrowserPagePool` requests automatic entry for pages leaving
+the visible tab set. Moving focus between cards in a visible split does not enter PiP.
 If multiple cards leave together, the focused card is considered first.
 Entering an unlocked empty Space or start page follows the same departure
 lifecycle. Locking a protected Space withdraws its pages' pending automatic
@@ -45,16 +75,26 @@ after the player checks below. A departing Chromium page that is playing, and
 not already in Picture in Picture, enters through the `EnterPictureInPicture`
 page request, which asks Chromium's media session to move its video.
 
-Coming back to the source page ends its PiP session, whether Crest started it
-automatically or the person entered it: the video returns to its place in the
-page. The core decides this once for both engines. Each page reports its PiP
+The Mac app observes app deactivation and macOS desktop departures. Both
+routes ask the originating browser window's page pool to consider the focused
+card first, then the other cards whose live views the window hosts. The
+window's tab and Space must still match, and the Space must be unlocked.
+The three choices are stored in the core's app preferences, and every
+automatic request uses the same application-wide reservation.
+
+With return on focus enabled, coming back to the source page ends its PiP
+session and returns the video inline. The core applies this policy to both
+engines. Each page reports its PiP
 activity in its snapshot, and when a window shows a page again (by the sidebar,
 a Space switch, a shortcut, the Dock menu or a window opening on it) the core
-sends that page's engine `ExitPictureInPicture`. WebKit closes the page's media
+sends that page's engine `ExitPictureInPicture`. The active browser window
+asks the same policy for the pages it presents when AppKit reports focus
+returning to Crest. WebKit closes the page's media
 presentations; Chromium closes its PiP window only when the page owns it. A page
 that stays on screen, such as one the person floated without leaving it, keeps
-its PiP. The page controller's `returnToTab()` only withdraws an automatic
-request still pending.
+its PiP. On return, WebKit cancels a pending automatic request. Chromium checks
+for a late presentation and asks the core to redock it when the source is
+still visible.
 
 A Space this process may not show keeps no video on screen. When a protected
 Space locks, on demand or as Crest goes to the background, or a Space is being
@@ -65,7 +105,7 @@ is asked again at once. The rule is the core's, so it holds for both engines and
 covers Chromium's document PiP for a page that owns the window. Private
 workspaces never lock.
 
-The PiP window's return control reports `PictureInPictureReturned` for its page,
+The player's return control reports `PictureInPictureReturned` for its page,
 and the engine returns the video inline itself. WebKit reports it from
 `_webViewFullscreenMayReturnToInline:` for an active, valid PiP source only.
 Chromium's return control asks the page's `Browser` to activate it; the host's
@@ -150,7 +190,8 @@ player eligibility. The core's tests cover ending PiP when a page comes back on
 screen, and the return control's routing to the owning window, Space and tab.
 
 Exercise the actual macOS PiP controls in an isolated app with a disposable video
-fixture, on both engines. Check manual and automatic entry, Return to tab from
+fixture on both engines. Check each automatic trigger independently, including
+leaving a full-screen desktop, then check manual entry, Return to tab from
 another tab, Space and browser window, coming back to the source tab by the
 sidebar, a Space switch and a shortcut, ordinary Close, playback continuity, and
 source navigation or closure. These native UI checks complement the core's
@@ -162,3 +203,8 @@ Copying `video.currentSrc` into a new native player would discard the original
 pipeline. It cannot generally recreate Media Source Extensions, encrypted
 media, authentication, or site controls. Native PiP keeps the original WebKit
 page and media pipeline alive.
+
+The Chromium adapter uses the same macOS controller WebKit uses for its
+remote layer. Both engines own their live media and send the system a
+presentation surface. Text tracks follow the engine's rendering of that
+surface. See [WebKit's controller integration](https://github.com/WebKit/WebKit/blob/main/Source/WebCore/platform/mac/VideoPresentationInterfaceMac.mm).

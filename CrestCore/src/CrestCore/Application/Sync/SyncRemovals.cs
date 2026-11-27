@@ -17,7 +17,7 @@ internal sealed record SyncRemovals(IReadOnlyList<SyncRemovals.Edit> Edits) {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static SyncRemovals None { get; } = new([]);
 

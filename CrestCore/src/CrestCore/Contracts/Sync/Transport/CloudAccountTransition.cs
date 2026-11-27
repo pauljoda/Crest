@@ -4,7 +4,7 @@ namespace CrestCore.Contracts;
 ///
 /// A choice travels as its index in `All`, so `All` is append-only.
 public sealed class CloudAccountTransition {
-    #region Variables
+    #region Static Variables
 
     /// An account signed in where none was: the first sign-in is not a
     /// conflict with anything.
@@ -15,6 +15,10 @@ public sealed class CloudAccountTransition {
     public static readonly CloudAccountTransition Unknown = new(name: "unknown", alwaysPauses: true);
 
     public static IReadOnlyList<CloudAccountTransition> All { get; } = [SignIn, SignOut, SwitchAccounts, Unknown];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

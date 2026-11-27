@@ -13,7 +13,7 @@ public sealed class DownloadRowAction {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static readonly DownloadRowAction Retry = new(Kinds.Retry, name: "retry", title: "Allow Download", symbol: "arrow.clockwise");
     public static readonly DownloadRowAction Cancel = new(Kinds.Cancel, name: "cancel", title: "Cancel Download", symbol: "xmark");
@@ -25,6 +25,10 @@ public sealed class DownloadRowAction {
     public static readonly DownloadRowAction Resume = new(Kinds.Resume, name: "resume", title: "Resume Download", symbol: "play");
 
     public static IReadOnlyList<DownloadRowAction> All { get; } = [Retry, Cancel, Open, Remove, Pause, Resume];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

@@ -313,6 +313,15 @@ final class BrowserPageHost {
         dropPresentation(tabID)
     }
 
+    /// Lets go of the page a tab kept in another Space or profile: the state
+    /// archived under its old profile describes a runtime it no longer belongs
+    /// to.
+    func releaseMismatchedPage(of tabID: UUID) {
+        guard let mismatched = runtimes.removeValue(forKey: tabID) else { return }
+        tabState.removeState(profileID: mismatched.page.profileID, tabID: tabID)
+        mismatched.release(keepingState: false)
+    }
+
     /// Unloads the tab's page while it belongs to the Space and profile
     /// `assignment` names; false when it does not.
     @discardableResult

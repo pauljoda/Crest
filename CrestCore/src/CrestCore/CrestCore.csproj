@@ -8,4 +8,7 @@
          connection, and history tests walk visits against a small history limit. -->
     <InternalsVisibleTo Include="CrestCore.Tests" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\ContentBridges\*.js" LogicalName="CrestCore.Resources.ContentBridges.%(Filename)%(Extension)" />
+  </ItemGroup>
 </Project>

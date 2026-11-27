@@ -9,13 +9,17 @@ public sealed class CrestFinish {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static readonly CrestFinish Flat = new(Kinds.Flat, "flat", "Flat", CrestVocabulary.Baseline);
     public static readonly CrestFinish Sheen = new(Kinds.Sheen, "sheen", "Sheen", CrestVocabulary.Studio, hasAngle: true);
     public static readonly CrestFinish Embossed = new(Kinds.Embossed, "embossed", "Embossed", CrestVocabulary.Studio);
 
     public static IReadOnlyList<CrestFinish> All { get; } = [Flat, Sheen, Embossed];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

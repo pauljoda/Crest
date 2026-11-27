@@ -10,7 +10,7 @@ namespace CrestCore.Contracts;
 /// state per transfer and pass it back with the next sample.
 public sealed record DownloadTransferEstimator(long PublishedBytes, long? KnownTotalBytes, bool TotalIsUnreliable,
     long? MeasurementBytes, double? MeasurementUptime, double? SmoothedBytesPerSecond) {
-    #region Variables
+    #region Static Variables
 
     public const double MinimumRateInterval = 0.15;
     public const double SmoothingWeight = 0.25;
@@ -18,6 +18,10 @@ public sealed record DownloadTransferEstimator(long PublishedBytes, long? KnownT
     public const double MaximumUsefulEstimate = 7 * 24 * 60 * 60;
 
     public static DownloadTransferEstimator Initial { get; } = new(0, null, false, null, null, null);
+
+    #endregion
+
+    #region Variables
 
     public bool IsValid => PublishedBytes >= 0 && (KnownTotalBytes ?? 1) > 0 && (MeasurementBytes ?? 0) >= 0
         && MeasurementBytes.HasValue == MeasurementUptime.HasValue

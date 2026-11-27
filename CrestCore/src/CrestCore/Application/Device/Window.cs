@@ -9,11 +9,14 @@ namespace CrestCore.Application;
 /// the tab to show when the shown one is dismissed. The device serializes
 /// every call.
 internal sealed class Window {
-    #region Variables
-
+    #region Static Variables
 
     /// The most items a Space's recent tabs hold, the shown one included.
     internal const int RecentLimit = 5;
+
+    #endregion
+
+    #region Variables
 
     /// The tab shown in each Space; null when the window shows none there.
     private readonly Dictionary<Guid, Guid?> tabs;

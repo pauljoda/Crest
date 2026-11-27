@@ -33,7 +33,7 @@ Set a default zoom for pages in **Settings → Appearance**, from **50% to 300%*
 
 ## Video and audio
 
-Use the sidebar’s Now Playing controls for eligible active media. On Mac, supported videos can open in **Picture in Picture**. Turn on **Picture in Picture when switching tabs** in **Settings → General** to start it automatically. Availability depends on the website and its player.
+Use the sidebar’s Now Playing controls for eligible active media. On Mac, supported videos can open in **Picture in Picture**. Drag the player where you want it, or flick it toward a corner to snap it there. Resize it by dragging an edge or corner where the resize cursor appears. Use the gear in the player to open **Settings → General → Picture in Picture**. Choose when videos float automatically, whether they return inline when their tab regains focus, and whether the player shows a border or uses square corners. The preview updates as you make changes. The border uses your window border width and the video’s Space theme. To block automatic PiP for a site in its Space, open **Site Controls → Site Settings**. Availability depends on the website and its player.
 
 ## Copy and share
 

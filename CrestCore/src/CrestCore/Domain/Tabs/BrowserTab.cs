@@ -6,10 +6,14 @@ namespace CrestCore.Domain;
 /// <see cref="State"/>; every rule below replaces that value rather than keeping a
 /// second copy of any field.
 public sealed class BrowserTab {
-    #region Variables
+    #region Static Variables
 
     /// The most characters a rename keeps.
     public const int MaximumTitleLength = 4096;
+
+    #endregion
+
+    #region Variables
 
     public TabState State { get; private set; }
 

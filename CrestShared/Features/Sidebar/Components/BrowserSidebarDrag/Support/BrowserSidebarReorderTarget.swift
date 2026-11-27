@@ -18,24 +18,192 @@ struct BrowserSidebarDrop {
 struct BrowserSidebarReorderTarget: Equatable, Sendable {
     // MARK: - Types
 
-    enum Kind: Equatable, Sendable {
+    /// An insertion into an ordered section.
+    struct Insertion: Equatable, Sendable {
+        let section: BrowserSidebarReorderSection
+        let beforeID: BrowserSidebarReorderItemID?
+        let index: Int
+    }
+
+    /// An insertion into the split-view cards shown for a Space.
+    struct SplitInsertion: Equatable, Sendable {
+        let assignment: BrowserSpaceRuntimeAssignment
+        let index: Int
+    }
+
+    /// Self-describing landing kind for a resolved drop target. Each kind
+    /// carries its own verdict, drop-intent builder, preview shape and landing
+    /// frame resolution rather than switching on a case tag.
+    struct Kind: Equatable, Sendable {
+        // MARK: - Types
+
+        private enum Identity: Equatable, Sendable {
+            case insert(Insertion)
+            case intoFolder(UUID)
+            case createCurrentFolder(UUID)
+            case space(BrowserSpaceRuntimeAssignment)
+            case splitInsert(SplitInsertion)
+        }
+
+        typealias LandingFrameResolver =
+            @MainActor @Sendable (
+                BrowserSidebarReorderLayout,
+                () -> (layout: BrowserPinnedTabReorderLayout, frame: CGRect, emptyHeight: CGFloat)?,
+                [BrowserSidebarReorderItemID: BrowserSidebarReorderGeometry.RegisteredRow]
+            ) -> CGRect?
+
+        // MARK: - Variables
+
+        private let identity: Identity
+        let insertion: Insertion?
+        let splitInsertion: SplitInsertion?
+        private let resolveVerdict:
+            @MainActor @Sendable (BrowserSidebarLiftPlan, DropTargetList) -> BrowserSidebarDropVerdict
+        private let resolveDrop: @MainActor @Sendable (TabSelection, SpaceModel, BrowserStore) -> BrowserSidebarDrop?
+        private let resolvePreviewShape: @Sendable (BrowserTabDragPreviewShape?) -> BrowserTabDragPreviewShape?
+        private let resolveLandingFrame: LandingFrameResolver
+
+        // MARK: - Actions - Factories
+
         /// Insert into an ordered section before `beforeID` (`nil` appends).
         /// `index` is the resolved slot, used to displace neighbours.
-        case insert(
+        static func insert(
             section: BrowserSidebarReorderSection,
             beforeID: BrowserSidebarReorderItemID?,
             index: Int
-        )
+        ) -> Self {
+            let insertion = Insertion(section: section, beforeID: beforeID, index: index)
+            return Self(
+                identity: .insert(insertion),
+                insertion: insertion,
+                splitInsertion: nil,
+                resolveVerdict: { plan, targets in
+                    plan.verdict(onList: section.list(in: targets))
+                },
+                resolveDrop: { selection, space, browser in
+                    let (placement, folderID) = section.list(in: space)
+                    return BrowserSidebarDrop(
+                        intent: DropIntoList(
+                            workspaceID: browser.family.workspaceID, windowID: browser.windowID, spaceID: space.id,
+                            selection: selection, section: placement, folderID: folderID,
+                            beforeTabID: beforeID?.anchorTabID(in: space, lifted: Set(selection.memberTabIDs)),
+                            beforeFolderID: beforeID?.folderID)
+                    )
+                },
+                resolvePreviewShape: { _ in section.restingPreviewShape },
+                resolveLandingFrame: { layout, pinned, _ in
+                    if section.usesGridOrdering, let pinned = pinned() {
+                        return pinned.layout.frame(for: .gap, in: pinned.frame)
+                    }
+                    return layout.gapFrame
+                }
+            )
+        }
+
         /// Land inside a collapsed folder.
-        case intoFolder(UUID)
-        case createCurrentFolder(UUID)
+        static func intoFolder(_ folderID: UUID) -> Self {
+            Self(
+                identity: .intoFolder(folderID),
+                insertion: nil,
+                splitInsertion: nil,
+                resolveVerdict: { plan, targets in
+                    plan.verdict(onList: targets.lists.first { $0.folderID == folderID })
+                },
+                resolveDrop: { selection, space, browser in
+                    guard let folder = space.folders.model(folderID) else { return nil }
+                    return BrowserSidebarDrop(
+                        intent: DropIntoList(
+                            workspaceID: browser.family.workspaceID, windowID: browser.windowID, spaceID: space.id,
+                            selection: selection, section: folder.location, folderID: folderID,
+                            beforeTabID: nil, beforeFolderID: nil)
+                    )
+                },
+                resolvePreviewShape: { _ in .row },
+                resolveLandingFrame: { layout, _, rows in
+                    rows[.folder(folderID)].flatMap { layout.frame(for: $0.row) }
+                }
+            )
+        }
+
+        /// Create a folder around an open tab.
+        static func createCurrentFolder(_ tabID: UUID) -> Self {
+            Self(
+                identity: .createCurrentFolder(tabID),
+                insertion: nil,
+                splitInsertion: nil,
+                resolveVerdict: { _, targets in
+                    targets.folderAroundTabIDs.contains(tabID) ? .allowed : .unavailable
+                },
+                resolveDrop: { selection, space, browser in
+                    BrowserSidebarDrop(
+                        intent: DropAroundTab(
+                            workspaceID: browser.family.workspaceID, windowID: browser.windowID, spaceID: space.id,
+                            selection: selection, tabID: tabID, title: BrowserStore.newFolderTitle)
+                    )
+                },
+                resolvePreviewShape: { _ in .row },
+                resolveLandingFrame: { layout, _, rows in
+                    rows[.tab(tabID)].flatMap { layout.frame(for: $0.row) }
+                }
+            )
+        }
+
         /// Move to another space.
-        case space(BrowserSpaceRuntimeAssignment)
+        static func space(_ assignment: BrowserSpaceRuntimeAssignment) -> Self {
+            Self(
+                identity: .space(assignment),
+                insertion: nil,
+                splitInsertion: nil,
+                resolveVerdict: { plan, targets in
+                    guard targets.spaceIDs.contains(assignment.spaceID) else { return .unavailable }
+                    return plan.verdict(onSpace: assignment.spaceID)
+                },
+                resolveDrop: { selection, space, browser in
+                    guard let destinationSpace = browser.spaceModel(assignment.spaceID),
+                        destinationSpace.profileID == assignment.profileID
+                    else { return nil }
+                    return BrowserSidebarDrop(
+                        intent: DropOnSpace(
+                            workspaceID: browser.family.workspaceID, windowID: browser.windowID, spaceID: space.id,
+                            selection: selection, destinationSpaceID: assignment.spaceID),
+                        destination: destinationSpace,
+                        leavesSpace: true
+                    )
+                },
+                resolvePreviewShape: { resting in resting },
+                resolveLandingFrame: { _, _, _ in nil }
+            )
+        }
+
         /// Join the cards the content area is presenting, as the card at
         /// `index` among them. The index counts presented cards only — the drop
         /// placeholder is not one of them — so it stays put as the row of cards
         /// shifts to make room.
-        case splitInsert(assignment: BrowserSpaceRuntimeAssignment, index: Int)
+        static func splitInsert(assignment: BrowserSpaceRuntimeAssignment, index: Int) -> Self {
+            let split = SplitInsertion(assignment: assignment, index: index)
+            return Self(
+                identity: .splitInsert(split),
+                insertion: nil,
+                splitInsertion: split,
+                resolveVerdict: { _, targets in
+                    BrowserSidebarDropVerdict(targets.split.map { $0.refusal })
+                },
+                resolveDrop: { selection, space, browser in
+                    // The cards on show are the shown tab's split, so the shown tab is
+                    // the one the lift joins, and a window showing one tab makes a split.
+                    guard assignment.spaceID == space.id, let shown = browser.selectedTabID(in: space.id) else {
+                        return nil
+                    }
+                    return BrowserSidebarDrop(
+                        intent: DropIntoSplit(
+                            workspaceID: browser.family.workspaceID, windowID: browser.windowID, spaceID: space.id,
+                            selection: selection, targetTabID: shown, index: index)
+                    )
+                },
+                resolvePreviewShape: { _ in .webpageCard },
+                resolveLandingFrame: { _, _, _ in nil }
+            )
+        }
 
         // MARK: - Actions - Verdicts
 
@@ -44,19 +212,7 @@ struct BrowserSidebarReorderTarget: Equatable, Sendable {
         /// rule that refuses it, or that the core offers no such target.
         @MainActor
         func verdict(in plan: BrowserSidebarLiftPlan, targets: DropTargetList) -> BrowserSidebarDropVerdict {
-            switch self {
-            case .insert(let section, _, _):
-                return plan.verdict(onList: section.list(in: targets))
-            case .intoFolder(let folderID):
-                return plan.verdict(onList: targets.lists.first { $0.folderID == folderID })
-            case .space(let assignment):
-                guard targets.spaceIDs.contains(assignment.spaceID) else { return .unavailable }
-                return plan.verdict(onSpace: assignment.spaceID)
-            case .splitInsert:
-                return BrowserSidebarDropVerdict(targets.split.map { $0.refusal })
-            case .createCurrentFolder(let tabID):
-                return targets.folderAroundTabIDs.contains(tabID) ? .allowed : .unavailable
-            }
+            resolveVerdict(plan, targets)
         }
 
         // MARK: - Actions - Dropping
@@ -69,51 +225,7 @@ struct BrowserSidebarReorderTarget: Equatable, Sendable {
         func drop(
             lifting selection: TabSelection, in space: SpaceModel, from browser: BrowserStore
         ) -> BrowserSidebarDrop? {
-            let (workspaceID, windowID, spaceID) = (browser.family.workspaceID, browser.windowID, space.id)
-            switch self {
-            case .insert(let section, let beforeID, _):
-                let (placement, folderID) = section.list(in: space)
-                return BrowserSidebarDrop(
-                    intent: DropIntoList(
-                        workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, selection: selection,
-                        section: placement, folderID: folderID,
-                        beforeTabID: beforeID?.anchorTabID(in: space, lifted: Set(selection.memberTabIDs)),
-                        beforeFolderID: beforeID?.folderID)
-                )
-            case .intoFolder(let folderID):
-                guard let folder = space.folders.model(folderID) else { return nil }
-                return BrowserSidebarDrop(
-                    intent: DropIntoList(
-                        workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, selection: selection,
-                        section: folder.location, folderID: folderID, beforeTabID: nil, beforeFolderID: nil)
-                )
-            case .space(let destination):
-                guard let destinationSpace = browser.spaceModel(destination.spaceID),
-                    destinationSpace.profileID == destination.profileID
-                else { return nil }
-                return BrowserSidebarDrop(
-                    intent: DropOnSpace(
-                        workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, selection: selection,
-                        destinationSpaceID: destination.spaceID),
-                    destination: destinationSpace,
-                    leavesSpace: true
-                )
-            case .splitInsert(let assignment, let index):
-                // The cards on show are the shown tab's split, so the shown tab is
-                // the one the lift joins, and a window showing one tab makes a split.
-                guard assignment.spaceID == spaceID, let shown = browser.selectedTabID(in: spaceID) else { return nil }
-                return BrowserSidebarDrop(
-                    intent: DropIntoSplit(
-                        workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, selection: selection,
-                        targetTabID: shown, index: index)
-                )
-            case .createCurrentFolder(let tabID):
-                return BrowserSidebarDrop(
-                    intent: DropAroundTab(
-                        workspaceID: workspaceID, windowID: windowID, spaceID: spaceID, selection: selection,
-                        tabID: tabID, title: BrowserStore.newFolderTitle)
-                )
-            }
+            resolveDrop(selection, space, browser)
         }
 
         // MARK: - Actions - Presentation
@@ -121,12 +233,7 @@ struct BrowserSidebarReorderTarget: Equatable, Sendable {
         /// The shape a lifted tab takes over this target, or `resting`, the
         /// shape it keeps where the target says nothing of its own.
         func previewShape(resting: BrowserTabDragPreviewShape?) -> BrowserTabDragPreviewShape? {
-            switch self {
-            case .insert(let section, _, _): section.restingPreviewShape
-            case .intoFolder, .createCurrentFolder: .row
-            case .splitInsert: .webpageCard
-            case .space: resting
-            }
+            resolvePreviewShape(resting)
         }
 
         /// Where a lift released here settles in the sidebar, from the lift's
@@ -138,19 +245,13 @@ struct BrowserSidebarReorderTarget: Equatable, Sendable {
             pinned: @autoclosure () -> (layout: BrowserPinnedTabReorderLayout, frame: CGRect, emptyHeight: CGFloat)?,
             rows: [BrowserSidebarReorderItemID: BrowserSidebarReorderGeometry.RegisteredRow]
         ) -> CGRect? {
-            switch self {
-            case .insert(let section, _, _):
-                if section.usesGridOrdering, let pinned = pinned() {
-                    return pinned.layout.frame(for: .gap, in: pinned.frame)
-                }
-                return layout.gapFrame
-            case .intoFolder(let id):
-                return rows[.folder(id)].flatMap { layout.frame(for: $0.row) }
-            case .createCurrentFolder(let id):
-                return rows[.tab(id)].flatMap { layout.frame(for: $0.row) }
-            case .space, .splitInsert:
-                return nil
-            }
+            resolveLandingFrame(layout, pinned, rows)
+        }
+
+        // MARK: - Actions - Equality
+
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            lhs.identity == rhs.identity
         }
     }
 
@@ -159,7 +260,6 @@ struct BrowserSidebarReorderTarget: Equatable, Sendable {
     let kind: Kind
 
     var section: BrowserSidebarReorderSection? {
-        guard case .insert(let section, _, _) = kind else { return nil }
-        return section
+        kind.insertion?.section
     }
 }

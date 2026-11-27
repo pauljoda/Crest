@@ -5,7 +5,7 @@ using CrestCore.Contracts;
 namespace CrestCore.Application;
 
 internal static partial class StoredSessionCodec {
-    #region Variables
+    #region Static Variables
 
     /// Branding stored before rendering versions were recorded is version one.
     private const int FirstRenderingVersion = 1;

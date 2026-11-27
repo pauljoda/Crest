@@ -146,28 +146,20 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var scriptDialog: ScriptDialogAsked?
     private(set) var developerCaptureFeedback: String?
     private(set) var developerCaptureFeedbackRevision = 0
-    var isCredentialAccessEnabled: Bool { credentialSession.isEnabled }
-    var credentialFillRequest: BrowserCredentialFillRequest? { credentialState.fillRequest }
-    var credentialSaveCandidate: BrowserCredentialSaveCandidate? { credentialState.saveCandidate }
-    var credentialHeldSaveCandidate: BrowserCredentialSaveCandidate? { credentialState.heldSaveCandidate }
-    var autofillSaveCandidate: BrowserAutofillSaveCandidate? { credentialState.autofillSaveCandidate }
-
-    func dismissAutofillSaveCandidate() {
-        credentialState.dismissAutofillSaveCandidate()
-    }
-    var credentialKeyPress: BrowserCredentialKeyPress? { credentialState.keyPress }
     /// The pool that owns this page. Weak because the pool owns the page.
     @ObservationIgnored weak var host: BrowserPagePool?
     @ObservationIgnored var windowRouting: BrowserPageWindowRouting?
 
     /// True when web content opened this page through `window.open()`. WebKit
     /// drives such a page's history, so it neither restores nor archives any.
-    @ObservationIgnored private(set) var wasOpenedAsPopup = false
+    @ObservationIgnored var wasOpenedAsPopup = false
 
     /// True from adoption until WebKit starts the popup's own navigation. WebKit
     /// drives an adopted popup, so nothing else may load it in that window —
     /// loading it here is what breaks `window.opener` and `document.write`.
     @ObservationIgnored var isAwaitingPopupNavigation = false
+
+    var allowsPageZoomChange: Bool { developerViewport == nil }
 
     @ObservationIgnored let dialogPresenter: BrowserDialogPresenter
     /// The app's passkey access, refreshed when a secure page commits.
@@ -463,17 +455,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     // MARK: - Actions - Navigation
-
-    /// Records that web content opened this page and that WebKit still owes it a
-    /// navigation. Only a page pool adopting a popup calls this.
-    func markOpenedAsPopup() {
-        wasOpenedAsPopup = true
-        isAwaitingPopupNavigation = true
-    }
-
-    func load(_ url: URL) {
-        load(URLRequest(url: url))
-    }
 
     /// Loads `request` in the page as the app's own load, which only the app
     /// may make: the core's `LoadPage`, or a request web content made that
@@ -791,52 +772,12 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         findSession.findAgain(direction, hasLoadedPage: live.url != nil, using: findExecutor)
     }
 
-    // MARK: - Actions - Zoom
-
-    /// Zooms the page in a step, which its site keeps in the page's profile.
-    @discardableResult
-    func zoomIn() -> Bool {
-        guard developerViewport == nil else { return false }
-        return zoomSession.set(pageZoom.pageZoomIncreased)
-    }
-
-    /// Zooms the page out a step, which its site keeps in the page's profile.
-    @discardableResult
-    func zoomOut() -> Bool {
-        guard developerViewport == nil else { return false }
-        return zoomSession.set(pageZoom.pageZoomDecreased)
-    }
-
-    /// Returns the page and its site to the default zoom.
-    @discardableResult
-    func resetZoom() -> Bool {
-        guard developerViewport == nil else { return false }
-        return zoomSession.reset()
-    }
-
-    /// The device's default zoom changed, which a site without a zoom of its
-    /// own follows.
-    @discardableResult
-    func applyDefaultPageZoom(_ zoom: CGFloat) -> Bool {
-        zoomSession.applyDefault(zoom)
-    }
-
     // MARK: - Actions - Agents
 
     /// Moves the agent's pointer to `point`, pressing there when `presses`.
     func pointAgent(at point: PagePoint, presses: Bool) {
         agentPointer = BrowserAgentPointer(
             point: point, presses: presses, revision: (agentPointer?.revision ?? 0) &+ 1)
-    }
-
-    // MARK: - Actions - Content blocking
-
-    /// Lets the person point at an element of the page to block on its site
-    /// from now on, starting from what they last right-clicked when
-    /// `fromContextMenu`. Answers whether the picker started.
-    @discardableResult
-    func pickElementToBlock(fromContextMenu: Bool = false) async -> Bool {
-        await cosmeticFilters?.pickElement(fromContextMenu: fromContextMenu) ?? false
     }
 
     // MARK: - Actions - Reader and info bars
@@ -890,18 +831,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     // MARK: - Actions - Credentials
 
-    func dismissCredentialFillRequest() {
-        credentialState.dismissFillRequest()
-    }
-
-    func setCredentialAccessEnabled(_ isEnabled: Bool) {
-        credentialSession.setEnabled(isEnabled)
-    }
-
-    func dismissCredentialSaveCandidate() {
-        credentialState.dismissSaveCandidate()
-    }
-
     /// Leaves passwords and codes to an extension that controls password
     /// saving in the page's profile, and says so once for the Space.
     func setPasswordsHandledByExtension(_ handled: Bool) {
@@ -929,45 +858,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         return true
     }
 
-    /// Not Now: the offer goes, and the key in the address field keeps it.
-    func declineCredentialSaveCandidate() {
-        credentialState.holdSaveCandidate()
-    }
-
-    func reofferCredentialSaveCandidate() {
-        credentialState.reofferHeldSaveCandidate()
-    }
-
-    func fillCredential(_ credential: BrowserCredential, for requestID: UUID) async throws {
-        guard let evaluate = credentialEvaluator else { throw CredentialVaultError.credentialManagerDisabled }
-        try await credentialSession.fill(credential, for: requestID, evaluate: evaluate)
-    }
-
-    func fillAutofillValues(_ values: [BrowserAutofillValue], for requestID: UUID) async throws {
-        guard let evaluate = credentialEvaluator else { throw CredentialVaultError.credentialManagerDisabled }
-        try await credentialSession.fillValues(values, for: requestID, evaluate: evaluate)
-    }
-
-    /// The login the page last filled, whose code a code step offers first.
-    var lastFilledCredentialID: UUID? { credentialState.lastFilledCredentialID }
-
-    func fillGeneratedPassword(_ password: String, for requestID: UUID) async throws {
-        guard let evaluate = credentialEvaluator else { throw CredentialVaultError.credentialManagerDisabled }
-        try await credentialSession.fillGeneratedPassword(password, for: requestID, evaluate: evaluate)
-    }
-
-    func credentialFormUsername(for requestID: UUID) async -> String? {
-        guard let evaluate = credentialEvaluator else { return nil }
-        return await credentialSession.currentUsername(for: requestID, evaluate: evaluate)
-    }
-
-    func holdCredentialKeys(_ hold: Bool, for requestID: UUID) async {
-        guard let evaluate = credentialEvaluator else { return }
-        await credentialSession.holdKeys(hold, for: requestID, evaluate: evaluate)
-    }
-
     /// Fills go back through the channel the credential bridge came in on.
-    private var credentialEvaluator: BrowserCredentialSession.Evaluate? {
+    var credentialEvaluator: BrowserCredentialSession.Evaluate? {
         guard let scripting = pageEngine.contentScripting else { return engineAdapter.credentialEvaluator }
         return { body, arguments, frame in
             try await scripting.callAsyncJavaScript(body, arguments: arguments, in: frame)
@@ -980,27 +872,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     // MARK: - Actions - Sharing and export
 
-    /// Copies the page's address, without its trackers while Super Copy is
-    /// on.
-    @discardableResult
-    func copyPageLink() -> Bool {
-        BrowserPageLinkClipboard.copy(linkToCopy)
-    }
-
     func copyDeveloperPageLink() {
         if copyPageLink() {
             presentDeveloperCaptureFeedback("URL Copied")
         }
-    }
-
-    /// The page's address as copying or sharing it hands it out.
-    var linkToCopy: BrowserCopiedLink? {
-        live.documentURL.map(downloadCenter.core.linkToCopy)
-    }
-
-    @discardableResult
-    func copyPageLinkAsMarkdown() -> Bool {
-        BrowserPageLinkClipboard.copyMarkdown(linkToCopy, title: live.title)
     }
 
     /// The whole page as an image `snapshotWidth` points wide, or as wide in

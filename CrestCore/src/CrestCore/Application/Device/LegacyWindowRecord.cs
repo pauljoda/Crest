@@ -12,7 +12,7 @@ namespace CrestCore.Application;
 /// remembered the Spaces they had seen.
 internal sealed record LegacyWindowRecord(Guid Id, Guid SelectedSpaceId, IReadOnlyDictionary<Guid, Guid> Tabs,
     IReadOnlySet<Guid>? CapturedSpaceIds, IReadOnlyDictionary<Guid, IReadOnlyList<double>> Shares, WindowLayout Layout) {
-    #region Variables
+    #region Static Variables
 
     private const string IdKey = "id";
     private const string SelectedSpaceKey = "selectedSpaceID";

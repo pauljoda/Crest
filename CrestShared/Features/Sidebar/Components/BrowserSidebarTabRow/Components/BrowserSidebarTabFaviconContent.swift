@@ -13,10 +13,12 @@ struct BrowserSidebarTabFaviconContent: View {
     let iconScale: Double
 
     @Environment(\.tabFaviconIsReplaced) private var isReplaced
+    @Environment(\.tabFaviconNeedsBounds) private var needsBounds
 
     var body: some View {
-        TabStateFaviconView(
-            tab: tab, favicons: favicons, profileID: profileID,
+        TabFaviconView(
+            subject: BrowserTabFaviconSubject(tab: tab, image: favicons.icon(of: tab.id)),
+            profileID: profileID,
             size: TabFaviconMetrics.defaultSize * BrowserSidebarDensity(iconScale).contentScale
         )
         .opacity(isReplaced ? 0 : 1)
@@ -24,9 +26,22 @@ struct BrowserSidebarTabFaviconContent: View {
         .overlay(alignment: .bottomTrailing) {
             TabEngineBadge(tabID: tab.id, scale: BrowserSidebarDensity(iconScale).contentScale)
         }
-        .anchorPreference(key: TabFaviconBoundsKey.self, value: .bounds) { $0 }
+        .modifier(BrowserTabFaviconBoundsPreference(isEnabled: needsBounds))
         .modifier(BrowserSidebarTabFaviconColumn(slot: metrics.faviconSlot))
         .foregroundStyle(isProminent ? .primary : .secondary)
+    }
+}
+
+private struct BrowserTabFaviconBoundsPreference: ViewModifier {
+    let isEnabled: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content.anchorPreference(key: TabFaviconBoundsKey.self, value: .bounds) { $0 }
+        } else {
+            content
+        }
     }
 }
 

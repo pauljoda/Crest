@@ -994,28 +994,6 @@ using CrestChromiumUIStart = void (*)(id<CrestMacShell> shell, const crest_engin
 @end
 
 namespace crest {
-void SnapPictureInPictureWindow(views::Widget* widget) {
-  if (!IsEnabled() || !widget) return;
-  NSWindow* window = widget->GetNativeWindow().GetNativeNSWindow();
-  NSScreen* screen = window.screen;
-  if (!screen) return;
-  constexpr CGFloat kMargin = 16;
-  NSRect frame = window.frame;
-  NSRect work = screen.visibleFrame;
-  const CGFloat left = NSMinX(work) + kMargin;
-  const CGFloat right = std::max(left, NSMaxX(work) - kMargin - NSWidth(frame));
-  const CGFloat bottom = NSMinY(work) + kMargin;
-  const CGFloat top = std::max(bottom, NSMaxY(work) - kMargin - NSHeight(frame));
-  NSRect target = frame;
-  target.origin.x = NSMidX(frame) < NSMidX(work) ? left : right;
-  target.origin.y = NSMidY(frame) < NSMidY(work) ? bottom : top;
-  if (std::abs(target.origin.x - frame.origin.x) < 1 &&
-      std::abs(target.origin.y - frame.origin.y) < 1) return;
-  [NSAnimationContext runAnimationGroup:^(NSAnimationContext* context) {
-    context.duration = 0.22;
-    [[window animator] setFrame:target display:YES];
-  } completionHandler:nil];
-}
 
 namespace {
 bool MatchesAuthenticationCallback(ASWebAuthenticationSessionRequest* request, const GURL& url) {

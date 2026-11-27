@@ -18,13 +18,18 @@ struct BrowserStartPageContent: View {
     let isCommandPalettePresented: Bool
     /// The window's commands, which the page's palette offers once what is
     /// typed matches one. They run exactly as they do from the overlay.
-    let commands: BrowserCommandPaletteCommandRegistry
+    var commands: BrowserCommandPaletteCommandRegistry? = nil
+    var chrome: BrowserChromeState? = nil
+    var makeCommands: (() -> BrowserCommandPaletteCommandRegistry)? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         if let space {
+            let resolvedFocusRequest = chrome?.startPageFocusRequest ?? focusRequest
+            let resolvedPalettePresented = chrome?.isCommandPalettePresented ?? isCommandPalettePresented
+            let resolvedCommands = commands ?? makeCommands?()
             BrowserStartPage(
                 browser: browser,
                 space: space,
@@ -33,10 +38,10 @@ struct BrowserStartPageContent: View {
                 isSourceAvailable: isSourceAvailable,
                 selectTab: selectStartPageTab,
                 openURL: openStartPageURL,
-                isCommandPaletteObscured: isCommandPalettePresented,
+                isCommandPaletteObscured: resolvedPalettePresented,
                 layout: .macOSPage,
                 focusRequest: space.id == browser.selectedSpaceID && tab != nil && tab?.id == browser.shownTab?.id
-                    ? focusRequest
+                    ? resolvedFocusRequest
                     : nil,
                 promotion: tab.map { tab in
                     BrowserStartPagePromotion(
@@ -47,7 +52,7 @@ struct BrowserStartPageContent: View {
                 // The page shows the Space's backdrop, so its title reads in
                 // the Space's scheme, as the sidebar's text does.
                 headerColorScheme: space.settings.look.shown.colorScheme(over: colorScheme),
-                commands: commands
+                commands: resolvedCommands
             )
         } else {
             BrowserUnloadedPageSurface()

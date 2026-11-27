@@ -17,7 +17,7 @@
   },
   "chrome/browser/BUILD.gn": {
     "before": "e4098a876ac02db4ab67a4ce1ab3261545d1a4cd4b13433fa0b4bc03969baac3",
-    "after": "7ba7d8e2d7aae32fdbd09ffa898239cb7ea8bfdad741e9bf155545242a054ed2"
+    "after": "923e6a3bbfabfe8e47f305770b6aad5c630014a81d48cf5f0c5219bd8a09feb5"
   },
   "chrome/browser/ui/tabs/tab_features.cc": {
     "before": "d73f9115e1f549c9e1b170e722a2ca3f26dddb7fe72b8a3cebe8c3f881ac636c",
@@ -97,7 +97,7 @@
   },
   "chrome/browser/ui/browser_web_contents_delegate/browser_web_contents_delegate.cc": {
     "before": "e0ab17b1d976d5d5c5c6be22171d92c8a7d613f5d83894445bf03146df61b12d",
-    "after": "373f6a7aac18bdade4f1988dcc346217ffa1b56723fadae02ae798190aa36a80"
+    "after": "187e9d28679b605ad15fd9314752025ffbe2efb6c889c77943a40f4561df8616"
   },
   "chrome/browser/ui/browser_web_contents_delegate/browser_web_contents_delegate.h": {
     "before": "7c58c13d0972384c4cdfa70e62fe6853dd346e01c010e3b2caba45d2c274bae7",
@@ -235,13 +235,9 @@
     "before": "00184571de0b49358f9c11af658f0066bb15a241f1f530b62bc57fa235438212",
     "after": "dedad4477eb358fe4293320da04a0cf8a8f5fe8a42dff21b7902cbd4ddbda46a"
   },
-  "chrome/browser/ui/views/overlay/video_overlay_window_views.h": {
-    "before": "ba49e1b9b9c063b968b55b6ba6050a519d421e88e5476fd22beb943877c42d6c",
-    "after": "e7d814c1bee3f804040feb248a81cea4b690c622eff9f590d8ffcf1daefac824"
-  },
   "chrome/browser/ui/views/overlay/video_overlay_window_views.cc": {
     "before": "d01b9fcc5a3cc275995380285ff3f82f2d02953ada129c184020e879203500e6",
-    "after": "497eade85968a6a0d73cd139283496220e5c6c21c949c66e74cde53704fd2eee"
+    "after": "afc2601d62100ffb050d3b198c6017817891ad43ba9b2eab783a9e89a5c333a0"
   },
   "third_party/blink/public/platform/media/key_system_config_selector.h": {
     "before": "ac960b2a40c65ff1c9b640e53ed6ed6e3a9ccf53d7a5607033d0cf59201a3d65",
@@ -534,5 +530,17 @@
   "content/browser/renderer_host/browser_compositor_view_mac.mm": {
     "before": "1579b8073ab9c8682f11edd12227324048bbf7c5ae6b3d6b924cb285d0eca665",
     "after": "710968c986105f73a0a01c95331c8049d007e1c9cffda35a21667118c3ecbdfd"
+  },
+  "content/public/browser/video_picture_in_picture_window_controller.h": {
+    "before": "413b259a9199e766cadacb3b4eb82ce154ebc9b6c96c3300b8d50c7eb0d5de47",
+    "after": "b54b1b8baef371de2b56d12a41adac11d39c82230e3a2f530d6f384e9b312547"
+  },
+  "content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.h": {
+    "before": "3cfa1c44c957f2de3d2f75295650b9a4226895b57b0d66ed21a3d23474752505",
+    "after": "80aac6ae074044e6d23f74f69694e4c0b2be9ef1c8cd7ac2e0b94995487c5c74"
+  },
+  "content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.cc": {
+    "before": "1901fac89378723459239b047613f7969922da26235f085ca6152c069d664ab9",
+    "after": "837d6f91b28897fbe9696ef5c0553c4fe925b6d526c60f03af9feb2154820c7c"
   }
 }

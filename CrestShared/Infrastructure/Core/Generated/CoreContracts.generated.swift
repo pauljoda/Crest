@@ -2554,7 +2554,10 @@ struct AppPreferences: Equatable, Sendable {
             searchesSitesWithTab: true,
             showsReasons: false,
             providerSpaceTrigger: SearchProviderSpaceTrigger.prefixedShortcut
-        )
+        ),
+        floatsVideoOnAppSwitch: false,
+        floatsVideoOnDesktopSwitch: false,
+        redocksVideoOnFocus: true
     )
 
     var startup: StartupBehavior
@@ -2573,6 +2576,9 @@ struct AppPreferences: Equatable, Sendable {
     var newTabPosition: NewTabPosition
     var newTabsJoinFolder: Bool
     var palette: PalettePreferences
+    var floatsVideoOnAppSwitch: Bool
+    var floatsVideoOnDesktopSwitch: Bool
+    var redocksVideoOnFocus: Bool
 }
 
 struct AppPreferencesChanged: CoreChange, Equatable, Sendable {
@@ -3403,6 +3409,19 @@ struct ContentBlockingApplies: Query, Equatable, Sendable {
 
     let spaceID: UUID
     let origin: SiteOrigin?
+}
+
+struct ContentBridgeScript: Equatable, Sendable {
+    let source: String
+    let handlerName: String
+    let mainFrameOnly: Bool
+}
+
+struct ContentBridgeSource: Query, Equatable, Sendable {
+    typealias Answer = ContentBridgeScript
+
+    let bridge: ContentBridge
+    let includeTestingHooks: Bool
 }
 
 struct ContentFrame: Equatable, Sendable, Identifiable {
@@ -4722,6 +4741,10 @@ struct FirstInstallSession: Query, Equatable, Sendable {
 
 }
 
+struct FocusPictureInPictureSource: Intent, PageIntent, Equatable, Sendable {
+    let pageID: UUID
+}
+
 struct FolderAlreadyExists: Equatable, Sendable {
     let folderID: UUID
 }
@@ -4975,6 +4998,40 @@ struct HoverPage: PageRequest, Equatable, Sendable {
     let pageID: UUID
     let inputID: UUID
     let point: PagePoint
+}
+
+struct HttpAuthenticationChallengePlan: Query, Equatable, Sendable {
+    typealias Answer = HttpAuthenticationDecision
+
+    let allowsCredentialSaving: Bool
+    let isSecureOrigin: Bool
+    let previousFailureCount: Int
+    let hasStoredCredential: Bool
+    let attemptedSameProtectionSpace: Bool
+    let proposedUsername: String?
+    let attemptedUsername: String?
+}
+
+struct HttpAuthenticationDecision: Equatable, Sendable {
+    let usesStoredCredential: Bool
+    let storedCredentialRejected: Bool
+    let allowsSaving: Bool
+    let suggestedUsername: String?
+}
+
+struct HttpAuthenticationSaveDecision: Equatable, Sendable {
+    let shouldSave: Bool
+    let replacesRejectedCredential: Bool
+}
+
+struct HttpAuthenticationSavePlan: Query, Equatable, Sendable {
+    typealias Answer = HttpAuthenticationSaveDecision
+
+    let allowsCredentialSaving: Bool
+    let isSecureOrigin: Bool
+    let userRequestedSave: Bool
+    let submittedUsername: String
+    let rejectedUsername: String?
 }
 
 struct IdentifyAgent: Intent, AgentIntent, Equatable, Sendable {
@@ -12698,6 +12755,67 @@ struct ContentBlockingPolicy: Hashable, Sendable {
             self.name = name
             self.title = title
             self.blocksContent = blocksContent
+        }
+    }
+}
+
+/// The members of the core's `ContentBridge`. A member's wire tag is its index in `all`.
+struct ContentBridge: Hashable, Sendable {
+    let tag: Int
+    var name: String { facts.name }
+    var handlerName: String { facts.handlerName }
+    var mainFrameOnly: Bool { facts.mainFrameOnly }
+    private let facts: Facts
+
+    private init(tag: Int, name: String, handlerName: String, mainFrameOnly: Bool) {
+        self.tag = tag
+        facts = Facts(name: name, handlerName: handlerName, mainFrameOnly: mainFrameOnly)
+    }
+
+    static let cosmeticFilter = ContentBridge(
+        tag: 0,
+        name: "cosmetic_filter",
+        handlerName: "crestCosmetics",
+        mainFrameOnly: false
+    )
+    static let credentials = ContentBridge(
+        tag: 1,
+        name: "credentials",
+        handlerName: "crestCredentials",
+        mainFrameOnly: false
+    )
+    static let readerMode = ContentBridge(tag: 2, name: "reader_mode", handlerName: "", mainFrameOnly: true)
+    static let translation = ContentBridge(tag: 3, name: "translation", handlerName: "", mainFrameOnly: true)
+    static let firstPaint = ContentBridge(
+        tag: 4,
+        name: "first_paint",
+        handlerName: "crestFirstPaint",
+        mainFrameOnly: true
+    )
+
+    static let all: [ContentBridge] = [cosmeticFilter, credentials, readerMode, translation, firstPaint]
+
+    static func named(_ name: String?) -> ContentBridge? {
+        all.first { $0.name == name }
+    }
+
+    static func == (lhs: ContentBridge, rhs: ContentBridge) -> Bool {
+        lhs.tag == rhs.tag
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(tag)
+    }
+
+    private final class Facts: Sendable {
+        let name: String
+        let handlerName: String
+        let mainFrameOnly: Bool
+
+        init(name: String, handlerName: String, mainFrameOnly: Bool) {
+            self.name = name
+            self.handlerName = handlerName
+            self.mainFrameOnly = mainFrameOnly
         }
     }
 }
@@ -26348,6 +26466,21 @@ struct SitePermission: Hashable, Sendable {
         components: [],
         platforms: [DevicePlatform.desktop]
     )
+    static let automaticPictureInPicture = SitePermission(
+        tag: 9,
+        name: "automaticPictureInPicture",
+        title: LocalizedStringResource("Automatic Picture in Picture"),
+        symbol: "pip",
+        requestTitle: LocalizedStringResource("Automatic Picture in Picture"),
+        question: LocalizedStringResource("Float video automatically?"),
+        askTitle: LocalizedStringResource("Use App Settings"),
+        askChoiceTitle: LocalizedStringResource("Use App Settings"),
+        isMedia: false,
+        isEngineEnforced: false,
+        isAskedBySystem: false,
+        components: [],
+        platforms: [DevicePlatform.desktop]
+    )
 
     static let all: [SitePermission] = [
         camera,
@@ -26358,7 +26491,8 @@ struct SitePermission: Hashable, Sendable {
         popups,
         automaticDownloads,
         externalApplications,
-        screenSharing
+        screenSharing,
+        automaticPictureInPicture
     ]
 
     static func named(_ name: String?) -> SitePermission? {

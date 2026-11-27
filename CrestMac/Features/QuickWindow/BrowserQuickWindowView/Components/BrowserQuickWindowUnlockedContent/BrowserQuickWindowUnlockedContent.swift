@@ -59,10 +59,6 @@ struct BrowserQuickWindowUnlockedContent: View {
                 }
             }
         }
-        .animation(
-            BrowserCommandSurfaceMorph.commandPaletteAnimation(reduceMotion: reduceMotion),
-            value: isPaletteShown
-        )
         .modifier(
             BrowserQuickWindowActivityLifecycleModifier(
                 model: model,

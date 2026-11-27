@@ -4,9 +4,7 @@ import WebKit
 final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureController,
     BrowserAutomaticPictureInPictureClient
 {
-    /// How long automatic Picture in Picture waits for the page to report a
-    /// floating video before it gives up.
-    private static let automaticPictureInPictureTimeout: Duration = .seconds(4)
+    // MARK: - Types
 
     private struct FrameCandidate {
         let frame: WKFrameInfo
@@ -19,6 +17,66 @@ final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureCo
         let id: UUID
         let candidate: FrameCandidate
     }
+
+    private protocol BridgeMessage: Decodable {
+        var documentID: String { get }
+
+        @MainActor
+        func apply(to controller: BrowserPictureInPicturePageController, frame: WKFrameInfo)
+    }
+
+    private struct BridgeEnvelope: Decodable {
+        let kind: String
+    }
+
+    private struct RemovedMessage: BridgeMessage {
+        let documentID: String
+
+        @MainActor
+        func apply(to controller: BrowserPictureInPicturePageController, frame: WKFrameInfo) {
+            controller.removeDocument(documentID)
+        }
+    }
+
+    private struct RequestMessage: BridgeMessage {
+        let documentID: String
+        let requestID: String?
+        let succeeded: Bool?
+
+        @MainActor
+        func apply(to controller: BrowserPictureInPicturePageController, frame: WKFrameInfo) {
+            controller.receiveRequestOutcome(
+                documentID: documentID, requestID: requestID, succeeded: succeeded == true)
+        }
+    }
+
+    private struct StateMessage: BridgeMessage {
+        let documentID: String
+        let active: Bool?
+        let eligible: Bool?
+        let videoID: String?
+        let score: Double?
+
+        @MainActor
+        func apply(to controller: BrowserPictureInPicturePageController, frame: WKFrameInfo) {
+            controller.receiveState(
+                documentID: documentID, active: active == true, eligible: eligible == true,
+                videoID: videoID, score: score, frame: frame)
+        }
+    }
+
+    // MARK: - Static Variables
+
+    /// How long automatic Picture in Picture waits for the page to report a
+    /// floating video before it gives up.
+    private static let automaticPictureInPictureTimeout: Duration = .seconds(4)
+    private static let messageDecoders: [String: (Data) -> (any BridgeMessage)?] = [
+        "removed": { try? JSONDecoder().decode(RemovedMessage.self, from: $0) },
+        "request": { try? JSONDecoder().decode(RequestMessage.self, from: $0) },
+        "state": { try? JSONDecoder().decode(StateMessage.self, from: $0) },
+    ]
+
+    // MARK: - Variables
 
     private weak var webView: WKWebView?
     private let coordinator: BrowserAutomaticPictureInPictureCoordinator
@@ -49,6 +107,8 @@ final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureCo
         !candidates.isEmpty && !isPictureInPictureActive && webView != nil
     }
 
+    // MARK: - Initializers
+
     init(webView: WKWebView, coordinator: BrowserAutomaticPictureInPictureCoordinator = .shared) {
         self.webView = webView
         self.coordinator = coordinator
@@ -56,7 +116,11 @@ final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureCo
         BrowserPictureInPictureContentBridge.shared.register(self, webView: webView)
     }
 
-    func leaveTab() { coordinator.request(from: self) }
+    // MARK: - Actions - Picture in Picture
+
+    func requestAutomaticEntry(for trigger: BrowserAutomaticPictureInPictureCoordinator.Trigger) {
+        coordinator.request(from: self, for: trigger)
+    }
 
     private func residencyProtectionMayHaveChanged() {
         guard protectsPageResidency != reportedResidencyProtection else { return }
@@ -64,7 +128,7 @@ final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureCo
         residencyProtectionChanged?()
     }
 
-    func returnToTab() {
+    func returnToTab(reconcileLateEntry: @escaping @MainActor () -> Void) {
         coordinator.cancel(self)
         refreshCandidates()
     }
@@ -98,39 +162,56 @@ final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureCo
 
     func receive(_ message: WKScriptMessage) {
         guard acceptsEvents, message.webView === webView,
-            let body = message.body as? [String: Any],
-            let documentID = body["documentID"] as? String, documentID.count <= 64,
-            let kind = body["kind"] as? String
+            let decoded = Self.decodeMessage(from: message.body)
         else { return }
-        if kind == "removed" {
-            candidates[documentID] = nil
-            activeDocuments.remove(documentID)
-            return
-        }
-        if kind == "request" {
-            guard body["requestID"] as? String == automaticRequest?.id.uuidString else { return }
-            let succeeded = body["succeeded"] as? Bool == true
-            if succeeded { activeDocuments.insert(documentID) }
-            finish(succeeded: succeeded)
-            return
-        }
-        guard kind == "state" else { return }
-        if body["active"] as? Bool == true {
+        decoded.apply(to: self, frame: message.frameInfo)
+    }
+
+    private static func decodeMessage(from body: Any) -> (any BridgeMessage)? {
+        guard JSONSerialization.isValidJSONObject(body),
+            let data = try? JSONSerialization.data(withJSONObject: body),
+            let envelope = try? JSONDecoder().decode(BridgeEnvelope.self, from: data),
+            let decode = messageDecoders[envelope.kind],
+            let message = decode(data),
+            message.documentID.count <= 64
+        else { return nil }
+        return message
+    }
+
+    private func removeDocument(_ documentID: String) {
+        candidates[documentID] = nil
+        activeDocuments.remove(documentID)
+    }
+
+    private func receiveRequestOutcome(documentID: String, requestID: String?, succeeded: Bool) {
+        guard requestID == automaticRequest?.id.uuidString else { return }
+        if succeeded { activeDocuments.insert(documentID) }
+        finish(succeeded: succeeded)
+    }
+
+    private func receiveState(
+        documentID: String,
+        active: Bool,
+        eligible: Bool,
+        videoID: String?,
+        score: Double?,
+        frame: WKFrameInfo
+    ) {
+        if active {
             activeDocuments.insert(documentID)
         } else {
             activeDocuments.remove(documentID)
         }
-        guard body["eligible"] as? Bool == true,
-            let videoID = body["videoID"] as? String, videoID.count <= 32,
-            let score = body["score"] as? Double, score.isFinite,
+        guard eligible,
+            let videoID, videoID.count <= 32,
+            let score, score.isFinite,
             candidates[documentID] != nil || candidates.count < 64
         else {
             candidates[documentID] = nil
             return
         }
         candidates[documentID] = FrameCandidate(
-            frame: message.frameInfo,
-            documentID: documentID, videoID: videoID, score: score)
+            frame: frame, documentID: documentID, videoID: videoID, score: score)
     }
 
     func beginAutomaticPictureInPicture(completion: @escaping @MainActor (Bool) -> Void) {
@@ -185,7 +266,7 @@ final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureCo
         timeout = nil
         let callback = completion
         completion = nil
-        if !succeeded { automaticRequest = nil }
+        automaticRequest = nil
         callback?(succeeded)
     }
 }

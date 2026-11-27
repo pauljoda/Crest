@@ -34,7 +34,8 @@ struct BrowserSpaceIconsAppearanceGroup: View {
             ForEach(BrowserSpaceIconDisplay.all) { display in
                 CrestPreviewButton(
                     title: Text(display.title), isSelected: display == appearance.spaceIcons,
-                    previewSize: BrowserSpaceIconsAppearanceMetrics.previewSize, faceSize: faceSize
+                    previewSize: BrowserSpaceIconsAppearanceMetrics.previewSize, faceSize: faceSize,
+                    snapshotKey: AnyHashable(["space-icons", display.name])
                 ) {
                     withAnimation(CrestMotion.styleChange.unlessReducingMotion(reduceMotion)) {
                         appearance.chosenSpaceIcons = display

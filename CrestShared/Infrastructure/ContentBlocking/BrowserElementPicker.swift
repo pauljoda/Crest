@@ -17,6 +17,14 @@ final class BrowserElementPicker {
         case cancel
     }
 
+    /// What the page's cosmetic bridge reports about the running picker.
+    struct Report: Decodable, Sendable {
+        let active: Bool?
+        let selector: String?
+        let canWiden: Bool?
+        let canNarrow: Bool?
+    }
+
     // MARK: - Variables
 
     private(set) var isActive = false
@@ -45,12 +53,12 @@ final class BrowserElementPicker {
     // MARK: - Mutators
 
     /// What the bridge reports, `report`, read once here.
-    func apply(_ report: [String: Any]) {
-        guard report["active"] as? Bool == true else { return end() }
+    func apply(_ report: Report) {
+        guard report.active == true else { return end() }
         isActive = true
-        selector = report["selector"] as? String
-        canWiden = report["canWiden"] as? Bool == true
-        canNarrow = report["canNarrow"] as? Bool == true
+        selector = report.selector
+        canWiden = report.canWiden == true
+        canNarrow = report.canNarrow == true
     }
 
     /// The picker stopped, or its document went away.

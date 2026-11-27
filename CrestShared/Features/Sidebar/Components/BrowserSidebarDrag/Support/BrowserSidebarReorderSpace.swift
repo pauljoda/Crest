@@ -36,4 +36,10 @@ extension EnvironmentValues {
         get { self[BrowserSidebarDropViewportIDKey.self] }
         set { self[BrowserSidebarDropViewportIDKey.self] = newValue }
     }
+
+    /// The scroll content's own coordinate space, when the view lives inside a
+    /// scrolling sidebar list whose origin is registered in global coordinates.
+    /// Measuring rows and zones here avoids firing geometry updates on every
+    /// scroll frame while keeping global coordinates exact for drags.
+    @Entry var browserSidebarScrollContentSpace: NamedCoordinateSpace? = nil
 }

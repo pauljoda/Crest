@@ -9,7 +9,7 @@ public sealed class CrestDepth {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static readonly CrestDepth None = new(Kinds.None, "none", "None", CrestVocabulary.Baseline);
     public static readonly CrestDepth Soft = new(Kinds.Soft, "soft", "Soft", CrestVocabulary.Studio);
@@ -18,6 +18,10 @@ public sealed class CrestDepth {
     public static readonly CrestDepth Figure = new(Kinds.Figure, "figure", "Raised Figure", CrestVocabulary.Simple);
 
     public static IReadOnlyList<CrestDepth> All { get; } = [None, Soft, Lifted, Figure];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

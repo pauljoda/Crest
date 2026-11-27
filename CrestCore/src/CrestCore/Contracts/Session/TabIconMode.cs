@@ -8,7 +8,7 @@ namespace CrestCore.Contracts;
 /// The stored session spells a mode as its `Name`, so a name never changes.
 /// A mode travels as its index in `All`, so `All` is append-only.
 public sealed class TabIconMode {
-    #region Variables
+    #region Static Variables
 
     /// One storage slot holds either an SF Symbol name or an emoji, so the
     /// emoji spelling carries this prefix, which makes the two unambiguous.
@@ -24,6 +24,10 @@ public sealed class TabIconMode {
         symbol: emoji => EmojiIcon.Chosen(emoji)?.Symbol);
 
     public static IReadOnlyList<TabIconMode> All { get; } = [Automatic, Pulled, Emoji];
+
+    #endregion
+
+    #region Variables
 
     private readonly Func<string?, string?> symbol;
 

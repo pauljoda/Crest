@@ -17,6 +17,32 @@ public sealed partial class BrowserContractsTests {
         binding.Commands.Count(command => command == new ExitPictureInPicture(page));
 
     [Fact]
+    public void ReturningFocusRedocksVisibleSourcesThatUseTheAppSetting() {
+        var session = TwoSpaceSession();
+        var (left, right) = (SpaceId(session["spaces"]![0]!), SpaceId(session["spaces"]![1]!));
+        var clock = new TestClock(new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero));
+        using var app = new CrestApp(new AppConfiguration(null, DevicePlatform.Desktop), clock, new TestIds());
+        var binding = new RecordingEngine();
+        var engine = app.RegisterEngine(new EngineRegistration(EngineKind.Chromium, EngineCapability.Required, IsDefault: true),
+            binding.Run);
+        var workspace = TestWorkspaces.Open(app, session);
+        var window = Guid.NewGuid();
+        app.Send(new OpenWindow(window, workspace, Saved: false, null, null, [], RestoresTabs: true));
+        var (_, background) = ShowNewTab(app, engine, clock, workspace, window, left, "https://background.example/");
+        var (_, foreground) = ShowNewTab(app, engine, clock, workspace, window, right, "https://foreground.example/");
+        app.Report(engine, new PageStateChanged(background, Showing("https://background.example/") with { Media = Floating }));
+        app.Report(engine, new PageStateChanged(foreground, Showing("https://foreground.example/") with { Media = Floating }));
+
+        app.Send(new FocusPictureInPictureSource(background));
+        app.Send(new FocusPictureInPictureSource(foreground));
+        Assert.Equal((0, 1), (Exits(binding, background), Exits(binding, foreground)));
+
+        app.Send(new SetAppPreferences(workspace, AppPreferences.Default with { RedocksVideoOnFocus = false }));
+        app.Send(new FocusPictureInPictureSource(foreground));
+        Assert.Equal(1, Exits(binding, foreground));
+    }
+
+    [Fact]
     public void LockingASpaceEndsThePictureInPictureOfItsPagesAndNoOtherSpaces() {
         var session = TwoSpaceSession();
         session["spaces"]![0]!["accessPolicy"] = "deviceOwnerAuthentication";

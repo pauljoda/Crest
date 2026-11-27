@@ -36,10 +36,7 @@ struct BrowserSidebarTabLabelContent: View {
                     iconScale: textScale
                 )
                 #if os(macOS)
-                    .simultaneousGesture(
-                        TapGesture().onEnded { faviconPrimaryClick?() },
-                        including: faviconPrimaryClick == nil ? .none : .all
-                    )
+                    .modifier(BrowserSidebarFaviconPrimaryClickModifier(action: faviconPrimaryClick))
                 #endif
                 if tab.placement == .saved, tab.isAwayFromSavedAddress, let restoreSavedLocation {
                     BrowserTabSavedLocationIndicator(restore: restoreSavedLocation)
@@ -53,3 +50,18 @@ struct BrowserSidebarTabLabelContent: View {
         .contentShape(.rect)
     }
 }
+
+#if os(macOS)
+    private struct BrowserSidebarFaviconPrimaryClickModifier: ViewModifier {
+        let action: (() -> Void)?
+
+        @ViewBuilder
+        func body(content: Content) -> some View {
+            if let action {
+                content.simultaneousGesture(TapGesture().onEnded(action))
+            } else {
+                content
+            }
+        }
+    }
+#endif

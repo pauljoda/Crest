@@ -8,6 +8,8 @@ import WebKit
 @Observable
 @MainActor
 final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
+    // MARK: - Variables
+
     /// The core's page, which `release(keepingState:)` ends.
     @ObservationIgnored let corePage: CorePage
     private(set) var tabID: UUID
@@ -75,19 +77,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var readerModeState: BrowserReaderModeState { readerModeSession.state }
     var isContentBlockingActive: Bool { contentRuleSession.isActive }
     private(set) var isRequestingDesktopSite = false
-    var isCredentialAccessEnabled: Bool { credentialSession.isEnabled }
-    /// True once iOS reclaimed this page's web-content process while it was off
-    /// screen. Selecting the tab again is what brings the page back.
-    var credentialFillRequest: BrowserCredentialFillRequest? { credentialState.fillRequest }
-    var credentialSaveCandidate: BrowserCredentialSaveCandidate? { credentialState.saveCandidate }
-    var credentialHeldSaveCandidate: BrowserCredentialSaveCandidate? { credentialState.heldSaveCandidate }
-    var autofillSaveCandidate: BrowserAutofillSaveCandidate? { credentialState.autofillSaveCandidate }
-
-    func dismissAutofillSaveCandidate() {
-        credentialState.dismissAutofillSaveCandidate()
-    }
-    var credentialKeyPress: BrowserCredentialKeyPress? { credentialState.keyPress }
-
     /// The fill request whose full offer shows in the band at the top of the
     /// page. A phone shows its offers in the strip above the keyboard and
     /// opens the band only when the strip asks.
@@ -132,7 +121,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored let spaceName: String
     @ObservationIgnored private let findSession = BrowserFindSession()
     @ObservationIgnored lazy var readerModeSession = BrowserReaderModeSession(
-        document: BrowserWebKitReaderModeDocument(webView: webView, translation: translation)
+        document: BrowserContentReaderModeDocument(webView: webView, translation: translation)
     )
     @ObservationIgnored lazy var faviconSession = BrowserFaviconSession(
         document: BrowserWebKitFaviconDocument(webView: webView, profileID: profileID),
@@ -154,14 +143,17 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         history: { [weak self] in self?.pageEngine.reportedHistory })
     /// The reporter that tells the core what the page's engine shows.
     var navigationReporter: EnginePageReporter? { reporter }
-    @ObservationIgnored private let credentialSession: BrowserCredentialSession
+    @ObservationIgnored let credentialSession: BrowserCredentialSession
     var credentialState: BrowserCredentialPageState<BrowserCredentialSession.FillTarget> {
         credentialSession.state
+    }
+    var credentialEvaluator: BrowserCredentialSession.Evaluate? {
+        BrowserCredentialSession.evaluator(in: webView)
     }
     @ObservationIgnored private var credentialMessageProxy: BrowserScriptMessageProxy?
     @ObservationIgnored private var cosmeticFilterMessageProxy: BrowserScriptMessageProxy?
     /// Answers the page's cosmetic bridge, once it first posts.
-    @ObservationIgnored private var cosmeticFilters: BrowserCosmeticFilterSession?
+    @ObservationIgnored var cosmeticFilters: BrowserCosmeticFilterSession?
     /// The element picker the page's bar shows while the person picks
     /// something to block.
     @ObservationIgnored let elementPicker = BrowserElementPicker()
@@ -191,6 +183,9 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// every popup does. Installing the same script message handler twice on it
     /// throws, and removing one would strip it from the opener.
     @ObservationIgnored private let ownsUserContentController: Bool
+    var allowsPageZoomChange: Bool { true }
+
+    // MARK: - Initializers
 
     /// The page hosting what WebKit's binding built as `webKitPage`, for
     /// `tab` in `space`. `contentRuleList` is a rule list the page applies
@@ -422,9 +417,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
     }
 
-    func load(_ url: URL) {
-        load(URLRequest(url: url))
-    }
+    // MARK: - Actions - Navigation
 
     /// Loads `request` in the page as the app's own load, which only the app
     /// may make: the core's `LoadPage`, or a request web content made that
@@ -502,13 +495,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         return true
     }
 
-    /// Records that web content opened this page and that WebKit still owes it a
-    /// navigation. Only a page store adopting a popup calls this.
-    func markOpenedAsPopup() {
-        wasOpenedAsPopup = true
-        isAwaitingPopupNavigation = true
-    }
-
     func monitorUserActivity(_ handler: @escaping () -> Void) {
         userActivityHandler = handler
         guard ownsUserContentController, userActivityMessageProxy == nil else { return }
@@ -526,6 +512,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     func stopMonitoringUserActivity() {
         userActivityHandler = nil
     }
+
+    // MARK: - Actions - Lifecycle
 
     func adopt(tabID: UUID, tab: BrowserPageTab) {
         self.tabID = tabID
@@ -675,6 +663,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         userActivityHandler = nil
     }
 
+    // MARK: - Actions - Content & display
+
     func reloadOrStop() {
         performReload(.standard)
     }
@@ -700,6 +690,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         )
     }
 
+    // MARK: - Actions - Find & Reader Mode
+
     func presentFind() {
         findSession.present(hasLoadedPage: webView.url != nil)
     }
@@ -712,31 +704,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         findSession.find(query, direction: direction, using: enginePage)
     }
 
-    /// Zooms the page in a step, which its site keeps in the page's profile.
-    @discardableResult
-    func zoomIn() -> Bool {
-        zoomSession.set(pageZoom.pageZoomIncreased)
-    }
-
-    /// Zooms the page out a step, which its site keeps in the page's profile.
-    @discardableResult
-    func zoomOut() -> Bool {
-        zoomSession.set(pageZoom.pageZoomDecreased)
-    }
-
-    /// Returns the page and its site to the default zoom.
-    @discardableResult
-    func resetZoom() -> Bool {
-        zoomSession.reset()
-    }
-
-    /// The device's default zoom changed, which a site without a zoom of its
-    /// own follows.
-    @discardableResult
-    func applyDefaultPageZoom(_ zoom: CGFloat) -> Bool {
-        zoomSession.applyDefault(zoom)
-    }
-
     func refreshReaderModeAvailability() async {
         await readerModeSession.refreshAvailability()
     }
@@ -745,22 +712,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         readerModeSession.toggle()
     }
 
-    /// Copies the page's address, without its trackers while Super Copy is
-    /// on.
-    @discardableResult
-    func copyPageLink() -> Bool {
-        BrowserPageLinkClipboard.copy(linkToCopy)
-    }
-
-    /// The page's address as copying or sharing it hands it out.
-    var linkToCopy: BrowserCopiedLink? {
-        live.documentURL.map(downloadCenter.core.linkToCopy)
-    }
-
-    @discardableResult
-    func copyPageLinkAsMarkdown() -> Bool {
-        BrowserPageLinkClipboard.copyMarkdown(linkToCopy, title: live.title)
-    }
+    // MARK: - Actions - Printing & export
 
     func printPage() {
         guard webView.url != nil else { return }
@@ -858,49 +810,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
     }
 
-    func dismissCredentialFillRequest() {
-        credentialState.dismissFillRequest()
-    }
-
-    func dismissCredentialSaveCandidate() {
-        credentialState.dismissSaveCandidate()
-    }
-
-    /// Not Now: the offer goes, and the key in the address field keeps it.
-    func declineCredentialSaveCandidate() {
-        credentialState.holdSaveCandidate()
-    }
-
-    func reofferCredentialSaveCandidate() {
-        credentialState.reofferHeldSaveCandidate()
-    }
-
-    func setCredentialAccessEnabled(_ isEnabled: Bool) {
-        credentialSession.setEnabled(isEnabled)
-    }
-
-    func fillCredential(_ credential: BrowserCredential, for requestID: UUID) async throws {
-        try await credentialSession.fill(credential, for: requestID, in: webView)
-    }
-
-    func fillGeneratedPassword(_ password: String, for requestID: UUID) async throws {
-        try await credentialSession.fillGeneratedPassword(password, for: requestID, in: webView)
-    }
-
-    func fillAutofillValues(_ values: [BrowserAutofillValue], for requestID: UUID) async throws {
-        try await credentialSession.fillValues(values, for: requestID, in: webView)
-    }
-
-    /// The login the page last filled, whose code a code step offers first.
-    var lastFilledCredentialID: UUID? { credentialState.lastFilledCredentialID }
-
-    func credentialFormUsername(for requestID: UUID) async -> String? {
-        await credentialSession.currentUsername(for: requestID, in: webView)
-    }
-
-    func holdCredentialKeys(_ hold: Bool, for requestID: UUID) async {
-        await credentialSession.holdKeys(hold, for: requestID, in: webView)
-    }
+    // MARK: - Actions - Credentials
 
     /// Puts Crest's strip above the keyboard in place of WebKit's bar, on a
     /// phone, once per page.
@@ -962,6 +872,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
                 contentWorld: BrowserCredentialContentBridge.contentWorld)
         }
     }
+
+    // MARK: - Actions - Observation & navigation state
 
     private func installObservations() {
         observations = [
@@ -1189,6 +1101,8 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             media: pageEngine.knownMediaActivity)
     }
 
+    // MARK: - Actions - Script messages
+
     /// Reads what the credential bridge posted from this page's web view. A
     /// popup shares this page's controller, so its bridge posts here too: a
     /// message another page's web view sent goes to that page, whose own
@@ -1222,13 +1136,6 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// it shows a site on the web and its bridge has posted.
     var canPickElementToBlock: Bool {
         cosmeticFilters?.blocksContent == true && webView.url?.webScheme != nil
-    }
-
-    /// Lets the person point at an element of the page to block on its site
-    /// from now on. Answers whether the picker started.
-    @discardableResult
-    func pickElementToBlock() async -> Bool {
-        await cosmeticFilters?.pickElement(fromContextMenu: false) ?? false
     }
 
     /// Whether this page's own web view sent `scriptMessage`.

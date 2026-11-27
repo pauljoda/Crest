@@ -4,7 +4,7 @@ namespace CrestCore.Contracts;
 /// draws alike. A look announces the newest vocabulary any of its terms
 /// needs, so an older reader of a synced look knows what it cannot draw.
 public sealed class CrestVocabulary {
-    #region Variables
+    #region Static Variables
 
     /// The vocabulary every shipped build draws.
     public static readonly CrestVocabulary Baseline = new(name: "baseline", version: SpaceBranding.BaselineRenderingVersion);
@@ -20,6 +20,10 @@ public sealed class CrestVocabulary {
     public static readonly CrestVocabulary Simple = new(name: "simple", version: 6);
 
     public static IReadOnlyList<CrestVocabulary> All { get; } = [Baseline, ExpandedCharges, Customization, Studio, Simple];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

@@ -4,7 +4,7 @@ using CrestCore.Domain;
 namespace CrestCore.Application;
 
 public sealed partial class NativeSessionAuthority {
-    #region Variables
+    #region Static Variables
 
     /// What a folder created without a title is called.
     internal const string NewFolderTitle = "New Folder";

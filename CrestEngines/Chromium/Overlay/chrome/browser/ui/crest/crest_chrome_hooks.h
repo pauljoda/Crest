@@ -22,8 +22,8 @@ class Profile;
 enum class ToastId;
 namespace extensions { class Extension; class ExtensionHost; }
 namespace content { class WebContents; class NavigationThrottleRegistry; class JavaScriptDialogManager; struct DesktopMediaID; struct DropData; struct MediaStreamRequest; struct OpenURLParams; }
+namespace content { class VideoOverlayWindow; class VideoPictureInPictureWindowController; }
 namespace net { class AuthChallengeInfo; }
-namespace views { class Widget; }
 
 namespace crest {
 // The isolated world Crest's content bridges run in. It sits at the top of
@@ -84,7 +84,9 @@ bool PresentHTTPAuthentication(content::WebContents* contents, const net::AuthCh
 // Tells the shared page presentation when web content enters or leaves video
 // fullscreen; the renderer still owns Escape and the fullscreen lifecycle.
 void ReportContentFullscreen(content::WebContents* contents, bool active);
-void SnapPictureInPictureWindow(views::Widget* window);
+bool SupportsSystemVideoPictureInPicture();
+std::unique_ptr<content::VideoOverlayWindow> CreateSystemVideoPictureInPicture(
+    content::VideoPictureInPictureWindowController* controller);
 // Chromium asks for `contents`' window after making it its Browser's active
 // tab, as a Picture in Picture window's return control does. Answers whether
 // the page returns from Picture in Picture, which the core then shows in its

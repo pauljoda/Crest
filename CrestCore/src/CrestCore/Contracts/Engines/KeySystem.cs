@@ -4,7 +4,7 @@ namespace CrestCore.Contracts;
 /// protected media through the platform stands in for. A key system travels
 /// as its index in `All`, so `All` is append-only.
 public sealed class KeySystem {
-    #region Variables
+    #region Static Variables
 
     /// Google's Widevine, which Crest's Chromium does not carry.
     public static readonly KeySystem Widevine = new(name: "widevine");
@@ -13,6 +13,10 @@ public sealed class KeySystem {
     public static readonly KeySystem PlayReady = new(name: "playready");
 
     public static IReadOnlyList<KeySystem> All { get; } = [Widevine, PlayReady];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

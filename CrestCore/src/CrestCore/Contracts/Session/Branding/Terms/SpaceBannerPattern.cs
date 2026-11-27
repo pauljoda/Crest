@@ -9,7 +9,7 @@ public sealed class SpaceBannerPattern {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static readonly SpaceBannerPattern Solid = new(Kinds.Solid, "solid", "Solid", CrestVocabulary.Baseline);
     public static readonly SpaceBannerPattern Split = new(Kinds.Split, "split", "Split", CrestVocabulary.Baseline);
@@ -22,6 +22,10 @@ public sealed class SpaceBannerPattern {
     public static readonly SpaceBannerPattern Lozenges = new(Kinds.Lozenges, "lozenges", "Lozenges", CrestVocabulary.Customization);
 
     public static IReadOnlyList<SpaceBannerPattern> All { get; } = [Solid, Split, Bands, Diagonal, Chevron, Quartered, Stripes, Checkered, Lozenges];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

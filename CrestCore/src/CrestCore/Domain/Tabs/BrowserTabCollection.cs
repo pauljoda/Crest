@@ -14,9 +14,14 @@ public sealed record SplitJoin(Guid SelectedTab, IReadOnlyList<(Guid Source, Gui
 /// live pages. The archive holds only what this edit adds; existing archive records
 /// stay with the Space.
 public sealed partial class BrowserTabCollection {
-    #region Variables
+    #region Static Variables
 
     public const int MaximumTabs = 5000;
+
+    #endregion
+
+    #region Variables
+
     private readonly List<BrowserTab> tabs = [];
     private readonly List<FolderState> folders = [];
     private readonly List<SplitGroupState> splitGroups = [];

@@ -4,7 +4,7 @@ namespace CrestCore.Contracts;
 ///
 /// A field travels as its index in `All`, so `All` is append-only.
 public sealed class DownloadTextField {
-    #region Variables
+    #region Static Variables
 
     public static readonly DownloadTextField Filename = new(name: "filename", maximumLength: 1_024);
     public static readonly DownloadTextField Destination = new(name: "destination", maximumLength: 8_192);
@@ -12,6 +12,10 @@ public sealed class DownloadTextField {
     public static readonly DownloadTextField MimeType = new(name: "mimeType", maximumLength: 255);
 
     public static IReadOnlyList<DownloadTextField> All { get; } = [Filename, Destination, Message, MimeType];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
     public int MaximumLength { get; }

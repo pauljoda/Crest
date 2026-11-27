@@ -9,13 +9,17 @@ public sealed class CrestChargeWeight {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static readonly CrestChargeWeight Light = new(Kinds.Light, "light", "Light", CrestVocabulary.Studio);
     public static readonly CrestChargeWeight Regular = new(Kinds.Regular, "regular", "Regular", CrestVocabulary.Studio);
     public static readonly CrestChargeWeight Bold = new(Kinds.Bold, "bold", "Bold", CrestVocabulary.Baseline);
 
     public static IReadOnlyList<CrestChargeWeight> All { get; } = [Light, Regular, Bold];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

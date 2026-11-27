@@ -371,9 +371,16 @@ final class SiteControlsModel {
     /// for the site in the page's Space.
     var permissions: [(permission: SitePermission, decision: SitePermissionDecision)] {
         guard let origin else { return [] }
-        return SitePermission.all.filter { $0.platforms.contains(.current) }.map {
+        return SitePermission.all.filter { $0 != .automaticPictureInPicture && $0.platforms.contains(.current) }.map {
             ($0, page.permissionCenter.decision(for: $0, origin: origin, in: page.spaceID))
         }
+    }
+
+    var blocksAutomaticPictureInPicture: Bool {
+        guard let origin else { return false }
+        return page.permissionCenter.decision(
+            for: .automaticPictureInPicture, origin: origin, in: page.spaceID
+        ).verdict == .deny
     }
 
     /// Whether the site asked for `permission`: a decision for it stands, it

@@ -6,12 +6,16 @@ namespace CrestCore.Application;
 /// One connection to a session file and its `checkpoint(part, data)` table.
 /// Not thread-safe: its owner serializes every call.
 internal sealed class SqliteConnection : IDisposable {
-    #region Variables
+    #region Static Variables
 
     /// A part is never empty and never larger than a session input may be.
     public const int MaximumPartBytes = NativeSessionAuthority.MaximumBytes;
 
     private const int BusyTimeoutMilliseconds = 2000;
+
+    #endregion
+
+    #region Variables
 
     private nint handle;
 

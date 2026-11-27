@@ -8,7 +8,7 @@ namespace CrestCore.Contracts;
 /// added keeps its name in the session and has no member here. A view
 /// travels as its index in `All`, so `All` is append-only.
 public sealed class NativeView {
-    #region Variables
+    #region Static Variables
 
     public static readonly NativeView Settings = new(name: "settings", title: "Settings", symbol: "gearshape.fill",
         TabPlacement.Current, opensOnce: true);
@@ -17,6 +17,10 @@ public sealed class NativeView {
         symbol: "book.closed.fill", TabPlacement.Saved, opensOnce: true);
 
     public static IReadOnlyList<NativeView> All { get; } = [Settings, GettingStarted];
+
+    #endregion
+
+    #region Variables
 
     /// The kind a tab's native content keeps in the stored session and in
     /// sync, so a name never changes.

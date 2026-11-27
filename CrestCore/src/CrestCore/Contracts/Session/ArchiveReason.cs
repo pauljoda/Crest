@@ -8,7 +8,7 @@ namespace CrestCore.Contracts;
 /// these spellings ever changes. A reason travels as its index in `All`, so
 /// `All` is append-only.
 public sealed class ArchiveReason {
-    #region Variables
+    #region Static Variables
 
     /// Current-tab cleanup archived a tab nobody had used for its lifetime.
     public static readonly ArchiveReason AutoCleanup = new(name: "autoCleanup", storedReason: "autoCleanup",
@@ -37,6 +37,10 @@ public sealed class ArchiveReason {
             : shared ?? Closed.Name);
 
     public static IReadOnlyList<ArchiveReason> All { get; } = [AutoCleanup, Closed, Deleted, DeletedOnAnotherDevice, QuickWindow, Synced];
+
+    #endregion
+
+    #region Variables
 
     private readonly Func<ArchiveReason, string?, string> syncProjection;
 

@@ -27,9 +27,10 @@ struct SpaceSidebarAddressBand: View {
     var horizontalInset = BrowserSidebarMetrics.layerInset
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// The field's width, which decides whether Copy URL fits beside Site
-    /// Controls.
-    @State private var fieldWidth: CGFloat = .infinity
+    /// Whether the field is wide enough to show Copy URL beside Site Controls.
+    /// Tracking only the threshold boolean avoids mutating view state on every
+    /// animation frame during sidebar-to-top matched-geometry transitions.
+    @State private var hasRoomForCopyURLButton = true
     /// Whether the pointer is over the field, which brings Copy URL back in a
     /// field too narrow to keep it, in the address's room.
     @State private var isHovering = false
@@ -58,7 +59,13 @@ struct SpaceSidebarAddressBand: View {
             SpacePagerSettlement.standardAnimation.unlessReducingMotion(reduceMotion),
             value: isAddressEditing.wrappedValue ? nil : address.wrappedValue
         )
-        .onGeometryChange(for: CGFloat.self, of: \.size.width) { fieldWidth = $0 }
+        .onGeometryChange(for: Bool.self) {
+            $0.size.width >= BrowserSidebarAddressFieldMetrics.copyURLButtonMinimumWidth
+        } action: { hasRoom in
+            if hasRoomForCopyURLButton != hasRoom {
+                hasRoomForCopyURLButton = hasRoom
+            }
+        }
         .onHover { hovering in
             withAnimation(CrestMotion.controlState.unlessReducingMotion(reduceMotion)) { isHovering = hovering }
         }
@@ -108,7 +115,7 @@ struct SpaceSidebarAddressBand: View {
     /// the page has an address to copy.
     private var copyURLPage: BrowserPage? {
         guard BrowserDeviceAppearanceStore.shared.address.showsCopyURLButton,
-            isHovering || fieldWidth >= BrowserSidebarAddressFieldMetrics.copyURLButtonMinimumWidth,
+            isHovering || hasRoomForCopyURLButton,
             let page = displayedPage, page.live.documentURL != nil
         else { return nil }
         return page

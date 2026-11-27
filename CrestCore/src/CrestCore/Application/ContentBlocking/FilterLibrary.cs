@@ -17,7 +17,7 @@ namespace CrestCore.Application;
 /// are ready. Until a list arrives, Crest's own baseline rules block. The
 /// library also keeps the link-tracking list up to date, which only cleans
 /// copied links.
-internal sealed class FilterLibrary {
+internal sealed partial class FilterLibrary {
     #region Types
 
     /// What the device holds of one download: its text's digest, or null
@@ -84,7 +84,7 @@ internal sealed class FilterLibrary {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     /// The longest list the core keeps, within the 16 MiB an intent may carry.
     public const int MaximumListBytes = 15 * 1024 * 1024;
@@ -177,6 +177,10 @@ internal sealed class FilterLibrary {
         ||snap.licdn.com^$third-party
         """;
 
+    #endregion
+
+    #region Variables
+
     private readonly Lock gate = new();
     private readonly string? folder;
     private readonly IReadOnlySet<string> conditions;
@@ -187,7 +191,7 @@ internal sealed class FilterLibrary {
     private readonly Download resourcesDownload;
     private readonly string resourcesDigest;
     private readonly Download linkTrackingDownload = new(LinkTrackingName, LinkTrackingId, LinkTrackingUrl);
-    private readonly Func<Device.FilterPreferences> preferences;
+    private readonly Func<FilterPreferences> preferences;
     private readonly Action<Change> announce;
     private readonly IClock clock;
     private readonly Dictionary<string, Copy> copies = [];
@@ -239,7 +243,7 @@ internal sealed class FilterLibrary {
     /// they added and their own filters. Tests may name resources of their own
     /// with their digest, `resourcesDigest`.
     public FilterLibrary(string? storageDirectory, DevicePlatform platform, IReadOnlyList<string>? languages,
-        Func<Device.FilterPreferences> preferences, Action<Change> announce, IClock clock, string? resourcesUrl = null,
+        Func<FilterPreferences> preferences, Action<Change> announce, IClock clock, string? resourcesUrl = null,
         string? resourcesDigest = null) {
         ArgumentNullException.ThrowIfNull(platform);
         ArgumentNullException.ThrowIfNull(preferences);
@@ -263,7 +267,7 @@ internal sealed class FilterLibrary {
 
     /// Whether the device subscribes to `list`: as the person turned it, or as
     /// the level they chose turns it.
-    private bool IsOn(FilterList list, Device.FilterPreferences chosen) =>
+    private bool IsOn(FilterList list, FilterPreferences chosen) =>
         chosen.Choices.TryGetValue(list, out bool isOn) ? isOn : list.IsOnByDefault(chosen.Level, languages);
 
     /// How a catalog list is named on the wire: the same on every device.
@@ -278,14 +282,14 @@ internal sealed class FilterLibrary {
     private static string Digest(string text) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
 
     /// The lists the device subscribes to: the catalog's, then the person's.
-    private IEnumerable<Download> Lists(Device.FilterPreferences chosen) =>
+    private IEnumerable<Download> Lists(FilterPreferences chosen) =>
         FilterList.All.Where(list => IsOn(list, chosen)).Select(list => new Download(list.Name, IdOf(list), list.Source))
             .Concat(chosen.CustomLists.Where(list => list.IsOn).Select(list => new Download(NameOf(list), list.Id, list.Url)));
 
     /// Every download in force: the lists the device subscribes to, the
     /// resources, and the link-tracking list while the device cleans copied
     /// links.
-    private IEnumerable<Download> Downloads(Device.FilterPreferences chosen) {
+    private IEnumerable<Download> Downloads(FilterPreferences chosen) {
         var downloads = Lists(chosen).Append(resourcesDownload);
         return chosen.CleansCopiedLinks ? downloads.Append(linkTrackingDownload) : downloads;
     }
@@ -500,465 +504,6 @@ internal sealed class FilterLibrary {
         // A copy that arrived meanwhile is read on the next ask.
         lock (gate) linkTracking = (digest, filters);
         return filters;
-    }
-
-    #endregion
-
-    #region Actions - Content rules
-
-    /// The content rule lists a page that blocks applies now. The first call
-    /// finds the rules a previous launch converted, or starts converting.
-    public ContentRuleListSet Rules() {
-        lock (gate) if (publishedKey is not null) return published;
-        Rebuild();
-        lock (gate) return published;
-    }
-
-    /// The source of the compiled list `identifier`, which the current or a
-    /// recent set names. Throws `Rejected` for one the core no longer holds.
-    public ContentRuleList Source(string identifier) {
-        ArgumentNullException.ThrowIfNull(identifier);
-        lock (gate) {
-            if (folder is null)
-                return heldSources.TryGetValue(identifier, out var held)
-                    ? new(identifier, held) : throw new Rejected(new ContentRuleListUnavailable(identifier));
-        }
-        string path = RulesPath(identifier);
-        try {
-            return new(identifier, File.ReadAllText(path));
-        } catch (Exception error) when (error is IOException or UnauthorizedAccessException) {
-            throw new Rejected(new ContentRuleListUnavailable(identifier));
-        }
-    }
-
-    /// Brings every output up to date with the lists: the content rules, and
-    /// the compiled filter.
-    private void Rebuild() {
-        RebuildRules();
-        RebuildEngine();
-    }
-
-    /// Converts the lists again unless their rules are the ones in force: at
-    /// once from what an earlier conversion stored, or on a worker. A stopped
-    /// library converts nothing.
-    private void RebuildRules() {
-        var chosen = preferences();
-        string key;
-        List<(string Name, string Digest)> inputs;
-        ContentRuleListSet? restored = null;
-        lock (gate) {
-            if (stopped) return;
-            inputs = Inputs(chosen);
-            key = RulesKey(inputs);
-            if (key == publishedKey) return;
-            if (StoredRules(key) is { } stored) {
-                Publish(key, stored);
-                restored = stored;
-            } else if (buildingKey is not null) {
-                rebuildWanted = true;
-                return;
-            } else {
-                buildingKey = key;
-                StartWorker(() => Build(key, inputs, chosen.CustomFilters));
-            }
-        }
-        if (restored is not null) announce(new ContentRuleListsChanged(restored));
-    }
-
-    /// The lists in force that the device holds a copy of, with their digests,
-    /// and the person's own filters. The caller holds the lock.
-    private List<(string Name, string Digest)> Inputs(Device.FilterPreferences chosen) {
-        var inputs = Lists(chosen).Select(source => (source.Name, Digest: copies.GetValueOrDefault(source.Name)?.Digest))
-            .Where(input => input.Digest is not null).Select(input => (input.Name, input.Digest!)).ToList();
-        if (chosen.CustomFilters.Length > 0) inputs.Add((CustomFiltersName, Digest(chosen.CustomFilters)));
-        return inputs;
-    }
-
-    /// The text of the input `name`: a list's copy, or the person's own filters.
-    private string? TextOf(string name, string customFilters) => name == CustomFiltersName ? customFilters : ReadText(name);
-
-    /// Converts `inputs` and Crest's baseline into content rule lists, keeps
-    /// them, and puts them in force. A failure leaves the rules in force.
-    private void Build(string key, IReadOnlyList<(string Name, string Digest)> inputs, string customFilters) {
-        ContentRuleListSet? built = null;
-        bool again;
-        try {
-            var texts = new List<string> { BaselineRules };
-            string? own = null;
-            foreach (var (name, _) in inputs) {
-                if (TextOf(name, customFilters) is not { } text) continue;
-                var resolved = new FilterListText(text).Resolved(conditions);
-                texts.Add(resolved);
-                if (name == CustomFiltersName) own = resolved;
-            }
-            var rules = ContentFilter.ContentRulesFor(texts);
-            // The lists' hiding goes through the cosmetic bridge on every
-            // engine: the generic rules as elements appear, and the sites' own
-            // from its first answer. In the lists, a site's hiding rule matches
-            // every address and is weighed on every load the page makes. The
-            // person's own hiding, which Block Element writes, stays here: few
-            // rules, which WebKit applies before a page first renders and in a
-            // sheet the page can neither reach nor outrank.
-            var ownHiding = own is null ? [] : ContentFilter.ContentRulesFor([own]).Rules.Where(Hides);
-            rules = rules with { Rules = [.. rules.Rules.Where(rule => !Hides(rule)).Concat(ownHiding)] };
-            built = new([.. Split(rules).Select((source, index) => Keep(Identifier(key, index), source))]);
-        } catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException
-            or DllNotFoundException or EntryPointNotFoundException) {
-            // The lists keep their copies; the next change converts them again.
-        } finally {
-            var chosen = preferences();
-            lock (gate) {
-                buildingKey = null;
-                again = rebuildWanted;
-                rebuildWanted = false;
-                // Rules for lists no longer wanted are not put in force; the
-                // wanted ones are converted, or restored, next.
-                if (built is not null && key == RulesKey(Inputs(chosen))) {
-                    Publish(key, built);
-                    SaveState();
-                } else if (built is not null) {
-                    built = null;
-                    again = true;
-                }
-            }
-        }
-        if (built is not null) announce(new ContentRuleListsChanged(built));
-        if (again) RebuildRules();
-    }
-
-    /// Whether a converted rule hides elements rather than blocking a load.
-    private static bool Hides(string rule) => rule.Contains("\"css-display-none\"", StringComparison.Ordinal);
-
-    /// The compiled lists for `rules`: as many rules as fit beside every
-    /// exception, the exceptions after them in each list, since an exception
-    /// reaches only the rules before it in its own list.
-    private static IEnumerable<string> Split(ContentFilter.ContentRules rules) {
-        int room = RulesPerList - rules.Exceptions.Count;
-        if (room <= 0) throw new InvalidOperationException("The lists hold more exceptions than one compiled list can.");
-        string exceptions = string.Join(',', rules.Exceptions);
-        for (int start = 0; start < rules.Rules.Count; start += room) {
-            var source = new StringBuilder("[");
-            source.AppendJoin(',', rules.Rules.Skip(start).Take(room));
-            if (exceptions.Length > 0) source.Append(',').Append(exceptions);
-            yield return source.Append(']').ToString();
-        }
-    }
-
-    /// The key of the rules `inputs` convert to on this platform: it changes
-    /// with any list's text, with the converter and with the conditions.
-    private string RulesKey(IReadOnlyList<(string Name, string Digest)> inputs) {
-        var description = new StringBuilder(RulesRevision).Append(':').Append(BaselineDigest).Append('\n');
-        description.AppendJoin(',', conditions.Order(StringComparer.Ordinal)).Append('\n');
-        foreach (var (name, digest) in inputs) description.Append(name).Append(':').Append(digest).Append('\n');
-        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(description.ToString())));
-    }
-
-    private static string Identifier(string key, int index) => $"{IdentifierPrefix}{key[..16]}.{index}";
-
-    /// Puts the set converted for `key` in force. The caller holds the lock.
-    private void Publish(string key, ContentRuleListSet set) {
-        if (publishedKey is not null && publishedKey != key) previous = (publishedKey, published);
-        published = set;
-        publishedKey = key;
-        if (folder is null) {
-            foreach (var stale in heldSources.Keys.Where(identifier => !set.Identifiers.Contains(identifier)).ToList())
-                heldSources.Remove(stale);
-            return;
-        }
-        // A rules file neither this set nor the one before it names is never
-        // asked for again. The one before stays, so switching back, as
-        // between Balanced and Strict, restores it at once.
-        try {
-            foreach (var path in Directory.EnumerateFiles(Path.Combine(folder, "rules"))) {
-                string name = Path.GetFileNameWithoutExtension(path);
-                bool named = set.Identifiers.Contains(name) || name == key
-                    || (previous is { } before && (before.Set.Identifiers.Contains(name) || name == before.Key));
-                if (!named) File.Delete(path);
-            }
-        } catch (Exception error) when (error is IOException or UnauthorizedAccessException) {
-            // Stale files are left for the next set to remove.
-        }
-    }
-
-    /// The set an earlier conversion stored for `key`, when every list of it
-    /// is still there. The caller holds the lock.
-    private ContentRuleListSet? StoredRules(string key) {
-        if (folder is null || !File.Exists(Path.Combine(folder, "rules", key + ".count"))) return null;
-        if (!int.TryParse(File.ReadAllText(Path.Combine(folder, "rules", key + ".count")), out int count)) return null;
-        var identifiers = Enumerable.Range(0, count).Select(index => Identifier(key, index)).ToList();
-        return identifiers.All(identifier => File.Exists(RulesPath(identifier))) ? new(identifiers) : null;
-    }
-
-    /// Keeps a compiled list's source and answers its identifier.
-    private string Keep(string identifier, string source) {
-        if (folder is null) {
-            lock (gate) heldSources[identifier] = source;
-            return identifier;
-        }
-        WriteAtomically(RulesPath(identifier), Encoding.UTF8.GetBytes(source));
-        return identifier;
-    }
-
-    private string RulesPath(string identifier) => Path.Combine(folder!, "rules", identifier + ".json");
-
-    #endregion
-
-    #region Actions - Engine filter
-
-    /// The address of the slot an engine that checks each request itself
-    /// checks against with `crest_content_filter_slot_check`. The first ask
-    /// makes it, with the compiled filter in it; the slot lives as long as the
-    /// core.
-    public nint SlotAddress() {
-        lock (gate) {
-            if (slot is null) {
-                slot = new ContentFilterSlot();
-                // The filter compiled before an engine asked goes in at once.
-                slot.Install(engine);
-            }
-        }
-        RebuildEngine();
-        lock (gate) return slot.Address;
-    }
-
-    /// What a document at `url` hides beyond what its engine blocks: on the
-    /// `first` ask, the site's hiding rules and procedural filters; on every
-    /// ask, the generic rules for the `classes` and `ids` it shows, one rule
-    /// per selector so a selector the engine cannot read costs only itself, and
-    /// the `resources` the filter blocks, whose elements collapse. Nothing
-    /// before the filter is compiled.
-    public CosmeticFilters Cosmetics(string url, bool first, IReadOnlyList<string> classes, IReadOnlyList<string> ids,
-        IReadOnlyList<PageResource> resources) {
-        ArgumentNullException.ThrowIfNull(url);
-        return Reading(current => CosmeticsWith(current, url, first, classes, ids, resources));
-    }
-
-    private static CosmeticFilters CosmeticsWith(ContentFilter? current, string url, bool first, IReadOnlyList<string> classes,
-        IReadOnlyList<string> ids, IReadOnlyList<PageResource> resources) {
-        if (current is null) return new(true, "", [], []);
-        var page = current.ResourcesFor(url);
-        IEnumerable<string> site = first ? page.HideSelectors : [];
-        var generic = page.GenericHide || classes.Count + ids.Count == 0 ? [] : current.HiddenSelectors(classes, ids, page.Exceptions);
-        var style = new StringBuilder();
-        foreach (var selector in site.Concat(generic).Distinct())
-            style.Append(selector).Append("{display:none!important}\n");
-        var collapse = resources.Where(resource => current.Blocks(new ContentFilter.Request(resource.Url, url, resource.Kind.RequestKind)))
-            .Select(resource => resource.Url).Distinct();
-        return new(true, style.ToString(), first ? page.ProceduralActions : [], [.. collapse]);
-    }
-
-    /// The scriptlets the filter runs in a page's own world at `url`, before
-    /// the page's scripts, as one script; empty for none, or before the filter
-    /// is compiled. uBlock's scriptlets share state through a
-    /// `scriptletGlobals` object their runner declares, so the script declares
-    /// it too, in a function of its own that keeps their names off the page.
-    public string Scriptlets(string url) {
-        ArgumentNullException.ThrowIfNull(url);
-        var script = Reading(current => current?.ResourcesFor(url).InjectedScript ?? "");
-        return script.Length == 0 ? "" : $"(function () {{\nconst scriptletGlobals = {{}};\n{script}\n}})();\n";
-    }
-
-    /// What `use` answers from the engine in force, which a rebuild that
-    /// replaces it meanwhile frees only after `use` is done.
-    private T Reading<T>(Func<ContentFilter?, T> use) {
-        ContentFilter? current;
-        lock (gate) {
-            current = engine;
-            engineReaders++;
-        }
-        try {
-            return use(current);
-        } finally {
-            lock (gate) {
-                if (--engineReaders == 0) {
-                    foreach (var retired in retiredEngines) retired.Dispose();
-                    retiredEngines.Clear();
-                }
-            }
-        }
-    }
-
-    /// What the filter calls the load of an element of `kind`.
-    /// Compiles the engine filter again unless the one in force matches the
-    /// lists: at once from what an earlier compile saved, or on a worker. A
-    /// stopped library compiles nothing.
-    private void RebuildEngine() {
-        var chosen = preferences();
-        string key;
-        List<(string Name, string Digest)> inputs;
-        lock (gate) {
-            if (stopped) return;
-            inputs = Inputs(chosen);
-            if (copies.GetValueOrDefault(ResourcesName)?.Digest is { } resources && resources == resourcesDigest)
-                inputs.Add((ResourcesName, resources));
-            key = EngineKey(inputs);
-            if (key == engineKey) return;
-            if (buildingEngineKey is not null) {
-                engineRebuildWanted = true;
-                return;
-            }
-            buildingEngineKey = key;
-            StartWorker(() => BuildEngine(key, inputs, chosen.CustomFilters));
-        }
-    }
-
-    /// The key the lists in force compile to, with the pinned resources and
-    /// without them.
-    private (string Key, string WithoutResources) WantedEngineKey(Device.FilterPreferences chosen) {
-        lock (gate) {
-            var inputs = Inputs(chosen);
-            string without = EngineKey(inputs);
-            if (copies.GetValueOrDefault(ResourcesName)?.Digest is { } resources && resources == resourcesDigest)
-                inputs.Add((ResourcesName, resources));
-            return (EngineKey(inputs), without);
-        }
-    }
-
-    private void BuildEngine(string key, IReadOnlyList<(string Name, string Digest)> inputs, string customFilters) {
-        ContentFilter? built = null;
-        bool again;
-        try {
-            bool wantsResources = inputs.Any(input => input.Name == ResourcesName);
-            string? resources = wantsResources ? ReadText(ResourcesName) : null;
-            // What the folder holds must still be the pinned bytes. Without
-            // them the filter is kept under a key that does not name them, so
-            // it compiles again once they arrive.
-            if (resources is not null && Digest(resources) != resourcesDigest) resources = null;
-            if (wantsResources && resources is null) {
-                inputs = [.. inputs.Where(input => input.Name != ResourcesName)];
-                key = EngineKey(inputs);
-            }
-            built = SavedEngine(key, resources);
-            if (built is null) {
-                // Crest's own baseline and the catalog's lists may run the
-                // scriptlets uBlock keeps for trusted lists; the lists the
-                // person added and their own filters may not.
-                var chosen = new List<string> { BaselineRules };
-                var added = new List<string>();
-                foreach (var (name, _) in inputs.Where(input => input.Name != ResourcesName))
-                    if (TextOf(name, customFilters) is { } text)
-                        (FilterList.Named(name) is not null ? chosen : added).Add(new FilterListText(text).Resolved(engineConditions));
-                built = ContentFilter.Compile(chosen, added, resources);
-                SaveEngine(key, built);
-            }
-        } catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException
-            or DllNotFoundException or EntryPointNotFoundException) {
-            built?.Dispose();
-            built = null;
-        } finally {
-            var wanted = WantedEngineKey(preferences());
-            lock (gate) {
-                buildingEngineKey = null;
-                again = engineRebuildWanted;
-                engineRebuildWanted = false;
-                // A filter for lists no longer wanted is not put in force.
-                if (built is not null && (key == wanted.Key || key == wanted.WithoutResources)) {
-                    slot?.Install(built);
-                    if (engine is not null) {
-                        if (engineReaders == 0) engine.Dispose();
-                        else retiredEngines.Add(engine);
-                    }
-                    engine = built;
-                    engineKey = key;
-                } else {
-                    built?.Dispose();
-                    again |= built is not null;
-                }
-            }
-        }
-        if (again) RebuildEngine();
-    }
-
-    /// The key of the engine filter `inputs` compile to: it changes with any
-    /// list's text, with the engine and with the conditions.
-    private string EngineKey(IReadOnlyList<(string Name, string Digest)> inputs) {
-        var description = new StringBuilder("engine:").Append(RulesRevision).Append(':').Append(BaselineDigest).Append('\n');
-        description.AppendJoin(',', engineConditions.Order(StringComparer.Ordinal)).Append('\n');
-        foreach (var (name, digest) in inputs) description.Append(name).Append(':').Append(digest).Append('\n');
-        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(description.ToString())));
-    }
-
-    /// The engine filter an earlier compile saved for `key`, with `resources`,
-    /// or null. A filter this library cannot read, such as one a previous
-    /// version saved, is compiled again.
-    private ContentFilter? SavedEngine(string key, string? resources) {
-        if (folder is null) return null;
-        string path = Path.Combine(folder, "engine", key[..16] + ".dat");
-        return File.Exists(path) ? ContentFilter.Load(File.ReadAllBytes(path), resources) : null;
-    }
-
-    /// Saves the engine filter for `key`, the only one kept.
-    private void SaveEngine(string key, ContentFilter filter) {
-        if (folder is null) return;
-        string directory = Path.Combine(folder, "engine");
-        WriteAtomically(Path.Combine(directory, key[..16] + ".dat"), filter.Save());
-        foreach (var stale in Directory.EnumerateFiles(directory, "*.dat"))
-            if (Path.GetFileNameWithoutExtension(stale) != key[..16]) File.Delete(stale);
-    }
-
-    #endregion
-
-    #region Actions - Storage
-
-    private string? ReadText(string name) {
-        if (folder is null) {
-            lock (gate) return heldTexts.GetValueOrDefault(name);
-        }
-        try {
-            return File.ReadAllText(Path.Combine(folder, "lists", name + ".txt"));
-        } catch (Exception error) when (error is IOException or UnauthorizedAccessException) {
-            return null;
-        }
-    }
-
-    /// Keeps a download's text, unless the library closed. The caller holds
-    /// the lock.
-    private void WriteText(string name, byte[] bytes, string text) {
-        if (folder is null) heldTexts[name] = text;
-        else if (!closed) WriteAtomically(Path.Combine(folder, "lists", name + ".txt"), bytes);
-    }
-
-    private static void WriteAtomically(string path, byte[] bytes) {
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        string pending = path + ".pending";
-        File.WriteAllBytes(pending, bytes);
-        File.Move(pending, path, overwrite: true);
-    }
-
-    /// Writes every copy's state, and the rules in force, unless the library
-    /// closed. The caller holds the lock.
-    private void SaveState() {
-        if (folder is null || closed) return;
-        var lists = new JsonObject();
-        foreach (var (name, copy) in copies)
-            lists[name] = copy.Encoded();
-        try {
-            WriteAtomically(Path.Combine(folder, "state.json"), Encoding.UTF8.GetBytes(new JsonObject { ["lists"] = lists }.ToJsonString()));
-            if (publishedKey is not null)
-                WriteAtomically(Path.Combine(folder, "rules", publishedKey + ".count"),
-                    Encoding.UTF8.GetBytes(published.Identifiers.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-        } catch (Exception error) when (error is IOException or UnauthorizedAccessException) {
-            // The copies stay in memory; the next save writes them.
-        }
-    }
-
-    /// Reads what a previous launch kept. A copy whose text is gone, or a
-    /// state that does not read, starts the list over.
-    private void RestoreState() {
-        if (folder is null) return;
-        JsonObject? lists;
-        try {
-            lists = JsonNode.Parse(File.ReadAllText(Path.Combine(folder, "state.json")))?["lists"] as JsonObject;
-        } catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Text.Json.JsonException) {
-            return;
-        }
-        foreach (var (name, value) in lists ?? []) {
-            bool known = FilterList.Named(name) is not null || name == ResourcesName || name == LinkTrackingName
-                || name.StartsWith("custom-", StringComparison.Ordinal);
-            if (!known || value is not JsonObject state) continue;
-            if (Copy.DigestIn(state) is not null && !File.Exists(Path.Combine(folder, "lists", name + ".txt"))) continue;
-            copies[name] = Copy.Decoded(state, UsualRefresh);
-        }
     }
 
     #endregion

@@ -4,7 +4,7 @@ namespace CrestCore.Domain;
 /// case-insensitively and with numbers compared by value, then by the
 /// capability's stored name, then by detail.
 public sealed class SitePermissionRecordOrder : IComparer<SitePermissionRecord> {
-    #region Variables
+    #region Static Variables
 
     public static readonly SitePermissionRecordOrder Instance = new();
 

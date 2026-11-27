@@ -3,7 +3,7 @@ namespace CrestCore.Contracts;
 /// The one blocked-popup indication a document may show. A status travels as
 /// its index in `All`, so `All` is append-only.
 public sealed class BlockedPopupStatus {
-    #region Variables
+    #region Static Variables
 
     public static readonly BlockedPopupStatus Blocked = new(name: "blocked", symbol: "macwindow.badge.plus", offersAllow: true,
         guidance: "Automatic pop-ups are blocked. Allow them for this site, then retry the action on the page.");
@@ -11,6 +11,10 @@ public sealed class BlockedPopupStatus {
         offersAllow: false, guidance: "Retry the action on the page. Crest did not reopen the blocked pop-up.");
 
     public static IReadOnlyList<BlockedPopupStatus> All { get; } = [Blocked, AllowedAwaitingRetry];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

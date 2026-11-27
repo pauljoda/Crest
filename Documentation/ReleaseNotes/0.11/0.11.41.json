@@ -1,9 +1,16 @@
 {
   "entries": [
     {
-      "id": "page-zoom-remembered-per-site",
-      "category": "fixed",
-      "message": "Page zoom now belongs to the website, not the tab. Each Space remembers the zoom you choose for a site after you close its tab or restart Crest, and private browsing keeps it until you close it. Other sites keep your default zoom, and Actual Size returns a site to it. Thanks to Shaheer Sarfaraz (@DaKheera47)."
+      "id": "shared-mac-picture-in-picture-player",
+      "category": "improved",
+      "message": "Picture in Picture works the same in WebKit and Chromium. Drag the player anywhere, flick it toward a corner, or resize it from an edge.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "automatic-picture-in-picture-focus-and-site-settings",
+      "category": "improved",
+      "message": "Choose when videos float or return to their tabs, and turn off automatic Picture in Picture for individual sites.",
+      "platforms": ["mac"]
     }
   ]
 }

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "page-zoom-remembered-per-site",
+      "category": "fixed",
+      "message": "Page zoom now belongs to the website, not the tab. Each Space remembers the zoom you choose for a site after you close its tab or restart Crest, and private browsing keeps it until you close it. Other sites keep your default zoom, and Actual Size returns a site to it. Thanks to Shaheer Sarfaraz (@DaKheera47)."
+    }
+  ]
+}

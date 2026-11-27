@@ -18,18 +18,13 @@ extension BrowserStore {
 
 extension BrowserStore {
     func credentialSuggestions(for url: URL) async throws -> [CredentialDescriptor] {
-        guard let spaceID = shownSpace?.id else {
-            throw CredentialVaultError.missingSpace
-        }
-        return try await credentialSuggestions(for: url, in: spaceID)
+        try await credentialSuggestions(for: url, in: try requireShownSpaceID())
     }
 
     /// The passwords the Space's group keeps: the ones its primary keeps for
     /// the group and the ones each Sub-Space saved before it joined.
     func savedCredentialDescriptors(in spaceID: UUID) async throws -> [CredentialDescriptor] {
-        guard spaceModel(spaceID) != nil else {
-            throw CredentialVaultError.missingSpace
-        }
+        _ = try requireSpace(spaceID)
         return try await groupDescriptors(of: spaceID) { try await credentialVault.descriptors(in: $0) }
     }
 
@@ -37,9 +32,7 @@ extension BrowserStore {
     /// read back, which every list and suggestion leaves out: one read of
     /// each vault.
     func savedCredentialInventory(in spaceID: UUID) async throws -> CredentialInventory {
-        guard spaceModel(spaceID) != nil else {
-            throw CredentialVaultError.missingSpace
-        }
+        _ = try requireSpace(spaceID)
         var descriptors: [CredentialDescriptor] = []
         var unreadableCount = 0
         var extras: [UUID: BrowserCredentialExtrasSummary] = [:]
@@ -55,9 +48,7 @@ extension BrowserStore {
     /// The notes and code the login `id` keeps, from whichever vault of the
     /// Space's group keeps it, or nil when it keeps none.
     func credentialExtras(id: UUID, in spaceID: UUID) async throws -> BrowserCredentialExtras? {
-        guard spaceModel(spaceID) != nil else {
-            throw CredentialVaultError.missingSpace
-        }
+        _ = try requireSpace(spaceID)
         for vault in credentialSpaceIDs(of: spaceID) {
             if let extras = try await credentialVault.extras(id: id, in: vault) { return extras }
         }
@@ -68,9 +59,7 @@ extension BrowserStore {
         for url: URL,
         in spaceID: UUID
     ) async throws -> [CredentialDescriptor] {
-        guard spaceModel(spaceID) != nil else {
-            throw CredentialVaultError.missingSpace
-        }
+        _ = try requireSpace(spaceID)
         let origin = CredentialOrigin(url: url)
         guard try credentialAccess(.fill, in: spaceID, origin: origin).refusal == nil else { return [] }
         guard let origin else {
@@ -82,17 +71,12 @@ extension BrowserStore {
     }
 
     func credential(id: UUID) async throws -> BrowserCredential? {
-        guard let spaceID = shownSpace?.id else {
-            throw CredentialVaultError.missingSpace
-        }
-        return try await credential(id: id, in: spaceID)
+        try await credential(id: id, in: try requireShownSpaceID())
     }
 
     /// The password `id` names among the ones the Space's group keeps.
     func credential(id: UUID, in spaceID: UUID) async throws -> BrowserCredential? {
-        guard spaceModel(spaceID) != nil else {
-            throw CredentialVaultError.missingSpace
-        }
+        _ = try requireSpace(spaceID)
         for vault in credentialSpaceIDs(of: spaceID) {
             if let credential = try await credentialVault.credential(id: id, in: vault) { return credential }
         }
@@ -100,9 +84,7 @@ extension BrowserStore {
     }
 
     func credentialInventory(in spaceID: UUID) async throws -> [BrowserCredential] {
-        guard spaceModel(spaceID) != nil else {
-            throw CredentialVaultError.missingSpace
-        }
+        _ = try requireSpace(spaceID)
         let descriptors = try await credentialVault.descriptors(in: spaceID)
         var credentials: [BrowserCredential] = []
         credentials.reserveCapacity(descriptors.count)
@@ -126,9 +108,7 @@ extension BrowserStore {
         for protectionSpace: BrowserHTTPAuthenticationProtectionSpace,
         in spaceID: UUID
     ) async throws -> BrowserCredential? {
-        guard spaceModel(spaceID) != nil else {
-            throw CredentialVaultError.missingSpace
-        }
+        _ = try requireSpace(spaceID)
         guard try credentialAccess(.fill, in: spaceID, origin: protectionSpace.origin).refusal == nil else {
             return nil
         }
@@ -143,6 +123,16 @@ extension BrowserStore {
     }
 
     // MARK: - Actions - Groups
+
+    private func requireSpace(_ spaceID: UUID) throws -> SpaceModel {
+        guard let space = spaceModel(spaceID) else { throw CredentialVaultError.missingSpace }
+        return space
+    }
+
+    private func requireShownSpaceID() throws -> UUID {
+        guard let spaceID = shownSpace?.id else { throw CredentialVaultError.missingSpace }
+        return spaceID
+    }
 
     /// What `read` answers for each vault of the group of `spaceID`, the
     /// primary's first.
@@ -263,9 +253,7 @@ extension BrowserStore {
             try await owner.setCrestPasswordSynchronization(isSynchronizable, in: spaceID)
             return
         }
-        guard let space = spaceModel(spaceID) else {
-            throw CredentialVaultError.missingSpace
-        }
+        let space = try requireSpace(spaceID)
         guard space.settings.credentialPreferences.syncsCrestPasswordsWithICloud != isSynchronizable else {
             return
         }
@@ -416,14 +404,11 @@ extension BrowserStore {
         isSynchronizable: Bool? = nil,
         now: Date = Date()
     ) async throws -> CredentialDescriptor {
-        guard let spaceID = shownSpace?.id else {
-            throw CredentialVaultError.missingSpace
-        }
-        return try await saveCredential(
+        try await saveCredential(
             username: username,
             password: password,
             for: url,
-            in: spaceID,
+            in: try requireShownSpaceID(),
             displayName: displayName,
             replacing: nil,
             isSynchronizable: isSynchronizable,
@@ -442,9 +427,7 @@ extension BrowserStore {
         isSynchronizable: Bool? = nil,
         now: Date = Date()
     ) async throws -> CredentialDescriptor {
-        guard let space = spaceModel(spaceID) else {
-            throw CredentialVaultError.missingSpace
-        }
+        let space = try requireSpace(spaceID)
         let origin = CredentialOrigin(url: url)
         if let refusal = try credentialAccess(.save, in: spaceID, origin: origin).refusal {
             throw CredentialVaultError(refusal)
@@ -495,9 +478,7 @@ extension BrowserStore {
         replacing existing: CredentialDescriptor? = nil,
         now: Date = Date()
     ) async throws -> CredentialDescriptor {
-        guard let space = spaceModel(spaceID) else {
-            throw CredentialVaultError.missingSpace
-        }
+        let space = try requireSpace(spaceID)
         if let refusal = try credentialAccess(.save, in: spaceID, origin: protectionSpace.origin).refusal {
             throw CredentialVaultError(refusal)
         }
@@ -536,18 +517,13 @@ extension BrowserStore {
     }
 
     func deleteCredential(id: UUID) async throws {
-        guard let spaceID = shownSpace?.id else {
-            throw CredentialVaultError.missingSpace
-        }
-        try await deleteCredential(id: id, in: spaceID)
+        try await deleteCredential(id: id, in: try requireShownSpaceID())
     }
 
     /// Deletes the password `id` names from whichever vault of the Space's
     /// group keeps it.
     func deleteCredential(id: UUID, in spaceID: UUID) async throws {
-        guard spaceModel(spaceID) != nil else {
-            throw CredentialVaultError.missingSpace
-        }
+        _ = try requireSpace(spaceID)
         for vault in credentialSpaceIDs(of: spaceID) {
             guard try await credentialVault.descriptors(in: vault).contains(where: { $0.id == id }) else { continue }
             try await credentialVault.delete(id: id, in: vault)
@@ -599,9 +575,7 @@ extension BrowserStore {
         edit: BrowserCredentialEdit,
         now: Date = Date()
     ) async throws -> CredentialDescriptor {
-        guard spaceModel(spaceID) != nil else {
-            throw CredentialVaultError.missingSpace
-        }
+        _ = try requireSpace(spaceID)
         guard let saved = try await credential(id: id, in: spaceID) else {
             throw CredentialVaultError.missingCredential
         }
@@ -629,9 +603,8 @@ extension BrowserStore {
     /// iCloud choice. Each is written there before it leaves here, so a stop
     /// partway leaves a copy, never a loss.
     func moveCredentials(_ ids: [UUID], from spaceID: UUID, to destination: UUID) async throws {
-        guard spaceModel(spaceID) != nil, let target = spaceModel(destination) else {
-            throw CredentialVaultError.missingSpace
-        }
+        _ = try requireSpace(spaceID)
+        let target = try requireSpace(destination)
         if let refusal = try credentialAccess(.save, in: destination).refusal {
             throw CredentialVaultError(refusal)
         }
@@ -655,9 +628,7 @@ extension BrowserStore {
     }
 
     func deleteUnreadableCredentials(in spaceID: UUID) async throws {
-        guard spaceModel(spaceID) != nil else {
-            throw CredentialVaultError.missingSpace
-        }
+        _ = try requireSpace(spaceID)
         for vault in credentialSpaceIDs(of: spaceID) {
             try await credentialVault.deleteUnreadableCredentials(in: vault)
         }
@@ -667,9 +638,7 @@ extension BrowserStore {
         _ credentials: [BrowserCredential],
         in spaceID: UUID
     ) async throws {
-        guard spaceModel(spaceID) != nil else {
-            throw CredentialVaultError.missingSpace
-        }
+        _ = try requireSpace(spaceID)
         guard !isPrivateBrowsing else {
             throw CredentialVaultError.unavailableInPrivateBrowsing
         }
@@ -723,9 +692,7 @@ extension BrowserStore {
         in spaceID: UUID,
         now: Date
     ) throws {
-        guard spaceModel(spaceID) != nil else {
-            throw CredentialVaultError.missingSpace
-        }
+        _ = try requireSpace(spaceID)
         if let refusal = try credentialAccess(.save, in: spaceID).refusal {
             throw CredentialVaultError(refusal)
         }

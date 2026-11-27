@@ -63,7 +63,7 @@ enum BrowserEngineRegistration {
             .workspaceProfiles, .workspaceTransfer, .profileDeletion,
             .beforeUnload, .downloads, .permissions, .viewportCapture, .inspector, .internalPages,
             .fullPageCapture, .pdf, .webArchive, .print, .localFiles,
-            .extensions, .translation, .selectionTranslation, .popups, .featureFlags, .audioSpectrum,
+            .extensions, .reader, .translation, .selectionTranslation, .popups, .featureFlags, .audioSpectrum,
             .contentBlocking,
         ],
         archiveFormat: .mhtml)
