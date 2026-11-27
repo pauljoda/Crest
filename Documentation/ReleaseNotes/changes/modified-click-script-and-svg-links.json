@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "modified-click-script-and-svg-links-open-tabs",
+      "category": "fixed",
+      "platforms": ["mac"],
+      "message": "On the Chromium engine, Command-click and middle-click open a new tab from a pinned or saved tab for every kind of link, including links a site opens in a window itself and links in SVG graphics, instead of opening Peek."
+    }
+  ]
+}

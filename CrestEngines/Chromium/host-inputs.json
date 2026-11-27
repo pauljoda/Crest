@@ -131,6 +131,14 @@
     "before": "ed4f9c74891c09cc97563b869fd3e7fb0fbdd114e32745b461d5d35a61ad0f19",
     "after": "d4aaaf86a176fa86cd203bdad43587d55d994974221c169691d1126b6d6ac79a"
   },
+  "third_party/blink/renderer/core/svg/svg_a_element.cc": {
+    "before": "7783759dcf4148c3c91953e9bf601296a23ec3fa55bf5c5603a5a7bbe54771a5",
+    "after": "1cb642bb09d9f6e330ee0929456b8b17f3bc63089888c6787d45c938cdf39e52"
+  },
+  "third_party/blink/renderer/core/frame/local_dom_window.cc": {
+    "before": "b32ec09d8b41da2330c052aeeea602d04d1cf17c7f81b9a63e0593d1fecb1cee",
+    "after": "e6813fd30b0a71e4edbd91467a2a2733bf54b52ddd03603ae856d578e1f2a0ad"
+  },
   "third_party/blink/renderer/core/loader/empty_clients.cc": {
     "before": "3b30b66e0f060d1d5a380cae0c74d939abf2879d0c57033d0f2acfbcd694584f",
     "after": "2f7d43e3b2b905ca08583a2b77e17a994a234a9dbbf39794c878e7cb4d081257"
