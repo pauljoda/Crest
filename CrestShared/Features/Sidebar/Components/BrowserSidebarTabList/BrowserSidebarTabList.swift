@@ -50,8 +50,14 @@ private struct BrowserCurrentTabsSeam: View {
             canClearOthers: holdsCurrentTabs && holdsTabsBesideShownTab,
             canClearAll: holdsCurrentTabs,
             clearOthers: { _ = context.tabActions.clearCurrentTabs(keepingShownTab: true) },
-            clearAll: { _ = context.tabActions.clearCurrentTabs(keepingShownTab: false) }
+            clearAll: { _ = context.tabActions.clearCurrentTabs(keepingShownTab: false) },
+            canTidy: context.tabActions.canTidy,
+            isTidying: TabTidying.shared.isTidying(in: context.space.id),
+            tidyFailed: TabTidying.shared.hasFailed(in: context.space.id),
+            tidy: { context.tabActions.startTidying() },
+            prepareTidy: { TabTidying.shared.prewarm() }
         )
+        .background { BrowserTidyBackgroundWork(context: context) }
     }
 
     /// Whether the current run holds a tab other than the one the window
@@ -69,6 +75,28 @@ private struct BrowserCurrentTabsSeam: View {
         guard !current.holdsTabRows else { return true }
         guard !current.isEmpty else { return false }
         return current.rows.contains { $0.kind.opensList && !space.tabIDs(inFolder: $0.id).isEmpty }
+    }
+}
+
+/// Has the shown Space's loose tabs described in the background while Tidy
+/// is on, once there are enough of them. It reads every loose tab's title and
+/// address, so it sits apart from the seam, and a page changing its title
+/// redraws only this. A locked Space's tabs, and a private window's, are
+/// never described.
+private struct BrowserTidyBackgroundWork: View {
+    let context: BrowserSidebarListContext
+
+    var body: some View {
+        let tidying = TabTidying.shared
+        let candidates =
+            tidying.isOn && TabTidying.isModelAvailable && !context.spaceAccess.isLocked(context.space)
+            ? TabTidying.candidates(in: context.space, of: context.browser) : []
+        Color.clear
+            .task(id: candidates.map(\.modelDescription)) {
+                tidying.describe(candidates, in: context.space.id) {
+                    [spaceAccess = context.spaceAccess, space = context.space] in !spaceAccess.isLocked(space)
+                }
+            }
     }
 }
 

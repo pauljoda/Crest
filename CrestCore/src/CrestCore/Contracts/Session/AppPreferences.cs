@@ -10,8 +10,9 @@ namespace CrestCore.Contracts;
 /// View focus follows the pointer, whether local pages open with the developer
 /// toolbar, whether holding a Most Recent Tab shortcut shows the recent tabs,
 /// where among the open tabs a new tab opens and whether one opened from a tab
-/// in a folder opens in that folder instead, and how the command palette ranks
-/// and arranges what it offers. Translation rules are in
+/// in a folder opens in that folder instead, how the command palette ranks
+/// and arranges what it offers, and whether the sidebar offers Tidy, which a
+/// person turns on themselves. Translation rules are in
 /// ordinal order of their source language. They stay on this device and never
 /// become sync records.
 /// </summary>
@@ -21,7 +22,7 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
     bool UnloadedSavedTabsStay, bool SplitFocusFollowsMouse, bool AutomaticallyShowsDeveloperToolbar, bool ShowsRecentTabs,
     NewTabPosition NewTabPosition, bool NewTabsJoinFolder,
     PalettePreferences Palette, bool FloatsVideoOnAppSwitch, bool FloatsVideoOnDesktopSwitch,
-    bool RedocksVideoOnFocus) {
+    bool RedocksVideoOnFocus, bool OffersTabTidying = false) {
     #region Static Variables
 
     /// The documented defaults for a person who never chose, which a platform
@@ -33,7 +34,7 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
         SplitFocusFollowsMouse: false,
         AutomaticallyShowsDeveloperToolbar: true, ShowsRecentTabs: true, NewTabPosition.Top, NewTabsJoinFolder: false,
         PalettePreferences.Default, FloatsVideoOnAppSwitch: false, FloatsVideoOnDesktopSwitch: false,
-        RedocksVideoOnFocus: true);
+        RedocksVideoOnFocus: true, OffersTabTidying: false);
 
     #endregion
 
@@ -77,11 +78,12 @@ public sealed record AppPreferences(StartupBehavior Startup, bool OffersTranslat
         && Palette.Equals(other.Palette)
         && FloatsVideoOnAppSwitch == other.FloatsVideoOnAppSwitch
         && FloatsVideoOnDesktopSwitch == other.FloatsVideoOnDesktopSwitch
-        && RedocksVideoOnFocus == other.RedocksVideoOnFocus;
+        && RedocksVideoOnFocus == other.RedocksVideoOnFocus
+        && OffersTabTidying == other.OffersTabTidying;
 
     public override int GetHashCode() => HashCode.Combine(Startup, OffersTranslation, AutomaticallyTranslates,
         TranslationRules.Count, ChecksSpelling, AutomaticallyEntersPictureInPicture,
-        HashCode.Combine(PinnedTabClose, SavedTabClose),
+        HashCode.Combine(PinnedTabClose, SavedTabClose, OffersTabTidying),
         HashCode.Combine(SavedTabFaviconReturnsToSavedUrl, UnloadedSavedTabsStay, SplitFocusFollowsMouse,
             AutomaticallyShowsDeveloperToolbar, ShowsRecentTabs, NewTabPosition, NewTabsJoinFolder,
             HashCode.Combine(Palette, FloatsVideoOnAppSwitch, FloatsVideoOnDesktopSwitch, RedocksVideoOnFocus)));

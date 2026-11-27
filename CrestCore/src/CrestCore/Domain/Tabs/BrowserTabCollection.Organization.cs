@@ -14,8 +14,10 @@ public sealed partial class BrowserTabCollection {
     #region Actions - Organization
 
     /// Adds a folder, or a group when `isGroup`: a group sits at the top level
-    /// of the open tabs, and no folder goes inside one.
-    public void AddFolder(Guid id, string name, TabPlacement? location = null, Guid? parent = null, bool isGroup = false) {
+    /// of the open tabs, and no folder goes inside one. `madeByTidy` marks a
+    /// group Tidy makes.
+    public void AddFolder(Guid id, string name, TabPlacement? location = null, Guid? parent = null, bool isGroup = false,
+        bool madeByTidy = false) {
         var tree = new FolderTree(folders);
         if (folders.Count >= FolderTree.MaximumCount) throw new Rejected(new FolderLimitReached(FolderTree.MaximumCount));
         if (folders.Any(f => f.Id == id)) throw new Rejected(new FolderAlreadyExists(id));
@@ -29,7 +31,7 @@ public sealed partial class BrowserTabCollection {
             if (tree.Depth(p) + 1 >= FolderTree.MaximumDepth) throw new Rejected(new FolderDepthLimitReached(FolderTree.MaximumDepth));
             var subtree = tree.Subtree(p); insertion = folders.FindLastIndex(f => subtree.Contains(f.Id)) + 1;
         }
-        folders.Insert(insertion, new(id, location, FolderName(name), ParentId: parent, IsGroup: isGroup));
+        folders.Insert(insertion, new(id, location, FolderName(name), ParentId: parent, IsGroup: isGroup, MadeByTidy: isGroup && madeByTidy));
     }
 
     /// Whether the folder turned into a group, or back into a folder. Only a

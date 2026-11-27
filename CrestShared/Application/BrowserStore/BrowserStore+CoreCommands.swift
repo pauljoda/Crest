@@ -41,6 +41,13 @@ extension BrowserStore {
         SetFolderGroup(workspaceID: family.workspaceID, spaceID: spaceID, folderID: folderID, isGroup: isGroup)
     }
 
+    /// Files the Space's loose open tabs into a Group for each of Tidy's
+    /// `topics`, in one edit. Throws the rule that refused it, such as a tab
+    /// that moved while the topics were found.
+    func tidySessionTabs(into topics: [TidyTopic], in spaceID: UUID) throws(Rejection) {
+        _ = try family.commit(TidyTabs(workspaceID: family.workspaceID, spaceID: spaceID, topics: topics), from: self)
+    }
+
     /// Chooses how a tab's icon is filled, and answers whether the core
     /// accepted the choice. A pulled icon wears `faviconData`, the image this
     /// platform holds for the page, so it needs one.

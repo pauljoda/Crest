@@ -165,7 +165,8 @@ internal static partial class StoredSessionCodec {
             DecodePalettePreferences(value[Key.Palette]),
             TolerantFlag(value[Key.FloatsVideoOnAppSwitch]) ?? defaults.FloatsVideoOnAppSwitch,
             TolerantFlag(value[Key.FloatsVideoOnDesktopSwitch]) ?? defaults.FloatsVideoOnDesktopSwitch,
-            TolerantFlag(value[Key.RedocksVideoOnFocus]) ?? defaults.RedocksVideoOnFocus);
+            TolerantFlag(value[Key.RedocksVideoOnFocus]) ?? defaults.RedocksVideoOnFocus,
+            TolerantFlag(value[Key.OffersTabTidying]) ?? defaults.OffersTabTidying);
     }
 
     /// The app-wide preferences. Store newer optional preferences only when
@@ -188,6 +189,7 @@ internal static partial class StoredSessionCodec {
             [Key.NewTabPosition] = preferences.NewTabPosition.Name,
             [Key.NewTabsJoinFolder] = preferences.NewTabsJoinFolder
         };
+        if (preferences.OffersTabTidying) value[Key.OffersTabTidying] = true;
         if (!preferences.Palette.Equals(PalettePreferences.Default)) value[Key.Palette] = Encode(preferences.Palette);
         if (preferences.FloatsVideoOnAppSwitch) value[Key.FloatsVideoOnAppSwitch] = true;
         if (preferences.FloatsVideoOnDesktopSwitch) value[Key.FloatsVideoOnDesktopSwitch] = true;

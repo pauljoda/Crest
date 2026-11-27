@@ -4590,10 +4590,19 @@
     "Couldn’t download this extension." : {
 
     },
+    "Couldn’t download Tidy’s word list. Turn Tidy off and on to try again." : {
+
+    },
     "Couldn’t Open Crest" : {
 
     },
     "Couldn’t open language downloads." : {
+
+    },
+    "Couldn’t Tidy" : {
+
+    },
+    "Couldn’t Tidy Open Tabs" : {
 
     },
     "Couldn’t update" : {
@@ -6002,6 +6011,9 @@
 
     },
     "Downloading" : {
+
+    },
+    "Downloading Tidy’s word list…" : {
 
     },
     "Downloading Update" : {
@@ -9353,6 +9365,9 @@
         }
       }
     },
+    "Offer Tidy for open tabs" : {
+
+    },
     "Offer to Translate" : {
 
     },
@@ -11701,6 +11716,12 @@
     "Require Touch ID or password" : {
 
     },
+    "Requires Apple Intelligence." : {
+
+    },
+    "Requires macOS 26 or later." : {
+
+    },
     "Rerun onboarding" : {
 
     },
@@ -13510,6 +13531,12 @@
     "Sort By" : {
 
     },
+    "Sorts open tabs into Groups by topic" : {
+
+    },
+    "Sorts open tabs into Groups by topic, on this device. Turning it on downloads a 30 MB word list." : {
+
+    },
     "Source" : {
 
     },
@@ -15313,6 +15340,12 @@
 
     },
     "Tide" : {
+
+    },
+    "Tidy" : {
+
+    },
+    "Tidy Open Tabs" : {
 
     },
     "Tight" : {

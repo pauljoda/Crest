@@ -1,5 +1,7 @@
 using System.Text;
 
+using CrestCore.Domain;
+
 namespace CrestCore.Contracts;
 
 /// <summary>
@@ -10,6 +12,9 @@ namespace CrestCore.Contracts;
 /// <see cref="IsGroup"/> marks a group: a single-level folder of open tabs that
 /// holds no folders and sits in no folder. A folder of the open tabs, a group
 /// among them, goes when its last tab leaves it; a saved folder stays empty.
+/// <see cref="MadeByTidy"/> marks a group Tidy made, which a later Tidy fills
+/// with the open tabs of the same topic rather than making another; it syncs
+/// with the group, and counts only while the folder is a group.
 /// </summary>
 [Observed]
 public sealed record FolderState(
@@ -22,7 +27,8 @@ public sealed record FolderState(
     bool IsCollapsed = false,
     DateTimeOffset? CollapseModifiedAt = null,
     Guid? OrderAnchorTabId = null,
-    bool IsGroup = false) {
+    bool IsGroup = false,
+    bool MadeByTidy = false) {
     #region Static Variables
 
     /// The most folders deep a folder may nest, counting the folder itself.
@@ -61,12 +67,18 @@ public sealed record FolderState(
     /// any depth. A group keeps its own state.
     internal bool CollapsesWithAll => !IsGroup && !IsCollapsed;
 
+    /// Whether Tidy files the open tabs of a topic named `matchKey` into this
+    /// folder: a group Tidy made, at the top level of the open tabs, whose
+    /// title matches.
+    internal bool TakesTidyTopic(string matchKey) => MadeByTidy && IsGroup && FolderTree.PlacesGroup(Location, ParentId)
+        && matchKey.Length > 0 && MatchKey(Title) == matchKey;
+
     #endregion
 
-    #region Actions - Imports
+    #region Actions - Matching
 
-    /// The key an imported folder matches an existing one by: its letters and
-    /// digits in compatibility form, lowercased.
+    /// The key an imported folder, or a topic Tidy names, matches an existing
+    /// one by: its letters and digits in compatibility form, lowercased.
     internal static string MatchKey(string title) => string.Concat(title.Normalize(NormalizationForm.FormKD)
         .Where(char.IsLetterOrDigit)).ToLowerInvariant();
 

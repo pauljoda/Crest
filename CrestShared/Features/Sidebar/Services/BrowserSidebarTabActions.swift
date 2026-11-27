@@ -1,5 +1,11 @@
 import Foundation
 
+// MARK: - Types
+
+/// The Space Tidy started in was switched away from or locked before it
+/// finished.
+struct TidySpaceNoLongerShown: Error {}
+
 /// The mutations a sidebar row performs on the tabs of one Space.
 ///
 /// Both shells ask for the same work behind the same guard: the Space this
@@ -79,6 +85,43 @@ struct BrowserSidebarTabActions {
         else { return false }
         syncPagesAfterMutation()
         return true
+    }
+
+    /// Whether Tidy is ready and the Space is the one shown, unlocked, with
+    /// enough loose web pages to sort.
+    var canTidy: Bool {
+        guard TabTidying.shared.isReady,
+            let space = browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess)
+        else { return false }
+        return TabTidying.candidateCount(in: space, of: browser) >= TabTidying.minimumLooseTabCount
+    }
+
+    /// Starts a Tidy of the Space's loose open tabs, unless one is under way.
+    func startTidying() {
+        TabTidying.shared.run(in: assignment.spaceID) { try await tidyCurrentTabs() }
+    }
+
+    /// Files the Space's loose open tabs into Groups by topic, with Apple's
+    /// on-device model. Throws when the Space stops being the selected,
+    /// unlocked one, when the model fails, or when the core refuses because
+    /// the tabs changed meanwhile. Does nothing when Tidy was turned off
+    /// meanwhile, even if it is on again, or Apple Intelligence went away, and
+    /// a tab whose page changed meanwhile stays loose.
+    func tidyCurrentTabs() async throws {
+        guard let space = browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) else {
+            throw TidySpaceNoLongerShown()
+        }
+        let tidying = TabTidying.shared
+        let generation = tidying.generation
+        let candidates = TabTidying.candidates(in: space, of: browser)
+        let topics = try await tidying.topics(for: candidates)
+        guard let shown = browser.selectedUnlockedSpace(matching: assignment, accessController: spaceAccess) else {
+            throw TidySpaceNoLongerShown()
+        }
+        let unchanged = TabTidying.topics(topics, unchangedSince: candidates, in: shown, of: browser)
+        guard tidying.isReady, tidying.generation == generation, !unchanged.isEmpty else { return }
+        try browser.tidySessionTabs(into: unchanged, in: assignment.spaceID)
+        syncPagesAfterMutation()
     }
 
     /// Whether the Space is the one shown, unlocked, and has a folder open to

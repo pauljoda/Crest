@@ -749,7 +749,9 @@ enum Rejection: Equatable, Error, Sendable {
     case syncStagingRefused(SyncStagingRefused)
     case tabAlreadyExists(TabAlreadyExists)
     case tabAlreadyHasPage(TabAlreadyHasPage)
+    case tabCannotBeTidied(TabCannotBeTidied)
     case tabLimitReached(TabLimitReached)
+    case tidyTopicNeedsTwoTabs(TidyTopicNeedsTwoTabs)
     case transientAlreadyCompleted(TransientAlreadyCompleted)
     case translationRuleLimitReached(TranslationRuleLimitReached)
     case unknownAgentSession(UnknownAgentSession)
@@ -1568,9 +1570,19 @@ enum Rejection: Equatable, Error, Sendable {
         if case .tabAlreadyHasPage(let value) = self { value } else { nil }
     }
 
+    /// The `TabCannotBeTidied` this rejection carries, or nil for another member.
+    var tabCannotBeTidied: TabCannotBeTidied? {
+        if case .tabCannotBeTidied(let value) = self { value } else { nil }
+    }
+
     /// The `TabLimitReached` this rejection carries, or nil for another member.
     var tabLimitReached: TabLimitReached? {
         if case .tabLimitReached(let value) = self { value } else { nil }
+    }
+
+    /// The `TidyTopicNeedsTwoTabs` this rejection carries, or nil for another member.
+    var tidyTopicNeedsTwoTabs: TidyTopicNeedsTwoTabs? {
+        if case .tidyTopicNeedsTwoTabs(let value) = self { value } else { nil }
     }
 
     /// The `TransientAlreadyCompleted` this rejection carries, or nil for another member.
@@ -2557,7 +2569,8 @@ struct AppPreferences: Equatable, Sendable {
         ),
         floatsVideoOnAppSwitch: false,
         floatsVideoOnDesktopSwitch: false,
-        redocksVideoOnFocus: true
+        redocksVideoOnFocus: true,
+        offersTabTidying: false
     )
 
     var startup: StartupBehavior
@@ -2579,6 +2592,7 @@ struct AppPreferences: Equatable, Sendable {
     var floatsVideoOnAppSwitch: Bool
     var floatsVideoOnDesktopSwitch: Bool
     var redocksVideoOnFocus: Bool
+    var offersTabTidying: Bool
 }
 
 struct AppPreferencesChanged: CoreChange, Equatable, Sendable {
@@ -4786,6 +4800,7 @@ struct FolderState: Equatable, Sendable, Identifiable {
     let collapseModifiedAt: Date?
     let orderAnchorTabID: UUID?
     let isGroup: Bool
+    let madeByTidy: Bool
     let displaySymbol: String
     let displayColor: BrandColor
 
@@ -4802,6 +4817,7 @@ struct FolderState: Equatable, Sendable, Identifiable {
         var collapseModifiedAt: Date?
         var orderAnchorTabID: UUID?
         var isGroup: Bool
+        var madeByTidy: Bool
     }
 
     /// The record's fields alone, as a platform sends it back.
@@ -4816,7 +4832,8 @@ struct FolderState: Equatable, Sendable, Identifiable {
             isCollapsed: isCollapsed,
             collapseModifiedAt: collapseModifiedAt,
             orderAnchorTabID: orderAnchorTabID,
-            isGroup: isGroup
+            isGroup: isGroup,
+            madeByTidy: madeByTidy
         )
     }
 }
@@ -9212,6 +9229,10 @@ struct TabAlreadyHasPage: Equatable, Sendable {
     let pageID: UUID
 }
 
+struct TabCannotBeTidied: Equatable, Sendable {
+    let tabID: UUID
+}
+
 struct TabContent: Equatable, Sendable {
     var address: String?
     var view: NativeView?
@@ -9377,6 +9398,21 @@ struct TakeReleaseNotes: Intent, WindowIntent, Equatable, Sendable {
 struct TearOffPermission: Equatable, Sendable {
     let allowed: Bool
     let reason: TearOffRefusal?
+}
+
+struct TidyTabs: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let spaceID: UUID
+    let topics: [TidyTopic]
+}
+
+struct TidyTopic: Equatable, Sendable {
+    var title: String
+    var tabIDs: [UUID]
+}
+
+struct TidyTopicNeedsTwoTabs: Equatable, Sendable {
+    let title: String
 }
 
 struct TintSplit: Intent, SessionIntent, Equatable, Sendable {
@@ -22808,7 +22844,7 @@ struct ShortcutCommand: Hashable, Sendable {
         name: "clearUnpinnedTabs",
         section: ShortcutSection.tabs,
         title: LocalizedStringResource("Clear Other Tabs"),
-        searchTerms: LocalizedStringResource("clean tidy archive unpinned open tabs"),
+        searchTerms: LocalizedStringResource("clean archive unpinned open tabs"),
         menuTitle: nil,
         symbol: "sparkles",
         requiredCapability: nil,
@@ -24494,7 +24530,7 @@ struct ShortcutCommand: Hashable, Sendable {
         name: "clearAllTabs",
         section: ShortcutSection.tabs,
         title: LocalizedStringResource("Clear All Tabs"),
-        searchTerms: LocalizedStringResource("clean tidy archive unpinned open tabs every current"),
+        searchTerms: LocalizedStringResource("clean archive unpinned open tabs every current"),
         menuTitle: nil,
         symbol: "sparkles",
         requiredCapability: nil,
@@ -30587,6 +30623,10 @@ final class FolderStateModel: ObservedModel, Identifiable {
         access(keyPath: \.isGroup)
         return isGroupStorage
     }
+    var madeByTidy: Bool {
+        access(keyPath: \.madeByTidy)
+        return madeByTidyStorage
+    }
     var displaySymbol: String {
         access(keyPath: \.displaySymbol)
         return displaySymbolStorage
@@ -30605,6 +30645,7 @@ final class FolderStateModel: ObservedModel, Identifiable {
     @ObservationIgnored private var collapseModifiedAtStorage: Date?
     @ObservationIgnored private var orderAnchorTabIDStorage: UUID?
     @ObservationIgnored private var isGroupStorage: Bool
+    @ObservationIgnored private var madeByTidyStorage: Bool
     @ObservationIgnored private var displaySymbolStorage: String
     @ObservationIgnored private var displayColorStorage: BrandColor
 
@@ -30620,6 +30661,7 @@ final class FolderStateModel: ObservedModel, Identifiable {
             collapseModifiedAt: collapseModifiedAt,
             orderAnchorTabID: orderAnchorTabID,
             isGroup: isGroup,
+            madeByTidy: madeByTidy,
             displaySymbol: displaySymbol,
             displayColor: displayColor
         )
@@ -30636,6 +30678,7 @@ final class FolderStateModel: ObservedModel, Identifiable {
         collapseModifiedAtStorage = value.collapseModifiedAt
         orderAnchorTabIDStorage = value.orderAnchorTabID
         isGroupStorage = value.isGroup
+        madeByTidyStorage = value.madeByTidy
         displaySymbolStorage = value.displaySymbol
         displayColorStorage = value.displayColor
     }
@@ -30677,6 +30720,10 @@ final class FolderStateModel: ObservedModel, Identifiable {
         if isGroupStorage != value.isGroup {
             isGroupStorage = value.isGroup
             withMutation(keyPath: \.isGroup) {}
+        }
+        if madeByTidyStorage != value.madeByTidy {
+            madeByTidyStorage = value.madeByTidy
+            withMutation(keyPath: \.madeByTidy) {}
         }
         if displaySymbolStorage != value.displaySymbol {
             displaySymbolStorage = value.displaySymbol

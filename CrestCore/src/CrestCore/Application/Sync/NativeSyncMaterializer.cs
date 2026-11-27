@@ -142,7 +142,7 @@ public static class NativeSyncMaterializer {
         IReadOnlyList<FolderState> synced = Payloads<FolderPayload>(records, space).Where(folder => policy.Includes(folder.Location))
             .OrderBy(folder => folder.OrderToken, StringComparer.Ordinal).ThenBy(folder => folder.Id.ToString("D"), StringComparer.Ordinal)
             .Select(folder => new FolderState(folder.Id, folder.Location, folder.Title, folder.Symbol, colorIds.Contains(folder.Id) ? folder.Color : null, folder.ParentId,
-                folder.IsCollapsed, folder.CollapseModifiedAt?.Moment, folder.OrderAnchorTabId, folder.IsGroup)).ToArray();
+                folder.IsCollapsed, folder.CollapseModifiedAt?.Moment, folder.OrderAnchorTabId, folder.IsGroup, folder.MadeByTidy)).ToArray();
         var places = Payloads<TabPayload>(records, space).Select(tab => tab.FolderId).Concat((local?.Tabs ?? []).Select(tab => tab.FolderId));
         var bridges = (local?.Folders ?? []).Where(folder => deleted.Contains(folder.Id));
         synced = Shown(synced, new FolderTree([.. synced, .. bridges]).Holding(places), emptied);

@@ -152,7 +152,7 @@ public sealed class ShortcutCommand {
     // it had when it cleared every open tab, since overrides are keyed by it.
     public static readonly ShortcutCommand ClearOtherTabs = new(Kinds.ClearOtherTabs, name: "clearUnpinnedTabs",
         ShortcutSection.Tabs, title: "Clear Other Tabs", symbol: "sparkles",
-        shortcuts: Everywhere(Character("k", Command | Shift)), searchTerms: "clean tidy archive unpinned open tabs");
+        shortcuts: Everywhere(Character("k", Command | Shift)), searchTerms: "clean archive unpinned open tabs");
     // The Mac gives ⌘E to opening extensions and moves archiving a modifier up.
     public static readonly ShortcutCommand ArchiveTab = new(Kinds.ArchiveTab, name: "archiveTab", ShortcutSection.Tabs,
         title: "Archive Tab", symbol: "archivebox",
@@ -345,7 +345,7 @@ public sealed class ShortcutCommand {
         title: "Clear All Tabs", symbol: "sparkles",
         shortcuts: [.. DevicePlatform.All.Select(platform =>
             new ShortcutDefault(platform, Character("k", Command | Shift | Option), YieldsToOverrides: true))],
-        searchTerms: "clean tidy archive unpinned open tabs every current", optionAlternate: true);
+        searchTerms: "clean archive unpinned open tabs every current", optionAlternate: true);
     // Closes every open folder of the shown Space, however deep. It came after
     // people could customize, so it waits for the keys a person chooses.
     public static readonly ShortcutCommand CollapseAllFolders = new(Kinds.CollapseAllFolders, name: "collapseAllFolders",
