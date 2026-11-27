@@ -109,14 +109,18 @@ class ReleasePreflightTests(unittest.TestCase):
         self.git("checkout", "updates")
         filename = "appcast-development.xml" if channel == "development" else "appcast.xml"
         short_version = f"<sparkle:shortVersionString>{version}</sparkle:shortVersionString>" if version else ""
-        # Stable items carry no channel.
+        # Stable items carry no channel, and their installers name no commit.
         item_channel = "" if channel == "stable" else f"<sparkle:channel>{channel}</sparkle:channel>"
+        installer = (
+            f"Installer-Crest-{version}.dmg" if channel == "stable"
+            else f"Installer-Crest-0.5.25-{channel}-2026-09-03-{commit[:7]}.dmg"
+        )
         (self.repository / filename).write_text(
             '<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">'
             f"<channel><item>{item_channel}"
             f"<sparkle:version>{build}</sparkle:version>{short_version}"
             f'<enclosure url="https://github.com/crest-browser/Crest/releases/download/{tag}/'
-            f'Installer-Crest-0.5.25-{channel}-2026-09-03-{commit[:7]}.dmg" />'
+            f'{installer}" />'
             "</item></channel></rss>"
         )
         self.git("add", filename)
