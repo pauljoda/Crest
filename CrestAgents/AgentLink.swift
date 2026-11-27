@@ -67,14 +67,75 @@ enum AgentLinkResponse: Codable, Sendable {
     case result(id: Int, result: AgentToolResult)
 }
 
-/// Why Crest refuses a helper.
-enum AgentLinkRefusal: String, Codable, Sendable {
+/// Why Crest refuses a helper, and what the helper tells its agent then. A
+/// refusal travels as its name; a name the link does not know fails to
+/// decode, so a helper skips a refusal newer than itself.
+struct AgentLinkRefusal: Codable, Hashable, Sendable {
+    // MARK: - Static Variables
+
     /// The helper is from a build of Crest whose link differs from the one
     /// running, such as the build an update replaced; the agent starts it
     /// again to reach this Crest.
-    case staleHelper
-    /// The person has agents turned off.
-    case agentsOff
+    static let staleHelper = Self(
+        name: "staleHelper",
+        message:
+            "Crest was updated since this connection started. Ask the person to restart Crest's MCP server in your agent."
+    )
+    /// The person has agents turned off, which the agent cannot tell from a
+    /// Crest that is not running.
+    static let agentsOff = Self(
+        name: "agentsOff",
+        message:
+            "Crest isn't running, or agents are turned off in Crest's Settings › Agents. Ask the person to open Crest and turn on agents."
+    )
+    /// Crest is connected to as many helpers as it takes at once; the agent
+    /// can try again once another one stops.
+    static let full = Self(
+        name: "full",
+        message:
+            "Crest is connected to as many agents as it takes at once. Try again once another agent stops, or ask the person to quit an agent they no longer use."
+    )
+    private static let all = [staleHelper, agentsOff, full]
+
+    // MARK: - Variables
+
+    /// How the refusal travels.
+    let name: String
+    /// What the agent's model reads instead of the tool's answer.
+    let message: String
+
+    // MARK: - Initializers
+
+    private init(name: String, message: String) {
+        self.name = name
+        self.message = message
+    }
+
+    init(from decoder: any Decoder) throws {
+        let name = try decoder.singleValueContainer().decode(String.self)
+        guard let refusal = Self.all.first(where: { $0.name == name }) else {
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Unknown refusal \(name)"))
+        }
+        self = refusal
+    }
+
+    // MARK: - Actions - Coding
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(name)
+    }
+
+    // MARK: - Actions - Comparing
+
+    static func == (lhs: AgentLinkRefusal, rhs: AgentLinkRefusal) -> Bool {
+        lhs.name == rhs.name
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+    }
 }
 
 extension AgentLinkRequest {

@@ -21,10 +21,12 @@ actor AgentAppLink {
         /// What the agent's model reads instead of the tool's answer.
         var message: String {
             switch self {
-            case .unreachable, .refused(.agentsOff):
-                "Crest isn't running, or agents are turned off in Crest's Settings › Agents. Ask the person to open Crest and turn on agents."
-            case .refused(.staleHelper):
-                "Crest was updated since this connection started. Ask the person to restart Crest's MCP server in your agent."
+            // Unreachable, the helper cannot tell a Crest that is not running
+            // from one with agents off.
+            case .unreachable:
+                AgentLinkRefusal.agentsOff.message
+            case .refused(let reason):
+                reason.message
             case .closed:
                 "Crest closed the connection before the tool finished."
             case .tooLarge:
@@ -103,12 +105,16 @@ actor AgentAppLink {
         Task { await self.listen(to: channel) }
         guard
             let attach = try? JSONEncoder().encode(
-                AgentLinkRequest.attach(version: AgentLinkRequest.version, client: client)),
-            channel.send(attach)
+                AgentLinkRequest.attach(version: AgentLinkRequest.version, client: client))
         else {
             disconnect(channel)
             throw Failure.unreachable
         }
+        // Crest may refuse the helper and hang up before the attach goes out,
+        // so a write that fails ends only the helper's sending: a refusal
+        // Crest sent first still arrives, then the end of the connection,
+        // which a Crest that missed the attach sends once it reads that end.
+        if !channel.send(attach) { channel.stopSending() }
         let listed = try await withCheckedThrowingContinuation { attaching = $0 }
         tools = listed == AgentToolDefinition.catalog ? nil : listed
         return channel
