@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-11-new-look",
-    "development": "page-zoom-remembered-per-site",
+    "development": "tidy-sorts-open-tabs-into-groups",
     "nightly": "picture-in-picture-settings-window-fallback"
   }
 }
