@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Export Crest's release history as the JSON the product site renders.
 
-Reads the release tags, the day each marketing version reached the checked-out
-branch, and `Documentation/ReleaseNotes/`, then writes one file:
+Reads the release tags, the day each version reached the checked-out branch,
+and `Documentation/ReleaseNotes/`, then writes one file:
 
     {
       "schema": 1,
@@ -28,13 +28,15 @@ branch, and `Documentation/ReleaseNotes/`, then writes one file:
     }
 
 `notes` holds each version's public entries that reach the platform, once, in
-the order they were written; a version with none is left out. Each channel
+the order they were written; a version with none is left out. A version file's
+entries belong to its version, and a fragment's to the version of the commit
+that added it, so the checkout needs its full history. Each channel
 lists its releases newest first. A release covers the versions after the
 release before it, up to its own, and `covers` names them newest first, so its
 changes are those versions' notes in that order. `writeUp` is the curated
 write-up of a Stable or App Store release, with only the items that reach the
-platform, and null everywhere else. `date` is null when no tag or version
-history gives one.
+platform, and null everywhere else. `date` is null when no tag, version
+history or fragment commit gives one.
 
 A channel's releases come from its tags: `v<version>` for Mac Stable,
 `nightly-<version>-<date>-…` and `development-<version>-<date>-…` for the Mac
@@ -55,13 +57,12 @@ from typing import Optional
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from release_note_catalog import (  # noqa: E402
-    CATALOG_DIRECTORY,
     VERSION_FILE_PATH,
     ReleaseNoteCatalog,
     ReleaseWriteUp,
     Version,
     VersionNotes,
-    read_catalog,
+    read_working_catalog,
 )
 
 
@@ -138,8 +139,12 @@ def release_tags(repository_root: pathlib.Path) -> list[tuple[str, str]]:
     return [tuple(line.split("\t", 1)) for line in output.splitlines() if "\t" in line]
 
 
-def version_dates(repository_root: pathlib.Path) -> dict[Version, str]:
-    """The day each marketing version first reached the checked-out branch."""
+def version_dates(repository_root: pathlib.Path, catalog: ReleaseNoteCatalog) -> dict[Version, str]:
+    """The day each version first reached the checked-out branch.
+
+    A version file's version dates from the day MARKETING_VERSION first held
+    it, and a version that only fragments give from the day its commit landed.
+    """
     output = git(
         repository_root,
         "log",
@@ -161,6 +166,9 @@ def version_dates(repository_root: pathlib.Path) -> dict[Version, str]:
                 dates.setdefault(Version.parse(text), current_date)
             except ValueError:
                 continue
+    for notes in catalog.versions:
+        if notes.landed is not None:
+            dates.setdefault(notes.version, notes.landed)
     return dates
 
 
@@ -218,9 +226,9 @@ def platform_notes(catalog: ReleaseNoteCatalog, platform: str) -> dict[str, list
 
 
 def release_history(repository_root: pathlib.Path) -> dict:
-    catalog = read_catalog(repository_root / CATALOG_DIRECTORY)
+    catalog = read_working_catalog(repository_root)
     tags = release_tags(repository_root)
-    dates = version_dates(repository_root)
+    dates = version_dates(repository_root, catalog)
     platforms: dict[str, dict] = {}
     for channel in CHANNELS:
         if channel.platform not in platforms:

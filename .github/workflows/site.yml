@@ -10,6 +10,7 @@ on:
     paths:
       - "HelpCenter/**"
       - "Documentation/ReleaseNotes/**"
+      - "Scripts/crest_version.py"
       - "Scripts/export-release-history.py"
       - "Scripts/release_note_catalog.py"
   # Each published Mac release adds a release page.

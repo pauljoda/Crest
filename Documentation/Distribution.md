@@ -58,10 +58,23 @@ unmerged PR does nothing. It never checks out the PR's own code: it builds the
 merge commit on `main` with the existing `production` environment and
 serialized publication queue. A direct push to `main` publishes nothing.
 
-The marketing version comes from `Config/Version.xcconfig`. Stable tags must
-match it exactly. Distributed build numbers add the GitHub Actions run number
-to Crest's public-repository build epoch. The epoch keeps Sparkle ordering
-strictly increasing across the repository migration; the run number keeps every
+A build's marketing version is its commit's version, which
+`Scripts/crest_version.py` computes from git: the anchor version in
+`Config/Version.xcconfig` plus the number of commits on main's first-parent
+history since the anchor. Pull requests never change it, so every commit on
+`main` has its own version, rising in merge order. The preflight computes it
+once, as its `marketing_version` output, and passes it to both `xcodebuild`
+runs and the release notes, so the Development, Nightly, and Stable builds of
+one commit share it. An experimental build takes the version of its branch's
+merge base with `main`, so the Development build it hands over to is always
+newer. A Stable tag must be `v` plus its commit's version, on a commit on
+main's first-parent history. Xcode Cloud computes the same version for the
+commit it archives and stamps it into its ephemeral checkout. Local and Xcode
+builds show the anchor version with build `1`.
+
+Distributed build numbers add the GitHub Actions run number to Crest's
+public-repository build epoch. The epoch keeps Sparkle ordering strictly
+increasing across the repository migration; the run number keeps every
 subsequent published update newer than the prior build. Preflight also reads
 every signed appcast and raises the build number above every published build,
 so retries and delayed runs cannot publish an update that Sparkle considers older.
@@ -230,8 +243,8 @@ the old signing path retained long enough to update installed copies safely.
 
 Before publishing a stable tag:
 
-1. confirm the version's write-up in `Documentation/ReleaseNotes` and the
-   marketing version are ready;
+1. confirm the commit's version (`python3 Scripts/crest_version.py --at <commit>`)
+   and that its write-up in `Documentation/ReleaseNotes` is named for it;
 2. complete local app and release-script tests for the commit being published;
 3. confirm **Build Crest** passed on the intended `main` commit, the latest
    **Refresh crestbrowser.com** run in Crest is green, and the latest
@@ -252,22 +265,28 @@ Before publishing a stable tag:
    from the previous stable WebKit-only app and an existing Chromium build,
    preserving Space and tab identity, engine profiles, and unsaved-changes prompts.
 
-For a new release line, explicitly set the intended version with
-`Scripts/set-version.sh --release X.Y.Z`. Routine fixes use
-`Scripts/set-version.sh --patch`. Keep `CURRENT_PROJECT_VERSION` unchanged;
-the distribution workflows own build numbers. Write the version's `release`
-write-up in its notes file, refresh
-the public roadmap with `Scripts/render-roadmap.py --write`, and review the
-maintained [iPhone and iPad listing](https://github.com/crest-browser/crestbrowser.com/blob/main/marketing/AppStore/README.md) against
-the release's mobile capabilities.
+A new release line starts by setting its anchor with
+`Scripts/set-version.sh --release X.Y.Z`; fixes never change the version. Keep
+`CURRENT_PROJECT_VERSION` unchanged; the distribution workflows own build
+numbers.
 
-Commit the version and release documentation together, push that commit to
-`main`, and wait for a **Build Crest** run on it to pass before creating and
-pushing an annotated `vX.Y.Z` tag at that same commit. A new release line uses
-`Scripts/check-version.sh` and the release notes check;
-`--fix-commit` applies only to patch increases on the existing line.
-Pushing the stable tag starts macOS publication. App Store build selection,
-submission, and release are separate steps in App Store Connect. When an App
+A Stable release is the commit that adds its write-up. On an up-to-date
+`main`, `python3 Scripts/crest_version.py next` gives the version that commit
+will have. Write the write-up as
+`Documentation/ReleaseNotes/<major>.<minor>/<version>.json` holding only
+`release`, refresh the public roadmap with `Scripts/render-roadmap.py --write`,
+and review the maintained
+[iPhone and iPad listing](https://github.com/crest-browser/crestbrowser.com/blob/main/marketing/AppStore/README.md)
+against the release's mobile capabilities. Commit the write-up and the release
+documentation together as one commit. Just before pushing it to `main`, fetch
+and check that `next` still names the file; if `main` moved, rename the file
+and amend. Wait for a **Build Crest** run on the pushed commit to pass, then
+create and push an annotated `vX.Y.Z` tag at that same commit. The preflight
+rejects a tag that isn't `v` plus its commit's version. A write-up pushed under
+the wrong name is fixed the same way: rename it to `next` in a new commit, push
+that, and tag it. Pushing the stable tag starts macOS publication. App Store
+build selection, submission, and release are separate steps in App Store
+Connect. When an App
 Store version goes live, push an annotated `ios-vX.Y.Z` tag at the commit it was
 built from; the product site then lists it under App Store.
 

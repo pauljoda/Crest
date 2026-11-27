@@ -141,6 +141,30 @@ class ReleasePreflightTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(outputs, {})
 
+    def test_stable_tag_must_name_the_version_git_gives_its_commit_on_main(self) -> None:
+        stable = {"GITHUB_EVENT_NAME": "push", "GITHUB_REF_TYPE": "tag"}
+        # The file holds the anchor, 0.5.25; the commit after it is 0.5.26.
+        anchor, outputs = self.preflight(**stable, GITHUB_REF_NAME="v0.5.25")
+        self.assertNotEqual(anchor.returncode, 0)
+        self.assertIn("its tag is v0.5.26", anchor.stderr)
+        self.assertEqual(outputs, {})
+
+        result, outputs = self.preflight(**stable, GITHUB_REF_NAME="v0.5.26")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            (outputs["channel"], outputs["marketing_version"], outputs["release_tag"], outputs["previous_commit"]),
+            ("stable", "0.5.26", "v0.5.26", self.previous_commit),
+        )
+
+        self.git("switch", "-c", "release-candidate")
+        (self.repository / "change.txt").write_text("Branch change\n")
+        self.git("commit", "-am", "Branch build")
+        branch, outputs = self.preflight(**stable, GITHUB_REF_NAME="v0.5.26")
+        self.git("switch", "main")
+        self.assertNotEqual(branch.returncode, 0)
+        self.assertIn("not on main's first-parent history", branch.stderr)
+        self.assertEqual(outputs, {})
+
     def test_interrupted_publications_cannot_reuse_another_runs_release_tag(self) -> None:
         self.publish_appcast("nightly", self.previous_commit, "nightly-build", build=1070)
         tags = set()

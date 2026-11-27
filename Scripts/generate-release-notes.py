@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Generate the GitHub and Sparkle notes of a Mac release from Crest's version notes.
 
-A Stable release whose version has a curated write-up publishes that write-up.
-Every other release lists the public entries that reach the Mac after its
-channel's cursor or, without a cursor, the entries the previous release's
-commit did not have. Each release links to its page on the product site.
+A release's version is the one `crest_version.py` computes for its commit,
+unless the workflow passes the version it built. A Stable release whose
+version has a curated write-up publishes that write-up. Every other release
+lists the public entries that reach the Mac after its channel's cursor or,
+without a cursor, the entries the previous release's commit did not have. Each
+release links to its page on the product site.
 """
 
 from __future__ import annotations
@@ -14,8 +16,8 @@ import pathlib
 import subprocess
 import urllib.parse
 
+from crest_version import VersionError, place
 from release_note_catalog import (
-    VERSION_FILE_PATH,
     CatalogValidationError,
     ReleaseNoteEntry,
     Version,
@@ -152,16 +154,17 @@ def release_notes(
     previous_ref: str | None,
     previous_entry: str | None,
     asset_name: str,
+    version: str | None = None,
 ) -> str:
     current_commit = git(repository_root, "rev-parse", f"{current_ref}^{{commit}}")
     catalog = read_catalog_at(repository_root, current_commit)
     if catalog is None:
         raise CatalogValidationError(f"{current_ref} has no release notes")
-    version = Version.from_version_file(
-        git(repository_root, "show", f"{current_commit}:{VERSION_FILE_PATH}"),
-        f"{current_ref}:{VERSION_FILE_PATH}",
-    )
-    version_notes = catalog.notes(version)
+    try:
+        release_version = Version.parse(version) if version else place(repository_root, current_commit).version
+    except VersionError as error:
+        raise CatalogValidationError(str(error)) from error
+    version_notes = catalog.notes(release_version)
     write_up = version_notes.write_up if channel == "stable" and version_notes else None
 
     lines = ["## Highlights", ""]
@@ -190,7 +193,7 @@ def release_notes(
         f"{urllib.parse.quote(release_tag, safe='.-_')}/"
         f"{urllib.parse.quote(asset_name, safe='.-_')}"
     )
-    page_url = f"{SITE_URL}/releases/{PLATFORM}/{channel}/{version}/"
+    page_url = f"{SITE_URL}/releases/{PLATFORM}/{channel}/{release_version}/"
     has_linear_history = previous_ref is not None and is_ancestor(
         repository_root,
         git(repository_root, "rev-parse", f"{previous_ref}^{{commit}}"),
@@ -229,6 +232,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--previous-ref")
     parser.add_argument("--previous-entry")
     parser.add_argument("--asset-name", required=True)
+    parser.add_argument("--version", help="the version the release built; computed from git when left out")
     return parser.parse_args()
 
 
@@ -245,6 +249,7 @@ def main() -> None:
             previous_ref=arguments.previous_ref,
             previous_entry=arguments.previous_entry,
             asset_name=arguments.asset_name,
+            version=arguments.version,
         ),
         end="",
     )

@@ -21,9 +21,22 @@ REQUIRES_PLUTIL = unittest.skipUnless(
 
 class XcodeCloudConfigurationTests(unittest.TestCase):
     @staticmethod
-    def marketing_version() -> str:
-        version_file = REPOSITORY_ROOT / "Config" / "Version.xcconfig"
-        return version_file.read_text().split("=", maxsplit=1)[1].strip()
+    def version_fixture(root: pathlib.Path) -> tuple[pathlib.Path, str]:
+        """A checkout one commit past its 0.5.25 anchor, which makes it 0.5.26."""
+        repository = root / "repository"
+        (repository / "Config").mkdir(parents=True)
+        (repository / "Scripts").symlink_to(REPOSITORY_ROOT / "Scripts")
+        (repository / "Config" / "Version.xcconfig").write_text("MARKETING_VERSION = 0.5.25\n")
+        for arguments in (
+            ["init", "--initial-branch=main"],
+            ["config", "user.name", "Crest Tests"],
+            ["config", "user.email", "crest-tests@example.invalid"],
+            ["add", "Config"],
+            ["commit", "-m", "Anchor"],
+            ["commit", "--allow-empty", "-m", "Fix"],
+        ):
+            subprocess.run(["git", *arguments], cwd=repository, check=True, capture_output=True)
+        return repository, "0.5.26"
 
 
     def test_both_app_schemes_are_shared_and_archive_enabled(self) -> None:
@@ -123,9 +136,9 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
     @REQUIRES_PLUTIL
     def test_post_xcodebuild_guard_rejects_archived_version_drift(self) -> None:
         guard = REPOSITORY_ROOT / "ci_scripts" / "ci_post_xcodebuild.sh"
-        expected_version = self.marketing_version()
 
         with tempfile.TemporaryDirectory() as temporary_directory:
+            repository, expected_version = self.version_fixture(pathlib.Path(temporary_directory))
             archive = pathlib.Path(temporary_directory) / "CrestMobile.xcarchive"
             app = archive / "Products" / "Applications" / "Crest.app"
             app.mkdir(parents=True)
@@ -143,14 +156,15 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                 "CI_XCODE_CLOUD": "TRUE",
                 "CI_XCODEBUILD_ACTION": "archive",
                 "CI_XCODEBUILD_EXIT_CODE": "0",
-                "CI_PRIMARY_REPOSITORY_PATH": str(REPOSITORY_ROOT),
+                "CI_PRIMARY_REPOSITORY_PATH": str(repository),
                 "CI_ARCHIVE_PATH": str(archive),
                 "CI_BUILD_NUMBER": "20",
             }
 
+            # The anchor in Config/Version.xcconfig is not the commit's version.
             for archived_version, expected_return_code in (
                 (expected_version, 0),
-                ("0.3.0", 64),
+                ("0.5.25", 64),
             ):
                 with self.subTest(archived_version=archived_version):
                     with (app / "Info.plist").open("wb") as stream:
@@ -171,10 +185,10 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                         check=False,
                     )
 
-                    self.assertEqual(result.returncode, expected_return_code)
+                    self.assertEqual(result.returncode, expected_return_code, result.stderr)
                     if expected_return_code:
                         self.assertIn(
-                            f"but Config/Version.xcconfig requires {expected_version}",
+                            f"but this commit's version is {expected_version}",
                             result.stderr,
                         )
 
@@ -184,6 +198,7 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temporary_directory:
             temporary_root = pathlib.Path(temporary_directory)
+            repository, version = self.version_fixture(temporary_root)
             archive = temporary_root / "CrestMobile.xcarchive"
             app = archive / "Products" / "Applications" / "Crest.app"
             app.mkdir(parents=True)
@@ -196,7 +211,7 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                 plistlib.dump(
                     {
                         "CFBundleIdentifier": "com.pauldavis.crest",
-                        "CFBundleShortVersionString": self.marketing_version(),
+                        "CFBundleShortVersionString": version,
                         "CFBundleVersion": "52",
                     },
                     stream,
@@ -234,7 +249,7 @@ class XcodeCloudConfigurationTests(unittest.TestCase):
                 "CI_XCODEBUILD_ACTION": "archive",
                 "CI_XCODEBUILD_EXIT_CODE": "0",
                 "CI_PRODUCT_PLATFORM": "iOS",
-                "CI_PRIMARY_REPOSITORY_PATH": str(REPOSITORY_ROOT),
+                "CI_PRIMARY_REPOSITORY_PATH": str(repository),
                 "CI_ARCHIVE_PATH": str(archive),
                 "CI_BUILD_NUMBER": "52",
                 "CI_AD_HOC_SIGNED_APP_PATH": str(ad_hoc_export),

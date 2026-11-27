@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract coverage for Crest's per-version release notes."""
+"""Contract coverage for Crest's release notes: version files, fragments and the pull request rules."""
 
 from __future__ import annotations
 
@@ -27,6 +27,8 @@ class ReleaseNoteCatalogTests(unittest.TestCase):
             self.git(*arguments)
         self.write_marketing_version("0.1.1")
         self.write_version_notes("0.1.1", [self.entry("existing-change", "fixed", "Keep existing behavior reliable")])
+        (self.repository / "CrestShared").mkdir()
+        (self.repository / "CrestShared" / "App.swift").write_text("// Crest\n")
         self.git("add", ".")
         self.git("commit", "-m", "baseline")
 
@@ -44,6 +46,15 @@ class ReleaseNoteCatalogTests(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(f"MARKETING_VERSION = {version}\n")
 
+    def notes_path(self, relative_path: str) -> pathlib.Path:
+        return self.repository / "Documentation" / "ReleaseNotes" / relative_path
+
+    def write_document(self, relative_path: str, document: dict[str, object]) -> pathlib.Path:
+        path = self.notes_path(relative_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(document, indent=2) + "\n")
+        return path
+
     def write_version_notes(
         self,
         version: str,
@@ -52,13 +63,13 @@ class ReleaseNoteCatalogTests(unittest.TestCase):
         line: str | None = None,
     ) -> pathlib.Path:
         line = line or version.rsplit(".", 1)[0]
-        path = self.repository / "Documentation" / "ReleaseNotes" / line / f"{version}.json"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        document: dict[str, object] = {"entries": entries}
+        document: dict[str, object] = {"entries": entries} if entries else {}
         if release is not None:
             document = {"release": release, **document}
-        path.write_text(json.dumps(document, indent=2) + "\n")
-        return path
+        return self.write_document(f"{line}/{version}.json", document)
+
+    def write_fragment(self, slug: str, entries: list[dict[str, object]]) -> pathlib.Path:
+        return self.write_document(f"changes/{slug}.json", {"entries": entries})
 
     def run_catalog_check(self, *arguments: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
@@ -69,7 +80,17 @@ class ReleaseNoteCatalogTests(unittest.TestCase):
             text=True,
         )
 
-    def test_version_files_must_be_well_formed_and_named_for_their_version(self) -> None:
+    def check_pull_request(self) -> subprocess.CompletedProcess[str]:
+        """Commit the working tree on the pull request's branch and check it against main."""
+        self.git("add", "-A")
+        self.git("commit", "--allow-empty", "-m", "pull request")
+        return self.run_catalog_check("--pull-request", "main")
+
+    def start_pull_request(self) -> None:
+        self.git("switch", "-C", "pull-request", "main")
+
+    def test_notes_files_must_be_well_formed_and_where_they_belong(self) -> None:
+        self.write_fragment("pending-fix", [self.entry("pending-fix", "fixed", "Describe a pending fix")])
         valid = self.run_catalog_check()
         self.assertEqual(valid.returncode, 0, valid.stderr)
 
@@ -77,27 +98,30 @@ class ReleaseNoteCatalogTests(unittest.TestCase):
             "wrong line folder": lambda: self.write_version_notes(
                 "0.1.1", [self.entry("moved", "fixed", "Describe a fix")], line="0.2"
             ),
-            "invalid id": lambda: self.write_version_notes(
-                "0.1.1", [self.entry("Bad ID", "new", "Describe a feature")]
+            "invalid id": lambda: self.write_fragment("bad-id", [self.entry("Bad ID", "new", "Describe a feature")]),
+            "unknown category": lambda: self.write_fragment(
+                "a-change", [self.entry("valid-id", "changed", "Describe a change")]
             ),
-            "unknown category": lambda: self.write_version_notes(
-                "0.1.1", [self.entry("valid-id", "changed", "Describe a change")]
+            "unknown field": lambda: self.write_fragment(
+                "a-fix", [self.entry("valid-id", "fixed", "Describe a fix", commit="abc")]
             ),
-            "unknown field": lambda: self.write_version_notes(
-                "0.1.1", [self.entry("valid-id", "fixed", "Describe a fix", commit="abc")]
+            "every platform listed": lambda: self.write_fragment(
+                "a-fix", [self.entry("valid-id", "fixed", "Describe a fix", platforms=["mac", "ios"])]
             ),
-            "every platform listed": lambda: self.write_version_notes(
-                "0.1.1", [self.entry("valid-id", "fixed", "Describe a fix", platforms=["mac", "ios"])]
+            "duplicate id across files": lambda: self.write_fragment(
+                "again", [self.entry("existing-change", "fixed", "Describe it again")]
             ),
-            "duplicate id across versions": lambda: self.write_version_notes(
-                "0.1.0", [self.entry("existing-change", "fixed", "Describe it again")]
-            ),
-            "newer than the marketing version": lambda: self.write_version_notes(
+            "entries in a version past the anchor": lambda: self.write_version_notes(
                 "0.1.2", [self.entry("future-change", "fixed", "Describe a future fix")]
             ),
             "empty release write-up": lambda: self.write_version_notes(
                 "0.1.1", [self.entry("existing-change", "fixed", "Keep existing behavior reliable")], release={}
             ),
+            "fragment with a write-up": lambda: self.write_document(
+                "changes/a-fix.json", {"release": {"summary": "A summary."}, "entries": []}
+            ),
+            "fragment without entries": lambda: self.write_fragment("a-fix", []),
+            "fragment slug": lambda: self.write_fragment("A Fix", [self.entry("a-fix", "fixed", "Describe a fix")]),
         }
         notes = self.repository / "Documentation" / "ReleaseNotes"
         for name, write in invalid_cases.items():
@@ -110,63 +134,114 @@ class ReleaseNoteCatalogTests(unittest.TestCase):
                 result = self.run_catalog_check()
                 self.assertNotEqual(result.returncode, 0, name)
 
-    def test_staged_contract_puts_new_entries_in_the_staged_versions_file(self) -> None:
-        self.write_marketing_version("0.1.2")
-        self.git("add", "Config")
+        with self.subTest("a Stable write-up past the anchor"):
+            shutil.rmtree(notes)
+            self.write_version_notes("0.1.1", [self.entry("existing-change", "fixed", "Keep existing behavior reliable")])
+            self.write_version_notes("0.1.4", [], release={"summary": "Crest 0.1.4 keeps things reliable."})
+            self.assertEqual(self.run_catalog_check().returncode, 0)
 
-        missing = self.run_catalog_check("--require-staged-entry")
+    def test_an_app_change_adds_its_notes_as_a_new_fragment(self) -> None:
+        self.start_pull_request()
+        (self.repository / "CrestShared" / "App.swift").write_text("// Crest, fixed\n")
+        missing = self.check_pull_request()
         self.assertNotEqual(missing.returncode, 0)
-        self.assertIn(
-            "add at least one new release-note entry to Documentation/ReleaseNotes/0.1/0.1.2.json",
-            missing.stderr,
-        )
+        self.assertIn("add a fragment", missing.stderr)
 
-        self.write_version_notes(
-            "0.1.1",
-            [
-                self.entry("existing-change", "fixed", "Keep existing behavior reliable"),
-                self.entry("new-change", "new", "Add a new workflow"),
-            ],
+        self.write_fragment(
+            "reliable-tabs",
+            [self.entry("reliable-tabs", "fixed", "Keep tabs reliable"), self.entry("faster-tabs", "improved", "Open tabs faster")],
         )
-        self.git("add", "Documentation")
-        misplaced = self.run_catalog_check("--require-staged-entry")
-        self.assertNotEqual(misplaced.returncode, 0)
-        self.assertIn("belong in Documentation/ReleaseNotes/0.1/0.1.2.json", misplaced.stderr)
-
-        self.write_version_notes(
-            "0.1.1", [self.entry("existing-change", "fixed", "Keep existing behavior reliable")]
-        )
-        self.write_version_notes("0.1.2", [self.entry("new-change", "new", "Add a new workflow")])
-        self.git("add", "Documentation")
-        added = self.run_catalog_check("--require-staged-entry")
+        added = self.check_pull_request()
         self.assertEqual(added.returncode, 0, added.stderr)
-        self.assertIn("new-change", added.stdout)
+        self.assertIn("reliable-tabs, faster-tabs", added.stdout)
 
-    def test_staged_contract_keeps_existing_entries_but_lets_write_ups_change(self) -> None:
+        self.start_pull_request()
+        (self.repository / "README.md").write_text("Crest\n")
+        documentation = self.check_pull_request()
+        self.assertEqual(documentation.returncode, 0, documentation.stderr)
+
+    def test_a_pull_request_keeps_the_version_unless_it_opens_a_line(self) -> None:
+        self.start_pull_request()
+        self.write_fragment("reliable-tabs", [self.entry("reliable-tabs", "fixed", "Keep tabs reliable")])
         self.write_marketing_version("0.1.2")
-        self.write_version_notes("0.1.2", [self.entry("new-change", "new", "Add a new workflow")])
-        self.write_version_notes(
-            "0.1.1",
-            [self.entry("existing-change", "fixed", "Keep existing behavior reliable")],
-            release={"summary": "Crest 0.1.1 keeps things reliable.", "fixed": ["Existing behavior is reliable."]},
-        )
-        self.git("add", ".")
-        with_write_up = self.run_catalog_check("--require-staged-entry")
-        self.assertEqual(with_write_up.returncode, 0, with_write_up.stderr)
+        bumped = self.check_pull_request()
+        self.assertNotEqual(bumped.returncode, 0)
+        self.assertIn("changes only to open a new release line", bumped.stderr)
 
-        self.write_version_notes(
-            "0.1.1", [self.entry("existing-change", "improved", "Rewrite existing release copy")]
-        )
-        self.git("add", ".")
-        rewritten = self.run_catalog_check("--require-staged-entry")
-        self.assertNotEqual(rewritten.returncode, 0)
-        self.assertIn("must not change or move release-note entries", rewritten.stderr)
+        self.write_marketing_version("0.2.0")
+        opened = self.check_pull_request()
+        self.assertEqual(opened.returncode, 0, opened.stderr)
 
-        (self.repository / "Documentation" / "ReleaseNotes" / "0.1" / "0.1.1.json").unlink()
+    def test_entries_on_main_never_change_but_write_ups_do(self) -> None:
+        self.write_fragment("merged-fix", [self.entry("merged-fix", "fixed", "Keep downloads reliable")])
         self.git("add", ".")
-        deleted = self.run_catalog_check("--require-staged-entry")
-        self.assertNotEqual(deleted.returncode, 0)
-        self.assertIn("must not delete release-note entries", deleted.stderr)
+        self.git("commit", "-m", "merged pull request")
+
+        cases = {
+            "rewritten entry": (
+                lambda: self.write_version_notes("0.1.1", [self.entry("existing-change", "improved", "Rewrite it")]),
+                "never change, move or go away",
+            ),
+            "deleted version file": (
+                lambda: self.notes_path("0.1/0.1.1.json").unlink(),
+                "never change, move or go away",
+            ),
+            "deleted fragment": (
+                lambda: self.notes_path("changes/merged-fix.json").unlink(),
+                "never change, move or go away",
+            ),
+            "entry moved to a fragment": (
+                lambda: (
+                    self.write_version_notes("0.1.1", [], release={"summary": "Crest 0.1.1."}),
+                    self.write_fragment(
+                        "moved", [self.entry("existing-change", "fixed", "Keep existing behavior reliable")]
+                    ),
+                ),
+                "never change, move or go away",
+            ),
+            "new entry in a version file": (
+                lambda: self.write_version_notes(
+                    "0.1.1",
+                    [
+                        self.entry("existing-change", "fixed", "Keep existing behavior reliable"),
+                        self.entry("late-change", "fixed", "Describe a late fix"),
+                    ],
+                ),
+                "new entries go in a new fragment",
+            ),
+            "new entry in a merged fragment": (
+                lambda: self.write_fragment(
+                    "merged-fix",
+                    [
+                        self.entry("merged-fix", "fixed", "Keep downloads reliable"),
+                        self.entry("late-change", "fixed", "Describe a late fix"),
+                    ],
+                ),
+                "new entries go in a new fragment",
+            ),
+            "new version file with entries": (
+                lambda: self.write_version_notes("0.1.2", [self.entry("late-change", "fixed", "Describe a late fix")]),
+                "new entries go in a new fragment",
+            ),
+        }
+        for name, (change, message) in cases.items():
+            with self.subTest(name):
+                self.start_pull_request()
+                change()
+                result = self.check_pull_request()
+                self.assertNotEqual(result.returncode, 0, name)
+                self.assertIn(message, result.stderr)
+
+        with self.subTest("write-ups"):
+            self.start_pull_request()
+            self.write_version_notes(
+                "0.1.1",
+                [self.entry("existing-change", "fixed", "Keep existing behavior reliable")],
+                release={"summary": "Crest 0.1.1 keeps things reliable.", "fixed": ["Existing behavior is reliable."]},
+            )
+            self.write_version_notes("0.1.3", [], release={"summary": "Crest 0.1.3 keeps downloads reliable."})
+            result = self.check_pull_request()
+            self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == "__main__":

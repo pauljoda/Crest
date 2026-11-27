@@ -46,6 +46,24 @@ jobs:
           python3 Scripts/release_note_catalog.py
           Scripts/audit-licenses.py
 
+  # Pull requests never set the version. One that changes the apps adds its
+  # release notes as a new fragment, which takes the version of the commit
+  # that merges it, so pull requests merge in any order.
+  release-notes:
+    name: Version and release notes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # GitHub's merge commit and its first parent, the base it merges into.
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Check that the pull request keeps the version and adds its notes
+        run: python3 Scripts/release_note_catalog.py --pull-request HEAD^1
+
   # Tests that need macOS tools, such as plutil, skip here. A macOS build job
   # runs the whole suite again on its runner.
   script-tests:

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "versions-from-git",
+      "category": "internal",
+      "message": "Pull requests no longer set Crest's version: each commit on main takes its version from git, and each pull request adds its release notes as its own fragment."
+    }
+  ]
+}

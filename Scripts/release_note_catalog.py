@@ -1,47 +1,77 @@
 #!/usr/bin/env python3
-"""Validate Crest's release notes: one file per version under Documentation/ReleaseNotes.
+"""Validate Crest's release notes under Documentation/ReleaseNotes.
 
-Each version Crest reaches has `Documentation/ReleaseNotes/<major>.<minor>/<version>.json`,
-written by the commit that moves `MARKETING_VERSION` to it:
+A pull request that changes Crest adds one fragment, `changes/<slug>.json`,
+and never touches the version:
 
     {
-      "release": { "summary": "...", "added": ["..."], "fixed": ["..."] },
       "entries": [
         { "id": "kebab-case-id", "category": "fixed", "message": "...", "platforms": ["mac"] }
       ]
     }
 
-`entries` record what that version changed. An entry's ID, category, message and
-platforms never change once it is on main. `release` is the curated write-up of a
-version published as Stable; it may be written and edited after the version lands.
-Leaving out `platforms` means the change reaches every platform.
+A fragment's entries belong to the version of the commit that adds it to main,
+which `crest_version.py` computes from git, so pull requests merge in any order.
+A pull request with several fixes lists one entry for each in its fragment.
+
+`<major>.<minor>/<version>.json` files are history: the entries of the versions
+from before versions came from git, and `release`, the curated write-up of a
+version published as Stable:
+
+    { "release": { "summary": "...", "added": ["..."], "fixed": ["..."] }, "entries": [...] }
+
+A Stable release from now on adds its write-up as a version file holding only
+`release`, named for the version of the commit that adds it
+(`crest_version.py next`).
+
+An entry's ID, category, message and platforms never change once it is on main,
+and it never moves or goes away. Write-ups may be written and edited at any
+time. Leaving out `platforms` means the change reaches every platform.
+
+    release_note_catalog.py                       check the notes in the working tree
+    release_note_catalog.py --pull-request BASE   check what HEAD changes since its merge base with BASE
 """
 
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import json
 import pathlib
 import re
 import subprocess
 import sys
-from typing import Iterable, Optional
+from typing import Iterable, Mapping, Optional
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from crest_version import (  # noqa: E402
+    VERSION_FILE_PATH,
+    MainCommit,
+    Version,
+    VersionError,
+    place,
+)
 
 
 CATALOG_DIRECTORY = "Documentation/ReleaseNotes"
+# Fragments live here, relative to the catalog directory.
+FRAGMENT_DIRECTORY = "changes"
 # The single catalog file the version files replaced; read only to compare a
 # commit against a parent that still has it.
 LEGACY_CATALOG_PATH = "Documentation/ReleaseNotes.json"
-VERSION_FILE_PATH = "Config/Version.xcconfig"
 SUPPORTED_CATEGORIES = ("new", "improved", "fixed", "internal")
 PUBLIC_CATEGORIES = ("new", "improved", "fixed")
 PLATFORMS = ("mac", "ios")
 RELEASE_SECTIONS = ("added", "changed", "fixed", "security", "removed", "upgrading")
 PUBLICATION_CHANNELS = ("stable", "development", "nightly")
 ENTRY_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-VERSION = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
-MARKETING_VERSION = re.compile(r"^\s*MARKETING_VERSION\s*=\s*(\S+)\s*$", re.MULTILINE)
+# What a pull request may change without a release note: documentation,
+# Markdown anywhere, the repository's own tooling, and the version file, which
+# has its own rule. Everything else reaches the apps.
+NOTE_FREE_FOLDERS = ("Documentation/", "HelpCenter/", ".github/", ".agents/", ".claude/", "ci_scripts/", "Scripts/")
+# Engine and packaging scripts shape what ships.
+NOTED_FOLDERS = ("Scripts/control-plane/",)
+NOTE_FREE_FILES = (VERSION_FILE_PATH, "LICENSE", "NOTICE")
 
 
 class CatalogValidationError(ValueError):
@@ -51,48 +81,14 @@ class CatalogValidationError(ValueError):
 # MARK: - Types
 
 
-@dataclass(frozen=True, order=True)
-class Version:
-    """A strict X.Y.Z marketing version, ordered numerically."""
-
-    major: int
-    minor: int
-    patch: int
-
-    @classmethod
-    def parse(cls, text: str) -> "Version":
-        match = VERSION.fullmatch(text)
-        if match is None:
-            raise CatalogValidationError(f"'{text}' is not a strict X.Y.Z version")
-        return cls(*(int(part) for part in match.groups()))
-
-    @classmethod
-    def from_version_file(cls, contents: str, source: str) -> "Version":
-        match = MARKETING_VERSION.search(contents)
-        if match is None:
-            raise CatalogValidationError(f"{source} does not define MARKETING_VERSION")
-        return cls.parse(match.group(1))
-
-    @property
-    def line(self) -> str:
-        return f"{self.major}.{self.minor}"
-
-    @property
-    def path(self) -> str:
-        """The version's notes file, relative to the repository root."""
-        return f"{CATALOG_DIRECTORY}/{self.line}/{self}.json"
-
-    def __str__(self) -> str:
-        return f"{self.major}.{self.minor}.{self.patch}"
-
-
 @dataclass(frozen=True)
 class ReleaseNoteEntry:
     identifier: str
     category: str
     message: str
     platforms: tuple[str, ...]
-    version: Version
+    # Set when the catalog is assembled; a fragment's comes from git.
+    version: Optional[Version] = None
 
     @property
     def is_public(self) -> bool:
@@ -102,9 +98,9 @@ class ReleaseNoteEntry:
         return not self.platforms or platform in self.platforms
 
     @property
-    def content(self) -> tuple[str, str, tuple[str, ...], Version]:
+    def content(self) -> tuple[str, str, tuple[str, ...]]:
         """What may never change once the entry is on main."""
-        return (self.category, self.message, self.platforms, self.version)
+        return (self.category, self.message, self.platforms)
 
 
 @dataclass(frozen=True)
@@ -134,10 +130,29 @@ class ReleaseWriteUp:
 
 
 @dataclass(frozen=True)
+class NotesFile:
+    """One file of the catalog: a version's file or a fragment."""
+
+    # Relative to the catalog directory.
+    path: str
+    # The version a version file is named for; None for a fragment.
+    named_version: Optional[Version]
+    entries: tuple[ReleaseNoteEntry, ...]
+    write_up: Optional[ReleaseWriteUp]
+
+    @property
+    def is_fragment(self) -> bool:
+        return self.named_version is None
+
+
+@dataclass(frozen=True)
 class VersionNotes:
     version: Version
     entries: tuple[ReleaseNoteEntry, ...]
     write_up: Optional[ReleaseWriteUp]
+    # The day the commit that gave this version its fragments reached main;
+    # None for a version file's version.
+    landed: Optional[str] = None
 
     def public_entries(self, platform: str) -> list[ReleaseNoteEntry]:
         return [entry for entry in self.entries if entry.is_public and entry.reaches(platform)]
@@ -202,7 +217,7 @@ def platform_list(value: object, source: str) -> tuple[str, ...]:
     return tuple(platform for platform in PLATFORMS if platform in value)
 
 
-def parse_entry(raw: object, version: Version, source: str) -> ReleaseNoteEntry:
+def parse_entry(raw: object, source: str) -> ReleaseNoteEntry:
     if not isinstance(raw, dict) or not {"id", "category", "message"} <= set(raw) or not set(raw) <= {
         "id",
         "category",
@@ -224,7 +239,7 @@ def parse_entry(raw: object, version: Version, source: str) -> ReleaseNoteEntry:
         raise CatalogValidationError(f"{entry_source}: category must be one of {supported}")
     message = one_line(raw["message"], f"{entry_source}: message")
     platforms = platform_list(raw["platforms"], entry_source) if "platforms" in raw else ()
-    return ReleaseNoteEntry(identifier, category, message, platforms, version)
+    return ReleaseNoteEntry(identifier, category, message, platforms)
 
 
 def parse_write_up(raw: object, source: str) -> ReleaseWriteUp:
@@ -262,82 +277,124 @@ def parse_write_up(raw: object, source: str) -> ReleaseWriteUp:
     return ReleaseWriteUp(summary, tuple(sections))
 
 
-def parse_version_document(contents: str, version: Version, source: str) -> VersionNotes:
+def named_version(relative_path: str) -> Optional[Version]:
+    """The version a version file is named for, or None for a fragment, checking where each lives."""
+    source = f"{CATALOG_DIRECTORY}/{relative_path}"
+    parts = relative_path.split("/")
+    if parts[0] == FRAGMENT_DIRECTORY:
+        if len(parts) != 2 or not parts[1].endswith(".json") or not ENTRY_ID.fullmatch(parts[1][: -len(".json")]):
+            raise CatalogValidationError(
+                f"{source}: fragments live at {FRAGMENT_DIRECTORY}/<kebab-case-slug>.json"
+            )
+        return None
+    if len(parts) != 2 or not parts[1].endswith(".json"):
+        raise CatalogValidationError(
+            f"{source}: notes live at <major>.<minor>/<version>.json or {FRAGMENT_DIRECTORY}/<slug>.json"
+        )
+    try:
+        version = Version.parse(parts[1][: -len(".json")])
+    except VersionError as error:
+        raise CatalogValidationError(f"{source}: {error}") from error
+    if parts[0] != version.line:
+        raise CatalogValidationError(f"{source}: belongs in the {version.line} folder")
+    return version
+
+
+def notes_file(relative_path: str, contents: str) -> NotesFile:
+    source = f"{CATALOG_DIRECTORY}/{relative_path}"
+    version = named_version(relative_path)
     try:
         document = json.loads(contents, object_pairs_hook=unique_json_object)
     except (json.JSONDecodeError, CatalogValidationError) as error:
         raise CatalogValidationError(f"{source}: {error}") from error
-    if not isinstance(document, dict) or "entries" not in document or not set(document) <= {
-        "release",
-        "entries",
-    }:
-        raise CatalogValidationError(f"{source}: must hold entries and an optional release")
-    raw_entries = document["entries"]
+    allowed = {"entries"} if version is None else {"entries", "release"}
+    if not isinstance(document, dict) or not document or not set(document) <= allowed:
+        expected = "entries" if version is None else "entries, a release write-up, or both"
+        raise CatalogValidationError(f"{source}: must hold {expected}")
+    raw_entries = document.get("entries", [])
     if not isinstance(raw_entries, list):
         raise CatalogValidationError(f"{source}: entries must be a list")
-    entries = tuple(parse_entry(raw, version, source) for raw in raw_entries)
+    entries = tuple(parse_entry(raw, source) for raw in raw_entries)
     write_up = parse_write_up(document["release"], source) if "release" in document else None
     if not entries and write_up is None:
         raise CatalogValidationError(f"{source}: add at least one entry")
-    return VersionNotes(version, entries, write_up)
+    return NotesFile(relative_path, version, entries, write_up)
 
 
-def version_for_path(relative_path: str) -> Version:
-    """The version a notes file is named for, checking it sits in its own line's folder."""
-    parts = relative_path.split("/")
-    if len(parts) != 2 or not parts[1].endswith(".json"):
-        raise CatalogValidationError(
-            f"{CATALOG_DIRECTORY}/{relative_path}: notes live at <major>.<minor>/<version>.json"
-        )
-    version = Version.parse(parts[1].removesuffix(".json"))
-    if parts[0] != version.line:
-        raise CatalogValidationError(
-            f"{CATALOG_DIRECTORY}/{relative_path}: belongs in the {version.line} folder"
-        )
-    return version
-
-
-def assemble(documents: Iterable[tuple[str, str]]) -> ReleaseNoteCatalog:
-    """A catalog from (path relative to the catalog directory, contents) pairs."""
-    versions = []
-    for relative_path, contents in documents:
-        version = version_for_path(relative_path)
-        versions.append(
-            parse_version_document(contents, version, f"{CATALOG_DIRECTORY}/{relative_path}")
-        )
-    versions.sort(key=lambda notes: notes.version)
-    seen: dict[str, Version] = {}
-    for notes in versions:
-        for entry in notes.entries:
+def notes_files(documents: Iterable[tuple[str, str]]) -> list[NotesFile]:
+    """The files of a catalog, checking each and that no entry ID repeats."""
+    files = [notes_file(path, contents) for path, contents in documents]
+    seen: dict[str, str] = {}
+    for file in files:
+        for entry in file.entries:
             if entry.identifier in seen:
                 raise CatalogValidationError(
-                    f"entry id '{entry.identifier}' is in both {seen[entry.identifier]} and {notes.version}"
+                    f"entry id '{entry.identifier}' is in both {seen[entry.identifier]} and {file.path}"
                 )
-            seen[entry.identifier] = notes.version
+            seen[entry.identifier] = file.path
+    return files
+
+
+# MARK: - Assembly
+
+
+@dataclass(frozen=True)
+class FragmentVersions:
+    """The main commit that added each fragment, and the version of a fragment that isn't on main yet."""
+
+    added_by: Mapping[str, MainCommit]
+    pending: Version
+
+
+def assemble(
+    documents: Iterable[tuple[str, str]],
+    fragment_versions: Optional[FragmentVersions] = None,
+) -> ReleaseNoteCatalog:
+    """A catalog from (path relative to the catalog directory, contents) pairs.
+
+    Release order is by version, then a version's file, then its fragments by
+    path, each as written.
+    """
+    files = sorted(notes_files(documents), key=lambda file: (file.is_fragment, file.path))
+    grouped: dict[Version, list[NotesFile]] = {}
+    landed: dict[Version, str] = {}
+    for file in files:
+        version = file.named_version
+        if version is None:
+            if fragment_versions is None:
+                raise CatalogValidationError(f"{file.path} is a fragment; read the catalog from git")
+            commit = fragment_versions.added_by.get(file.path)
+            version = commit.version if commit is not None else fragment_versions.pending
+            if commit is not None:
+                landed.setdefault(version, commit.date)
+        grouped.setdefault(version, []).append(file)
+
+    versions = []
+    for version in sorted(grouped):
+        version_files = grouped[version]
+        write_ups = [file.write_up for file in version_files if file.write_up is not None]
+        entries = tuple(
+            replace(entry, version=version)
+            for file in version_files
+            for entry in file.entries
+        )
+        versions.append(VersionNotes(version, entries, write_ups[0] if write_ups else None, landed.get(version)))
     return ReleaseNoteCatalog(tuple(versions))
 
 
-def read_catalog(directory: pathlib.Path) -> ReleaseNoteCatalog:
-    if not directory.is_dir():
-        raise CatalogValidationError(f"{CATALOG_DIRECTORY} is missing")
-    documents = []
-    for path in sorted(directory.rglob("*")):
-        if path.is_dir() or path.name == ".DS_Store":
-            continue
-        documents.append((path.relative_to(directory).as_posix(), path.read_text()))
-    return assemble(documents)
+def has_fragments(documents: list[tuple[str, str]]) -> bool:
+    return any(path.startswith(f"{FRAGMENT_DIRECTORY}/") for path, _ in documents)
 
 
 # MARK: - Git
 
 
-def git(repository_root: pathlib.Path, *arguments: str, stdin: Optional[str] = None) -> subprocess.CompletedProcess[str]:
+def git(repository_root: pathlib.Path, *arguments: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["git", "-C", str(repository_root), *arguments],
         check=False,
         capture_output=True,
         text=True,
-        input=stdin,
     )
 
 
@@ -363,27 +420,74 @@ def read_blobs(repository_root: pathlib.Path, objects: list[str]) -> list[str]:
     return contents
 
 
-def read_catalog_at(repository_root: pathlib.Path, treeish: str) -> Optional[ReleaseNoteCatalog]:
-    """The catalog in a commit, or in the index when `treeish` is ":"; None when it has none."""
-    if treeish == ":":
-        listing = git(repository_root, "ls-files", "--stage", "--", CATALOG_DIRECTORY)
-        rows = [line.split(None, 3) for line in listing.stdout.splitlines()]
-        blobs = [(row[3], row[1]) for row in rows]
-    else:
-        listing = git(repository_root, "ls-tree", "-r", treeish, "--", CATALOG_DIRECTORY)
-        if listing.returncode != 0:
-            raise CatalogValidationError(f"cannot read {treeish}: {listing.stderr.strip()}")
-        rows = [line.split(None, 3) for line in listing.stdout.splitlines()]
-        blobs = [(row[3], row[2]) for row in rows]
-    if not blobs:
-        return None
+def documents_in(directory: pathlib.Path) -> list[tuple[str, str]]:
+    if not directory.is_dir():
+        raise CatalogValidationError(f"{CATALOG_DIRECTORY} is missing")
+    return [
+        (path.relative_to(directory).as_posix(), path.read_text())
+        for path in sorted(directory.rglob("*"))
+        if not path.is_dir() and path.name != ".DS_Store"
+    ]
+
+
+def documents_at(repository_root: pathlib.Path, treeish: str) -> list[tuple[str, str]]:
+    listing = git(repository_root, "ls-tree", "-r", treeish, "--", CATALOG_DIRECTORY)
+    if listing.returncode != 0:
+        raise CatalogValidationError(f"cannot read {treeish}: {listing.stderr.strip()}")
+    rows = [line.split(None, 3) for line in listing.stdout.splitlines()]
+    blobs = [(row[3], row[2]) for row in rows if not row[3].endswith("/.DS_Store")]
     prefix = f"{CATALOG_DIRECTORY}/"
     contents = read_blobs(repository_root, [blob for _, blob in blobs])
-    return assemble(
-        (path.removeprefix(prefix), text)
-        for (path, _), text in zip(blobs, contents)
-        if not path.endswith("/.DS_Store")
+    return [(path[len(prefix) :], text) for (path, _), text in zip(blobs, contents)]
+
+
+def fragment_versions(repository_root: pathlib.Path, ref: str) -> FragmentVersions:
+    """The main commit that added each fragment `ref` can see; one not on main yet is pending."""
+    try:
+        placement = place(repository_root, ref)
+    except VersionError as error:
+        raise CatalogValidationError(str(error)) from error
+    log = git(
+        repository_root,
+        "log",
+        "--first-parent",
+        "--diff-merges=first-parent",
+        "--no-renames",
+        "--diff-filter=A",
+        "--name-only",
+        "--format=%x00%H",
+        placement.commit.sha,
+        "--",
+        f"{CATALOG_DIRECTORY}/{FRAGMENT_DIRECTORY}/",
     )
+    if log.returncode != 0:
+        raise CatalogValidationError(f"cannot read the fragments' history: {log.stderr.strip()}")
+    added_by: dict[str, MainCommit] = {}
+    prefix = f"{CATALOG_DIRECTORY}/"
+    commit: Optional[MainCommit] = None
+    for line in log.stdout.splitlines():
+        if line.startswith("\0"):
+            commit = placement.history.by_sha.get(line[1:])
+        elif line.startswith(prefix) and commit is not None:
+            # The log runs newest first; the newest add is the one in the tree.
+            added_by.setdefault(line[len(prefix) :], commit)
+    return FragmentVersions(added_by, placement.next)
+
+
+def read_catalog_at(repository_root: pathlib.Path, treeish: str) -> Optional[ReleaseNoteCatalog]:
+    """The catalog in a commit; None when it has none."""
+    documents = documents_at(repository_root, treeish)
+    if not documents:
+        return None
+    versions = fragment_versions(repository_root, treeish) if has_fragments(documents) else None
+    return assemble(documents, versions)
+
+
+def read_working_catalog(repository_root: pathlib.Path) -> ReleaseNoteCatalog:
+    """The catalog in the working tree; a fragment HEAD's main history hasn't added is pending."""
+    documents = documents_in(repository_root / CATALOG_DIRECTORY)
+    versions = fragment_versions(repository_root, "HEAD") if has_fragments(documents) else None
+    return assemble(documents, versions)
 
 
 def legacy_entries_at(repository_root: pathlib.Path, treeish: str) -> Optional[dict[str, tuple[str, str]]]:
@@ -403,79 +507,107 @@ def file_at(repository_root: pathlib.Path, object_name: str) -> Optional[str]:
 # MARK: - Validation
 
 
-def validate_working_catalog(repository_root: pathlib.Path) -> ReleaseNoteCatalog:
-    catalog = read_catalog(repository_root / CATALOG_DIRECTORY)
+def validate_working_tree(repository_root: pathlib.Path) -> list[NotesFile]:
+    """The notes in the working tree, checked without git."""
+    files = notes_files(documents_in(repository_root / CATALOG_DIRECTORY))
     version_file = repository_root / VERSION_FILE_PATH
-    newest = catalog.newest
-    if version_file.is_file() and newest is not None:
-        marketing_version = Version.from_version_file(version_file.read_text(), VERSION_FILE_PATH)
-        if newest.version > marketing_version:
+    if version_file.is_file():
+        anchor = Version.from_version_file(version_file.read_text(), VERSION_FILE_PATH)
+        for file in files:
+            if file.entries and file.named_version is not None and file.named_version > anchor:
+                raise CatalogValidationError(
+                    f"{CATALOG_DIRECTORY}/{file.path} adds entries to a version past {anchor}; "
+                    f"new entries go in {CATALOG_DIRECTORY}/{FRAGMENT_DIRECTORY}/<slug>.json"
+                )
+    return files
+
+
+def needs_note(path: str) -> bool:
+    """Whether a change to `path` reaches the apps, so its pull request needs a release note."""
+    if path in NOTE_FREE_FILES or path.endswith(".md"):
+        return False
+    if path.startswith(NOTED_FOLDERS):
+        return True
+    if path.startswith(NOTE_FREE_FOLDERS):
+        return False
+    return "/" in path or not path.startswith(".")
+
+
+def validate_pull_request(repository_root: pathlib.Path, base: str, head: str = "HEAD") -> tuple[str, ...]:
+    """The entries a pull request adds, after checking it follows the fragment rules.
+
+    The pull request is what `head` changes since its merge base with `base`.
+    """
+    merge_base = git(repository_root, "merge-base", base, head)
+    if merge_base.returncode != 0:
+        raise CatalogValidationError(f"{head} shares no history with {base}")
+    merge_base_sha = merge_base.stdout.strip()
+    diff = git(repository_root, "diff", "--no-renames", "--name-only", merge_base_sha, head)
+    if diff.returncode != 0:
+        raise CatalogValidationError(f"cannot compare {head} with {base}: {diff.stderr.strip()}")
+    changed = diff.stdout.splitlines()
+
+    if VERSION_FILE_PATH in changed:
+        before = file_at(repository_root, f"{merge_base_sha}:{VERSION_FILE_PATH}")
+        after = file_at(repository_root, f"{head}:{VERSION_FILE_PATH}")
+        if before is None or after is None:
+            raise CatalogValidationError(f"pull requests keep {VERSION_FILE_PATH}")
+        try:
+            previous = Version.from_version_file(before, f"{base}:{VERSION_FILE_PATH}")
+            proposed = Version.from_version_file(after, f"{head}:{VERSION_FILE_PATH}")
+        except VersionError as error:
+            raise CatalogValidationError(str(error)) from error
+        if (proposed.major, proposed.minor) <= (previous.major, previous.minor):
             raise CatalogValidationError(
-                f"{newest.version.path} is newer than MARKETING_VERSION {marketing_version}"
+                f"{VERSION_FILE_PATH} changes only to open a new release line "
+                f"(Scripts/set-version.sh --release); versions come from git, so leave it at {previous}"
             )
-    return catalog
 
+    before_files = {file.path: file for file in notes_files(documents_at(repository_root, merge_base_sha))}
+    after_files = {file.path: file for file in notes_files(documents_at(repository_root, head))}
 
-def validate_staged_entry(repository_root: pathlib.Path) -> tuple[str, ...]:
-    """The entries a fix commit adds, after checking it adds them where they belong."""
-    staged_version_file = file_at(repository_root, f":{VERSION_FILE_PATH}")
-    if staged_version_file is None:
-        raise CatalogValidationError(f"stage {VERSION_FILE_PATH} with the current commit")
-    version = Version.from_version_file(staged_version_file, f"staged {VERSION_FILE_PATH}")
-    current = read_catalog_at(repository_root, ":")
-    if current is None:
-        raise CatalogValidationError(f"stage {version.path} with this change's release notes")
-    current_entries = current.entries
-
-    has_head = git(repository_root, "rev-parse", "--verify", "--quiet", "HEAD").returncode == 0
-    previous = read_catalog_at(repository_root, "HEAD") if has_head else None
-    if previous is not None:
-        previous_content = {identifier: entry.content for identifier, entry in previous.entries.items()}
-        current_content = {identifier: entry.content for identifier, entry in current_entries.items()}
-    else:
-        previous_content = (legacy_entries_at(repository_root, "HEAD") if has_head else None) or {}
-        current_content = {
-            identifier: (entry.category, entry.message) for identifier, entry in current_entries.items()
-        }
-
-    deleted = sorted(previous_content.keys() - current_content.keys())
-    if deleted:
-        raise CatalogValidationError(
-            f"commits must not delete release-note entries: {', '.join(deleted)}"
+    changed_entries = []
+    for path, file in before_files.items():
+        later = {entry.identifier: entry for entry in after_files[path].entries} if path in after_files else {}
+        changed_entries.extend(
+            entry.identifier
+            for entry in file.entries
+            if entry.identifier not in later or later[entry.identifier].content != entry.content
         )
-    rewritten = [
-        identifier
-        for identifier, content in previous_content.items()
-        if current_content[identifier] != content
-    ]
-    if rewritten:
+    if changed_entries:
         raise CatalogValidationError(
-            f"commits must not change or move release-note entries: {', '.join(rewritten)}"
+            f"release-note entries on main never change, move or go away: {', '.join(changed_entries)}"
         )
 
-    added = tuple(identifier for identifier in current_entries if identifier not in previous_content)
-    if not added:
-        raise CatalogValidationError(
-            f"add at least one new release-note entry to {version.path}"
-        )
-    misplaced = [identifier for identifier in added if current_entries[identifier].version != version]
+    added: list[str] = []
+    misplaced: list[str] = []
+    for path, file in after_files.items():
+        earlier = {entry.identifier for entry in before_files[path].entries} if path in before_files else set()
+        new = [entry.identifier for entry in file.entries if entry.identifier not in earlier]
+        if file.is_fragment and path not in before_files:
+            added.extend(new)
+        else:
+            misplaced.extend(new)
     if misplaced:
         raise CatalogValidationError(
-            f"new release-note entries belong in {version.path}: {', '.join(misplaced)}"
+            f"new entries go in a new fragment, {CATALOG_DIRECTORY}/{FRAGMENT_DIRECTORY}/<slug>.json, "
+            f"not in a version file or an existing fragment: {', '.join(misplaced)}"
         )
-    newest = current.newest
-    if newest is not None and newest.version != version:
+    noted = [path for path in changed if needs_note(path)]
+    if noted and not added:
         raise CatalogValidationError(
-            f"{newest.version.path} is newer than the staged MARKETING_VERSION {version}"
+            f"this pull request changes the apps ({noted[0]}"
+            + (f" and {len(noted) - 1} more" if len(noted) > 1 else "")
+            + f"); add a fragment, {CATALOG_DIRECTORY}/{FRAGMENT_DIRECTORY}/<slug>.json, with its entries"
         )
-    return added
+    return tuple(added)
 
 
 # MARK: - Writing
 
 
 def format_document(document: dict[str, object]) -> str:
-    """A version file's canonical text: two-space JSON with platform lists on one line."""
+    """A notes file's canonical text: two-space JSON with platform lists on one line."""
     text = json.dumps(document, indent=2, ensure_ascii=False)
     text = re.sub(
         r'"platforms": \[([^\]]*)\]',
@@ -487,17 +619,16 @@ def format_document(document: dict[str, object]) -> str:
     return text + "\n"
 
 
-def append_entry(repository_root: pathlib.Path, version: Version, entry: dict[str, object]) -> pathlib.Path:
-    """Add an entry to a version's notes file, creating the file when it is the version's first."""
-    path = repository_root / version.path
-    if path.is_file():
-        document = json.loads(path.read_text(), object_pairs_hook=unique_json_object)
-    else:
-        document = {"entries": []}
-    document["entries"].append(entry)
+def write_fragment(repository_root: pathlib.Path, slug: str, entries: list[dict[str, object]]) -> pathlib.Path:
+    """Write a new fragment with `entries`, refusing to replace one."""
+    relative_path = f"{FRAGMENT_DIRECTORY}/{slug}.json"
+    path = repository_root / CATALOG_DIRECTORY / relative_path
+    if path.exists():
+        raise CatalogValidationError(f"{CATALOG_DIRECTORY}/{relative_path} already exists")
+    text = format_document({"entries": entries})
+    notes_file(relative_path, text)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(format_document(document))
-    parse_version_document(path.read_text(), version, version.path)
+    path.write_text(text)
     return path
 
 
@@ -507,25 +638,31 @@ def append_entry(repository_root: pathlib.Path, version: Version, entry: dict[st
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--repository-root", type=pathlib.Path, default=pathlib.Path.cwd())
-    parser.add_argument("--require-staged-entry", action="store_true")
+    parser.add_argument("--pull-request", metavar="BASE", help="check what HEAD changes since its merge base with BASE")
+    parser.add_argument("--head", default="HEAD", help="the pull request's commit (default HEAD)")
     return parser.parse_args()
 
 
 def main() -> int:
     arguments = parse_arguments()
     try:
-        if arguments.require_staged_entry:
-            added_entries = validate_staged_entry(arguments.repository_root)
-            print(f"Validated new release-note entries: {', '.join(added_entries)}")
+        if arguments.pull_request:
+            added = validate_pull_request(arguments.repository_root, arguments.pull_request, arguments.head)
+            if added:
+                print(f"Validated the pull request's release notes: {', '.join(added)}")
+            else:
+                print("Validated the pull request: it changes neither the apps nor their release notes.")
             return 0
 
-        catalog = validate_working_catalog(arguments.repository_root)
+        files = validate_working_tree(arguments.repository_root)
+        fragments = [file for file in files if file.is_fragment]
+        entries = sum(len(file.entries) for file in files)
         print(
-            f"Validated {len(catalog.entries)} release-note entries "
-            f"in {len(catalog.versions)} versions."
+            f"Validated {entries} release-note entries "
+            f"in {len(files) - len(fragments)} version files and {len(fragments)} fragments."
         )
         return 0
-    except (CatalogValidationError, OSError) as error:
+    except (CatalogValidationError, VersionError, OSError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
 

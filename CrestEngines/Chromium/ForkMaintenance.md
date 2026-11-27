@@ -397,11 +397,11 @@ release. `upstream_version` can select a specific release, and
 `allow_major=true` allows a milestone. The repository must allow Actions to
 create pull requests.
 
-An update PR contains the new pins, host hashes, a patch version increment, a
-release-note entry, and the plan's summary. Its engine is built in the workspace
-and not published. It waits in a draft release, `chromium-engine-candidate-<key>`,
-which no release workflow or install script reads, since they ask only for
-`chromium-engine-<key>`. A maintainer tests it, publishes it with
+An update PR contains the new pins, host hashes, a release-note fragment, and
+the plan's summary; it takes its version from git when it merges. Its engine
+is built in the workspace and not published. It waits in a draft release,
+`chromium-engine-candidate-<key>`, which no release workflow or install script
+reads, since they ask only for `chromium-engine-<key>`. A maintainer tests it, publishes it with
 `publish-chromium-engine.py`, which removes the candidate, and then merges. A release run that finds no engine
 for its commit builds one on the Mac, so publish before merging. App release jobs
 consume only the artifact whose engine key matches their own source. No signing
