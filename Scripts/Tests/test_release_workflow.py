@@ -109,9 +109,11 @@ class ReleasePreflightTests(unittest.TestCase):
         self.git("checkout", "updates")
         filename = "appcast-development.xml" if channel == "development" else "appcast.xml"
         short_version = f"<sparkle:shortVersionString>{version}</sparkle:shortVersionString>" if version else ""
+        # Stable items carry no channel.
+        item_channel = "" if channel == "stable" else f"<sparkle:channel>{channel}</sparkle:channel>"
         (self.repository / filename).write_text(
             '<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">'
-            f"<channel><item><sparkle:channel>{channel}</sparkle:channel>"
+            f"<channel><item>{item_channel}"
             f"<sparkle:version>{build}</sparkle:version>{short_version}"
             f'<enclosure url="https://github.com/crest-browser/Crest/releases/download/{tag}/'
             f'Installer-Crest-0.5.25-{channel}-2026-09-03-{commit[:7]}.dmg" />'
@@ -184,6 +186,13 @@ class ReleasePreflightTests(unittest.TestCase):
         unchanged, outputs = self.preflight()
         self.assertEqual(unchanged.returncode, 0, unchanged.stderr)
         self.assertEqual(outputs["should_publish"], "false")
+
+        # A Stable installer names no commit, but its tag names its version,
+        # which belongs to one commit, so the same Stable release keeps it too.
+        self.publish_appcast("stable", self.current_commit, "v0.5.26", version="0.5.26")
+        stable, outputs = self.preflight(GITHUB_EVENT_NAME="push", GITHUB_REF_TYPE="tag", GITHUB_REF_NAME="v0.5.26")
+        self.assertEqual(stable.returncode, 0, stable.stderr)
+        self.assertEqual(outputs["release_tag"], "v0.5.26")
 
     def test_interrupted_publications_cannot_reuse_another_runs_release_tag(self) -> None:
         self.publish_appcast("nightly", self.previous_commit, "nightly-build", build=1070)

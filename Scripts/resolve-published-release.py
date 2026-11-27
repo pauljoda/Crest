@@ -5,9 +5,10 @@ Without `--require-newer`, prints the source commit of the channel's latest
 published item. With it, fails unless the version about to be published is
 newer than every version the channel offers, because Crest refuses an update
 that isn't. The one exception is the commit the channel already publishes,
-which keeps its version. An experimental build is compared only with its own
-branch's, since experimental versions follow each branch's merge base; a tie
-there is reported, not refused.
+which keeps its version: the installer names it, and a Stable release's tag
+names its version, which belongs to one commit on main. An experimental build
+is compared only with its own branch's, since experimental versions follow each
+branch's merge base; a tie there is reported, not refused.
 """
 
 from __future__ import annotations
@@ -28,6 +29,8 @@ from crest_version import Version, VersionError  # noqa: E402
 SPARKLE_NAMESPACE = "http://www.andymatuschak.org/xml-namespaces/sparkle"
 ROLLING_CHANNELS = ("development", "nightly")
 CHANNELS = ("stable", *ROLLING_CHANNELS, "experimental")
+# experimental-<version>-<branch>-<date>-<build>-r<run>.<attempt>
+EXPERIMENTAL_TAG = re.compile(r"^experimental-[0-9.]+-(?P<branch>.+)-\d{4}-\d{2}-\d{2}-\d+-r\d+\.\d+$")
 
 
 @dataclass(frozen=True)
@@ -39,6 +42,18 @@ class Publication:
     # The source commit's prefix, from the installer's name; Stable installers name none.
     commit_prefix: Optional[str]
     release_tag: str
+
+    @property
+    def branch_slug(self) -> Optional[str]:
+        """The branch an experimental release was built from."""
+        match = EXPERIMENTAL_TAG.fullmatch(self.release_tag)
+        return match.group("branch") if match else None
+
+    def is_commit(self, source_sha: str, version: Version) -> bool:
+        """Whether this item publishes `source_sha`, which carries `version`."""
+        if self.commit_prefix is not None:
+            return source_sha.startswith(self.commit_prefix)
+        return self.release_tag == f"v{version}"
 
 
 def publications(appcast: str, channel: str) -> list[Publication]:
@@ -83,19 +98,13 @@ def newer_than_published(
     """None when `version` may be published, a note on a tolerated tie, or a refusal as VersionError."""
     items = [item for item in publications(appcast, channel) if item.version is not None]
     if branch_slug is not None:
-        # experimental-<version>-<branch>-<date>-…
-        items = [
-            item for item in items if item.release_tag.startswith(f"experimental-{item.version}-{branch_slug}-")
-        ]
+        items = [item for item in items if item.branch_slug == branch_slug]
     if not items:
         return None
     highest = max(item.version for item in items)
     if version > highest:
         return None
-    same_commit = any(
-        item.version == version and item.commit_prefix and source_sha.startswith(item.commit_prefix)
-        for item in items
-    )
+    same_commit = any(item.version == version and item.is_commit(source_sha, version) for item in items)
     if version == highest and (same_commit or branch_slug is not None):
         return (
             f"Crest {version} ties the {channel} channel's newest version; copies that already have "
