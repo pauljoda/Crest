@@ -41,7 +41,7 @@ public sealed record FinishDeletingSpace(Guid WorkspaceId, Guid WindowId, Guid S
     /// Space the session no longer holds is the session's to refuse. A deleted
     /// Space leaves nothing in this device's link, agent or site preferences,
     /// except the site choices a primary kept for the group it handed over,
-    /// which its successor keeps.
+    /// which its successor keeps, and the profiles it erased keep no zoom.
     internal override void Commit(CrestApp app, ChangeFeed changes) {
         var deletion = app.Device.Workspace(WorkspaceId).Current.PendingDeletion(SpaceId);
         if (deletion is not null && deletion.Erasing.Any(profile => !app.DataDeletions.Erased(profile)))
@@ -53,6 +53,7 @@ public sealed record FinishDeletingSpace(Guid WorkspaceId, Guid WindowId, Guid S
         app.Device.ForgetAgents(SpaceId, changes);
         app.Device.ForgetDownloads(SpaceId, changes);
         app.Device.ForgetBlockingSites(SpaceId, changes);
+        if (deletion is not null) app.Device.ForgetSiteZoom(deletion.Erasing);
     }
 
     #endregion

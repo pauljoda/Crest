@@ -152,7 +152,8 @@ internal sealed class SqliteConnection : IDisposable {
         Pages = ReadPages(),
         Downloads = ReadDownloads(),
         SyncsWithICloud = ReadSyncsWithICloud(),
-        SiteControlTopActions = ReadSiteControlTopActions()
+        SiteControlTopActions = ReadSiteControlTopActions(),
+        SiteZoom = ReadSiteZoom()
     };
 
     /// How this device shows pages, or the defaults until the store keeps
@@ -344,6 +345,21 @@ internal sealed class SqliteConnection : IDisposable {
             var origin = new SiteOrigin(Sqlite.ColumnText(statement, 0), Sqlite.ColumnText(statement, 1),
                 Sqlite.sqlite3_column_int(statement, 2));
             if (origin.IsValid) choices.Add(new(null, origin, engine));
+        });
+        return choices;
+    }
+
+    /// The zoom each profile keeps for its hosts, least recent first. A row
+    /// whose profile, host or zoom does not read is left out.
+    private List<SiteZoomChoice> ReadSiteZoom() {
+        var choices = new List<SiteZoomChoice>();
+        Rows("SELECT profile, host, factor FROM device_site_zoom ORDER BY position", statement => {
+            var host = Sqlite.ColumnText(statement, 1);
+            var factor = Sqlite.sqlite3_column_double(statement, 2);
+            if (Identity(statement, 0) is { } profile && host.Length is > 0 and <= SiteOrigin.MaximumHostLength
+                && host == host.ToLowerInvariant().TrimEnd('.') && Uri.CheckHostName(host.Trim('[', ']')) != UriHostNameType.Unknown
+                && SiteZoomLedger.Allows(factor))
+                choices.Add(new(profile, host, factor));
         });
         return choices;
     }
@@ -641,6 +657,18 @@ internal sealed class SqliteConnection : IDisposable {
                 Checked(Sqlite.sqlite3_bind_int64(statement, 3, choice.Origin.Port));
                 Bind(statement, 4, choice.Engine.Name);
                 Checked(Sqlite.sqlite3_bind_int64(statement, 5, index));
+            });
+    }
+
+    /// The zoom each profile keeps for its hosts, least recent first.
+    internal void WriteSiteZoom(IReadOnlyList<SiteZoomChoice> choices) {
+        Execute("DELETE FROM device_site_zoom");
+        InsertInOrder("INSERT INTO device_site_zoom(profile, host, factor, position) VALUES(?,?,?,?)",
+            choices, (statement, choice, index) => {
+                Bind(statement, 1, Spelling(choice.ProfileId));
+                Bind(statement, 2, choice.Host);
+                Checked(Sqlite.sqlite3_bind_double(statement, 3, choice.Factor));
+                Checked(Sqlite.sqlite3_bind_int64(statement, 4, index));
             });
     }
 
