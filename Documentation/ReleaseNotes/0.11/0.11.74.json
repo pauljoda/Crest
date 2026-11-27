@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-close-button-stays-after-close",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "In a long tab list, closing a tab with its close button leaves the button showing on the tab that moves under the pointer, so you can close the next one with another click instead of opening it."
+    }
+  ]
+}

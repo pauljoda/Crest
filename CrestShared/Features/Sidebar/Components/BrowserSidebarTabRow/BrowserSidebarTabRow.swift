@@ -17,6 +17,7 @@ struct BrowserSidebarTabRow: View {
     var isSplitGroupMember = false
 
     @Environment(\.sidebarSpacePresentation) private var spacePresentation
+    @Environment(\.sidebarRecycledRowOffset) private var recycledRowOffset
     @State private var isHovering = false
     @State private var renameRequest: BrowserTabRuntimeAssignment?
     @State private var iconRequest: BrowserTabRuntimeAssignment?
@@ -47,10 +48,18 @@ struct BrowserSidebarTabRow: View {
             )
         )
         .onChange(of: runtimeAssignment) { _, assignment in
-            isHovering = false
+            // A recycled row that shows the next tab in the same place, as
+            // when the tab above it closes, is still under the pointer: the
+            // pointer never left it, so nothing would say it is there again.
+            if recycledRowOffset == nil { isHovering = false }
             guard renameRequest != assignment else { return }
             cancelTitleEditing()
             iconRequest = nil
+        }
+        .onChange(of: recycledRowOffset) {
+            // A recycled row that moves elsewhere in its run has left the
+            // pointer behind.
+            isHovering = false
         }
         .modifier(
             SidebarSpaceRoleCleanupModifier(
