@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-11-new-look",
-    "development": "chromium-upstream-158-0-8127-90-d12f3208c6b4",
+    "development": "versions-from-git",
     "nightly": "picture-in-picture-settings-window-fallback"
   }
 }
