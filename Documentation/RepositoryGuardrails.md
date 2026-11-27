@@ -18,30 +18,32 @@ Scripts/check-swift-format.sh --base main
 
 The script only invokes strict `swift-format lint`. It never runs formatter write mode and never performs a repository-wide formatting pass.
 
-## Fix commit versions
+## Versions
 
-Every verified fix advances the patch component of Crest's public version in
-the same commit:
+Pull requests never change Crest's version. `Config/Version.xcconfig` holds
+the release line's anchor version, and each commit on main's first-parent
+history counts one patch past it:
 
 ```sh
-Scripts/set-version.sh --patch
-git add Config/Version.xcconfig
-Scripts/check-version.sh --fix-commit
+python3 Scripts/crest_version.py            # the version of HEAD
+python3 Scripts/crest_version.py --at REF   # the version of REF
+python3 Scripts/crest_version.py next       # the version the next commit on main gets
 ```
 
-Pass a positive count to `--patch` only when one focused commit intentionally
-contains that many independently verified fixes. The fix-commit check reads the
-Git index and rejects a missing, unstaged, non-increasing, or major/minor bump.
-Changing release lines uses `Scripts/set-version.sh --release X.Y.Z` and remains
-an explicit release-and-tag decision. Neither path changes
-`CURRENT_PROJECT_VERSION`; Xcode Cloud owns distributed build numbers.
+A branch takes the version of its merge base with `main`. The script needs the
+full history and refuses a shallow clone. Every published build passes its
+version to `xcodebuild` as `MARKETING_VERSION`; `Scripts/check-version.sh`
+checks that the file holds only the anchor and that the Info.plists take the
+version from the build settings. Opening a release line uses
+`Scripts/set-version.sh --release X.Y.Z` and remains an explicit release
+decision. Neither path changes `CURRENT_PROJECT_VERSION`; the release
+workflows own distributed build numbers.
 
 ## Release notes
 
 `Documentation/ReleaseNotes` is the source for the product site's release notes
-and for GitHub and Sparkle release copy. Each version Crest reaches has one
-file, `<major>.<minor>/<version>.json`, written by the commit that moves
-`MARKETING_VERSION` to it:
+and for GitHub and Sparkle release copy. A pull request that changes app code
+adds one new fragment, `changes/<slug>.json`, holding its entries:
 
 ```json
 {
@@ -51,31 +53,45 @@ file, `<major>.<minor>/<version>.json`, written by the commit that moves
 }
 ```
 
+A fragment's entries belong to the version of the commit that added it to
+`main`. The `<major>.<minor>/<version>.json` files hold the entries of the
+versions from before versions came from git, and the curated write-ups.
+
 `new`, `improved`, and `fixed` entries are public; `internal` records a change
 that should not be announced. Messages state the user outcome directly and do
 not inherit commit wording. `platforms` lists `mac` or `ios` for a change that
 reaches only that platform; leave it out for a change that reaches both. IDs
-are unique across every version and survive rebases and history rewrites. Never
+are unique across every file and survive rebases and history rewrites. Never
 reuse, change, move, or delete an entry; release order is version order, then
-the order within a file.
+a version's file, then its fragments by name, each as written.
 
 A version published as Stable carries its curated write-up as `release`: a
 `summary` and lists of `added`, `changed`, `fixed`, `security`, `removed`, and
-`upgrading` items. An item is text, or `{ "text": …, "platforms": [...] }`. The
-write-up may be written or edited after the version lands. A Stable release
-publishes it on GitHub and in Sparkle; other releases list the entries after
-their channel's cursor. Successful publications keep the per-channel cursors in
-the workflow-owned `updates` branch and advance only the selected channel in
-the same commit as its signed appcast.
+`upgrading` items. An item is text, or `{ "text": …, "platforms": [...] }`. A
+new Stable release adds its write-up as a version file holding only
+`release`, named for the version of the commit that adds it. A write-up may be
+written or edited at any time. A Stable release publishes it on GitHub and in
+Sparkle; other releases list the entries after their channel's cursor.
+Successful publications keep the per-channel cursors in the workflow-owned
+`updates` branch and advance only the selected channel in the same commit as
+its signed appcast.
 
-Every product or architecture commit adds at least one new entry.
-`Scripts/check-version.sh --fix-commit` rejects a patch bump unless the staged
-version's file holds new entries and no newer file exists. Validate the working
-notes directly with:
+The **Version and release notes** check runs on every pull request. It fails a
+pull request that changes app code without adding a fragment, that changes,
+moves or deletes an existing entry, that adds entries anywhere but a new
+fragment, or that changes `Config/Version.xcconfig` without opening a new
+release line. Documentation, Markdown and the repository's own tooling
+(`.github/`, `Scripts/` outside `Scripts/control-plane/`, `ci_scripts/`) need
+no fragment. Check a branch's committed changes, or the working notes, with:
 
 ```sh
+python3 Scripts/release_note_catalog.py --pull-request origin/main
 python3 Scripts/release_note_catalog.py
 ```
+
+`Scripts/convert-version-bump.py` turns a branch made under the earlier
+per-version rules, with its version bump and entries in version files, into
+one fragment.
 
 `Scripts/export-release-history.py` turns the notes, the release tags and the
 version history into one JSON file. The product site,

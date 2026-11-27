@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import pathlib
+import sys
 import unittest
 
 
@@ -18,6 +19,8 @@ def load_script_module(name: str, filename: str):
     if specification is None or specification.loader is None:
         raise RuntimeError(f"Unable to load {path}")
     module = importlib.util.module_from_spec(specification)
+    # Dataclasses look their module up while it loads.
+    sys.modules[name] = module
     specification.loader.exec_module(module)
     return module
 

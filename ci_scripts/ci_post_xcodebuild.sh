@@ -24,17 +24,10 @@ repository_path="${CI_PRIMARY_REPOSITORY_PATH:-}"
 [ -n "$repository_path" ] \
     || fail "CI_PRIMARY_REPOSITORY_PATH is unavailable."
 
-version_file="$repository_path/Config/Version.xcconfig"
-[ -f "$version_file" ] \
-    || fail "Config/Version.xcconfig is missing from the primary repository."
-
+# The same version ci_pre_xcodebuild.sh stamped, computed again from git.
 expected_version="$(
-    sed -nE \
-        's/^[[:space:]]*MARKETING_VERSION[[:space:]]*=[[:space:]]*([^[:space:]]+)[[:space:]]*$/\1/p' \
-        "$version_file"
-)"
-[ -n "$expected_version" ] \
-    || fail "Unable to resolve MARKETING_VERSION from Config/Version.xcconfig."
+    python3 "$repository_path/Scripts/crest_version.py" --repository-root "$repository_path"
+)" || fail "Unable to compute Crest's version for this commit."
 
 expected_build="${CI_BUILD_NUMBER:-}"
 [ -n "$expected_build" ] \
@@ -73,7 +66,7 @@ actual_bundle_identifier="$(plutil -extract CFBundleIdentifier raw -o - "$app_pl
 [ "$actual_bundle_identifier" = "com.pauldavis.crest" ] \
     || fail "The archived app bundle identifier is '$actual_bundle_identifier', expected com.pauldavis.crest."
 [ "$actual_version" = "$expected_version" ] \
-    || fail "The archived app is version $actual_version, but Config/Version.xcconfig requires $expected_version."
+    || fail "The archived app is version $actual_version, but this commit's version is $expected_version."
 [ "$actual_build" = "$expected_build" ] \
     || fail "The archived app build is $actual_build, but Xcode Cloud assigned $expected_build."
 

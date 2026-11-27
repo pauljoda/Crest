@@ -27,25 +27,26 @@ only the core's `LinkToCopy` makes, and new trackers are `$removeparam` rules
 in the core, never Swift code. The contribution skill's Architecture section
 has the details.
 
-## Versioning completed work
+## Versions come from git
 
-- Every committed app-code change advances `MARKETING_VERSION` with
-  `Scripts/set-version.sh --patch` unless the commit explicitly opens a new
-  release line.
-- Keep routine development versions on the current release line until a
-  maintainer explicitly requests a release-line change; the version already in
-  `main` is the source of truth.
-- Do not increment `CURRENT_PROJECT_VERSION`; the release pipeline owns
+- Pull requests never change the version. `Config/Version.xcconfig` holds the
+  release line's anchor version and changes only when a maintainer opens a
+  new line with `Scripts/set-version.sh --release X.Y.Z`.
+- Every commit on `main` takes its version from git: the anchor plus the
+  commits on main's first-parent history since it, as
+  `Scripts/crest_version.py` computes. Pull requests therefore merge in any
+  order without re-bumping.
+- Do not change `CURRENT_PROJECT_VERSION`; the release pipeline owns
   distributed build numbers.
-- Before committing app-code changes, stage `Config/Version.xcconfig` with the
-  task-owned files and run `Scripts/check-version.sh --fix-commit`.
 
 ## Explicit release notes
 
-- Every committed app-code or architecture-significant change adds its entries
-  to its version's file, `Documentation/ReleaseNotes/<major>.<minor>/<version>.json`,
-  in the same commit. Add `"platforms": ["mac"]` or `["ios"]` when a change
-  reaches only that platform.
+- A pull request that changes app code adds one new fragment,
+  `Documentation/ReleaseNotes/changes/<slug>.json`, holding its entries as
+  `{"entries": [...]}`. The entries belong to the version of the commit that
+  merges the pull request; one with several fixes lists one entry for each.
+  Add `"platforms": ["mac"]` or `["ios"]` when a change reaches only that
+  platform.
 - Use a unique lowercase kebab-case ID and one of `new`, `improved`, `fixed`,
   or `internal`. Use `internal` only when the change should not appear in
   public release notes.
@@ -54,9 +55,12 @@ has the details.
 - When a change includes a community contribution, from a pull request's
   author or co-author, end its public entry, and its line in the release
   write-up, with `Thanks to <Name> (@<GitHub login>).`
-- Never reuse, change, move, or delete an existing entry. Stage the version's
-  notes file with the task-owned files before running
-  `Scripts/check-version.sh --fix-commit`.
+- Never reuse, change, move, or delete an existing entry, whether it is in a
+  fragment or in the per-version files under
+  `Documentation/ReleaseNotes/<major>.<minor>/`, which are history. The
+  **Version and release notes** check enforces these rules on every pull
+  request; after committing, run it locally with
+  `python3 Scripts/release_note_catalog.py --pull-request origin/main`.
 
 ## Generated localization catalog
 

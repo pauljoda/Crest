@@ -106,10 +106,10 @@ jobs:
           retry_github git fetch --force origin \
             "refs/heads/updates:refs/remotes/origin/updates"
 
+          # A branch carries the version of its merge base with main, so the
+          # Development build it moves people to is always newer.
           marketing_version="$(
-            sed -nE \
-              's/^MARKETING_VERSION[[:space:]]*=[[:space:]]*([^[:space:]]+)$/\1/p' \
-              Config/Version.xcconfig
+            python3 Scripts/crest_version.py --main "refs/remotes/origin/${default_branch}"
           )"
           build_epoch=1000
           build_number="$((build_epoch + GITHUB_RUN_NUMBER))"
@@ -193,6 +193,19 @@ jobs:
             fi
           fi
 
+          # A branch's builds carry its merge base's version, so they may tie
+          # one another, but going below the branch's last build means main's
+          # anchor went down.
+          if [[ -f "$experimental_appcast" ]]; then
+            python3 Scripts/resolve-published-release.py \
+              --appcast "$experimental_appcast" \
+              --channel experimental \
+              --require-newer "$marketing_version" \
+              --source-sha "$source_sha" \
+              --branch-slug "$branch_slug" \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
+
           # First publication, or a rebased branch whose prior commit is no longer
           # reachable, starts release notes at the branch point with main.
           if [[ -z "$previous_commit" ]]; then
@@ -271,6 +284,7 @@ jobs:
           DEVELOPER_ID_PROVISIONING_PROFILE_BASE64: ${{ secrets.DEVELOPER_ID_PROVISIONING_PROFILE_BASE64 }}
           RELEASE_ASSET_BASE: ${{ needs.preflight.outputs.asset_base }}
           RELEASE_BUILD_NUMBER: ${{ needs.preflight.outputs.build_number }}
+          RELEASE_MARKETING_VERSION: ${{ needs.preflight.outputs.marketing_version }}
           SOURCE_SHA: ${{ needs.preflight.outputs.source_sha }}
         run: |
           set -euo pipefail
@@ -387,6 +401,7 @@ jobs:
             -destination 'generic/platform=macOS' \
             -archivePath "$archive_path" \
             -derivedDataPath "$RUNNER_TEMP/crest-experimental-derived-data" \
+            MARKETING_VERSION="$RELEASE_MARKETING_VERSION" \
             CURRENT_PROJECT_VERSION="$RELEASE_BUILD_NUMBER" \
             CREST_DEFAULT_UPDATE_CHANNEL=development \
             DEVELOPMENT_TEAM="$team_id" \
@@ -454,6 +469,7 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=macOS' \
             -derivedDataPath "$RUNNER_TEMP/crest-experimental-derived-data" \
+            MARKETING_VERSION="$RELEASE_MARKETING_VERSION" \
             CURRENT_PROJECT_VERSION="$RELEASE_BUILD_NUMBER" \
             CODE_SIGNING_ALLOWED=NO
           ui_framework="$RUNNER_TEMP/crest-experimental-derived-data/Build/Products/Release/CrestChromiumUIProduct.framework"
@@ -480,6 +496,7 @@ jobs:
           done
           test "$(defaults read "$chromium_app/Contents/Info" CFBundleIdentifier)" = "com.pauldavis.crest"
           test "$(defaults read "$chromium_app/Contents/Info" CrestDefaultUpdateChannel)" = "development"
+          test "$(defaults read "$chromium_app/Contents/Info" CFBundleShortVersionString)" = "$RELEASE_MARKETING_VERSION"
           test "$(defaults read "$chromium_app/Contents/Info" CFBundleVersion)" = "$RELEASE_BUILD_NUMBER"
 
           package_disk_image "$chromium_app" "$publish_path/$installer_name" "Crest" chromium
@@ -504,6 +521,7 @@ jobs:
           PREVIOUS_COMMIT: ${{ needs.preflight.outputs.previous_commit }}
           RELEASE_ASSET_BASE: ${{ needs.preflight.outputs.asset_base }}
           RELEASE_BRANCH: ${{ needs.preflight.outputs.branch_name }}
+          RELEASE_MARKETING_VERSION: ${{ needs.preflight.outputs.marketing_version }}
           RELEASE_TAG: ${{ needs.preflight.outputs.release_tag }}
           RELEASE_TITLE: ${{ needs.preflight.outputs.release_title }}
           SOURCE_SHA: ${{ needs.preflight.outputs.source_sha }}
@@ -572,6 +590,7 @@ jobs:
               previous_ref=os.environ["PREVIOUS_COMMIT"],
               previous_entry=None,
               asset_name=os.environ["INSTALLER_NAME"],
+              version=os.environ["RELEASE_MARKETING_VERSION"],
           )
           pathlib.Path(os.environ["RELEASE_NOTES_PATH"]).write_text(notes)
           PY
