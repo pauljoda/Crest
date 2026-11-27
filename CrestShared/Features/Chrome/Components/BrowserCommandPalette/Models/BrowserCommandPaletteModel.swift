@@ -13,8 +13,8 @@ import SwiftUI
 final class BrowserCommandPaletteModel {
     // MARK: - Static Variables
 
-    /// How long Return, Tab or Down wait for the answer to what was typed
-    /// before they act on the rows already shown.
+    /// How long Return, Tab or Down wait for the off-main answer to what was
+    /// typed before the palette asks for it on the main thread.
     private static let keyWait: Duration = .milliseconds(300)
     /// How far apart, in points, the palette and a row may place one pointer
     /// position, as each converts it into window coordinates.
@@ -305,8 +305,11 @@ final class BrowserCommandPaletteModel {
         if held != heldModifiers { heldModifiers = held }
     }
 
-    /// Runs `key` now when the rows answer what was typed, or once they do,
-    /// or after a short wait on the rows already shown.
+    /// Runs `key` now when the rows answer what was typed, or once they do.
+    /// The answer comes off the main thread; after a short wait the palette
+    /// asks for it on the main thread instead, so a key never acts on rows
+    /// that answer an earlier keystroke, such as the search for half a typed
+    /// address.
     private func waitForAnswer(_ key: @escaping () -> Void) {
         guard shownSequence != sequence else {
             key()
@@ -316,11 +319,10 @@ final class BrowserCommandPaletteModel {
         keyWaitTask?.cancel()
         keyWaitTask = Task { [weak self] in
             try? await Task.sleep(for: Self.keyWait)
-            guard !Task.isCancelled, let self else { return }
-            // Keep the key pending if the initial deferred answer has not yet
-            // arrived and no rows exist to act on.
-            guard self.shownSequence > 0 || !self.items.isEmpty else { return }
-            runWaitingKey()
+            guard !Task.isCancelled, let self, waitingKey != nil,
+                let answer = try? browser.core.query(question(for: query))
+            else { return }
+            show(answer, for: sequence)
         }
     }
 
@@ -328,8 +330,6 @@ final class BrowserCommandPaletteModel {
         keyWaitTask?.cancel()
         guard let key = waitingKey else { return }
         waitingKey = nil
-        // A key that waited too long acts on what is shown, whatever it answers.
-        shownSequence = sequence
         key()
     }
 
