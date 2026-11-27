@@ -62,13 +62,23 @@ sed -i '' -E \
     "s/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = $expected_build;/g" \
     "$project_file"
 
+# Crest's version is counted over main's first-parent history
+# (Scripts/crest_version.py), so the archive needs all of it, and main itself
+# when it archives a branch. Config/Version.xcconfig holds only the line's
+# anchor; stamp the computed version into it in this ephemeral checkout so the
+# archive carries the same version a Mac release of this commit would.
+if [ "$(git -C "$repository_path" rev-parse --is-shallow-repository)" = "true" ]; then
+    git -C "$repository_path" fetch --quiet --unshallow origin \
+        || fail "Unable to fetch the history Crest's version is counted over."
+fi
+if ! git -C "$repository_path" rev-parse --verify --quiet refs/remotes/origin/main >/dev/null; then
+    git -C "$repository_path" fetch --quiet origin "+refs/heads/main:refs/remotes/origin/main" \
+        || fail "Unable to fetch main, which Crest's version is counted along."
+fi
 expected_version="$(
-    sed -nE \
-        's/^[[:space:]]*MARKETING_VERSION[[:space:]]*=[[:space:]]*([^[:space:]]+)[[:space:]]*$/\1/p' \
-        "$version_file"
-)"
-[ -n "$expected_version" ] \
-    || fail "Unable to resolve MARKETING_VERSION from Config/Version.xcconfig."
+    python3 "$repository_path/Scripts/crest_version.py" --repository-root "$repository_path"
+)" || fail "Unable to compute Crest's version for this commit."
+printf 'MARKETING_VERSION = %s\n' "$expected_version" > "$version_file"
 
 if ! build_settings="$(
     xcodebuild \

@@ -87,7 +87,6 @@ jobs:
             done
           }
 
-          marketing_version="$(sed -nE 's/^MARKETING_VERSION[[:space:]]*=[[:space:]]*([^[:space:]]+)$/\1/p' Config/Version.xcconfig)"
           # Preserve Sparkle ordering across the move to the public repository,
           # whose Actions run counter restarted below already-installed builds.
           build_epoch=1000
@@ -117,10 +116,38 @@ jobs:
             channel=nightly
           fi
 
+          # The version comes from git: the anchor in Config/Version.xcconfig
+          # plus the commits on main since it (Scripts/crest_version.py). A
+          # Stable tag must name a commit on main's own history.
+          if [[ "$channel" == "stable" ]]; then
+            marketing_version="$(python3 Scripts/crest_version.py --on-main)"
+          else
+            marketing_version="$(python3 Scripts/crest_version.py)"
+          fi
+
+          # Crest refuses an update that isn't newer than the one it runs, so
+          # the version must be above everything the channel offers, unless
+          # this commit is the one it already publishes.
+          if [[ "$channel" == "development" ]]; then
+            channel_appcast=appcast-development.xml
+          else
+            channel_appcast=appcast.xml
+          fi
+          if git cat-file -e "FETCH_HEAD:${channel_appcast}" 2>/dev/null; then
+            git show "FETCH_HEAD:${channel_appcast}" > "$RUNNER_TEMP/crest-published-${channel_appcast}"
+            python3 Scripts/resolve-published-release.py \
+              --appcast "$RUNNER_TEMP/crest-published-${channel_appcast}" \
+              --channel "$channel" \
+              --require-newer "$marketing_version" \
+              --source-sha "$source_sha" \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
+
           if [[ "$channel" == "stable" ]]; then
             expected_tag="v${marketing_version}"
             if [[ "$GITHUB_REF_TYPE" != "tag" || "$GITHUB_REF_NAME" != "$expected_tag" ]]; then
-              printf 'Stable releases must run from the %s tag.\n' "$expected_tag" >&2
+              printf 'Stable releases run from the tag of their version: %s is %s, so its tag is %s.\n' \
+                "$short_sha" "$marketing_version" "$expected_tag" >&2
               exit 1
             fi
             release_tag="$expected_tag"
@@ -142,7 +169,6 @@ jobs:
           previous_release_note_state="$RUNNER_TEMP/${release_note_state_filename}"
           release_note_state_arguments=(
             marker
-            --catalog Documentation/ReleaseNotes
             --channel "$channel"
           )
           if git cat-file -e "FETCH_HEAD:${release_note_state_filename}" 2>/dev/null; then
@@ -269,6 +295,7 @@ jobs:
           DEVELOPER_ID_PROVISIONING_PROFILE_BASE64: ${{ secrets.DEVELOPER_ID_PROVISIONING_PROFILE_BASE64 }}
           RELEASE_ASSET_BASE: ${{ needs.preflight.outputs.asset_base }}
           RELEASE_BUILD_NUMBER: ${{ needs.preflight.outputs.build_number }}
+          RELEASE_MARKETING_VERSION: ${{ needs.preflight.outputs.marketing_version }}
           SOURCE_SHA: ${{ needs.preflight.outputs.source_sha }}
           RELEASE_CHANNEL: ${{ needs.preflight.outputs.channel }}
         run: |
@@ -386,6 +413,7 @@ jobs:
             -destination 'generic/platform=macOS' \
             -archivePath "$archive_path" \
             -derivedDataPath "$RUNNER_TEMP/crest-release-derived-data" \
+            MARKETING_VERSION="$RELEASE_MARKETING_VERSION" \
             CURRENT_PROJECT_VERSION="$RELEASE_BUILD_NUMBER" \
             CREST_DEFAULT_UPDATE_CHANNEL="$RELEASE_CHANNEL" \
             DEVELOPMENT_TEAM="$team_id" \
@@ -453,6 +481,7 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=macOS' \
             -derivedDataPath "$RUNNER_TEMP/crest-release-derived-data" \
+            MARKETING_VERSION="$RELEASE_MARKETING_VERSION" \
             CURRENT_PROJECT_VERSION="$RELEASE_BUILD_NUMBER" \
             CODE_SIGNING_ALLOWED=NO
           ui_framework="$RUNNER_TEMP/crest-release-derived-data/Build/Products/Release/CrestChromiumUIProduct.framework"
@@ -479,6 +508,7 @@ jobs:
           done
           test "$(defaults read "$chromium_app/Contents/Info" CFBundleIdentifier)" = "com.pauldavis.crest"
           test "$(defaults read "$chromium_app/Contents/Info" CrestDefaultUpdateChannel)" = "$RELEASE_CHANNEL"
+          test "$(defaults read "$chromium_app/Contents/Info" CFBundleShortVersionString)" = "$RELEASE_MARKETING_VERSION"
           test "$(defaults read "$chromium_app/Contents/Info" CFBundleVersion)" = "$RELEASE_BUILD_NUMBER"
 
           package_disk_image "$chromium_app" "$publish_path/$installer_name" "Crest" chromium
@@ -501,6 +531,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PREVIOUS_COMMIT: ${{ needs.preflight.outputs.previous_commit }}
+          RELEASE_MARKETING_VERSION: ${{ needs.preflight.outputs.marketing_version }}
           RELEASE_NOTE_MARKER: ${{ needs.preflight.outputs.release_note_marker }}
           RELEASE_ASSET_BASE: ${{ needs.preflight.outputs.asset_base }}
           RELEASE_CHANNEL: ${{ needs.preflight.outputs.channel }}
@@ -553,6 +584,7 @@ jobs:
             --current-ref "$SOURCE_SHA"
             --previous-entry "$RELEASE_NOTE_MARKER"
             --asset-name "$installer_name"
+            --version "$RELEASE_MARKETING_VERSION"
           )
           if [[ -n "$PREVIOUS_COMMIT" ]]; then
             release_note_arguments+=(--previous-ref "$PREVIOUS_COMMIT")
@@ -701,7 +733,6 @@ jobs:
             'This branch is written by the production release workflow. Its signed stable, nightly, and development appcasts point only to notarized assets in GitHub Releases.' \
             > "$updates_checkout/README.md"
           python3 Scripts/release_note_publication.py advance \
-            --catalog Documentation/ReleaseNotes \
             --state "$updates_checkout/$release_note_state_filename" \
             --channel "$RELEASE_CHANNEL" \
             --output "$updates_checkout/$release_note_state_filename"

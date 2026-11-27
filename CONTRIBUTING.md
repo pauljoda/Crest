@@ -118,37 +118,55 @@ tools helped, and that the skill was run and its output reviewed. The
 without the second, or that removed the section. You remain responsible for
 understanding, validating and explaining everything you submit.
 
-`Config/Version.xcconfig` is the only source for Crest's public version. Versions
-use complete `X.Y.Z` semantic versioning. Once a fix is verified and ready to
-commit, run `Scripts/set-version.sh --patch`, stage the version file with the
-fix, and run `Scripts/check-version.sh --fix-commit`. Each independently
-verified fix advances the patch component once; when several already verified
-fixes intentionally share one commit, use `Scripts/set-version.sh --patch N` to
-account for all of them.
+Pull requests never set Crest's version. Versions use complete `X.Y.Z`
+semantic versioning, and each commit on `main` takes its version from git:
+`Config/Version.xcconfig` holds the release line's anchor version, and every
+later commit on main's first-parent history counts one patch past it
+(`python3 Scripts/crest_version.py` prints the version of `HEAD`). Pull
+requests therefore merge in any order without re-bumping. A branch shows the
+version of its merge base with `main`, and local and Xcode builds show the
+anchor version with build `1`.
 
-Changing the major or minor release line is a separate release decision. Use
-`Scripts/set-version.sh --release X.Y.Z` only when that release and its tag have
-been explicitly approved. Xcode Cloud continues to own distributed integer
-build numbers while the repository keeps build `1` as its local fallback.
+Opening a major or minor release line is a separate release decision. Use
+`Scripts/set-version.sh --release X.Y.Z` only when that line has been
+explicitly approved. The release workflows own distributed integer build
+numbers while the repository keeps build `1` as its local fallback.
 
-Every user-visible or architecture-significant work commit adds its release
-notes to the file for the version it moves to,
-`Documentation/ReleaseNotes/<major>.<minor>/<version>.json`, which
-`Scripts/set-version.sh` names after the bump. Each entry has a unique lowercase
-kebab-case `id`, a `category` and a `message`. Choose `new`, `improved`, or
-`fixed` for public notes and write the message as a concise user-facing outcome.
-Use `internal` to record architecture, release, or tooling work that should not
-appear to users. Add `"platforms": ["mac"]` or `"platforms": ["ios"]` when a
-change reaches only that platform. An entry never changes once it is on `main`.
-The fix-commit check requires the new staged entries, in that version's file,
-alongside the patch bump.
+A pull request that changes app code adds its release notes as one new
+fragment, `Documentation/ReleaseNotes/changes/<slug>.json`:
+
+```json
+{
+  "entries": [
+    { "id": "sidebar-long-folder-scroll", "category": "fixed", "message": "…", "platforms": ["mac"] }
+  ]
+}
+```
+
+Its entries belong to the version of the commit that merges it; a pull
+request with several fixes lists one entry for each. Each entry has a unique
+lowercase kebab-case `id`, a `category` and a `message`. Choose `new`,
+`improved`, or `fixed` for public notes and write the message as a concise
+user-facing outcome. Use `internal` to record architecture, release, or
+tooling work that should not appear to users. Add `"platforms": ["mac"]` or
+`"platforms": ["ios"]` when a change reaches only that platform. An entry
+never changes, moves or goes away once it is on `main`. Documentation and the
+repository's own tooling need no fragment. The **Version and release notes**
+check enforces these rules on every pull request; run it locally after
+committing:
+
+```sh
+python3 Scripts/release_note_catalog.py --pull-request origin/main
+```
 
 Keep commits focused and use a Conventional Commit subject such as
 `refactor(settings): adopt native split navigation`. Commit subjects remain
 useful development history, but release copy comes from the release notes. The
-release commit of a Stable version adds that version's curated write-up as
-`release` in its file, and receives an annotated `vX.Y.Z` tag; an App Store
-release receives an `ios-vX.Y.Z` tag. Do not invent historical release tags.
+release commit of a Stable version adds that version's curated write-up as a
+file holding only `release`, named for the commit's version
+(`Documentation/ReleaseNotes/<major>.<minor>/<version>.json`), and receives an
+annotated `vX.Y.Z` tag; an App Store release receives an `ios-vX.Y.Z` tag. Do
+not invent historical release tags.
 
 ## Developer Certificate of Origin
 

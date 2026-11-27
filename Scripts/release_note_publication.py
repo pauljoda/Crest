@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Read and advance Crest's per-channel release-note publication cursors."""
+"""Read and advance Crest's per-channel release-note publication cursors.
+
+A cursor names the last entry a channel published. Entries keep release order,
+by version and then as written, so the entries after a cursor are the ones the
+channel hasn't published. The catalog is read from a checkout with its full
+history, which gives each fragment its version.
+"""
 
 from __future__ import annotations
 
@@ -11,24 +17,15 @@ import sys
 import tempfile
 from typing import NamedTuple
 
-try:
-    from release_note_catalog import (
-        CATALOG_DIRECTORY,
-        PUBLICATION_CHANNELS,
-        CatalogValidationError,
-        ReleaseNoteCatalog,
-        read_catalog,
-        unique_json_object,
-    )
-except ModuleNotFoundError:
-    from Scripts.release_note_catalog import (
-        CATALOG_DIRECTORY,
-        PUBLICATION_CHANNELS,
-        CatalogValidationError,
-        ReleaseNoteCatalog,
-        read_catalog,
-        unique_json_object,
-    )
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from crest_version import VersionError  # noqa: E402
+from release_note_catalog import (  # noqa: E402
+    PUBLICATION_CHANNELS,
+    CatalogValidationError,
+    ReleaseNoteCatalog,
+    read_working_catalog,
+    unique_json_object,
+)
 
 
 PUBLICATION_STATE_FILENAME = "release-note-publication.json"
@@ -150,7 +147,7 @@ def read_optional(path: pathlib.Path | None) -> tuple[str | None, str]:
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("marker", "advance"))
-    parser.add_argument("--catalog", type=pathlib.Path, default=pathlib.Path(CATALOG_DIRECTORY))
+    parser.add_argument("--repository-root", type=pathlib.Path, default=pathlib.Path.cwd())
     parser.add_argument("--state", type=pathlib.Path)
     parser.add_argument("--channel", choices=PUBLICATION_CHANNELS, required=True)
     parser.add_argument("--output", type=pathlib.Path)
@@ -159,7 +156,7 @@ def parse_arguments() -> argparse.Namespace:
 
 def main() -> int:
     arguments = parse_arguments()
-    catalog = read_catalog(arguments.catalog)
+    catalog = read_working_catalog(arguments.repository_root)
     state_contents, state_source = read_optional(arguments.state)
     state = effective_publication_state(catalog, state_contents, state_source)
 
@@ -180,6 +177,6 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except (CatalogValidationError, OSError) as error:
+    except (CatalogValidationError, VersionError, OSError) as error:
         print(f"error: {error}", file=sys.stderr)
         raise SystemExit(1)

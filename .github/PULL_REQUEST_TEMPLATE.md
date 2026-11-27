@@ -19,6 +19,6 @@
 
 - [ ] Space and browsing-profile isolation are preserved.
 - [ ] The macOS and mobile platform behavior remains intentionally native.
-- [ ] User-visible or architecture-significant changes add explicit entries to their version's file in `Documentation/ReleaseNotes`.
-- [ ] Every verified fix commit includes its patch bump and passes `Scripts/check-version.sh --fix-commit`.
+- [ ] App changes add their entries in one new fragment, `Documentation/ReleaseNotes/changes/<slug>.json`.
+- [ ] The pull request leaves the version alone; it comes from git when the pull request merges.
 - [ ] I have signed off every commit as described in `CONTRIBUTING.md`.

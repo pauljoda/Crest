@@ -103,15 +103,24 @@ class ReleasePreflightTests(unittest.TestCase):
             check=True, capture_output=True, text=True,
         ).stdout.strip()
 
-    def publish_appcast(self, channel: str, commit: str, tag: str, build: int = 1060) -> None:
+    def publish_appcast(
+        self, channel: str, commit: str, tag: str, build: int = 1060, version: str | None = None,
+    ) -> None:
         self.git("checkout", "updates")
         filename = "appcast-development.xml" if channel == "development" else "appcast.xml"
+        short_version = f"<sparkle:shortVersionString>{version}</sparkle:shortVersionString>" if version else ""
+        # Stable items carry no channel, and their installers name no commit.
+        item_channel = "" if channel == "stable" else f"<sparkle:channel>{channel}</sparkle:channel>"
+        installer = (
+            f"Installer-Crest-{version}.dmg" if channel == "stable"
+            else f"Installer-Crest-0.5.25-{channel}-2026-09-03-{commit[:7]}.dmg"
+        )
         (self.repository / filename).write_text(
             '<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">'
-            f"<channel><item><sparkle:channel>{channel}</sparkle:channel>"
-            f"<sparkle:version>{build}</sparkle:version>"
+            f"<channel><item>{item_channel}"
+            f"<sparkle:version>{build}</sparkle:version>{short_version}"
             f'<enclosure url="https://github.com/crest-browser/Crest/releases/download/{tag}/'
-            f'Installer-Crest-0.5.25-{channel}-2026-09-03-{commit[:7]}.dmg" />'
+            f'{installer}" />'
             "</item></channel></rss>"
         )
         self.git("add", filename)
@@ -140,6 +149,54 @@ class ReleasePreflightTests(unittest.TestCase):
                 result, outputs = self.preflight(**environment)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(outputs, {})
+
+    def test_stable_tag_must_name_the_version_git_gives_its_commit_on_main(self) -> None:
+        stable = {"GITHUB_EVENT_NAME": "push", "GITHUB_REF_TYPE": "tag"}
+        # The file holds the anchor, 0.5.25; the commit after it is 0.5.26.
+        anchor, outputs = self.preflight(**stable, GITHUB_REF_NAME="v0.5.25")
+        self.assertNotEqual(anchor.returncode, 0)
+        self.assertIn("its tag is v0.5.26", anchor.stderr)
+        self.assertEqual(outputs, {})
+
+        result, outputs = self.preflight(**stable, GITHUB_REF_NAME="v0.5.26")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            (outputs["channel"], outputs["marketing_version"], outputs["release_tag"], outputs["previous_commit"]),
+            ("stable", "0.5.26", "v0.5.26", self.previous_commit),
+        )
+
+        self.git("switch", "-c", "release-candidate")
+        (self.repository / "change.txt").write_text("Branch change\n")
+        self.git("commit", "-am", "Branch build")
+        branch, outputs = self.preflight(**stable, GITHUB_REF_NAME="v0.5.26")
+        self.git("switch", "main")
+        self.assertNotEqual(branch.returncode, 0)
+        self.assertIn("not on main's first-parent history", branch.stderr)
+        self.assertEqual(outputs, {})
+
+    def test_a_channel_only_publishes_a_version_newer_than_it_offers(self) -> None:
+        # This commit is 0.5.26. Crest refuses an update that isn't newer, so a
+        # channel already at or past it from another commit stops the run.
+        for published in ("0.5.27", "0.5.26"):
+            with self.subTest(published=published):
+                self.publish_appcast("nightly", self.previous_commit, "nightly-build", version=published)
+                result, outputs = self.preflight()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(f"Crest 0.5.26 is not newer than {published}", result.stderr)
+                self.assertEqual(outputs, {})
+
+        # The commit the channel already publishes keeps its version.
+        self.publish_appcast("nightly", self.current_commit, "nightly-current", version="0.5.26")
+        unchanged, outputs = self.preflight()
+        self.assertEqual(unchanged.returncode, 0, unchanged.stderr)
+        self.assertEqual(outputs["should_publish"], "false")
+
+        # A Stable installer names no commit, but its tag names its version,
+        # which belongs to one commit, so the same Stable release keeps it too.
+        self.publish_appcast("stable", self.current_commit, "v0.5.26", version="0.5.26")
+        stable, outputs = self.preflight(GITHUB_EVENT_NAME="push", GITHUB_REF_TYPE="tag", GITHUB_REF_NAME="v0.5.26")
+        self.assertEqual(stable.returncode, 0, stable.stderr)
+        self.assertEqual(outputs["release_tag"], "v0.5.26")
 
     def test_interrupted_publications_cannot_reuse_another_runs_release_tag(self) -> None:
         self.publish_appcast("nightly", self.previous_commit, "nightly-build", build=1070)

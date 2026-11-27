@@ -2,10 +2,10 @@
 """Open an upstream Chromium release as a draft for review.
 
 - A built update (the default) commits the new pins and host hashes with a
-  patch version and release note. Its engine is not published here: a
-  maintainer tests the build, publishes it from the build Mac with
-  `publish-chromium-engine.py`, and only then merges, so nothing an update
-  builds reaches people without that decision.
+  release-note fragment; it takes its version from git when it merges. Its
+  engine is not published here: a maintainer tests the build, publishes it
+  from the build Mac with `publish-chromium-engine.py`, and only then merges,
+  so nothing an update builds reaches people without that decision.
 - `--rebase` opens a full stable release whose plan stopped on Crest's patches.
   It commits the patches as the plan carried them over, keeping the pinned
   release, and lists what a session must resolve before the engine can be
@@ -134,25 +134,26 @@ def main():
     run("git", "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com")
     staged = sorted(changed)
     if args.receipt:
-        # A built update reaches people, so it moves Crest's version and says what changed.
-        run(REPO / "Scripts/set-version.sh", "--patch")
-        crest_version = release_note_catalog.Version.from_version_file(
-            (REPO / "Config/Version.xcconfig").read_text(), "Config/Version.xcconfig")
-        note = {"id": f"chromium-upstream-{version.replace('.', '-')}-{args.base_sha[:12]}", "category": "fixed",
+        # A built update reaches people, so it says what changed in its own fragment.
+        slug = f"chromium-upstream-{version.replace('.', '-')}-{args.base_sha[:12]}"
+        note = {"id": slug, "category": "fixed",
                 "message": f"Chromium is updated to {version} with upstream security and compatibility fixes.",
                 "platforms": ["mac"]}
-        notes_path = release_note_catalog.append_entry(REPO, crest_version, note)
-        staged += ["Config/Version.xcconfig", str(notes_path.relative_to(REPO))]
+        notes_path = release_note_catalog.write_fragment(REPO, slug, [note])
+        staged.append(str(notes_path.relative_to(REPO)))
     if staged:
         run("git", "add", *staged)
     if args.receipt:
-        run(REPO / "Scripts/check-version.sh", "--fix-commit")
         subject = f"Update Chromium to {version}"
     elif args.rebase:
         subject = f"Rebase Crest's patches for Chromium {version}"
     else:
         subject = f"Check Crest's patches against Chromium {version}"
     run("git", "commit", "-s", "--allow-empty", "-m", subject)
+    if args.receipt:
+        # The checks the pull request will face.
+        run(sys.executable, REPO / "Scripts/release_note_catalog.py", "--repository-root", REPO,
+            "--pull-request", args.base_sha)
     # The branch is named for the release and its base. An earlier run that
     # pushed it but didn't open its PR left it there, so reuse it as it is.
     if run("git", "ls-remote", "--heads", "origin", f"refs/heads/{branch}", capture=True).strip():
@@ -303,8 +304,8 @@ def blocked_body(version, plan, early):
             "resolve each conflict in the report's `conflicts`, and commit the patches. Plan again until nothing "
             f"stops it, then run `chromium-fork.py update {major}--version {version} --sdk <macOS SDK>` from the "
             "clean checkout: it "
-            "pins the release, refreshes the host hashes and builds the engine. Add the patch version and release "
-            "note before review.\n")
+            "pins the release, refreshes the host hashes and builds the engine. Add a release-note fragment under "
+            "`Documentation/ReleaseNotes/changes/` before review; the version comes from git.\n")
 
 
 if __name__ == "__main__":

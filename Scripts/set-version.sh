@@ -6,10 +6,11 @@ repository_root="${CREST_VERSION_REPOSITORY_ROOT:-$script_root}"
 version_file="$repository_root/Config/Version.xcconfig"
 check_script="${0:A:h}/check-version.sh"
 
+# Opens a release line: X.Y.Z becomes the line's anchor version, and every
+# later commit on main counts one patch past it (Scripts/crest_version.py).
+# Fixes never change the version; it comes from git.
 usage() {
-  print -u2 "Usage:"
-  print -u2 "  Scripts/set-version.sh --patch [COUNT]"
-  print -u2 "  Scripts/set-version.sh --release X.Y.Z"
+  print -u2 "Usage: Scripts/set-version.sh --release X.Y.Z"
   exit 64
 }
 
@@ -54,30 +55,19 @@ is_version_greater() {
 current_version="$(sed -nE 's/^[[:space:]]*MARKETING_VERSION[[:space:]]*=[[:space:]]*([^[:space:]]+)[[:space:]]*$/\1/p' "$version_file")"
 
 case "${1:-}" in
-  --patch)
-    [[ "$#" -le 2 ]] || usage
-    patch_count="${2:-1}"
-    [[ "$patch_count" =~ '^[1-9][0-9]*$' ]] || usage
-
-    current_parts=("${(@s:.:)current_version}")
-    next_patch=$(( current_parts[3] + patch_count ))
-    requested_version="${current_parts[1]}.${current_parts[2]}.$next_patch"
-    update_kind="fix"
-    ;;
   --release)
     [[ "$#" == 2 ]] || usage
     requested_version="$2"
     is_strict_semver "$requested_version" || usage
     is_version_greater "$requested_version" "$current_version" \
-      || { print -u2 "error: $requested_version must be greater than current version $current_version."; exit 1; }
+      || { print -u2 "error: $requested_version must be greater than the anchor version $current_version."; exit 1; }
 
     current_parts=("${(@s:.:)current_version}")
     requested_parts=("${(@s:.:)requested_version}")
     if [[ "${requested_parts[1]}.${requested_parts[2]}" == "${current_parts[1]}.${current_parts[2]}" ]]; then
-      print -u2 "error: use --patch for fixes on the current release line."
+      print -u2 "error: $requested_version is on the current release line; versions on a line come from git."
       exit 1
     fi
-    update_kind="release line"
     ;;
   *)
     usage
@@ -105,9 +95,4 @@ if ! "$check_script"; then
   exit 1
 fi
 
-requested_parts=("${(@s:.:)requested_version}")
-notes_path="Documentation/ReleaseNotes/${requested_parts[1]}.${requested_parts[2]}/${requested_version}.json"
-print "Updated Crest $update_kind from $current_version to $requested_version."
-if [[ ! -f "$repository_root/$notes_path" ]]; then
-  print "Write this change's release notes in $notes_path."
-fi
+print "Opened the Crest ${requested_version%.*} release line at $requested_version."

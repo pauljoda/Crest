@@ -166,14 +166,14 @@ type you touch. The rules that matter most:
 
 ## Pull request
 
-- **Version and release note.** Every commit that changes app code runs
-  `Scripts/set-version.sh --patch`, writes its entries, each with a unique
-  lowercase kebab-case `id`, in the new version's file under
-  `Documentation/ReleaseNotes/<major>.<minor>/`, marks a change that reaches
-  only one platform with `"platforms": ["mac"]` or `["ios"]`, stages
-  `Config/Version.xcconfig` with the change, and passes
-  `Scripts/check-version.sh --fix-commit`. Never change
-  `CURRENT_PROJECT_VERSION`.
+- **Release note, never a version.** A pull request that changes app code
+  adds one new fragment, `Documentation/ReleaseNotes/changes/<slug>.json`,
+  with one entry per change, each with a unique lowercase kebab-case `id`,
+  and marks a change that reaches only one platform with
+  `"platforms": ["mac"]` or `["ios"]`. It never touches
+  `Config/Version.xcconfig` or `CURRENT_PROJECT_VERSION`: each commit on
+  `main` takes its version from git when it merges. After committing, pass
+  `python3 Scripts/release_note_catalog.py --pull-request origin/main`.
 - **One focused pull request.** No scope widening and no drive-by refactors.
   When a change regenerates `CrestShared/Resources/Localizable.xcstrings`,
   the regenerated catalog is part of that change. Edit `project.yml` and run
@@ -245,7 +245,7 @@ type you touch. The rules that matter most:
 - [ ] Every address handed to another app is a `BrowserCopiedLink`.
 - [ ] No new windows, ad-hoc fills or modal notices; every menu item has an icon.
 - [ ] Tests only for silent-breaking contracts; probes removed.
-- [ ] Patch bump, release-note entry and `check-version.sh --fix-commit` pass.
+- [ ] One new release-note fragment, no version change, and `release_note_catalog.py --pull-request` passes.
 - [ ] Pull request lists what ran, and both AI usage boxes are ticked.
 - [ ] Visual changes are shown in screenshots attached to the pull request.
 - [ ] Test copies of Crest are quit, unregistered and deleted.

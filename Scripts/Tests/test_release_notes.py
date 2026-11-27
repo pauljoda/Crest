@@ -50,6 +50,14 @@ class ReleaseNotesTests(unittest.TestCase):
         self.git("commit", "-m", f"chore: private subject for {version}")
         return self.git("rev-parse", "HEAD")
 
+    def commit_fragment(self, slug: str, entries: list[dict[str, object]]) -> str:
+        path = self.repository / "Documentation" / "ReleaseNotes" / "changes" / f"{slug}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"entries": entries}, indent=2) + "\n")
+        self.git("add", ".")
+        self.git("commit", "-m", f"Merge the {slug} pull request")
+        return self.git("rev-parse", "HEAD")
+
     def generate_notes(
         self,
         current_commit: str,
@@ -166,6 +174,31 @@ class ReleaseNotesTests(unittest.TestCase):
         self.assertEqual(nightly.returncode, 0, nightly.stderr)
         self.assertNotIn("brings browsing profiles", nightly.stdout)
         self.assertIn("- Create separate browsing profiles", nightly.stdout)
+
+    def test_fragments_take_the_version_of_the_commit_that_merged_them(self) -> None:
+        self.commit_version("0.5.24", [{"id": "boundary", "category": "internal", "message": "Boundary"}])
+        self.commit_fragment("profiles", [{"id": "profiles", "category": "new", "message": "Create separate browsing profiles"}])
+        current = self.commit_fragment(
+            "navigation",
+            [
+                {"id": "navigation", "category": "fixed", "message": "Keep navigation controls in sync"},
+                {"id": "phone-only", "category": "fixed", "message": "Keep the iPhone toolbar in place", "platforms": ["ios"]},
+            ],
+        )
+
+        development = self.generate_notes(
+            current, "boundary", channel="development", release_tag="development-0.5.26-2026-12-01-1800-r800.1"
+        )
+        after_profiles = self.generate_notes(current, "profiles", channel="development")
+
+        self.assertEqual(development.returncode, 0, development.stderr)
+        self.assertIn("### New\n\n- Create separate browsing profiles", development.stdout)
+        self.assertIn("### Fixed\n\n- Keep navigation controls in sync", development.stdout)
+        self.assertNotIn("iPhone toolbar", development.stdout)
+        self.assertIn("(https://crestbrowser.com/releases/mac/development/0.5.26/)", development.stdout)
+        self.assertEqual(after_profiles.returncode, 0, after_profiles.stderr)
+        self.assertNotIn("browsing profiles", after_profiles.stdout)
+        self.assertIn("- Keep navigation controls in sync", after_profiles.stdout)
 
 
 if __name__ == "__main__":
