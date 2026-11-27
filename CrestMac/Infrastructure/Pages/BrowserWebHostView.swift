@@ -482,7 +482,9 @@ final class BrowserWebHostView: NSView {
 
     /// SwiftUI took this host down. A view it showed stays in the window, out
     /// of sight, for the host SwiftUI puts in its place, which it makes and
-    /// places only after it dismantles this one.
+    /// places only after it dismantles this one. A page its host kept off
+    /// screen leaves the window as it did: kept out of sight, it would count
+    /// as presented, and its engine would show it and give it focus.
     func dismantle() {
         detach(keepingInWindow: true)
     }
@@ -504,7 +506,7 @@ final class BrowserWebHostView: NSView {
         let successor = Self.successor(for: hostedWebView, in: placement)
         if let successor, successor.window != nil || hostedWebView.window == nil {
             successor.show(hostedWebView, focusRestoration: focusRestoration)
-        } else if let window = hostedWebView.window, successor != nil || keepingInWindow {
+        } else if let window = hostedWebView.window, presentation != .hidden, successor != nil || keepingInWindow {
             Self.keep(hostedWebView, in: window)
         } else {
             hostedWebView.removeFromSuperview()
@@ -567,7 +569,6 @@ final class BrowserWebHostView: NSView {
         else { return }
         let focusRestoration = showing.focusRestoration
         (webView as? any BrowserNativePageSurfaceLifecycle)?.willDetach(from: showing)
-        webView.removeFromSuperview()
         host.show(webView, focusRestoration: focusRestoration)
         if host.isPageActive { host.scheduleFocusRestoration() }
     }
@@ -821,14 +822,12 @@ final class BrowserWebHostView: NSView {
     }
 
     /// Shows the view this host claimed before it was in a window, now that
-    /// it is in one, unless a newer claim shows it there already: that host
+    /// it is in one, unless a newer claim shows it in any window: that host
     /// keeps it until it lets go, as a stale update never takes it back.
     private func showAwaitedWebView() {
         awaitsWindow = false
         guard let hostedWebView, hostedWebView.superview !== self else { return }
-        if let showing = hostedWebView.superview as? BrowserWebHostView, showing.window === window,
-            showing.claim > claim, showing.isDrawn
-        {
+        if let showing = hostedWebView.superview as? BrowserWebHostView, showing.claim > claim, showing.isDrawn {
             return
         }
         show(hostedWebView, focusRestoration: focusRestoration)

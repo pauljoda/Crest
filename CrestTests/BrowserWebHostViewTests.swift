@@ -82,6 +82,26 @@ final class BrowserWebHostViewTests: XCTestCase {
         late.detach()
     }
 
+    /// A page its host keeps off screen, as a Space the window does not show
+    /// does, leaves the window with that host rather than staying in it out
+    /// of sight, where it would count as presented and take focus.
+    func testHiddenPageLeavesTheWindowWithItsHost() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 640, height: 480), styleMask: [.titled], backing: .buffered,
+            defer: true)
+        let root = NSView(frame: NSRect(x: 0, y: 0, width: 640, height: 480))
+        window.contentView = root
+        let page = BrowserWindowDepartureProbe(frame: root.bounds)
+        let offScreen = BrowserWebHostView(frame: root.bounds)
+        offScreen.updatePresentation(.hidden)
+        root.addSubview(offScreen)
+        offScreen.attach(page)
+
+        offScreen.dismantle()
+
+        XCTAssertNil(page.window)
+    }
+
     private func keyboardFallbackEvent(
         in window: NSWindow,
         type: NSEvent.EventType = .keyDown,
