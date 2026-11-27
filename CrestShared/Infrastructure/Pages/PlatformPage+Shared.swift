@@ -50,11 +50,15 @@ extension BrowserPlatformPage {
         return zoomSession.set(pageZoom.pageZoomDecreased)
     }
 
-    /// Returns the page and its site to the default zoom.
+    /// Returns the page and its site to the default zoom and undoes a pinch.
+    /// Says whether either changed.
     @discardableResult
     func resetZoom() -> Bool {
         guard allowsPageZoomChange else { return false }
-        return zoomSession.reset()
+        // A pinch lives in the engine's view, apart from the page's zoom, so
+        // it goes whether or not the zoom was already the default.
+        let unpinched = enginePage.resetPageScale()
+        return zoomSession.reset() || unpinched
     }
 
     /// The device's default zoom changed, which a site without a zoom of its

@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "id": "actual-size-undoes-pinch",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "Actual Size (Command-0) also undoes a trackpad pinch. Thanks to Avelino (@avelino)."
+    }
+  ]
+}
