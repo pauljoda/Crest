@@ -3,7 +3,9 @@
 
     extension PageNavigationStarted {
         @MainActor func present(on engine: ChromiumEngine) {
-            engine.presentedPage(pageID)?.observer(BrowserPageNavigationStarted())
+            guard let page = engine.presentedPage(pageID) else { return }
+            page.observer(BrowserPageNavigationStarted())
+            page.observer(BrowserPageProgressChanged(progress: 0.08))
         }
     }
 #endif

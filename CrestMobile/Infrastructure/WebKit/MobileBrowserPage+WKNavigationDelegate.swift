@@ -57,6 +57,10 @@ extension MobileBrowserPage: WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation?) {
         guard isCurrentNavigation(navigation) else { return }
+        if let reload = webKitPage.engine.reloadAfterRestoreIfNeeded() {
+            activeNavigation = reload
+            return
+        }
         if let url = webView.url { reporter.committed(url) }
         zoomSession.committed(webView.url)
         mediaSessionCoordinator?.didCommitNavigation()
@@ -96,7 +100,10 @@ extension MobileBrowserPage: WKNavigationDelegate {
         decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
     ) {
         let followsLinkTap = navigationAction.navigationType == .linkActivated
-        if navigationAction.targetFrame?.isMainFrame == true { mainFrameFollowsLinkTap = followsLinkTap }
+        if navigationAction.targetFrame?.isMainFrame == true {
+            mainFrameFollowsLinkTap = followsLinkTap
+            webKitPage.engine.noteRestoredRequest(navigationAction.request)
+        }
         // A new-tab link to a file downloads from this page, so no tab slides
         // in only to close again once the file arrives.
         if followsLinkTap, navigationAction.targetFrame == nil, Self.namesFile(navigationAction.request.url) {
@@ -124,6 +131,9 @@ extension MobileBrowserPage: WKNavigationDelegate {
         decidePolicyFor navigationResponse: WKNavigationResponse,
         decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy) -> Void
     ) {
+        if navigationResponse.isForMainFrame {
+            webKitPage.engine.noteRestoredResponse(navigationResponse.response)
+        }
         // Only a link the person tapped downloads its file: a reload, a
         // history step or a tab restoring what it showed keeps showing it.
         if navigationResponse.isForMainFrame, mainFrameFollowsLinkTap, Self.isFile(navigationResponse) {
@@ -199,6 +209,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        webKitPage.engine.cancelPendingRestoreReload()
         faviconSession.invalidate()
         translation.reset()
         readerModeSession.invalidate()
@@ -212,6 +223,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
         didFail navigation: WKNavigation?,
         withError error: any Error
     ) {
+        webKitPage.engine.cancelPendingRestoreReload()
         httpAuthenticationSession.authenticationFailed()
         recordNavigationFailure(
             error,
@@ -225,6 +237,7 @@ extension MobileBrowserPage: WKNavigationDelegate {
         didFailProvisionalNavigation navigation: WKNavigation?,
         withError error: any Error
     ) {
+        webKitPage.engine.cancelPendingRestoreReload()
         httpAuthenticationSession.authenticationFailed()
         recordNavigationFailure(
             error,

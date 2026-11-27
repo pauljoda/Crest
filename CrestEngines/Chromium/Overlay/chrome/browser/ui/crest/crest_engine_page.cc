@@ -521,7 +521,15 @@ bool EnginePage::RestoreNow(const std::vector<uint8_t>& state, const std::string
   for (int index = 0; index < controller.GetEntryCount(); ++index) {
     entry_ids_[controller.GetEntryAtIndex(index)->GetUniqueID()] = ids[static_cast<size_t>(index)];
   }
-  controller.LoadIfNecessary();
+  // Reawakening a restored page reloads fresh content while keeping the
+  // restored back/forward history intact. A POST entry stays on LoadIfNecessary
+  // so reawakening never silently re-submits a form.
+  content::NavigationEntry* selected_entry = controller.GetEntryAtIndex(selected);
+  if (selected_entry && selected_entry->GetHasPostData()) {
+    controller.LoadIfNecessary();
+  } else {
+    controller.Reload(content::ReloadType::NORMAL, /*check_for_repost=*/false);
+  }
   StateChanged();
   return true;
 }
@@ -663,6 +671,9 @@ void EnginePage::AdoptCommittedDocument() {
     return;
   }
   presents_adopted_commit_ = true;
+  if (web_contents()->CompletedFirstVisuallyNonEmptyPaint()) {
+    painted_content_ = true;
+  }
   if (entry->IsInitialEntry()) {
     return;
   }
@@ -692,6 +703,26 @@ void EnginePage::DidStopLoading() {
       PublishIcon(entry->GetFavicon().image, entry->GetFavicon().url);
     }
   }
+}
+
+void EnginePage::LoadProgressChanged(double progress) {
+  Present(engine::PageLoadProgressed{.page_id = id_, .progress = progress});
+}
+
+void EnginePage::DidFirstVisuallyNonEmptyPaint() {
+  NoteContentPainted();
+}
+
+void EnginePage::OnFirstContentfulPaintInPrimaryMainFrame(base::TimeTicks) {
+  NoteContentPainted();
+}
+
+void EnginePage::NoteContentPainted() {
+  if (painted_content_) {
+    return;
+  }
+  painted_content_ = true;
+  Present(engine::PageContentPainted{.page_id = id_});
 }
 
 void EnginePage::TitleWasSet(content::NavigationEntry* entry) {
@@ -1271,6 +1302,10 @@ void EnginePage::Watch() {
     return;
   }
   Present(engine::PageViewReady{.page_id = id_});
+  if (painted_content_ || web_contents()->CompletedFirstVisuallyNonEmptyPaint()) {
+    painted_content_ = true;
+    Present(engine::PageContentPainted{.page_id = id_});
+  }
   presented_loading_.reset();
   presented_theme_.reset();
   if (infobars_) {
@@ -1486,6 +1521,10 @@ bool EnginePage::Answer(const engine::ShowPage&) {
     Present(engine::PageNavigationCommitted{.page_id = id_,
                                             .url = PresentedURL(web_contents()->GetLastCommittedURL()),
                                             .is_loading = web_contents()->IsLoading()});
+    if (painted_content_ || web_contents()->CompletedFirstVisuallyNonEmptyPaint()) {
+      painted_content_ = true;
+      Present(engine::PageContentPainted{.page_id = id_});
+    }
   }
   if (media_) {
     media_->VisibilityChanged(true);

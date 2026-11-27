@@ -15,7 +15,8 @@ extension EnginePresentation {
         case .pageViewReady(let presentation): presentation.deliver(to: page)
         case .audioSpectrumChanged, .contentFullscreenChanged, .contentMessagePosted, .contentScriptEvaluated,
             .extensionDownloadProgressed, .extensionsChanged, .infoBarRemoved, .infoBarShown, .inspectorClosed,
-            .inspectorLayoutChanged, .linkHovered, .mediaSessionChanged, .pageInteracted, .pageLoadingChanged,
+            .inspectorLayoutChanged, .linkHovered, .mediaSessionChanged, .pageContentPainted, .pageInteracted,
+            .pageLoadProgressed, .pageLoadingChanged,
             .pageNavigationStarted, .pagePasswordControlChanged, .pageRendererGone, .pageThemeChanged, .pageViewClosed,
             .pageViewUnavailable,
             .peekRequested, .popupBlocked, .profileNotificationClosed, .profileNotificationPosted,

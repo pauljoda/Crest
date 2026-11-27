@@ -36,6 +36,10 @@ extension BrowserPage: WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation?) {
         guard isCurrentNavigation(navigation) else { return }
+        if let reload = webKitAdapter?.webKitPage.engine.reloadAfterRestoreIfNeeded() {
+            activeNavigation = reload
+            return
+        }
         if let url = webView.url { webKitAdapter?.reporter?.committed(url) }
         zoomSession.committed(webView.url)
         linkHover?.didCommitNavigation()
@@ -72,6 +76,9 @@ extension BrowserPage: WKNavigationDelegate {
         decidePolicyFor navigationAction: WKNavigationAction,
         decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
     ) {
+        if navigationAction.targetFrame?.isMainFrame == true {
+            webKitAdapter?.webKitPage.engine.noteRestoredRequest(navigationAction.request)
+        }
         navigationDecider.decision(
             for: navigationAction,
             isAppInitiated: isAppInitiated(navigationAction)
@@ -152,6 +159,9 @@ extension BrowserPage: WKNavigationDelegate {
         decidePolicyFor navigationResponse: WKNavigationResponse,
         decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy) -> Void
     ) {
+        if navigationResponse.isForMainFrame {
+            webKitAdapter?.webKitPage.engine.noteRestoredResponse(navigationResponse.response)
+        }
         decideResponsePolicy(for: navigationResponse, in: webView, decisionHandler: decisionHandler)
     }
 
@@ -208,6 +218,7 @@ extension BrowserPage: WKNavigationDelegate {
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        webKitAdapter?.webKitPage.engine.cancelPendingRestoreReload()
         faviconSession?.invalidate()
         translation.reset()
         readerModeSession?.invalidate()
@@ -269,6 +280,7 @@ extension BrowserPage: WKNavigationDelegate {
         didFail navigation: WKNavigation?,
         withError error: any Error
     ) {
+        webKitAdapter?.webKitPage.engine.cancelPendingRestoreReload()
         if isCurrentNavigation(navigation) {
             linkHover?.didFailNavigation()
             linkDrag?.didFinishNavigation()
@@ -286,6 +298,7 @@ extension BrowserPage: WKNavigationDelegate {
         didFailProvisionalNavigation navigation: WKNavigation?,
         withError error: any Error
     ) {
+        webKitAdapter?.webKitPage.engine.cancelPendingRestoreReload()
         if isCurrentNavigation(navigation) {
             linkHover?.didFailNavigation()
             linkDrag?.didFinishNavigation()
