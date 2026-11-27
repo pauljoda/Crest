@@ -1,3 +1,4 @@
+import AppKit
 import Observation
 import SwiftUI
 
@@ -136,7 +137,7 @@ final class BrowserChromeState {
     // MARK: - Actions - Command Palette
 
     func openLocation(_ address: String = "") {
-        commandPaletteMode = .editLocation(address)
+        open(.editLocation(address))
     }
 
     /// Edits `address`, or puts the editor away when it is already showing,
@@ -150,7 +151,14 @@ final class BrowserChromeState {
     }
 
     func presentCommandPalette() {
-        commandPaletteMode = .newTab
+        open(.newTab)
+    }
+
+    /// Shows the palette in `mode`. A palette that appears holds what the
+    /// person types from now on until its field takes the keyboard.
+    private func open(_ mode: BrowserCommandPaletteMode) {
+        if commandPaletteMode != mode { BrowserCommandPaletteTypeahead.hold(in: NSApp.keyWindow) }
+        commandPaletteMode = mode
     }
 
     func openNewTab(isStartPageSelected: Bool) {
@@ -174,6 +182,7 @@ final class BrowserChromeState {
     }
 
     func dismissCommandPalette() {
+        BrowserCommandPaletteTypeahead.release()
         commandPaletteMode = nil
     }
 
