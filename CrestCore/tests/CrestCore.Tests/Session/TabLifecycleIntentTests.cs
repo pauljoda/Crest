@@ -72,4 +72,89 @@ public sealed partial class BrowserContractsTests {
         Assert.DoesNotContain(device.Tab(window, space.Id), new Guid?[] { pinned, article });
     }
 
+    /// A Space with no pinned tab whose first saved tab and first open tab
+    /// each sit in a collapsed folder, ahead of a loose saved tab and two
+    /// loose open tabs.
+    private sealed class CollapsedFoldersSpace {
+        public Guid Space { get; } = Guid.NewGuid();
+        public Guid SavedFolder { get; } = Guid.NewGuid();
+        public Guid SavedInFolder { get; } = Guid.NewGuid();
+        public Guid LooseSaved { get; } = Guid.NewGuid();
+        public Guid OpenInFolder { get; } = Guid.NewGuid();
+        public Guid Shown { get; } = Guid.NewGuid();
+        public Guid NextOpen { get; } = Guid.NewGuid();
+        public JsonNode Session { get; }
+
+        public CollapsedFoldersSpace() {
+            var openFolder = Guid.NewGuid();
+            Session = SavedSession().Document["session"]!;
+            Session.AsObject().Remove("disposableSeedMarker");
+            Session.AsObject().Remove("selectedSpaceID");
+            var space = Session["spaces"]![0]!.AsObject();
+            space["id"] = SwiftId(Space);
+            space["tabs"] = new JsonArray(Tab(SavedInFolder, TabPlacement.Saved, SavedFolder), Tab(LooseSaved, TabPlacement.Saved, null),
+                Tab(OpenInFolder, TabPlacement.Current, openFolder), Tab(Shown, TabPlacement.Current, null),
+                Tab(NextOpen, TabPlacement.Current, null));
+            space["folders"] = new JsonArray(Folder(SavedFolder, TabPlacement.Saved), Folder(openFolder, TabPlacement.Current));
+            space.Remove("selectedTabID");
+        }
+
+        private static JsonObject Tab(Guid id, TabPlacement placement, Guid? folder) => new() {
+            ["id"] = SwiftId(id),
+            ["title"] = "Page",
+            ["url"] = $"https://folders.example/{id}",
+            ["placement"] = placement.Name,
+            ["savedURL"] = placement.IsDurable ? $"https://folders.example/{id}" : null,
+            ["folderID"] = folder is { } folderId ? SwiftId(folderId) : null,
+            ["symbol"] = "globe",
+            ["lastActivatedAt"] = 800000000.0
+        };
+
+        private static JsonObject Folder(Guid id, TabPlacement location) => new() {
+            ["id"] = SwiftId(id),
+            ["title"] = "Folder",
+            ["location"] = location.Name,
+            ["isCollapsed"] = true
+        };
+    }
+
+    [Fact]
+    public void ASpaceFallsBackOnlyToATabItsSidebarShows() {
+        var fixture = new CollapsedFoldersSpace();
+        using var device = new TestDevice(fixture.Session);
+        var window = device.Open(fixture.Space, (fixture.Space, fixture.Shown));
+
+        // Deleting the shown tab, with no tab to go back to, passes the open
+        // tab inside a collapsed folder.
+        device.Send(new DeleteTab(device.Workspace, window, fixture.Space, fixture.Shown));
+        Assert.Equal(fixture.NextOpen, device.Tab(window, fixture.Space));
+
+        // Clearing the open tabs passes the first saved tab, inside a
+        // collapsed folder, for the loose one, and so does a new window.
+        device.Send(new ClearCurrentTabs(device.Workspace, window, fixture.Space));
+        Assert.Equal(fixture.LooseSaved, device.Tab(window, fixture.Space));
+        Assert.Equal(fixture.LooseSaved, device.Tab(device.Open(fixture.Space), fixture.Space));
+
+        // Opened, the folder's tab is the first saved tab again.
+        device.Send(new CollapseFolder(device.Workspace, fixture.Space, fixture.SavedFolder, Collapsed: false));
+        Assert.Equal(fixture.SavedInFolder, device.Tab(device.Open(fixture.Space), fixture.Space));
+
+        // With the Saved section collapsed the sidebar shows no tab, so a
+        // window shows none.
+        device.Send(new ExpandSavedTabs(device.Workspace, fixture.Space, IsExpanded: false));
+        Assert.Null(device.Tab(device.Open(fixture.Space), fixture.Space));
+    }
+
+    [Fact]
+    public void WithNothingCollapsedASpaceFallsBackAsTheSectionRankingAlonePicks() {
+        using var device = new TestDevice(MaximalDocument());
+        foreach (var space in device.Authority.Current.Spaces) {
+            var open = space with {
+                Folders = [.. space.Folders.Select(folder => folder with { IsCollapsed = false })],
+                Settings = space.Settings with { IsSavedTabsExpanded = true }
+            };
+            Guid? ranked = TabPlacement.Fallback([.. open.Tabs.Select(tab => tab.Placement)]) is { } index ? open.Tabs[index].Id : null;
+            Assert.Equal(ranked, open.FallbackTab());
+        }
+    }
 }

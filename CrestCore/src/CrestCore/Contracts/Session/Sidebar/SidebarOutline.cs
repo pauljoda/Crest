@@ -201,6 +201,19 @@ public sealed record SidebarOutline(IReadOnlyList<SidebarList> Lists) {
         return Walk(isSectionExpanded, id => !collapsed.Contains(id));
     }
 
+    /// <summary>The tab a Space with <paramref name="tabs"/>, the tabs this outline lists,
+    /// falls back to: by <see cref="TabPlacement.Fallback"/>, in the Space's tab order, among
+    /// the tabs a person sees, as <see cref="Shown"/> answers, and its Start Pages, which have
+    /// no row. Null when none is seen, so a tab inside a collapsed folder or section is never
+    /// chosen.</summary>
+    public Guid? FallbackTab(IReadOnlyList<TabState> tabs, IReadOnlyList<FolderState> folders,
+        Func<TabPlacement, bool> isSectionExpanded) {
+        ArgumentNullException.ThrowIfNull(tabs);
+        var shown = Shown(folders, isSectionExpanded).ToHashSet();
+        TabState[] seen = [.. tabs.Where(tab => tab.IsStartPage || shown.Contains(tab.Id))];
+        return TabPlacement.Fallback([.. seen.Select(tab => tab.Placement)]) is { } index ? seen[index].Id : null;
+    }
+
     /// <summary>The rows a person steps through, in the order the sidebar shows them: each
     /// tab and split row of the sections <paramref name="isSectionExpanded"/> answers for,
     /// skipping the inside of every folder of <paramref name="folders"/> that is collapsed.

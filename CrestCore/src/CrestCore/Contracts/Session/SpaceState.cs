@@ -114,6 +114,11 @@ public sealed record SpaceState(
     /// <see cref="SidebarOutline.Stops"/>.</summary>
     public IReadOnlyList<SidebarRow> Stops() => Sidebar.Stops(Folders, Shows);
 
+    /// <summary>The tab the Space shows when its selection is gone or no window chose one:
+    /// the first open tab, else the first pinned one, else the first saved one, among those
+    /// its sidebar shows and its Start Pages; see <see cref="SidebarOutline.FallbackTab"/>.</summary>
+    public Guid? FallbackTab() => Sidebar.FallbackTab(Tabs, Folders, Shows);
+
     /// <summary>The tab one step in <paramref name="direction"/> from the shown tab shows,
     /// or null; see <see cref="SidebarOutline.Step"/>.</summary>
     public Guid? Step(Guid shownTabId, AdjacentDirection direction) => Sidebar.Step(shownTabId, direction, Folders, Shows);
