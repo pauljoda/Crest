@@ -15,7 +15,14 @@ Most extensions need no desktop helper. A smaller group, with password managers 
 
 Extensions run on Chromium, which handles `nativeMessaging` itself. Each companion app registers a small manifest that names its helper and the extension IDs it will answer.
 
-Most companion apps register their helper only in another browser's folder, not Crest's. When Chromium's own lookup finds no manifest, Crest also checks `~/Library/Application Support/Google/Chrome/NativeMessagingHosts`, then `/Library/Google/Chrome/NativeMessagingHosts`. A helper registered anywhere else is not found. Chromium still checks the manifest's `allowed_origins`, so a helper answers only the extensions its app lists.
+Chromium's own lookup checks Crest's folder, `~/Library/Application Support/Crest/Chromium/NativeMessagingHosts`, and `/Library/Application Support/Chromium/NativeMessagingHosts`. Most companion apps register their helper only in another browser's folder, not Crest's. When Chromium's own lookup finds no manifest, Crest also checks these folders, in order:
+
+1. `~/Library/Application Support/Google/Chrome/NativeMessagingHosts`
+2. The same folder for Chrome Beta, Dev and Canary: `Google/Chrome Beta`, `Google/Chrome Dev` and `Google/Chrome Canary`
+3. `~/Library/Application Support/Chromium/NativeMessagingHosts`
+4. `/Library/Google/Chrome/NativeMessagingHosts`
+
+A helper registered anywhere else is not found. Chromium still checks the manifest's `allowed_origins`, so a helper answers only the extensions its app lists.
 
 ## The app decides whether to trust Crest
 

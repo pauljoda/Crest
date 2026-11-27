@@ -604,24 +604,38 @@
    // contents. See crbug.com/40059470.
 --- a/chrome/browser/extensions/api/messaging/launch_context_posix.cc
 +++ b/chrome/browser/extensions/api/messaging/launch_context_posix.cc
-@@ -48,6 +48,28 @@
-   if (result.empty()) {
+@@ -6,6 +6,7 @@
+ 
+ #include <memory>
+ #include <utility>
++#include <vector>
+ 
+ #include "base/command_line.h"
+ #include "base/files/file_util.h"
+@@ -49,6 +50,35 @@
      result = FindManifestInDir(chrome::DIR_NATIVE_MESSAGING, host_name);
    }
-+
+ 
 +#if BUILDFLAG(IS_MAC)
 +  // Companion apps — Apple's Passwords helper, ChatGPT, 1Password, Claude —
-+  // register their hosts for Chrome and do not know Crest's directories. Fall
-+  // back to Chrome's per-user registrations, then its global ones. Chromium
-+  // still validates the manifest and the extension origins it allows, so a
-+  // host answers only the extensions its app registered.
++  // register their hosts for Chrome or Chromium and do not know Crest's
++  // directories. Fall back to their per-user registrations, for every Chrome
++  // channel since a Mac may have only a beta or none at all, then to Chrome's
++  // global ones. The folders are fixed, the host name was validated, and
++  // Chromium still validates the manifest and the extension origins it
++  // allows, so a host answers only the extensions its app registered.
 +  if (result.empty() &&
 +      base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
 +    const std::string file = host_name + ".json";
-+    const base::FilePath candidates[] = {
-+        base::GetHomeDir().Append("Library/Application Support/Google/Chrome/NativeMessagingHosts").Append(file),
-+        base::FilePath("/Library/Google/Chrome/NativeMessagingHosts").Append(file),
-+    };
++    std::vector<base::FilePath> candidates;
++    if (allow_user_level_hosts) {
++      const base::FilePath support = base::GetHomeDir().Append("Library/Application Support");
++      for (const char* folder : {"Google/Chrome", "Google/Chrome Beta", "Google/Chrome Dev",
++                                 "Google/Chrome Canary", "Chromium"}) {
++        candidates.push_back(support.Append(folder).Append("NativeMessagingHosts").Append(file));
++      }
++    }
++    candidates.push_back(base::FilePath("/Library/Google/Chrome/NativeMessagingHosts").Append(file));
 +    for (const auto& candidate : candidates) {
 +      if (base::PathExists(candidate)) {
 +        result = candidate;
@@ -630,9 +644,10 @@
 +    }
 +  }
 +#endif
- 
++
    if (result.empty()) {
      error_message = "Can't find native messaging host " + host_name;
+   }
 --- a/chrome/browser/ui/unload_controller.cc
 +++ b/chrome/browser/ui/unload_controller.cc
 @@ -3,6 +3,10 @@

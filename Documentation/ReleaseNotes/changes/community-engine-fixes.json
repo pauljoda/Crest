@@ -31,6 +31,14 @@
         "mac"
       ],
       "message": "A private or trusted-tester Chrome Web Store extension installs in Chromium for a Space signed in to an account that can see it, instead of failing with “Couldn’t download this extension.” Thanks to rajuGT (@rajuGT)."
+    },
+    {
+      "id": "companion-apps-without-chrome",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "Extensions with a companion Mac app, such as 1Password, reach it in Chromium on Macs without Google Chrome when the app registered for another Chrome channel or for Chromium."
     }
   ]
 }

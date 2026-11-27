@@ -465,10 +465,13 @@ A private window's groups are kept in memory only. Folder membership grants
 an extension nothing.
 
 Companion apps such as Apple's Passwords helper and 1Password register their
-native-messaging hosts for Google Chrome and do not know Crest's directories. In
-Crest mode only, when the regular Chromium lookup finds no manifest, the host
-checks Chrome's per-user `NativeMessagingHosts` directory and then its global
-one. Chromium still validates the manifest and the extension IDs it allows, so a
+native-messaging hosts for Google Chrome or Chromium and do not know Crest's
+directories. In Crest mode only, when the regular Chromium lookup finds no
+manifest, the host checks a fixed list of per-user `NativeMessagingHosts`
+directories, Chrome's for each channel (stable, Beta, Dev, Canary) and then
+Chromium's, and then Chrome's global one. The per-user directories are skipped
+when policy turns off user-level hosts. Chromium still validates the manifest
+and the extension IDs it allows, so a
 host answers only the extensions its app registered, and Apple's helper still
 controls authentication and access to the password vault. Crest does not
 copy Chrome's profile, change Apple's helper, or read passwords itself.
