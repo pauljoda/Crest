@@ -6,28 +6,28 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.11.46</title>
-            <pubDate>Thu, 26 Nov 2026 21:30:44 +0000</pubDate>
+            <title>0.11.49</title>
+            <pubDate>Fri, 27 Nov 2026 00:10:15 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1720</sparkle:version>
-            <sparkle:shortVersionString>0.11.46</sparkle:shortVersionString>
+            <sparkle:version>1721</sparkle:version>
+            <sparkle:shortVersionString>0.11.49</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Improved
+### Maintenance
 
-- Sidebar scrolling stays smooth at up to 120 fps across hundreds and thousands of tabs, including fast flicks and open folders.
+- Reliability and internal improvements.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[Release notes](https://crestbrowser.com/releases/mac/development/0.11.46/) · [View all changes](https://github.com/crest-browser/Crest/compare/3fb60e2846affbe26cf35060408852f280c3946f...6a8968edcd472cbd2960f75fc30c9ee303a81e8c) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.11.46-2026-11-26-1720-r720.1/Installer-Crest-0.11.46-development-2026-11-26-6a8968e.dmg)
+[Release notes](https://crestbrowser.com/releases/mac/development/0.11.49/) · [View all changes](https://github.com/crest-browser/Crest/compare/6a8968edcd472cbd2960f75fc30c9ee303a81e8c...7bdf30d7abb7fc0c0681143edb21e1a164f08ec0) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.11.49-2026-11-26-1721-r721.1/Installer-Crest-0.11.49-development-2026-11-26-7bdf30d.dmg)
 
 [Browse Development releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.11.46-2026-11-26-1720-r720.1/Installer-Crest-0.11.46-development-2026-11-26-6a8968e.dmg" length="413973493" type="application/octet-stream" sparkle:edSignature="pG4MClCezMtTDYzEg7H/d54OoFnBm3ZyhYNXsk0m+InpmEhxkkNnHB1BVz4dIrfFprjaPLh/hnQICKTOZ+OFBg=="/>
+            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.11.49-2026-11-26-1721-r721.1/Installer-Crest-0.11.49-development-2026-11-26-7bdf30d.dmg" length="414197237" type="application/octet-stream" sparkle:edSignature="rDBw7DwJFh4rlfIanJgxFnNl8QJ55KAym+nnFWhRaOF+dd+9Xq4zAuWDk4/RJXJq+DT1i8F8wcvVBQ/KkjpdDQ=="/>
         </item>
         <item>
             <title>0.10.138</title>
@@ -89,6 +89,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 6PYjj8AgPjBBGqGxoVhlQmVZmAMdu1yS0MxDsfdz/5YgNr6UIc+z/gxIKL67JHX903/kiBsb+2RNa9euGf3PDQ==
-length: 6856
+edSignature: O9xQn0X0k5xLRV8i7v8S2dcG1ecsXZE5yRdy66JoXibJv4C7tKSrdBtK11GhcJJByv6jdS3aDIqr79Eu3YlnBQ==
+length: 6771
 -->

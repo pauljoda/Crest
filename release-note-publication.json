@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-11-new-look",
-    "development": "sidebar-120fps-recycled-scrolling",
+    "development": "harden-content-bridges-and-review-cleanups",
     "nightly": "picture-in-picture-settings-window-fallback"
   }
 }
