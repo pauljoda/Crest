@@ -70,7 +70,7 @@ public sealed record CloseTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Gui
         var before = followUp.FallbackAfterDismissing(space.Id, TabId, available);
         if (followUp.Window?.Tab(space.Id) != TabId) return before;
         if (ReturnTabId is { } returning && returning != TabId && available.Contains(returning)) return returning;
-        if (walksSiblings && followUp.UnvisitedSiblings(space.Id, TabId, before, available) is { Count: > 0 } siblings
+        if (walksSiblings && followUp.UnvisitedSiblings(space, TabId, before, available) is { Count: > 0 } siblings
             && space.Neighbor(TabId, siblings) is { } sibling) return sibling;
         return before ?? space.Neighbor(TabId, available);
     }

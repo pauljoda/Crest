@@ -97,6 +97,17 @@ public sealed partial class BrowserContractsTests {
         device.Send(new ShowTab(window, fixture.Space, right));
         device.Send(new CloseTab(device.Workspace, window, fixture.Space, right));
         Assert.Equal(left, device.Tab(window, fixture.Space));
+
+        // A tab the window showed as the other side of a split was on screen,
+        // so closing back past it returns to the pinned tab.
+        device.Send(new ShowTab(window, fixture.Space, fixture.Pinned));
+        Guid shownSide = Behind(), otherSide = Behind(), last = Behind();
+        device.Send(new JoinSplit(device.Workspace, device.Open(fixture.Space), fixture.Space, otherSide, shownSide, null));
+        device.Send(new ShowTab(window, fixture.Space, shownSide));
+        device.Send(new ShowTab(window, fixture.Space, fixture.Pinned));
+        device.Send(new ShowTab(window, fixture.Space, last));
+        device.Send(new CloseTab(device.Workspace, window, fixture.Space, last));
+        Assert.Equal(fixture.Pinned, device.Tab(window, fixture.Space));
     }
 
     [Fact]
