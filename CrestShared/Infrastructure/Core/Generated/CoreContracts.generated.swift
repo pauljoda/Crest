@@ -2566,7 +2566,8 @@ struct AppPreferences: Equatable, Sendable {
             learnsChoices: true,
             searchesSitesWithTab: true,
             showsReasons: false,
-            providerSpaceTrigger: SearchProviderSpaceTrigger.prefixedShortcut
+            providerSpaceTrigger: SearchProviderSpaceTrigger.prefixedShortcut,
+            prefersSitesOverSearch: false
         ),
         floatsVideoOnAppSwitch: false,
         floatsVideoOnDesktopSwitch: false,
@@ -6793,7 +6794,8 @@ struct PalettePreferences: Equatable, Sendable {
         learnsChoices: true,
         searchesSitesWithTab: true,
         showsReasons: false,
-        providerSpaceTrigger: SearchProviderSpaceTrigger.prefixedShortcut
+        providerSpaceTrigger: SearchProviderSpaceTrigger.prefixedShortcut,
+        prefersSitesOverSearch: false
     )
 
     var layout: PaletteLayout
@@ -6805,6 +6807,7 @@ struct PalettePreferences: Equatable, Sendable {
     var searchesSitesWithTab: Bool
     var showsReasons: Bool
     var providerSpaceTrigger: SearchProviderSpaceTrigger
+    var prefersSitesOverSearch: Bool
 }
 
 struct PaletteRow: Equatable, Sendable {

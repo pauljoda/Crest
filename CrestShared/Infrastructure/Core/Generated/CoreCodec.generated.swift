@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0x3d, 0xc2, 0x1e, 0xc5, 0xcc, 0xf8, 0x61, 0x52, 0x27, 0x1a, 0xbe, 0xb1, 0x7d, 0x5c, 0x50, 0xb9, 0x10, 0xd8, 0xa3, 0xa1, 0x2c, 0xd0, 0xc2, 0x06, 0xcd, 0x0b, 0x78, 0x71, 0xa7, 0xf0, 0x9b, 0x8a
+        0xd6, 0x45, 0x93, 0x9c, 0xab, 0x5d, 0x75, 0x38, 0x89, 0xe0, 0x5f, 0x98, 0xd8, 0x1b, 0xbb, 0x06, 0xc3, 0x48, 0xb4, 0x23, 0xd2, 0x21, 0x65, 0x5f, 0x4f, 0x5e, 0x3b, 0x94, 0xf6, 0x7a, 0x86, 0x69
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -18964,7 +18964,8 @@ extension PalettePreferences {
         let searchesSitesWithTab = try reader.readBool()
         let showsReasons = try reader.readBool()
         let providerSpaceTrigger = try SearchProviderSpaceTrigger(from: &reader)
-        self.init(layout: layout, sources: sources, showsTopHit: showsTopHit, prefersOpenTabs: prefersOpenTabs, completesInline: completesInline, learnsChoices: learnsChoices, searchesSitesWithTab: searchesSitesWithTab, showsReasons: showsReasons, providerSpaceTrigger: providerSpaceTrigger)
+        let prefersSitesOverSearch = try reader.readBool()
+        self.init(layout: layout, sources: sources, showsTopHit: showsTopHit, prefersOpenTabs: prefersOpenTabs, completesInline: completesInline, learnsChoices: learnsChoices, searchesSitesWithTab: searchesSitesWithTab, showsReasons: showsReasons, providerSpaceTrigger: providerSpaceTrigger, prefersSitesOverSearch: prefersSitesOverSearch)
     }
 
     func encode(into writer: inout WireWriter) {
@@ -18980,6 +18981,7 @@ extension PalettePreferences {
         writer.writeBool(searchesSitesWithTab)
         writer.writeBool(showsReasons)
         providerSpaceTrigger.encode(into: &writer)
+        writer.writeBool(prefersSitesOverSearch)
     }
 }
 
