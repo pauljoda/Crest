@@ -13428,6 +13428,9 @@
     "Site Settings" : {
 
     },
+    "Sites before search" : {
+
+    },
     "Sites with Blocking Off" : {
 
     },
@@ -15766,6 +15769,9 @@
 
     },
     "Type a provider’s name or shortcut and press Tab." : {
+
+    },
+    "Type a space after a word to search it." : {
 
     },
     "Type Shortcut" : {

@@ -17,15 +17,17 @@ internal sealed record PaletteLeading(PaletteQuery Query, AddressMatch? Completi
 /// One way a row comes to lead the palette as its best match, so Return runs
 /// it. The rules are asked in order and the first that names a row leads:
 /// a calculation, the address the field completes, what the person picked at
-/// least twice for this text, then a strongly used place whose title or
-/// address starts with the text. A word that names no address leads only
-/// with a place it names: a site the field completes, as the tab that shows
-/// it, or a tab whose title, the site name its title ends with, or the page
-/// title behind a name the person gave it, starts with it, never a page only
-/// history holds. While the field may not
-/// complete, as for a phrase, a single letter, a word followed by a space,
-/// or after the person deleted a completion, only a calculation leads, so
-/// Return runs what they typed: its search, or the address it names.
+/// least twice for this text, the strongest place the text names for a
+/// person who puts sites before search, then a strongly used place whose
+/// title or address starts with the text. A word that names no address leads
+/// only with a place it names: a site the field completes, as the tab that
+/// shows it, or a tab whose title, the site name its title ends with, or the
+/// page title behind a name the person gave it, starts with it, and a page
+/// only history holds only for a person who puts sites before search. While
+/// the field may not complete, as for a phrase, a single letter, a word
+/// followed by a space, or after the person deleted a completion, only a
+/// calculation leads, so Return runs what they typed: its search, or the
+/// address it names.
 internal sealed class PaletteLeadRule {
     #region Static Variables
 
@@ -63,6 +65,15 @@ internal sealed class PaletteLeadRule {
             ? learned with { Row = learned.Row with { Reason = PaletteReason.Learned } }
             : null);
 
+    /// For a person who puts sites before search, the strongest place a word
+    /// that names no address names, whether a tab or only history holds it,
+    /// so the site leads and the search follows. A space after the word, or a
+    /// phrase, lets the search lead again, as the field may not complete then.
+    public static readonly PaletteLeadRule KnownSite = new((context, leading) =>
+        leading.Completes && leading.Searches && context.Preferences.PrefersSitesOverSearch
+            ? leading.Ranked.Where(entry => entry.IsNamed && entry.Place is not null).MaxBy(entry => entry.Score)
+            : null);
+
     /// The strongest row that may lead, once two letters are typed and the
     /// person shows a Top Hit; for a word that names no address, only a tab,
     /// once three letters are typed.
@@ -72,7 +83,7 @@ internal sealed class PaletteLeadRule {
             : null);
 
     /// The rules, in the order the palette asks them.
-    public static IReadOnlyList<PaletteLeadRule> All { get; } = [Calculation, Completion, Habit, StrongPlace];
+    public static IReadOnlyList<PaletteLeadRule> All { get; } = [Calculation, Completion, Habit, KnownSite, StrongPlace];
 
     #endregion
 

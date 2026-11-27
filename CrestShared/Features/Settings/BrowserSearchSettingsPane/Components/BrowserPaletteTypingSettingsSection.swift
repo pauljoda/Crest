@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// How the palette completes and learns as a person types, and clearing what
-/// it learned.
+/// How the palette treats a typed word, completes and learns as a person
+/// types, and clearing what it learned.
 struct BrowserPaletteTypingSettingsSection: View {
     @Bindable var preferences: BrowserAppPreferenceStore
     let browser: BrowserStore
@@ -10,6 +10,11 @@ struct BrowserPaletteTypingSettingsSection: View {
 
     var body: some View {
         Section {
+            Toggle(isOn: $preferences.palette.prefersSitesOverSearch) {
+                Text("Sites before search")
+                Text("Type a space after a word to search it.")
+            }
+            .accessibilityIdentifier("palette-prefers-sites")
             Toggle("Complete addresses inline", isOn: $preferences.palette.completesInline)
                 .accessibilityIdentifier("palette-completes-inline")
             Toggle("Learn from my choices", isOn: $preferences.palette.learnsChoices)

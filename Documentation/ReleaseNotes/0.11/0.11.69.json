@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "palette-sites-before-search",
+      "category": "new",
+      "message": "A new Sites before search option in Settings › Search › Typing lets one typed word lead the command palette with the best matching site you know, such as an open, pinned or saved tab or a page in your history, with the search right below it. A space after the word searches first again. Thanks to Gustavo Lima (@athousanddetails)."
+    }
+  ]
+}

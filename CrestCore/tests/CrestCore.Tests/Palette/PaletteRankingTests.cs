@@ -191,6 +191,31 @@ public sealed partial class BrowserContractsTests {
     /// yet: the chat, a news site and the forge's settings visited often, an
     /// article about the chat once, Crest's notes twelve times and a weather
     /// site three times. Answers the session, the Space and the tab it shows.
+    /// With sites before search, one word leads with the strongest place it
+    /// names, even a page only history holds, and the search follows it; a
+    /// tab it names still leads, and a space after the word, a phrase, or a
+    /// word that names nothing searches first. The choice is kept, and a store
+    /// from before it reads it as off.
+    [Fact]
+    public void SitesBeforeSearchLetAWordLeadWithAPlaceItNamesUntilASpaceFollowsIt() {
+        var (session, space, shown) = RankingSpace();
+        session["appPreferences"] = new JsonObject { ["palette"] = new JsonObject { ["prefersSitesOverSearch"] = true } };
+        using var device = new TestDevice(session);
+        var window = device.Open(space, (space, shown));
+        IReadOnlyList<PaletteRow> Rows(string text) => [.. device.Query(Asking(window, text)).Groups.SelectMany(group => group.Rows)];
+
+        var word = Rows("weather");
+        Assert.Equal((PaletteRowKind.History, "Weather Forecast"), (word[0].Kind, word[0].Title));
+        Assert.Equal(PaletteRowKind.Search, word[1].Kind);
+        Assert.Equal((PaletteRowKind.History, "Tech Digest"), (Rows("tech")[0].Kind, Rows("tech")[0].Title));
+        Assert.Equal((PaletteRowKind.Tab, "#general - Parlor"), (Rows("parl")[0].Kind, Rows("parl")[0].Title));
+        Assert.All(["weather ", "crest browser", "pralor"], text => Assert.Equal(PaletteRowKind.Search, Rows(text)[0].Kind));
+
+        var chosen = PalettePreferences.Default with { PrefersSitesOverSearch = true };
+        Assert.True(StoredSessionCodec.DecodePalettePreferences(StoredSessionCodec.Encode(chosen)).PrefersSitesOverSearch);
+        Assert.False(StoredSessionCodec.DecodePalettePreferences(new JsonObject()).PrefersSitesOverSearch);
+    }
+
     private static (JsonNode Session, Guid Space, Guid Shown) RankingSpace() {
         Guid shown = Guid.NewGuid();
         JsonObject Tab(Guid id, string title, string url, string placement, double hoursAgo) {

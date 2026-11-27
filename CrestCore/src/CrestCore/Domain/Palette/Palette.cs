@@ -5,8 +5,11 @@ namespace CrestCore.Domain;
 #region Types
 
 /// A row the palette ranked, with its score, the kind of result it is, the
-/// page it leads to, and whether it may lead the palette as its best match.
-internal sealed record PaletteCandidate(PaletteRow Row, PaletteSource Source, int Score, string? Place, bool MayLead);
+/// page it leads to, whether it may lead the palette as its best match, and
+/// whether the text names it: a tab or a page in history whose title, site or
+/// the name its tab goes by starts with the text.
+internal sealed record PaletteCandidate(PaletteRow Row, PaletteSource Source, int Score, string? Place, bool MayLead,
+    bool IsNamed = false);
 
 #endregion
 

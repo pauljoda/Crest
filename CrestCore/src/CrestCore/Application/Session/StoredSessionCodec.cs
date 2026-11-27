@@ -127,6 +127,7 @@ internal static partial class StoredSessionCodec {
         public const string Placement = "placement";
         public const string PositionModifiedAt = "positionModifiedAt";
         public const string PrefersOpenTabs = "prefersOpenTabs";
+        public const string PrefersSitesOverSearch = "prefersSitesOverSearch";
         public const string PrimarySpaceId = "primarySpaceID";
         public const string ProtectionModifiedAt = "protectionModifiedAt";
         public const string ProviderSpaceTrigger = "providerSpaceTrigger";
