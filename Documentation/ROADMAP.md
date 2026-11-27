@@ -42,14 +42,15 @@ the live status for each issue.
 - [ ] [Tab switches Spaces instead of moving between form fields on iPad](https://github.com/crest-browser/Crest/issues/425)
 - [ ] [bug: Preserve sidebar state and page state when moving a tab to another window/display](https://github.com/crest-browser/Crest/issues/477)
 - [ ] [feature: Support multiple Private Browsing windows](https://github.com/crest-browser/Crest/issues/481)
-- [ ] [bug: Zoom level is bound to the tab instead of the web site host](https://github.com/crest-browser/Crest/issues/517)
 - [ ] [feature: Share one extension install across chosen Spaces](https://github.com/crest-browser/Crest/issues/527)
 - [ ] [Keep a Quick Window from another app clear of a new tab's keyboard on iPhone](https://github.com/crest-browser/Crest/issues/563)
 - [ ] [Say so when a link from another app needs a locked Space](https://github.com/crest-browser/Crest/issues/564)
-- [ ] [feature: Any plans on implementing Tidy Tabs? Or at least Save All Tabs](https://github.com/crest-browser/Crest/issues/1060)
 
 #### Completed
 
+- [x] [bug: Zoom level is bound to the tab instead of the web site host](https://github.com/crest-browser/Crest/issues/517)
+- [x] [[Bug] Vertical tab list scrolling becomes laggy with many tabs open](https://github.com/crest-browser/Crest/issues/719)
+- [x] [feature: Any plans on implementing Tidy Tabs? Or at least Save All Tabs](https://github.com/crest-browser/Crest/issues/1060)
 - [x] [Overhaul passwords and autofill: one-time codes, a new suggestion popup, and saved addresses and payment cards](https://github.com/crest-browser/Crest/issues/1344)
 
 <!-- crest-roadmap-sync:end -->
