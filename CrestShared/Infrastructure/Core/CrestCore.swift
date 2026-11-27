@@ -88,6 +88,9 @@ final class CrestCore {
     /// (e) moves live revocation into engine commands, the pages' permission
     /// plumbing learns this way what a change covered.
     private let sitePermissionFollowers = Followers<SitePermissionsChanged>()
+    /// Who hears each site zoom a profile keeps that changed, once its batch
+    /// is applied: the pages showing that site.
+    private let siteZoomFollowers = Followers<SiteZoomChanged>()
     private let notificationAccessFollowers = Followers<Void>()
     /// Who hears the questions the core asks the person and those that no
     /// longer wait, once their batch is applied.
@@ -387,6 +390,7 @@ final class CrestCore {
         if batch.notificationAccessChanged { notificationAccessFollowers.send([()]) }
         if !batch.pageRecords.isEmpty { engines.recordsApplied(batch.pageRecords) }
         if !batch.permissionChanges.isEmpty { sitePermissionFollowers.send(batch.permissionChanges) }
+        if !batch.siteZoomChanges.isEmpty { siteZoomFollowers.send(batch.siteZoomChanges) }
         if !batch.prompts.isEmpty { promptFollowers.send(batch.prompts) }
         if !batch.downloads.isEmpty { downloadFollowers.send(batch.downloads) }
         if !batch.startedDownloads.isEmpty { downloadStartFollowers.send(batch.startedDownloads) }
@@ -415,6 +419,12 @@ final class CrestCore {
     /// The registration lasts as long as `owner`.
     func followSitePermissions(_ owner: AnyObject, _ handler: @escaping @MainActor (SitePermissionsChanged) -> Void) {
         sitePermissionFollowers.follow(owner, handler)
+    }
+
+    /// Calls `handler` with each site zoom a profile keeps that changed, once
+    /// its batch is applied. The registration lasts as long as `owner`.
+    func followSiteZoom(_ owner: AnyObject, _ handler: @escaping @MainActor (SiteZoomChanged) -> Void) {
+        siteZoomFollowers.follow(owner, handler)
     }
 
     func followNotificationAccess(_ owner: AnyObject, _ handler: @escaping @MainActor () -> Void) {

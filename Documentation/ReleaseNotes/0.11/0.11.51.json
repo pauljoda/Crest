@@ -1,9 +1,9 @@
 {
   "entries": [
     {
-      "id": "tidy-sorts-open-tabs-into-groups",
-      "category": "new",
-      "message": "Tidy sorts a Space's loose open tabs into Groups named for their topic, using Apple Intelligence on the device. Turn it on in Settings › Tabs, then press Tidy above the open tabs once six or more are loose. Running it again adds to the Groups it made, and its Groups sync like any other. Thanks to Ali Karbassi (@karbassi)."
+      "id": "page-zoom-remembered-per-site",
+      "category": "fixed",
+      "message": "Page zoom now belongs to the website, not the tab. Each Space remembers the zoom you choose for a site after you close its tab or restart Crest, and private browsing keeps it until you close it. Other sites keep your default zoom, and Actual Size returns a site to it. Thanks to Shaheer Sarfaraz (@DaKheera47)."
     }
   ]
 }

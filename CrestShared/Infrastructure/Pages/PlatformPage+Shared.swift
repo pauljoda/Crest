@@ -36,46 +36,32 @@ extension BrowserPlatformPage {
 
     // MARK: - Actions - Zoom
 
+    /// Zooms the page in a step, which its site keeps in the page's profile.
     @discardableResult
     func zoomIn() -> Bool {
         guard allowsPageZoomChange else { return false }
-        return setTemporaryPageZoom(pageZoom.pageZoomIncreased)
+        return zoomSession.set(pageZoom.pageZoomIncreased)
     }
 
+    /// Zooms the page out a step, which its site keeps in the page's profile.
     @discardableResult
     func zoomOut() -> Bool {
         guard allowsPageZoomChange else { return false }
-        return setTemporaryPageZoom(pageZoom.pageZoomDecreased)
+        return zoomSession.set(pageZoom.pageZoomDecreased)
     }
 
+    /// Returns the page and its site to the default zoom.
     @discardableResult
     func resetZoom() -> Bool {
         guard allowsPageZoomChange else { return false }
-        hasTemporaryPageZoomOverride = false
-        return setPageZoom(defaultPageZoom)
+        return zoomSession.reset()
     }
 
-    /// Updates this page's global baseline without discarding a temporary zoom
-    /// chosen through the page commands. A manually zoomed page rejoins the
-    /// baseline when Reset is used, when recreation makes a new page, or when
-    /// the newly selected default already equals its temporary value.
+    /// The device's default zoom changed, which a site without a zoom of its
+    /// own follows.
     @discardableResult
     func applyDefaultPageZoom(_ zoom: CGFloat) -> Bool {
-        let normalized = BrowserDefaultPageZoomStore.normalized(zoom)
-        defaultPageZoom = normalized
-        if hasTemporaryPageZoomOverride {
-            if pageZoom.matchesPageZoom(normalized) {
-                hasTemporaryPageZoomOverride = false
-            }
-            return false
-        }
-        return setPageZoom(normalized)
-    }
-
-    private func setTemporaryPageZoom(_ zoom: CGFloat) -> Bool {
-        let changed = setPageZoom(zoom)
-        hasTemporaryPageZoomOverride = !pageZoom.matchesPageZoom(defaultPageZoom)
-        return changed
+        zoomSession.applyDefault(zoom)
     }
 
     // MARK: - Actions - Content Blocking

@@ -50,6 +50,35 @@ final class CorePage {
         self.core = core
     }
 
+    // MARK: - Actions - Zoom
+
+    /// What the core keeps as the zoom of `url`'s site in the page's profile;
+    /// nil once the page is released, or while the core refuses to say, as
+    /// for a page it does not host yet.
+    func siteZoom(for url: URL) -> SiteZoomPreference? {
+        guard !isReleased else { return nil }
+        return try? core?.query(SavedSiteZoom(pageID: id, url: url.absoluteString))
+    }
+
+    /// Has the core keep `factor` as the zoom of `url`'s site in the page's
+    /// profile, or none when nil. False when it refused.
+    func setSiteZoom(_ factor: Double?, for url: URL) -> Bool {
+        guard !isReleased, let core else { return false }
+        do {
+            _ = try core.send(SetSiteZoom(pageID: id, url: url.absoluteString, factor: factor))
+            return true
+        } catch {
+            Self.logger.debug("The core refused the site zoom: \(String(describing: error))")
+            return false
+        }
+    }
+
+    /// Calls `handler` with each site zoom a profile keeps that changed, for
+    /// as long as `owner` lives.
+    func followSiteZoom(_ owner: AnyObject, _ handler: @escaping @MainActor (SiteZoomChanged) -> Void) {
+        core?.followSiteZoom(owner, handler)
+    }
+
     // MARK: - Actions - Engines
 
     /// What the platform hosts for the page now that the core moved it off

@@ -129,7 +129,9 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var findFocusRequest: Int { findSession.focusRequest }
     var findFocusesQueryField: Bool { findSession.focusesQueryField }
     var canFindAgain: Bool { findSession.canFindAgain }
-    private(set) var pageZoom: CGFloat = BrowserDefaultPageZoomStore.defaultLevel
+    var pageZoom: CGFloat { zoomSession.factor }
+    /// The page's zoom: its site's in the page's profile, or the default.
+    let zoomSession: BrowserPageZoomSession
     let translation = BrowserPageTranslation()
     var readerModeState: BrowserReaderModeState { readerModeSession?.state ?? .unavailable }
     var isContentBlockingActive: Bool { engineAdapter.isContentBlockingActive }
@@ -157,8 +159,6 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// loading it here is what breaks `window.opener` and `document.write`.
     @ObservationIgnored var isAwaitingPopupNavigation = false
 
-    @ObservationIgnored var defaultPageZoom: CGFloat
-    @ObservationIgnored var hasTemporaryPageZoomOverride = false
     var allowsPageZoomChange: Bool { developerViewport == nil }
 
     @ObservationIgnored let dialogPresenter: BrowserDialogPresenter
@@ -351,11 +351,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         self.allowsCredentialAccess = allowsCredentialAccess
         sitePermissionSession = BrowserPageSitePermissionSession(
             page: engineAdapter.enginePage, permissionCenter: permissionCenter, spaceID: spaceID)
-        let normalizedDefaultPageZoom = BrowserDefaultPageZoomStore.normalized(
-            defaultPageZoom
-        )
-        self.defaultPageZoom = normalizedDefaultPageZoom
-        pageZoom = normalizedDefaultPageZoom
+        zoomSession = BrowserPageZoomSession(
+            page: corePage, profileID: profileID, defaultZoom: defaultPageZoom, url: corePage.live.documentURL)
         self.openModifiedLink = openModifiedLink
         self.openPeek = openPeek
         self.handleLinkDrag = handleLinkDrag
@@ -395,6 +392,10 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         )
         self.externalSchemeCoordinator = externalSchemeCoordinator
         super.init()
+        zoomSession.apply = { [weak self] _ in
+            guard let self else { return }
+            self.enginePage.zoom(to: self.renderedPageZoom)
+        }
         corePage.engineMoved = { [weak self] in self?.moveToNewEngine() }
         installEngine()
     }
@@ -405,8 +406,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     private func installEngine() {
         sitePermissionSession.siteURL = { [weak self] in self?.pageEngine.currentURL ?? self?.live.documentURL }
         sitePermissionSession.siteDecisionDidChange = { [weak self] in self?.sitePermissionDidChange($0) }
-        // The Space's default zoom; an engine that creates its page later
-        // replays it then.
+        // The page's zoom; an engine that creates its page later replays it
+        // then.
         enginePage.zoom(to: pageZoom)
         engineAdapter.attach(to: self, allowsCredentialAccess: allowsCredentialAccess)
         engineAdapter.setPrivateBrowsing(isPrivateBrowsing)
@@ -463,6 +464,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         // An engine that reports its own navigations prepares the page when it
         // says one started; until then the page only shows the load pending.
         if pageEngine.reportsNavigationState, request.url != nil {
+            zoomSession.prepareForNavigation(to: request.url)
             engineAdapter.reporter?.heading(to: request.url)
             webContentFailureMessage = nil
             pageEngine.load(request)
@@ -1094,23 +1096,13 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
     }
 
-    // MARK: - Actions - Zoom state
-
-    func setPageZoom(_ zoom: CGFloat) -> Bool {
-        guard zoom != pageZoom else {
-            return false
-        }
-        pageZoom = zoom
-        enginePage.zoom(to: renderedPageZoom)
-        return true
-    }
-
     // MARK: - Actions - Navigation state
 
     /// Readies the page for a navigation of its document to `url`, which the
     /// app asked for or the engine accepted: what belonged to the document it
     /// leaves goes, and the page shows it heading to `url`.
     func prepareForNavigation(to url: URL?) {
+        zoomSession.prepareForNavigation(to: url)
         // Same-document navigation never commits a replacement document.
         // Cancel the current pull here; suspend new pulls only when WebKit
         // actually starts provisional navigation.

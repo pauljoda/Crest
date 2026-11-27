@@ -111,6 +111,7 @@ internal sealed partial class Device {
         lastUse = records.Windows.Count == 0 ? 0 : records.Windows.Max(record => record.Used);
         keptPermissions.Restore(records.SitePermissions);
         keptEngines.Restore(records.SiteEngines);
+        keptSiteZoom.Restore(records.SiteZoom);
         defaultEngine = records.DefaultEngine;
         shortcuts = records.Shortcuts;
         links = records.Links;
@@ -172,7 +173,8 @@ internal sealed partial class Device {
     /// A workspace that closed takes the windows over it with it, each
     /// published as closed, then publishes that it closed. Their saved records
     /// stay, so a later launch restores those windows: a workspace closing is
-    /// not the person closing its windows.
+    /// not the person closing its windows. A memory-only profile no workspace
+    /// browses with any more forgets its site zoom.
     public void Detach(Guid workspaceId) {
         Window[] closed;
         lock (gate) {
@@ -181,6 +183,7 @@ internal sealed partial class Device {
             foreach (var window in closed) open.Remove(window.Id);
         }
         foreach (var window in closed) announce(new WindowClosed(window.Id));
+        ForgetPassingSiteZoom();
         announce(new WorkspaceClosed(workspaceId));
     }
 
@@ -233,8 +236,9 @@ internal sealed partial class Device {
     /// changed is published first, then what the command did that the states
     /// cannot tell, then each window that shows something else. The window
     /// that issued the command takes what it chose to show, and every window
-    /// over the workspace is repaired against `next`. Called with no session
-    /// lock held.
+    /// over the workspace is repaired against `next`, and a memory-only
+    /// profile its Spaces no longer browse with forgets its site zoom. Called
+    /// with no session lock held.
     public void SessionPublished(Guid workspaceId, SessionState previous, SessionState next, WindowFollowUp? followUp,
         SessionTabEvents events) {
         ArgumentNullException.ThrowIfNull(previous);
@@ -256,6 +260,7 @@ internal sealed partial class Device {
         }
         foreach (var change in changes) announce(change);
         RememberPublished(workspaceId, previous, next);
+        if (!SameProfiles(previous, next)) ForgetPassingSiteZoom();
         if (owner is not null) FollowOwner(owner);
     }
 
@@ -365,7 +370,8 @@ internal sealed partial class Device {
         Pages = pages,
         Downloads = [.. downloads],
         SyncsWithICloud = syncsWithICloud,
-        SiteControlTopActions = chosenSiteControlTopActions?.Actions ?? []
+        SiteControlTopActions = chosenSiteControlTopActions?.Actions ?? [],
+        SiteZoom = [.. keptSiteZoom.Choices]
     };
 
     #endregion

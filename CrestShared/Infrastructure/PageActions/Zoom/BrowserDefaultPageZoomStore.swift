@@ -11,8 +11,8 @@ protocol BrowserDefaultPageZoomObserving: AnyObject {
 /// store keeps, and the pages that follow it.
 ///
 /// Pages subscribe weakly so changing Settings can update every resident page
-/// without making their lifetimes part of the preference's lifetime. A page with
-/// a temporary command override decides for itself whether to adopt the change.
+/// without making their lifetimes part of the preference's lifetime. A page
+/// whose site keeps a zoom of its own shows that instead.
 @Observable
 @MainActor
 final class BrowserDefaultPageZoomStore {
