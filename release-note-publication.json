@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-11-new-look",
-    "development": "sidebar-drag-preview-and-live-reorder-motion",
+    "development": "page-zoom-remembered-per-site",
     "nightly": "picture-in-picture-settings-window-fallback"
   }
 }
