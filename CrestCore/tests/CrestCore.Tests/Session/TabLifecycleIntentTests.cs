@@ -46,6 +46,72 @@ public sealed partial class BrowserContractsTests {
     }
 
     [Fact]
+    public void ClosingTheOnlyTabAWindowShowedShowsTheTabBesideIt() {
+        var fixture = new BatchSpace();
+        using var device = new TestDevice(fixture.Session);
+
+        // A window that has shown nothing else in the Space, as after a
+        // relaunch, shows the tab below the one it closed rather than none,
+        // and the other side of a split it closed one side of.
+        var window = device.Open(fixture.Space, (fixture.Space, fixture.Open));
+        device.Send(new CloseTab(device.Workspace, window, fixture.Space, fixture.Open));
+        Assert.Equal(fixture.Left, device.Tab(window, fixture.Space));
+        device.Send(new CloseTab(device.Workspace, window, fixture.Space, fixture.Left));
+        Assert.Equal(fixture.Right, device.Tab(window, fixture.Space));
+
+        // A tab the window showed before still comes first.
+        device.Send(new ShowTab(window, fixture.Space, fixture.Pinned));
+        device.Send(new ShowTab(window, fixture.Space, fixture.Last));
+        device.Send(new CloseTab(device.Workspace, window, fixture.Space, fixture.Last));
+        Assert.Equal(fixture.Pinned, device.Tab(window, fixture.Space));
+    }
+
+    [Fact]
+    public void ClosingATabOpenedBehindWalksTheTabsOpenedWithItBeforeReturning() {
+        var fixture = new BatchSpace();
+        using var device = new TestDevice(fixture.Session);
+        var window = device.Open(fixture.Space, (fixture.Space, fixture.Open));
+        Guid Behind() {
+            var id = Guid.NewGuid();
+            device.Send(new OpenTab(device.Workspace, window, fixture.Space, id, new TabContent($"https://behind.example/{id}",
+                View: null, Title: null), TabPlacement.Current, AfterTabId: fixture.Pinned, Shows: false, PlacesAsNewTab: true));
+            return id;
+        }
+
+        // Three links opened behind the pinned tab, then the first one read:
+        // closing walks to the next one the window has not shown, then the
+        // last, and only then back to the pinned tab.
+        device.Send(new ShowTab(window, fixture.Space, fixture.Pinned));
+        Guid first = Behind(), second = Behind(), third = Behind();
+        device.Send(new ShowTab(window, fixture.Space, first));
+        device.Send(new CloseTab(device.Workspace, window, fixture.Space, first));
+        Assert.Equal(second, device.Tab(window, fixture.Space));
+        device.Send(new CloseTab(device.Workspace, window, fixture.Space, second));
+        Assert.Equal(third, device.Tab(window, fixture.Space));
+        device.Send(new CloseTab(device.Workspace, window, fixture.Space, third));
+        Assert.Equal(fixture.Pinned, device.Tab(window, fixture.Space));
+
+        // One shown after another goes back to the one shown before.
+        Guid left = Behind(), right = Behind();
+        device.Send(new ShowTab(window, fixture.Space, left));
+        device.Send(new ShowTab(window, fixture.Space, right));
+        device.Send(new CloseTab(device.Workspace, window, fixture.Space, right));
+        Assert.Equal(left, device.Tab(window, fixture.Space));
+
+        // A tab the window showed as the other side of a split was on screen,
+        // even once it leaves the split, so closing returns to the pinned tab.
+        device.Send(new ShowTab(window, fixture.Space, fixture.Pinned));
+        Guid shownSide = Behind(), otherSide = Behind(), last = Behind();
+        device.Send(new JoinSplit(device.Workspace, device.Open(fixture.Space), fixture.Space, otherSide, shownSide, null));
+        device.Send(new ShowTab(window, fixture.Space, shownSide));
+        device.Send(new ShowTab(window, fixture.Space, fixture.Pinned));
+        device.Send(new LeaveSplit(device.Workspace, fixture.Space, otherSide));
+        device.Send(new ShowTab(window, fixture.Space, last));
+        device.Send(new CloseTab(device.Workspace, window, fixture.Space, last));
+        Assert.Equal(fixture.Pinned, device.Tab(window, fixture.Space));
+    }
+
+    [Fact]
     public void PuttingAwaySavedTabsTogetherReturnsTheWindowToATabOutsideThem() {
         using var device = new TestDevice(MaximalDocument());
         var core = device.Authority;

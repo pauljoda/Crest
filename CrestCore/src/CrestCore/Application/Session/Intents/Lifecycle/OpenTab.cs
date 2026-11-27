@@ -12,7 +12,9 @@ namespace CrestCore.Contracts;
 /// `AfterTabId` names sits in, and, when `SavesInSavedFolder` as well, as for
 /// an address the person typed for a new tab, at the end of its saved folder,
 /// saved there. When `Shows`, the window that
-/// asked shows the tab and its Space. Refused with `TabLimitReached` or
+/// asked shows the tab and its Space; otherwise the tab opens behind the one
+/// that window shows, which a close returns to once it has walked the tabs
+/// opened behind it. Refused with `TabLimitReached` or
 /// `PinnedTabsFull` when the Space or the section is full, and with
 /// `UnsupportedAddress` for an address a page cannot load.
 public sealed record OpenTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid TabId, TabContent Content, TabPlacement Placement,
@@ -33,6 +35,7 @@ public sealed record OpenTab(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid
             edited.JoinFolderOf(from, tab.Id, turn.Now, SavesInSavedFolder);
         var followUp = new WindowFollowUp(workspace.IssuingWindow(WindowId));
         if (Shows) followUp.ShowTab(space.Id, tab.Id).ShowSpace(space.Id);
+        else followUp.OpenBehind(space.Id, tab.Id);
         return new(turn.Basis.Replacing(edited.Capture(space)), SyncStaging.Creation, followUp,
             SessionTabEvents.None.Opening(WindowId, space.Id, tab.Id));
     }
