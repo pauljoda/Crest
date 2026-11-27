@@ -6,28 +6,43 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.11.53</title>
-            <pubDate>Fri, 27 Nov 2026 04:41:56 +0000</pubDate>
+            <title>0.11.63</title>
+            <pubDate>Fri, 27 Nov 2026 05:30:46 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1725</sparkle:version>
-            <sparkle:shortVersionString>0.11.53</sparkle:shortVersionString>
+            <sparkle:version>1727</sparkle:version>
+            <sparkle:shortVersionString>0.11.63</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
+### New
+
+- Return to Saved URL sends a pinned or saved tab you've moved away from back to its saved address, from the Tabs menu, the command palette, or keys you choose in Settings › Shortcuts. Thanks to @hader00.
+- Turn on Show sidebar when switching Spaces with shortcuts in Settings › Appearance, and a hidden sidebar slides out for a moment when you change Space from the keyboard, so you can see where you landed. Thanks to Mathias Balling (@MathiasBalling).
+- Turn on Ask before quitting in Settings › General, and Command-Q or Quit Crest asks first, with Don't ask again to stop asking. Thanks to Mael Bigay (@mTxBeN).
+
+### Improved
+
+- A folder you make from a tab's menu opens with its name ready to type, as New Folder in the sidebar does. A new saved folder opens the saved section first, so its name is in view. Thanks to Sunny Tamang (@SunnyTamang).
+- While a Peek is open, the address field shows the Peek's address, and its lock, Copy URL button and Site Controls are for the Peek's page. When the Peek closes or becomes a tab, the field shows the tab's address again. Thanks to Jared Volpe (@plainspace).
+
 ### Fixed
 
-- Middle-clicking a saved tab inside a folder or folder preview card now reliably unloads it, including after moving tabs or collapsing and reopening folders.
+- When Crest is already connected to as many agents as it takes, another agent is told so and can try again later, instead of being told that Crest isn't running. Thanks to Nir Cohen (@nircoh-onyx).
+- In Settings › Tabs, the note about holding Shift sits under Switch to tabs opened from links, the only setting it changes. Thanks to Miguel Villalobos (@MotherJammer).
+- Typing “settings” in the command palette lists Settings pages, and a phrase such as “privacy settings” finds its page. Thanks to Anna Danchenko (@aodanchenko).
+- The command palette no longer selects a row that appears under a resting pointer, so Return opens the row the keyboard chose. Moving the pointer still selects the row under it. Thanks to Miguel Villalobos (@MotherJammer).
+- With Reduce Transparency on, a Space's sidebar texture shows as a fine film grain instead of all but disappearing, and the Texture slider previews it the same way. Thanks to Peppe Bergqvist (@peppelorum).
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[Release notes](https://crestbrowser.com/releases/mac/development/0.11.53/) · [View all changes](https://github.com/crest-browser/Crest/compare/f0cf12262cbc7900040dc392958250db875f7883...24a35a7d389d52fbe84688f753ea3a6de8b2d020) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.11.53-2026-11-27-1725-r725.1/Installer-Crest-0.11.53-development-2026-11-27-24a35a7.dmg)
+[Release notes](https://crestbrowser.com/releases/mac/development/0.11.63/) · [View all changes](https://github.com/crest-browser/Crest/compare/24a35a7d389d52fbe84688f753ea3a6de8b2d020...950a9758b818789500c27e60dc868f544559c2eb) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.11.63-2026-11-27-1727-r727.1/Installer-Crest-0.11.63-development-2026-11-27-950a975.dmg)
 
 [Browse Development releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.11.53-2026-11-27-1725-r725.1/Installer-Crest-0.11.53-development-2026-11-27-24a35a7.dmg" length="414789110" type="application/octet-stream" sparkle:edSignature="Yff2lKJsfyIog/MpNPxT9SWjtmnq/Yc123zExbw9zqVP6xJNORARbrp0RIpLxvQQyfrYuMaFhbmiEjhgmOIKAg=="/>
+            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.11.63-2026-11-27-1727-r727.1/Installer-Crest-0.11.63-development-2026-11-27-950a975.dmg" length="414890997" type="application/octet-stream" sparkle:edSignature="GB73iYTa60eEQEVSKMdeVyatJmXAO6zTv3QFcoX4tWE8KJDDlnZ4VSwCGfvM+deQJ5ri09wvuS80W+9if7C3Cw=="/>
         </item>
         <item>
             <title>0.10.138</title>
@@ -89,6 +104,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: AeBsXzhB2YOkP+Ki3ClGtQZB/vjT/L7WVdDSsQfKTBKI36Ri3i49UEszrUm0KJB1dG74tpdpb35KJqcHoaDsDA==
-length: 6883
+edSignature: SnXu3XT4zwmv0Xhd5uVnJ/9JN66Pm59oQ3L7VpCTHj3GJgXLgtq0IstHeyOTqguZfekyg9SSI82lbJEsGLowBQ==
+length: 8823
 -->

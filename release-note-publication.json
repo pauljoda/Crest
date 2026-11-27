@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-11-new-look",
-    "development": "sidebar-folder-middle-click-unload",
+    "development": "ask-before-quitting",
     "nightly": "picture-in-picture-settings-window-fallback"
   }
 }
