@@ -403,6 +403,18 @@
     "before": "362984dc8a2c504c75ab7f6d4810d67bd459f2f4b232fdf2158d5da9fdde364b",
     "after": "a50cbb7f660472462ba0c7da20db8de88f17e8b7b08055ff16ff97d01d104d8f"
   },
+  "content/public/browser/video_picture_in_picture_window_controller.h": {
+    "before": "413b259a9199e766cadacb3b4eb82ce154ebc9b6c96c3300b8d50c7eb0d5de47",
+    "after": "b54b1b8baef371de2b56d12a41adac11d39c82230e3a2f530d6f384e9b312547"
+  },
+  "content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.h": {
+    "before": "3cfa1c44c957f2de3d2f75295650b9a4226895b57b0d66ed21a3d23474752505",
+    "after": "80aac6ae074044e6d23f74f69694e4c0b2be9ef1c8cd7ac2e0b94995487c5c74"
+  },
+  "content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.cc": {
+    "before": "1901fac89378723459239b047613f7969922da26235f085ca6152c069d664ab9",
+    "after": "837d6f91b28897fbe9696ef5c0553c4fe925b6d526c60f03af9feb2154820c7c"
+  },
   "services/network/BUILD.gn": {
     "before": "1e38a27be4dc0ddd09617493b68d2a6d31f8073a5e73e014739d60eed56561e9",
     "after": "e4066df86c009ff175a046782988bb415dfac0f5f15fc0841750f782d88ec2ce"
@@ -530,17 +542,5 @@
   "content/browser/renderer_host/browser_compositor_view_mac.mm": {
     "before": "1579b8073ab9c8682f11edd12227324048bbf7c5ae6b3d6b924cb285d0eca665",
     "after": "710968c986105f73a0a01c95331c8049d007e1c9cffda35a21667118c3ecbdfd"
-  },
-  "content/public/browser/video_picture_in_picture_window_controller.h": {
-    "before": "413b259a9199e766cadacb3b4eb82ce154ebc9b6c96c3300b8d50c7eb0d5de47",
-    "after": "b54b1b8baef371de2b56d12a41adac11d39c82230e3a2f530d6f384e9b312547"
-  },
-  "content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.h": {
-    "before": "3cfa1c44c957f2de3d2f75295650b9a4226895b57b0d66ed21a3d23474752505",
-    "after": "80aac6ae074044e6d23f74f69694e4c0b2be9ef1c8cd7ac2e0b94995487c5c74"
-  },
-  "content/browser/picture_in_picture/video_picture_in_picture_window_controller_impl.cc": {
-    "before": "1901fac89378723459239b047613f7969922da26235f085ca6152c069d664ab9",
-    "after": "837d6f91b28897fbe9696ef5c0553c4fe925b6d526c60f03af9feb2154820c7c"
   }
 }
