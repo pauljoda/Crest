@@ -1,5 +1,3 @@
-using CrestCore.Contracts;
-
 namespace CrestCore.Application;
 
 /// What a session command chose for the window that issued it to show next:
@@ -77,8 +75,8 @@ internal sealed class WindowFollowUp(Window? window) {
     /// The tabs the window opened behind the same tab as `tabId` and has not
     /// shown since, when it would go back to that tab, `returnsTo`: see
     /// `Window.UnvisitedSiblings`. None for a command issued without a window.
-    public IReadOnlySet<Guid> UnvisitedSiblings(SpaceState space, Guid tabId, Guid? returnsTo, IReadOnlySet<Guid> available) =>
-        Window?.UnvisitedSiblings(space, tabId, returnsTo, available) ?? new HashSet<Guid>();
+    public IReadOnlySet<Guid> UnvisitedSiblings(Guid spaceId, Guid tabId, Guid? returnsTo, IReadOnlySet<Guid> available) =>
+        Window?.UnvisitedSiblings(spaceId, tabId, returnsTo, available) ?? new HashSet<Guid>();
 
     /// The tab to show in `spaceId` after the tabs `tabIds` leave it together:
     /// see `Window.DismissalFallback`. Only a window that shows one of them

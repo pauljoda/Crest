@@ -274,16 +274,19 @@ internal sealed class Window {
 
     /// The tabs `available` holds that the window opened behind the same tab
     /// as `dismissed` and has not shown since, when `returnsTo`, the tab the
-    /// window would go back to once `dismissed` leaves `space`, is that
-    /// opener; none otherwise. A tab in a split whose other side the window
-    /// showed was on screen too, so it counts as shown.
-    public IReadOnlySet<Guid> UnvisitedSiblings(SpaceState space, Guid dismissed, Guid? returnsTo, IReadOnlySet<Guid> available) {
-        ArgumentNullException.ThrowIfNull(space);
-        if (!openers.TryGetValue((space.Id, dismissed), out var opener) || returnsTo != opener) return new HashSet<Guid>();
-        var shown = recent.TryGetValue(space.Id, out var history) ? history.ToHashSet() : [];
-        return unvisited.Where(entry => entry.SpaceId == space.Id && entry.TabId != dismissed && available.Contains(entry.TabId)
-                && openers.GetValueOrDefault(entry) == opener && !Cards(space, entry.TabId).TabIds.Any(shown.Contains))
-            .Select(entry => entry.TabId).ToHashSet();
+    /// window would go back to once `dismissed` leaves `spaceId`, is that
+    /// opener; none otherwise.
+    public IReadOnlySet<Guid> UnvisitedSiblings(Guid spaceId, Guid dismissed, Guid? returnsTo, IReadOnlySet<Guid> available) {
+        if (!openers.TryGetValue((spaceId, dismissed), out var opener) || returnsTo != opener) return new HashSet<Guid>();
+        return unvisited.Where(entry => entry.SpaceId == spaceId && entry.TabId != dismissed && available.Contains(entry.TabId)
+            && openers.GetValueOrDefault(entry) == opener).Select(entry => entry.TabId).ToHashSet();
+    }
+
+    /// Counts every tab the window's content shows over `session` as shown:
+    /// the other sides of the split it shows as well as the tab it focuses,
+    /// which stay shown if they later leave the split.
+    public void SeeOnScreen(SessionState session) {
+        foreach (var tabId in OnScreen(session)) unvisited.Remove((ShownSpaceId, tabId));
     }
 
     /// Applies what a command chose for this window to show next.

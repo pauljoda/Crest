@@ -302,6 +302,7 @@ internal sealed partial class Device {
         var changes = new List<Change>();
         foreach (var window in windows.ToArray()) {
             edit(window);
+            window.SeeOnScreen(session);
             if (Publishing(window, session) is { } change) changes.Add(change);
         }
         return changes;
