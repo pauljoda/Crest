@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "undo-clear-tabs",
+      "category": "fixed",
+      "platforms": ["mac"],
+      "message": "Undo now brings back the tabs Clear Other Tabs and Clear All Tabs put away, in the same order, folders and Split Views. Edit › Undo offers it right after a clear, and so does the notice that reports it."
+    }
+  ]
+}

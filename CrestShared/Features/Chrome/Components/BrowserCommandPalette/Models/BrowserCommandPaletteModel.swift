@@ -13,8 +13,8 @@ import SwiftUI
 final class BrowserCommandPaletteModel {
     // MARK: - Static Variables
 
-    /// How long Return, Tab or Down wait for the answer to what was typed
-    /// before they act on the rows already shown.
+    /// How long Return, Tab or Down wait for the off-main answer to what was
+    /// typed before the palette asks for it on the main thread.
     private static let keyWait: Duration = .milliseconds(300)
     /// How far apart, in points, the palette and a row may place one pointer
     /// position, as each converts it into window coordinates.
@@ -76,7 +76,7 @@ final class BrowserCommandPaletteModel {
     @ObservationIgnored private var shownSequence = 0
     @ObservationIgnored private var answerTask: Task<Void, Never>?
     /// A key pressed before the answer to what was typed arrived, and the
-    /// wait that runs it on the rows already shown.
+    /// wait after which the palette asks for that answer on the main thread.
     @ObservationIgnored private var waitingKey: (() -> Void)?
     @ObservationIgnored private var keyWaitTask: Task<Void, Never>?
     /// Where the pointer last stood over the palette, in window coordinates,
@@ -234,6 +234,8 @@ final class BrowserCommandPaletteModel {
     // MARK: - Actions - Completion
 
     func updateCompletionEditing(text: String, selection: NSRange, isComposing: Bool) {
+        // A key pressed for the text before this edit never acts on the answer to it.
+        if !isComposing, text != query { dropWaitingKey() }
         let couldPropose = completionEditing.canPropose(for: query)
         completionEditing.update(text: text, selection: selection, isComposing: isComposing)
         if !isComposing { query = text }
@@ -305,8 +307,12 @@ final class BrowserCommandPaletteModel {
         if held != heldModifiers { heldModifiers = held }
     }
 
-    /// Runs `key` now when the rows answer what was typed, or once they do,
-    /// or after a short wait on the rows already shown.
+    /// Runs `key` now when the rows answer what was typed, or once they do.
+    /// The answer comes off the main thread; after a short wait the palette
+    /// asks for it on the main thread instead, so a key never acts on rows
+    /// that answer an earlier keystroke, such as the search for half a typed
+    /// address. A key whose text has no answer, or that the person typed past,
+    /// does nothing.
     private func waitForAnswer(_ key: @escaping () -> Void) {
         guard shownSequence != sequence else {
             key()
@@ -316,20 +322,24 @@ final class BrowserCommandPaletteModel {
         keyWaitTask?.cancel()
         keyWaitTask = Task { [weak self] in
             try? await Task.sleep(for: Self.keyWait)
-            guard !Task.isCancelled, let self else { return }
-            // Keep the key pending if the initial deferred answer has not yet
-            // arrived and no rows exist to act on.
-            guard self.shownSequence > 0 || !self.items.isEmpty else { return }
-            runWaitingKey()
+            guard !Task.isCancelled, let self, waitingKey != nil else { return }
+            guard let answer = try? browser.core.query(question(for: query)) else {
+                dropWaitingKey()
+                return
+            }
+            show(answer, for: sequence)
         }
+    }
+
+    private func dropWaitingKey() {
+        keyWaitTask?.cancel()
+        waitingKey = nil
     }
 
     private func runWaitingKey() {
         keyWaitTask?.cancel()
         guard let key = waitingKey else { return }
         waitingKey = nil
-        // A key that waited too long acts on what is shown, whatever it answers.
-        shownSequence = sequence
         key()
     }
 

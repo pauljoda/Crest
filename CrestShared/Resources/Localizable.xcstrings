@@ -14514,6 +14514,9 @@
     "Tabs below the line close automatically on your Space’s cleanup schedule. Clear archives all but the tab you’re on, and Clear All Tabs in the Space’s ••• menu archives every one. Pinned and saved tabs stay." : {
 
     },
+    "Tabs Cleared" : {
+
+    },
     "Tap for options. Touch and hold to translate now." : {
 
     },
@@ -14634,6 +14637,9 @@
 
     },
     "The checkpoint could not be restored. Your original files have been preserved." : {
+
+    },
+    "The cleared tabs are no longer in the Archive." : {
 
     },
     "The connection to %@ ended before the page finished loading." : {

@@ -131,7 +131,7 @@ public sealed partial class BrowserContractsTests {
 
         // Clearing the open tabs passes the first saved tab, inside a
         // collapsed folder, for the loose one, and so does a new window.
-        device.Send(new ClearCurrentTabs(device.Workspace, window, fixture.Space));
+        device.Send(new ClearCurrentTabs(device.Workspace, window, fixture.Space, Guid.NewGuid()));
         Assert.Equal(fixture.LooseSaved, device.Tab(window, fixture.Space));
         Assert.Equal(fixture.LooseSaved, device.Tab(device.Open(fixture.Space), fixture.Space));
 
@@ -143,6 +143,57 @@ public sealed partial class BrowserContractsTests {
         // window shows none.
         device.Send(new ExpandSavedTabs(device.Workspace, fixture.Space, IsExpanded: false));
         Assert.Null(device.Tab(device.Open(fixture.Space), fixture.Space));
+    }
+
+    [Fact]
+    public void TakingBackAClearReopensItsTabsWhereTheyStoodInTheirFolderAndSplit() {
+        var fixture = new BatchSpace();
+        using var device = new TestDevice(fixture.Session);
+        var window = device.Open(fixture.Space, (fixture.Space, fixture.Open));
+        var before = device.Authority.Current.KnownSpace(fixture.Space);
+        var clear = Guid.NewGuid();
+
+        // Clearing the other tabs archives the split, the last tab and the
+        // open folder's only tab, and the emptied folder goes.
+        device.Send(new ClearCurrentTabs(device.Workspace, window, fixture.Space, clear, KeepsShownTab: true));
+        var cleared = device.Authority.Current.KnownSpace(fixture.Space);
+        Assert.Equal([fixture.Pinned, fixture.Saved, fixture.Open], cleared.Tabs.Select(tab => tab.Id));
+        Assert.DoesNotContain(cleared.Folders, folder => folder.Id == fixture.OpenFolder);
+        Assert.Empty(cleared.SplitGroups);
+
+        // Taken back after a new tab opened and showed, each tab returns where
+        // it stood, after the tab it followed, with its folder and split as
+        // they were; the new tab follows them, and the window shows the tab
+        // it showed when it cleared.
+        var opened = Guid.NewGuid();
+        device.Send(new OpenTab(device.Workspace, window, fixture.Space, opened, new TabContent("https://opened.example/", View: null,
+            Title: null), TabPlacement.Current, AfterTabId: fixture.Open, Shows: true));
+        var reopened = device.Send(new RestoreClearedTabs(device.Workspace, window, fixture.Space, clear));
+        var restored = device.Authority.Current.KnownSpace(fixture.Space);
+        Assert.Equal([fixture.Pinned, fixture.Saved, fixture.Open, fixture.Left, fixture.Right, fixture.Last, fixture.Filed, opened],
+            restored.Tabs.Select(tab => tab.Id));
+        Assert.Equal(before.Folders, restored.Folders);
+        Assert.Equal(before.SplitGroups, restored.SplitGroups);
+        Assert.Equal(before.Tabs.Select(tab => (tab.Id, tab.FolderId, tab.SplitGroupId)),
+            restored.Tabs.Where(tab => tab.Id != opened).Select(tab => (tab.Id, tab.FolderId, tab.SplitGroupId)));
+        Assert.DoesNotContain(restored.ArchivedTabs, archived => cleared.ArchivedTabs.Any(entry => entry.Tab.Id == archived.Tab.Id
+            && entry.ArchivedAt == archived.ArchivedAt && entry.Reason == ArchiveReason.Closed));
+        Assert.Equal(fixture.Open, device.Tab(window, fixture.Space));
+        Assert.Equal([fixture.Left, fixture.Right, fixture.Last, fixture.Filed],
+            reopened.OfType<TabsOpened>().Single().Tabs.Select(tab => tab.TabId));
+
+        // Nothing is left to take back a second time.
+        Assert.Equal(clear, Assert.IsType<ClearedTabsGone>(Assert.Throws<Rejected>(() =>
+            device.Send(new RestoreClearedTabs(device.Workspace, window, fixture.Space, clear))).Rejection).ClearId);
+
+        // Clearing every open tab takes the shown one too, which shows again
+        // once the clear is taken back.
+        var all = Guid.NewGuid();
+        device.Send(new ClearCurrentTabs(device.Workspace, window, fixture.Space, all));
+        Assert.Equal(fixture.Pinned, device.Tab(window, fixture.Space));
+        device.Send(new RestoreClearedTabs(device.Workspace, window, fixture.Space, all));
+        Assert.Equal(restored.Tabs.Select(tab => tab.Id), device.Authority.Current.KnownSpace(fixture.Space).Tabs.Select(tab => tab.Id));
+        Assert.Equal(fixture.Open, device.Tab(window, fixture.Space));
     }
 
     [Fact]
