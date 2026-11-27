@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "id": "close-tab-shortcut-closes-only-search-field",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "Pressing ⌘W with the search field open closes only the search field, and leaves the tab behind it open."
+    }
+  ]
+}

@@ -19,6 +19,33 @@ final class BrowserDurableTabCloseTests: XCTestCase {
         XCTAssertTrue(context.browser.shownSpace!.archive.contains(tabID: context.tab.id))
     }
 
+    /// Close Tab with the palette open puts only the palette away, as Escape
+    /// does; the shown tab closes on the next press.
+    func testCloseTabWithPaletteOpenClosesOnlyThePalette() throws {
+        let address = try XCTUnwrap(URL(string: "https://example.com"))
+        let shown = TabState.Seed(title: "Shown", url: address, placement: .current)
+        let other = TabState.Seed(title: "Other", url: address, placement: .current)
+        let space = SpaceState.Seed(
+            name: "Shown", symbol: "circle", accent: .indigo, folders: [], tabs: [shown, other])
+        let browser = BrowserStore.hostingPages(
+            SessionState.Seed(spaces: [space]), showing: space.id, tabs: [space.id: shown.id])
+        let chrome = BrowserChromeState()
+        let actions = BrowserCommandActions(
+            browser: browser, pages: BrowserPagePool(browser: browser), chrome: chrome, windows: nil)
+        chrome.presentCommandPalette()
+
+        actions.perform(.closeTabOrWindow)
+
+        XCTAssertFalse(chrome.isCommandPalettePresented)
+        XCTAssertTrue(try XCTUnwrap(browser.spaceModel(space.id)).tabs.contains(shown.id))
+
+        actions.perform(.closeTabOrWindow)
+
+        let closed = try XCTUnwrap(browser.spaceModel(space.id))
+        XCTAssertFalse(closed.tabs.contains(shown.id))
+        XCTAssertTrue(closed.archive.contains(tabID: shown.id))
+    }
+
     /// Clear Other Tabs archives the shown Space's open tabs however recently
     /// they were used, but the shown one, keeps its pinned and saved tabs, and
     /// leaves other Spaces alone, even a tab there past its cleanup lifetime.

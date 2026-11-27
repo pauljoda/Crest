@@ -239,9 +239,16 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         NSApp.keyWindow?.performClose(nil)
     }
 
-    /// Closes the selected tab the way the core closes it, or the window when
-    /// the core says only the window is left to close.
+    /// Closes the palette when it is open, or else the selected tab the way
+    /// the core closes it, or the window when the core says only the window
+    /// is left to close.
     func closeTabOrWindow() {
+        // An open palette closes alone, as Escape closes it, since it is in
+        // front of everything else.
+        if chrome.isCommandPalettePresented {
+            chrome.dismissCommandPalette()
+            return
+        }
         // A Peek open over the tab closes first, as it is what shows.
         if pages.closePeek() { return }
         if closeSidebarSelection() { return }
