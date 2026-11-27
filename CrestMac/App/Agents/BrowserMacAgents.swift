@@ -194,7 +194,16 @@ final class BrowserMacAgents {
     // MARK: - Actions - Connections
 
     private func admit(_ connection: BrowserAgentConnection) {
-        guard listener != nil, links.count < Self.maximumConnections else {
+        guard listener != nil else {
+            connection.close()
+            return
+        }
+        // A helper past the limit hears why before Crest hangs up, so its
+        // agent is not told that Crest isn't running.
+        guard links.count < Self.maximumConnections else {
+            if let refusal = try? JSONEncoder().encode(AgentLinkResponse.refused(reason: .full)) {
+                connection.send(refusal)
+            }
             connection.close()
             return
         }

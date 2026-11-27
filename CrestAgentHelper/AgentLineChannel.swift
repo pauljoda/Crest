@@ -71,6 +71,12 @@ final class AgentLineChannel: @unchecked Sendable {
         }
     }
 
+    /// Sends nothing more: the other end reads the end of what arrived,
+    /// while its lines still arrive here.
+    func stopSending() {
+        _ = shutdown(output, SHUT_WR)
+    }
+
     func close() {
         Darwin.close(input)
         if output != input { Darwin.close(output) }
