@@ -7,6 +7,14 @@
         "mac"
       ],
       "message": "Actual Size (Command-0) also undoes a trackpad pinch. Thanks to Avelino (@avelino)."
+    },
+    {
+      "id": "link-menu-spaces-after-peek",
+      "category": "improved",
+      "platforms": [
+        "mac"
+      ],
+      "message": "A link's menu now lists your other Spaces after Peek and Split View, and pages in Chromium no longer offer to open a link as another profile. Thanks to Gustavo Lima (@athousanddetails)."
     }
   ]
 }

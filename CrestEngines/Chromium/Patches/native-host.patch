@@ -757,7 +757,7 @@
  #import "components/remote_cocoa/app_shim/menu_controller_cocoa_delegate_impl.h"
  #include "content/public/browser/web_contents.h"
  #include "ui/base/cocoa/menu_utils.h"
-@@ -78,16 +80,53 @@
+@@ -78,16 +80,56 @@
    views::Widget* widget = views::Widget::GetTopLevelWidgetForNativeView(
        source_web_contents_->GetNativeView());
  
@@ -776,6 +776,9 @@
 +        case IDC_CONTENT_CONTEXT_OPENLINKNEWWINDOW:
 +        case IDC_CONTENT_CONTEXT_OPENLINKOFFTHERECORD:
 +        case IDC_CONTENT_CONTEXT_OPENLINKINPROFILE:
++        // With one other profile, Chromium offers it as a row of its own
++        // instead of the submenu above.
++        case IDC_OPEN_LINK_IN_PROFILE_FIRST:
 +        case IDC_CONTENT_CONTEXT_OPENLINKBOOKMARKAPP:
 +        case IDC_CONTENT_CONTEXT_OPENLINKSPLITVIEW:
 +        // These open Views surfaces this build never creates, or depend on a
@@ -814,7 +817,7 @@
  
    NSPoint position =
        NSMakePoint(params_.x, NSHeight(parent_view_.bounds) - params_.y);
-@@ -97,7 +136,8 @@
+@@ -97,7 +139,8 @@
  
    ui::ShowContextMenu(menu_controller_.menu, clickEvent, parent_view_,
                        /*allow_nested_tasks=*/true,
