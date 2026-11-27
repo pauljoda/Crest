@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-11-new-look",
-    "development": "shared-pin-links-open-in-shown-space",
+    "development": "fallback-tab-visible-in-sidebar",
     "nightly": "picture-in-picture-settings-window-fallback"
   }
 }

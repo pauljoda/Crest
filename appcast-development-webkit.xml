@@ -6,33 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.11.66</title>
-            <pubDate>Fri, 27 Nov 2026 06:38:26 +0000</pubDate>
+            <title>0.11.68</title>
+            <pubDate>Fri, 27 Nov 2026 07:34:54 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1728</sparkle:version>
-            <sparkle:shortVersionString>0.11.66</sparkle:shortVersionString>
+            <sparkle:version>1730</sparkle:version>
+            <sparkle:shortVersionString>0.11.68</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### Improved
-
-- The downloads button wears a ring that fills while a download runs. On Mac, a download started in a Quick Window shows its progress in a card in the window's corner, which says when it's done and shows the file in Finder when you click it. Thanks to @athousanddetails.
-
 ### Fixed
 
-- An app or installer you click on a site that sends every file as a generic download, such as a GitHub release, saves without asking whether its type matches its name. Thanks to @athousanddetails.
-- A link in a pinned tab that Sub-Spaces share opens its Peek, new tab or Quick Window in the Space you're in, not in the Space that opened the tab first. Thanks to Flair1365 (@Flair1365).
+- A page stays on screen and keeps drawing as a video goes into or out of full screen, or as a Peek opens as a tab, instead of being hidden and shown again. Thanks to HC (@hcbille).
+- When Crest picks a tab on its own, such as after Clear All Tabs or Delete Tab or when it shows a Space with no tab chosen, it picks one the sidebar shows instead of one hidden in a collapsed folder or a collapsed Saved section. Thanks to Grayson Harrington (@grayson-harrington).
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[Release notes](https://crestbrowser.com/releases/mac/development/0.11.66/) · [View all changes](https://github.com/crest-browser/Crest/compare/950a9758b818789500c27e60dc868f544559c2eb...8cbc1c5211742096ac872d0f5e9fb2c8f9bf9470) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.11.66-2026-11-27-1728-r728.1/Installer-Crest-0.11.66-development-2026-11-27-8cbc1c5.dmg)
+[Release notes](https://crestbrowser.com/releases/mac/development/0.11.68/) · [View all changes](https://github.com/crest-browser/Crest/compare/8cbc1c5211742096ac872d0f5e9fb2c8f9bf9470...e911857bfc7c66042d62111933c47a317af5bb44) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.11.68-2026-11-27-1730-r730.1/Installer-Crest-0.11.68-development-2026-11-27-e911857.dmg)
 
 [Browse Development releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.11.66-2026-11-27-1728-r728.1/Installer-Crest-0.11.66-development-2026-11-27-8cbc1c5.dmg" length="414881782" type="application/octet-stream" sparkle:edSignature="6hAf33eHOipS3ZBPvbKhvH/o5g2AxdEBjsWJMUUXK/7Z+/ZdKxKfXHyeidok5WLB11iQIZDqskcCu4zeBbr2Aw=="/>
+            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.11.68-2026-11-27-1730-r730.1/Installer-Crest-0.11.68-development-2026-11-27-e911857.dmg" length="414962677" type="application/octet-stream" sparkle:edSignature="opHOI9MxsvTBamkKFr/hbMylr9C71bUhb06qLyZUYWB0nUwqKy6NGOtRopoETstAfVX7NDN45tCgtLgWxjHXDw=="/>
         </item>
         <item>
             <title>0.10.138</title>
@@ -94,6 +90,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: ru635/r4X4audx911lkUH26fByR/uRCJ7RoPXOd2i2UkieDIEHBHo4+994Vo+h7wHsgzBYwoVoP5g6LuT0gOAQ==
-length: 7397
+edSignature: mImQefBC0tr820jLxS2/ZstSCLL5Tm8Jp8lnjIOSzNeowZJk+cfSpzPwsetcOR9/fVCoz2Y8s7s3dBnE+oUgCQ==
+length: 7188
 -->
