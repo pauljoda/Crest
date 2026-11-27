@@ -204,10 +204,10 @@ internal sealed class Window {
     }
 
     /// Shows `space`, on the tab the window showed there while it still
-    /// exists, else on the Space's fallback tab.
+    /// exists, else on the Space's fallback tab, one its sidebar shows.
     public void ShowSpace(SpaceState space) {
         ShownSpaceId = space.Id;
-        if (!Contains(space, tabs.GetValueOrDefault(space.Id))) tabs[space.Id] = FallbackTab(space);
+        if (!Contains(space, tabs.GetValueOrDefault(space.Id))) tabs[space.Id] = space.FallbackTab();
         Remember(space.Id);
     }
 
@@ -332,11 +332,6 @@ internal sealed class Window {
     #endregion
 
     #region Actions - Rules
-
-    /// The tab a Space shows when no window chose one: the first open tab,
-    /// else the first pinned one, else the first tab.
-    public static Guid? FallbackTab(SpaceState space) =>
-        TabPlacement.Fallback([.. space.Tabs.Select(tab => tab.Placement)]) is { } index ? space.Tabs[index].Id : null;
 
     /// Shares that describe a split's columns, normalized to sum to one, or
     /// null: there must be at least one and no more than a split holds, each a

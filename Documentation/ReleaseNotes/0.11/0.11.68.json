@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "fallback-tab-visible-in-sidebar",
+      "category": "fixed",
+      "message": "When Crest picks a tab on its own, such as after Clear All Tabs or Delete Tab or when it shows a Space with no tab chosen, it picks one the sidebar shows instead of one hidden in a collapsed folder or a collapsed Saved section. Thanks to Grayson Harrington (@grayson-harrington)."
+    }
+  ]
+}
