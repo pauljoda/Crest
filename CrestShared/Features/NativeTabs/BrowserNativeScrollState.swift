@@ -69,8 +69,9 @@ private struct BrowserNativeScrollRestoration<Target: Hashable & Sendable>: View
     /// Scrolls to `target`. Until the content has made it, steps down a
     /// screen at a time from the top, so the list makes the rows on the way.
     private func reveal(_ target: Target) async {
-        // Let the content lay out and make the rows it starts with.
-        try? await Task.sleep(for: CrestMotion.searchMatchSettle)
+        // Let the content lay out and make the rows it starts with. A reveal
+        // cancelled meanwhile mustn't move the page.
+        do { try await Task.sleep(for: CrestMotion.searchMatchSettle) } catch { return }
         if !isMade(target) {
             withTransaction(Transaction(animation: nil)) { position.scrollTo(y: 0) }
             try? await Task.sleep(for: Self.stepPause)

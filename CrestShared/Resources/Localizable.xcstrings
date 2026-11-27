@@ -4317,7 +4317,14 @@
 
     },
     "conflict use this device use iCloud" : {
-
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التعارض iCloud"
+          }
+        }
+      }
     },
     "command palette address bar layout top hit prefer open tabs match reasons results order sections blended also show reset order" : {
 
@@ -5805,7 +5812,14 @@
       }
     },
     "diagnostics monitor pending records" : {
-
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التشخيص المراقبة السجلات المعلقة"
+          }
+        }
+      }
     },
     "Developer URL" : {
 
@@ -6710,7 +6724,14 @@
       }
     },
     "external apps open in Space default links" : {
-
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التطبيقات الخارجية فتح"
+          }
+        }
+      }
     },
     "FairPlay protected video" : {
 
@@ -7629,7 +7650,14 @@
       }
     },
     "iCloud CloudKit sync now pull from iCloud status account upload download errors" : {
-
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud CloudKit الحالة الحساب الرفع التنزيل"
+          }
+        }
+      }
     },
     "iCloud didn’t respond in time. Crest will retry automatically." : {
 
@@ -7753,7 +7781,14 @@
       }
     },
     "import export backup portability data records another browser" : {
-
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الاستيراد التصدير النسخ الاحتياطي قابلية النقل البيانات السجلات"
+          }
+        }
+      }
     },
     "Import from %@" : {
 
@@ -8086,7 +8121,6 @@
 
     },
     "keyboard keys commands rebind remap hotkeys navigation tabs Spaces page" : {
-      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -10419,7 +10453,14 @@
 
     },
     "Peek cross-site links pinned saved open with modifier drag links dim page size speed test" : {
-
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Peek المثبتة المحفوظة فتح"
+          }
+        }
+      }
     },
     "Pending uploads" : {
       "localizations" : {
@@ -11134,7 +11175,14 @@
       }
     },
     "Quick Window auto-archive remember the chosen Space for each site" : {
-
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "النافذة السريعة"
+          }
+        }
+      }
     },
     "Quick Window Released" : {
       "localizations" : {
@@ -12179,7 +12227,14 @@
 
     },
     "routes routing rules sites open in Space new route" : {
-
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التوجيه فتح"
+          }
+        }
+      }
     },
     "Ring" : {
       "extractionState" : "manual"

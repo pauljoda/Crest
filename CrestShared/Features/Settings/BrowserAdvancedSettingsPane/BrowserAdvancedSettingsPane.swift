@@ -17,8 +17,10 @@ struct BrowserAdvancedSettingsPane: View {
             BrowserSettingsSectionSlot(.setup) {
                 BrowserAdvancedSetupSection(setupActions: setupActions)
             }
-            BrowserSettingsSectionSlot(.featureFlagsLink) {
-                if let openFeatureFlags {
+            // Only a shell that offers Feature Flags here draws the row, and
+            // only that shell lists it in Advanced's search.
+            if let openFeatureFlags {
+                BrowserSettingsSectionSlot(.featureFlagsLink) {
                     Section {
                         Button(action: openFeatureFlags) {
                             LabeledContent(String(localized: BrowserSettingsDestination.featureFlags.title)) {

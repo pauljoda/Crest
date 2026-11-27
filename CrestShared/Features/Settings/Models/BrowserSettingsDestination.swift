@@ -56,6 +56,10 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         private static let platformAboutSections: [BrowserSettingsSection] = [
             .version, .softwareUpdates, .whatsNew, .community,
         ]
+        /// Only the Mac lists Feature Flags under Advanced.
+        private static let platformAdvancedSections: [BrowserSettingsSection] = [
+            .setup, .featureFlagsLink, .dataPortability,
+        ]
     #else
         private static let platformGeneralSections: [BrowserSettingsSection] = [
             .defaultBrowser, .startup, .floatingSidebar, .translation,
@@ -71,6 +75,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
             .privacySpace, .spaceLock, .dataRetention, .sitePermissions, .websiteData, .clearBrowsingData,
         ]
         private static let platformAboutSections: [BrowserSettingsSection] = [.version, .whatsNew, .community]
+        private static let platformAdvancedSections: [BrowserSettingsSection] = [.setup, .dataPortability]
     #endif
 
     // Each destination is a tile of Crest's paper in one of its brand colors,
@@ -144,7 +149,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         requiredCapability: .featureFlags, platforms: [.desktop])
     static let advanced = BrowserSettingsDestination(
         kind: .advanced, name: "advanced", title: "Advanced", subtitle: "Import, export, and runtime",
-        sections: [.setup, .featureFlagsLink, .dataPortability], symbol: "switch.2",
+        sections: platformAdvancedSections, symbol: "switch.2",
         color: CrestBrandPalette.coral)
     static let agents = BrowserSettingsDestination(
         kind: .agents, name: "agents", title: "Agents", subtitle: "Coding agents and scripts",
