@@ -38,13 +38,36 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 standardContent
             } sidebar: {
                 sidebarSurface
-                    .allowsHitTesting(!model.chrome.isCommandPalettePresented)
-                    .accessibilityHidden(model.chrome.isCommandPalettePresented)
+                    .modifier(BrowserCommandPaletteBackgroundGuard(chrome: model.chrome))
             } controls: {
                 shellControls
-                    .allowsHitTesting(!model.chrome.isCommandPalettePresented)
-                    .accessibilityHidden(model.chrome.isCommandPalettePresented)
+                    .modifier(BrowserCommandPaletteBackgroundGuard(chrome: model.chrome))
             }
+            .animation(chromeAnimation(CrestMotion.collection), value: sidebarOnRight)
+            .animation(
+                model.sidebarAnimation(
+                    model.isSidebarApproachingDock
+                        ? CrestMotion.sidebarDockAttachment
+                        : CrestMotion.sidebarMorph,
+                    reduceMotion: reduceMotion
+                ),
+                value: model.chrome.columnVisibility
+            )
+            .animation(
+                model.sidebarAnimation(
+                    model.isSidebarApproachingDock
+                        ? CrestMotion.sidebarDockAttachment
+                        : model.isSidebarMorphing
+                            ? CrestMotion.sidebarMorph
+                            : CrestMotion.floatingPane,
+                    reduceMotion: reduceMotion
+                ),
+                value: model.isFloatingSidebarPresented
+            )
+            .animation(
+                model.sidebarAnimation(CrestMotion.sidebarDockApproach, reduceMotion: reduceMotion),
+                value: model.isSidebarApproachingDock
+            )
 
             // Window focus gates the edge reveal in the shell and over a page
             // in full screen alike, so it is followed whichever shows.
@@ -60,15 +83,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             // left in every sidebar state, over the window's address bar or the
             // leading card's when the sidebar does not hold them.
             if stylesWindow {
-                BrowserNativeWindowControlsBridge(
-                    isVisible: model.sidebarPresentation.showsWindowControls || model.showsPageCardBars,
-                    sidebarOnRight: sidebarOnRight && !model.showsPageCardBars,
-                    sidebarWidth: model.sidebarWidth
-                )
-                .frame(maxWidth: .infinity)
-                .frame(height: 0)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
+                BrowserNativeWindowControlsHost(model: model, sidebarOnRight: sidebarOnRight)
             }
 
             // A held Most Recent Tab shortcut shows the recent tabs over the
@@ -83,10 +98,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         // bars along its top, and over a fullscreen page too, so one posted
         // there is never lost.
         .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
-            GeometryReader { proxy in
-                BrowserNoticeLayer(notices: model.chrome.notices)
-                    .padding(noticeArea(page: anchor.map { proxy[$0] }, in: proxy.size))
-            }
+            BrowserRootNoticeOverlayHost(model: model, anchor: anchor)
         }
         .overlayPreferenceValue(BrowserRootPageBoundsKey.self) { anchor in
             GeometryReader { proxy in
@@ -109,38 +121,6 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
         .environment(downloadFeedback)
         .environment(model.extensionTileLift)
         .environment(\.spacePagerPresentation, spacePagerPresentation)
-        .animation(chromeAnimation(CrestMotion.collection), value: sidebarOnRight)
-        // The address bar changing place carries the window's field between
-        // the sidebar and the top of the page.
-        .animation(CrestMotion.chrome.unlessReducingMotion(reduceMotion), value: model.showsPageCardBars)
-        .animation(
-            model.sidebarAnimation(
-                model.isSidebarApproachingDock
-                    ? CrestMotion.sidebarDockAttachment
-                    : CrestMotion.sidebarMorph,
-                reduceMotion: reduceMotion
-            ),
-            value: model.chrome.columnVisibility
-        )
-        .animation(
-            model.sidebarAnimation(
-                model.isSidebarApproachingDock
-                    ? CrestMotion.sidebarDockAttachment
-                    : model.isSidebarMorphing
-                        ? CrestMotion.sidebarMorph
-                        : CrestMotion.floatingPane,
-                reduceMotion: reduceMotion
-            ),
-            value: model.isFloatingSidebarPresented
-        )
-        .animation(
-            model.sidebarAnimation(CrestMotion.sidebarDockApproach, reduceMotion: reduceMotion),
-            value: model.isSidebarApproachingDock
-        )
-        .animation(
-            BrowserCommandSurfaceMorph.commandPaletteAnimation(reduceMotion: reduceMotion),
-            value: model.isCommandPaletteShown
-        )
         .onChange(
             of: model.chrome.utilityPresentation.isSidebarInteractionActive
         ) { _, isActive in
@@ -199,8 +179,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                     model: model, transientBrowsing: transientBrowsing, page: anchor,
                     commandSurfaceNamespace: commandSurfaceNamespace)
             }
-            .allowsHitTesting(!model.chrome.isCommandPalettePresented)
-            .accessibilityHidden(model.chrome.isCommandPalettePresented)
+            .modifier(BrowserCommandPaletteBackgroundGuard(chrome: model.chrome))
 
             BrowserRootUtilityFanLayer(model: model, sidebarOnRight: sidebarOnRight)
                 .zIndex(BrowserRootMetrics.utilityFanZIndex)
@@ -213,18 +192,6 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
                 reduceMotion: reduceMotion
             )
         }
-    }
-
-    /// The insets, from the window's edges, of the area a notice stands in:
-    /// the page below the bars along its top, or the whole window while a
-    /// page fills it.
-    private func noticeArea(page: CGRect?, in size: CGSize) -> EdgeInsets {
-        guard let page, model.pages.activePage?.isContentFullscreen != true else { return EdgeInsets() }
-        var insets = BrowserChromeAppearance.contentInsets(for: page, in: size, direction: layoutDirection)
-        if model.showsPageCardBars || model.presentsSplitBars {
-            insets.top += BrowserPageBarMetrics.topSectionHeight
-        }
-        return insets
     }
 
     private var revealsSidebarOverFullscreenPage: Bool {
@@ -256,14 +223,7 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             )
         }
         .background {
-            BrowserSidebarPointerNavigation(
-                isSidebarVisible:
-                    model.sidebarPresentation.showsSidebar
-                    && !model.chrome.isCommandPalettePresented,
-                perform: model.handleAuxiliaryMouseAction,
-                navigationTargets: { [pages = model.pages] in pages.livePages },
-                activeTarget: { [pages = model.pages] in pages.activePage }
-            )
+            BrowserSidebarPointerNavigationHost(model: model)
         }
         // A floating sidebar keeps Split View from handing the pointer to
         // the card beneath it.
@@ -352,5 +312,78 @@ private struct BrowserRootPermissionObserver: ViewModifier {
         Prompt(
             requestID: model.pages.activePage?.sitePermissionRequests.current?.id,
             asksInSidebar: !model.showsPageCardBars && !model.presentsSplitBars)
+    }
+}
+
+/// Reads `isCommandPalettePresented` in a leaf view so toggling the command
+/// palette never invalidates `BrowserRootShell.body`.
+private struct BrowserSidebarPointerNavigationHost: View {
+    let model: BrowserRootModel
+
+    var body: some View {
+        BrowserSidebarPointerNavigation(
+            isSidebarVisible:
+                model.sidebarPresentation.showsSidebar
+                && !model.chrome.isCommandPalettePresented,
+            perform: model.handleAuxiliaryMouseAction,
+            navigationTargets: { [pages = model.pages] in pages.livePages },
+            activeTarget: { [pages = model.pages] in pages.activePage }
+        )
+    }
+}
+
+/// Reads `showsPageCardBars` in a leaf view so swapping address bar placement
+/// never invalidates `BrowserRootShell.body`.
+private struct BrowserNativeWindowControlsHost: View {
+    let model: BrowserRootModel
+    let sidebarOnRight: Bool
+
+    var body: some View {
+        BrowserNativeWindowControlsBridge(
+            isVisible: model.sidebarPresentation.showsWindowControls || model.showsPageCardBars,
+            sidebarOnRight: sidebarOnRight && !model.showsPageCardBars,
+            sidebarWidth: model.sidebarWidth
+        )
+        .frame(maxWidth: .infinity)
+        .frame(height: 0)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+/// Computes notice padding in a leaf view so address-bar placement changes do
+/// not rebuild `BrowserRootShell.body`.
+private struct BrowserRootNoticeOverlayHost: View {
+    let model: BrowserRootModel
+    let anchor: Anchor<CGRect>?
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    var body: some View {
+        GeometryReader { proxy in
+            BrowserNoticeLayer(notices: model.chrome.notices)
+                .padding(noticeArea(page: anchor.map { proxy[$0] }, in: proxy.size))
+        }
+    }
+
+    private func noticeArea(page: CGRect?, in size: CGSize) -> EdgeInsets {
+        guard let page, model.pages.activePage?.isContentFullscreen != true else { return EdgeInsets() }
+        var insets = BrowserChromeAppearance.contentInsets(for: page, in: size, direction: layoutDirection)
+        if model.showsPageCardBars || model.presentsSplitBars {
+            insets.top += BrowserPageBarMetrics.topSectionHeight
+        }
+        return insets
+    }
+}
+
+/// Observes `isCommandPalettePresented` in a leaf modifier so toggling the
+/// command palette never invalidates `BrowserRootShell.body`.
+private struct BrowserCommandPaletteBackgroundGuard: ViewModifier {
+    let chrome: BrowserChromeState
+
+    func body(content: Content) -> some View {
+        let isPresented = chrome.isCommandPalettePresented
+        content
+            .allowsHitTesting(!isPresented)
+            .accessibilityHidden(isPresented)
     }
 }

@@ -1,9 +1,11 @@
 import SwiftUI
 
 /// The window chrome that moves between the sidebar and the top of the page
-/// as the address bar changes place. Both places draw the same controls under
-/// one of these identities, so switching carries them from one place to the
-/// other rather than fading one set out and another in.
+/// as the address bar changes place.
+///
+/// Both surfaces animate purely with GPU-composited offset and opacity
+/// transitions rather than cross-container `matchedGeometryEffect`, avoiding
+/// per-frame root `NSHostingView` layout passes during placement swaps.
 enum BrowserWindowChromeMorph: Hashable, Sendable {
     /// Back, forward and reload.
     case navigation
@@ -12,18 +14,27 @@ enum BrowserWindowChromeMorph: Hashable, Sendable {
 
     // MARK: - Static Variables
 
-    /// How the chrome arrives in its new place and leaves its old one. The
-    /// arriving copy shows at once, carried from the old frame to the new.
-    /// The leaving copy rides along on the same frame at full strength and
-    /// only fades as the two meet, so whichever of them a container clips,
-    /// the controls stay solid all the way across.
     static var transition: AnyTransition {
-        .asymmetric(
-            insertion: .identity,
-            removal: .opacity.animation(
-                .linear(duration: handoffFade).delay(CrestMotion.chromeTransition - handoffFade)))
+        topBarTransition(fromLeading: true)
     }
 
-    /// How long the leaving copy takes to fade once the two have met.
-    private static let handoffFade: TimeInterval = 0.06
+    /// GPU-composited glide for the top address bar arriving from or departing
+    /// toward the sidebar edge.
+    static func topBarTransition(fromLeading: Bool) -> AnyTransition {
+        let dx: CGFloat = fromLeading ? -32 : 32
+        return .asymmetric(
+            insertion: .offset(x: dx, y: 8).combined(with: .opacity),
+            removal: .offset(x: dx, y: 8).combined(with: .opacity)
+        )
+    }
+
+    /// GPU-composited glide for the sidebar navigation and address strip
+    /// arriving from or departing toward the top of the page.
+    static func sidebarTransition(towardTrailing: Bool) -> AnyTransition {
+        let dx: CGFloat = towardTrailing ? 28 : -28
+        return .asymmetric(
+            insertion: .offset(x: dx, y: -10).combined(with: .opacity),
+            removal: .offset(x: dx, y: -10).combined(with: .opacity)
+        )
+    }
 }

@@ -25,9 +25,9 @@ struct BrowserOnboardingWindowPreview<Page: View>: View {
 
     /// The showcase's first Space dressed in the look, as the core resolves it.
     private var space: SpaceModel {
-        SpaceModel.detached(
-            SessionState.Seed.showcase.spaces[0].wearing(
-                branding, symbol: symbol, name: name.isEmpty ? String(localized: "Your Space") : name))
+        let resolvedName = name.isEmpty ? String(localized: "Your Space") : name
+        return BrowserOnboardingPreviewSpaceCache.space(
+            branding: branding, symbol: symbol, name: resolvedName)
     }
 
     var body: some View {
@@ -234,12 +234,55 @@ extension BrowserOnboardingWindowPreview {
     /// Three more Spaces, each wearing another template in the companion
     /// look.
     private var companions: [SpaceModel] {
+        BrowserOnboardingPreviewSpaceCache.companions(companionLook: companionLook)
+    }
+}
+
+/// Keeps detached preview Spaces alive across body evaluations so static
+/// Settings and onboarding previews never rebuild `SpaceModel` trees during
+/// scrolling or appearance updates.
+@MainActor
+private enum BrowserOnboardingPreviewSpaceCache {
+    private struct SpaceEntry {
+        let branding: SpaceBranding
+        let symbol: String
+        let name: String
+        let model: SpaceModel
+    }
+
+    private struct CompanionEntry {
+        let companionLook: SetupLook?
+        let models: [SpaceModel]
+    }
+
+    private static var spaces: [SpaceEntry] = []
+    private static var companionSets: [CompanionEntry] = []
+
+    static func space(branding: SpaceBranding, symbol: String, name: String) -> SpaceModel {
+        if let cached = spaces.first(where: {
+            $0.branding == branding && $0.symbol == symbol && $0.name == name
+        }) {
+            return cached.model
+        }
+        let model = SpaceModel.detached(
+            SessionState.Seed.showcase.spaces[0].wearing(branding, symbol: symbol, name: name))
+        if spaces.count >= 32 { spaces.removeFirst() }
+        spaces.append(SpaceEntry(branding: branding, symbol: symbol, name: name, model: model))
+        return model
+    }
+
+    static func companions(companionLook: SetupLook?) -> [SpaceModel] {
+        if let cached = companionSets.first(where: { $0.companionLook == companionLook }) {
+            return cached.models
+        }
         let seed = SessionState.Seed.showcase.spaces[0]
         let symbols = ["briefcase.fill", "book.fill", "leaf.fill"]
-        return zip(SpaceHouse.all.dropFirst(), symbols).map { house, symbol in
+        let models = zip(SpaceHouse.all.dropFirst(), symbols).map { house, symbol in
             let look = companionLook?.applying(to: house.look) ?? house.look
             return SpaceModel.detached(seed.wearing(look, symbol: symbol, name: String(localized: house.title)))
         }
+        companionSets.append(CompanionEntry(companionLook: companionLook, models: models))
+        return models
     }
 }
 

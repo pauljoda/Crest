@@ -27,30 +27,37 @@ struct BrowserQuickWindowCommandPaletteLayer: View {
     let openBrowserWindow: () -> Void
 
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    @ViewBuilder
     var body: some View {
-        if let mode = chrome.commandPaletteMode, let space = model.spaceModel, fieldFrame != nil {
-            BrowserCommandPalette(
-                browser: model.browser,
-                space: space,
-                selectedTabID: nil,
-                initialQuery: mode.initialQuery(over: model.address),
-                commands: commands,
-                isSourceAvailable: { _ in false },
-                selectTab: { _, _ in false },
-                openURL: { _, _, _ in false },
-                dismiss: chrome.dismissCommandPalette,
-                presentation: .dropping,
-                morphNamespace: morphNamespace,
-                fieldFrame: fieldFrame,
-                destination: BrowserQuickWindowPaletteDestination(
-                    model: model, isActive: scenePhase == .active, showTab: showTab),
-                readPasteboard: { NSPasteboard.general.string(forType: .string) }
-            )
-            .id(BrowserCommandPalettePresentationIdentity(mode: mode, space: space, source: nil))
-            .transition(.browserCommandPaletteOverlay)
+        let isShown = chrome.commandPaletteMode != nil && model.spaceModel != nil && fieldFrame != nil
+        ZStack {
+            if let mode = chrome.commandPaletteMode, let space = model.spaceModel, fieldFrame != nil {
+                BrowserCommandPalette(
+                    browser: model.browser,
+                    space: space,
+                    selectedTabID: nil,
+                    initialQuery: mode.initialQuery(over: model.address),
+                    commands: commands,
+                    isSourceAvailable: { _ in false },
+                    selectTab: { _, _ in false },
+                    openURL: { _, _, _ in false },
+                    dismiss: chrome.dismissCommandPalette,
+                    presentation: .dropping,
+                    morphNamespace: morphNamespace,
+                    fieldFrame: fieldFrame,
+                    destination: BrowserQuickWindowPaletteDestination(
+                        model: model, isActive: scenePhase == .active, showTab: showTab),
+                    readPasteboard: BrowserPasteboardStringCache.currentString
+                )
+                .id(BrowserCommandPalettePresentationIdentity(mode: mode, space: space, source: nil))
+                .transition(.browserCommandPaletteOverlay)
+            }
         }
+        .animation(
+            BrowserCommandSurfaceMorph.commandPaletteAnimation(reduceMotion: reduceMotion),
+            value: isShown
+        )
     }
 
     /// What the palette's other rows do from a Quick Window: a Space moves

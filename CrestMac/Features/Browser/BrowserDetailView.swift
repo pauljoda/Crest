@@ -6,10 +6,9 @@ struct BrowserDetailView: View {
     let pages: BrowserPagePool
     let spaceAccess: BrowserSpaceAccessController
     let tabPromotionNamespace: Namespace.ID
-    let startPageFocusRequest: Int
-    let isCommandPalettePresented: Bool
-    /// The window's commands, for the Start Page's palette.
-    let commands: BrowserCommandPaletteCommandRegistry
+    let chrome: BrowserChromeState
+    /// Builds the window's commands lazily, only when a Start Page renders.
+    let makeCommands: () -> BrowserCommandPaletteCommandRegistry
     var previewsStartPage = false
 
     var body: some View {
@@ -27,9 +26,8 @@ struct BrowserDetailView: View {
             pages: pages,
             spaceAccess: spaceAccess,
             tabPromotionNamespace: tabPromotionNamespace,
-            startPageFocusRequest: startPageFocusRequest,
-            isCommandPalettePresented: isCommandPalettePresented,
-            commands: commands
+            chrome: chrome,
+            makeCommands: makeCommands
         )
     }
 }

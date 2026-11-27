@@ -67,8 +67,7 @@ struct BrowserQuickWindowAddressControl: View {
         )
         .coordinateSpace(Self.field)
         .anchorPreference(key: BrowserQuickWindowCommandPaletteLayer.FieldAnchor.self, value: .bounds) { $0 }
-        .background { commandPaletteAnchor }
-        // The palette grows out of the field and its input line takes the
+        // The palette rises over the field and its input line takes the
         // field's place until it closes.
         .animation(commandPaletteHandoff.fieldAnimation.unlessReducingMotion(reduceMotion)) {
             $0.opacity(isPaletteShown ? 0 : 1)
@@ -105,22 +104,6 @@ struct BrowserQuickWindowAddressControl: View {
     /// Whether the palette shows over the field, which needs the Quick
     /// Window's Space, as the palette's layer does.
     private var isPaletteShown: Bool { chrome?.commandPaletteMode != nil && model.spaceModel != nil }
-
-    /// The field's frame, carrying the palette's identity while the field
-    /// holds it, so the palette's surface grows out of the field's, as the
-    /// sidebar's field does with a browser window's palette.
-    @ViewBuilder
-    private var commandPaletteAnchor: some View {
-        if commandPaletteHandoff.fieldHoldsMorph, let space = model.spaceModel {
-            Color.clear.matchedGeometryEffect(
-                id: BrowserCommandSurfaceMorph.commandPalette(spaceID: space.id),
-                in: commandSurfaceNamespace,
-                properties: .frame,
-                anchor: .center,
-                isSource: true
-            )
-        }
-    }
 
     /// Opens the palette over the field, starting at the page's address;
     /// without one the field edits in place.

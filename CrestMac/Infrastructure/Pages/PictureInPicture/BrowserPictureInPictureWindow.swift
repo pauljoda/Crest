@@ -16,9 +16,11 @@ final class BrowserPictureInPictureWindow: NSPanel {
 
     private struct Drag {
         let original: CGRect
+        let visibleFrame: CGRect
         let start: CGPoint
         let horizontalEdge: CGFloat
         let verticalEdge: CGFloat
+        var didResize = false
         var samples: [PointerSample] = []
 
         var resizes: Bool { horizontalEdge != 0 || verticalEdge != 0 }
@@ -43,10 +45,37 @@ final class BrowserPictureInPictureWindow: NSPanel {
         }
     }
 
+    private struct FrameAnimation {
+        let from: CGRect
+        let to: CGRect
+        let startTime: CFTimeInterval
+        let duration: CFTimeInterval
+        let completion: @MainActor () -> Void
+    }
+
+    /// Breaks the retain cycle between `CADisplayLink` and the window.
+    @MainActor
+    private final class DisplayLinkTarget: NSObject {
+        weak var window: BrowserPictureInPictureWindow?
+
+        init(window: BrowserPictureInPictureWindow) {
+            self.window = window
+        }
+
+        @objc func step(_ link: CADisplayLink) {
+            window?.stepFrameAnimation(link)
+        }
+    }
+
     private final class PointerSurface: NSView {
         weak var player: BrowserPictureInPictureWindow?
         weak var controls: NSView?
         private var tracking: NSTrackingArea?
+
+        override func layout() {
+            super.layout()
+            player?.layoutContent()
+        }
 
         override func updateTrackingAreas() {
             super.updateTrackingAreas()
@@ -62,7 +91,9 @@ final class BrowserPictureInPictureWindow: NSPanel {
         override func hitTest(_ point: NSPoint) -> NSView? {
             let local = convert(point, from: superview)
             guard bounds.contains(local) else { return nil }
-            if let controls, controls.alphaValue > 0, controls.frame.contains(local) {
+            if let controls, player?.controlsVisible == true, controls.alphaValue > 0.01,
+                controls.frame.contains(local)
+            {
                 return controls.hitTest(local) ?? controls
             }
             return self
@@ -90,10 +121,13 @@ final class BrowserPictureInPictureWindow: NSPanel {
 
     // MARK: - Static Variables
 
-    private static let inset: CGFloat = CrestSpacing.medium
+    static let inset: CGFloat = CrestSpacing.medium
     private static let resizeMargin: CGFloat = 6
     private static let initialWidth: CGFloat = 360
-    private static let minimumWidth: CGFloat = 180
+    static let minimumWidth: CGFloat = 180
+    private static let flyDuration: CFTimeInterval = 0.26
+    private static let settleDuration: CFTimeInterval = 0.18
+    private static let controlsFadeDuration: TimeInterval = 0.14
 
     // MARK: - Variables
 
@@ -106,10 +140,14 @@ final class BrowserPictureInPictureWindow: NSPanel {
     private var refreshPending = false
     private weak var video: NSView?
     private var aspect: CGFloat
+    private var pendingAspectReconcile = false
     private var drag: Drag?
     private var destination: CGRect
+    private var frameAnimation: FrameAnimation?
+    private var displayLink: CADisplayLink?
     private var isPresenting = false
     private var pointerIsInside = false
+    private var controlsVisible = false
     var onPlayback: (Bool) -> Void = { _ in }
     var onRestore: () -> Void = {}
     var onSettings: () -> Void = {}
@@ -121,7 +159,7 @@ final class BrowserPictureInPictureWindow: NSPanel {
         }
     }
 
-    var restingFrame: CGRect { isPresenting ? destination : frame }
+    var restingFrame: CGRect { isPresenting || frameAnimation != nil ? destination : frame }
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
@@ -170,61 +208,65 @@ final class BrowserPictureInPictureWindow: NSPanel {
         surface.layer?.backgroundColor = NSColor.black.cgColor
         surface.layer?.masksToBounds = true
         backdrop.frame = surface.bounds
-        backdrop.autoresizingMask = [.width, .height]
         surface.addSubview(backdrop)
-        videoContainer.autoresizingMask = [.width, .height]
         videoContainer.wantsLayer = true
         videoContainer.layer?.backgroundColor = NSColor.black.cgColor
         videoContainer.layer?.masksToBounds = true
         surface.addSubview(videoContainer)
-        layoutAppearance()
         contentView = surface
 
         let controls = NSHostingView(rootView: controlContent)
         let sizeOfControls = controls.fittingSize
         controls.frame = CGRect(
-            x: (surface.bounds.width - sizeOfControls.width) / 2,
-            y: surface.bounds.height - sizeOfControls.height - Self.inset - borderWidth,
+            x: round((surface.bounds.width - sizeOfControls.width) / 2),
+            y: round(surface.bounds.height - sizeOfControls.height - Self.inset - borderWidth),
             width: sizeOfControls.width, height: sizeOfControls.height)
-        controls.autoresizingMask = [.minXMargin, .maxXMargin, .minYMargin]
         controls.alphaValue = 0
         surface.addSubview(controls)
         surface.controls = controls
         self.controls = controls
+        layoutContent()
         observeAppearance()
     }
 
     // MARK: - Actions - Presentation
 
     func present(_ view: NSView, from sourceFrame: CGRect?) {
+        cancelFrameAnimation()
         video = view
         let fliesFromSource =
             sourceFrame.map { !$0.isEmpty } == true
             && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         if fliesFromSource, let sourceFrame {
-            setFrame(sourceFrame.insetBy(dx: -borderWidth, dy: -borderWidth), display: false)
+            applyFrameWithoutActions(sourceFrame.insetBy(dx: -borderWidth, dy: -borderWidth))
             isPresenting = true
         }
         videoContainer.addSubview(view)
-        view.frame = videoContainer.bounds
         view.autoresizingMask = [.width, .height]
+        layoutContent()
         NSApp.addWindowsItem(self, title: title, filename: false)
         orderFrontRegardless()
 
         DispatchQueue.main.async { [weak self] in
             guard let self, video != nil else { return }
             if isPresenting {
-                setFrame(destination, display: true, animate: true)
-                isPresenting = false
+                animateFrame(to: destination, duration: Self.flyDuration) { [weak self] in
+                    guard let self else { return }
+                    isPresenting = false
+                    // WebKit acknowledges the first container resize after entry.
+                    // Report the settled video bounds once the flight finishes.
+                    refreshVideoSurface()
+                    setPointerInside(frame.contains(NSEvent.mouseLocation))
+                }
+            } else {
+                refreshVideoSurface()
+                setPointerInside(frame.contains(NSEvent.mouseLocation))
             }
-            // WebKit acknowledges the first container resize after entry.
-            // Report the settled video bounds once its new window has laid out.
-            refreshVideoSurface()
-            setPointerInside(frame.contains(NSEvent.mouseLocation))
         }
     }
 
     func dismiss() {
+        cancelFrameAnimation()
         NSApp.removeWindowsItem(self)
         orderOut(nil)
         video?.removeFromSuperview()
@@ -238,12 +280,16 @@ final class BrowserPictureInPictureWindow: NSPanel {
             guard let self else { return }
             refreshPending = false
             guard let video, video.window === self else { return }
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            layoutContent()
             videoContainer.layoutSubtreeIfNeeded()
             video.setFrameSize(videoContainer.bounds.size)
             video.resize(withOldSuperviewSize: videoContainer.bounds.size)
             video.layer?.setNeedsLayout()
             video.layer?.layoutIfNeeded()
             video.needsDisplay = true
+            CATransaction.commit()
         }
     }
 
@@ -262,35 +308,81 @@ final class BrowserPictureInPictureWindow: NSPanel {
         frameAppearance = appearance
         if change != 0, let visible = screen?.visibleFrame {
             let previous = restingFrame
-            destination = resized(previous, to: previous.width + change, in: visible)
-            if !isPresenting { setFrame(destination, display: true) }
+            let anchor = Self.nearestEdgeAnchor(of: previous, in: visible)
+            destination = Self.resized(
+                previous, to: previous.width + change, in: visible,
+                horizontal: anchor.horizontal, vertical: anchor.vertical,
+                borderWidth: borderWidth, aspect: aspect, backingScale: backingScaleFactor)
+            retargetOrApplyDestination()
         }
-        layoutAppearance()
+        layoutContent()
         invalidateShadow()
         if change != 0 { refreshVideoSurface() }
     }
 
-    private func layoutAppearance() {
+    private func layoutContent() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        let bounds = surface.bounds
         surface.layer?.cornerRadius = frameAppearance.cornerRadius
-        backdrop.isHidden = borderWidth == 0
-        videoContainer.frame = surface.bounds.insetBy(dx: borderWidth, dy: borderWidth)
-        videoContainer.layer?.cornerRadius = frameAppearance.videoCornerRadius
-        if let controls {
-            controls.setFrameOrigin(
-                NSPoint(
-                    x: controls.frame.minX, y: surface.bounds.height - controls.frame.height - Self.inset - borderWidth)
-            )
+        let showsBackdrop = borderWidth > 0
+        backdrop.isHidden = !showsBackdrop
+        if showsBackdrop, backdrop.frame != bounds {
+            backdrop.frame = bounds
         }
+        let videoFrame = bounds.insetBy(dx: borderWidth, dy: borderWidth)
+        if videoContainer.frame != videoFrame {
+            videoContainer.frame = videoFrame
+        }
+        videoContainer.layer?.cornerRadius = frameAppearance.videoCornerRadius
+        if let video, video.superview === videoContainer, video.frame != videoContainer.bounds {
+            video.frame = videoContainer.bounds
+        }
+        if let controls {
+            let controlsSize = controls.frame.size
+            let nextOrigin = NSPoint(
+                x: round((bounds.width - controlsSize.width) / 2),
+                y: round(bounds.height - controlsSize.height - Self.inset - borderWidth)
+            )
+            if controls.frame.origin != nextOrigin {
+                controls.setFrameOrigin(nextOrigin)
+            }
+        }
+        CATransaction.commit()
     }
 
     func setVideoSize(_ size: CGSize) {
         let next = Self.aspect(of: size)
         guard next != aspect else { return }
         aspect = next
+        guard drag == nil else {
+            pendingAspectReconcile = true
+            return
+        }
+        pendingAspectReconcile = false
         if let visible = screen?.visibleFrame {
-            let rect = resized(restingFrame, to: restingFrame.width, in: visible)
-            destination = rect
-            if !isPresenting { setFrame(rect, display: true) }
+            let previous = restingFrame
+            let anchor = Self.nearestEdgeAnchor(of: previous, in: visible)
+            destination = Self.resized(
+                previous, to: previous.width, in: visible,
+                horizontal: anchor.horizontal, vertical: anchor.vertical,
+                borderWidth: borderWidth, aspect: aspect, backingScale: backingScaleFactor)
+            retargetOrApplyDestination()
+        }
+    }
+
+    private func retargetOrApplyDestination() {
+        if let active = frameAnimation {
+            let remaining = max(0.08, active.duration - (CACurrentMediaTime() - active.startTime))
+            frameAnimation = FrameAnimation(
+                from: frame,
+                to: destination,
+                startTime: CACurrentMediaTime(),
+                duration: remaining,
+                completion: active.completion
+            )
+        } else if !isPresenting {
+            applyFrameWithoutActions(destination)
         }
     }
 
@@ -322,8 +414,81 @@ final class BrowserPictureInPictureWindow: NSPanel {
         updateControlVisibility()
     }
 
-    private func updateControlVisibility() {
-        controls?.alphaValue = pointerIsInside || isKeyWindow ? 1 : 0
+    private func updateControlVisibility(animated: Bool = true) {
+        let shouldShow = drag?.resizes != true && (pointerIsInside || isKeyWindow)
+        guard shouldShow != controlsVisible, let controls else { return }
+        controlsVisible = shouldShow
+        let targetAlpha: CGFloat = shouldShow ? 1 : 0
+        if animated && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = Self.controlsFadeDuration
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                controls.animator().alphaValue = targetAlpha
+            }
+        } else {
+            controls.alphaValue = targetAlpha
+        }
+    }
+
+    // MARK: - Actions - Frame Animation
+
+    private func applyFrameWithoutActions(_ rect: CGRect) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        setFrame(rect, display: true)
+        layoutContent()
+        CATransaction.commit()
+    }
+
+    private func animateFrame(
+        to target: CGRect, duration: CFTimeInterval, completion: @escaping @MainActor () -> Void = {}
+    ) {
+        cancelFrameAnimation()
+        destination = target
+        let start = frame
+        let reducesMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        if reducesMotion || duration <= 0 || Self.framesNearlyEqual(start, target) {
+            applyFrameWithoutActions(target)
+            completion()
+            return
+        }
+        frameAnimation = FrameAnimation(
+            from: start, to: target, startTime: CACurrentMediaTime(), duration: duration, completion: completion)
+        let proxy = DisplayLinkTarget(window: self)
+        let link = displayLink(target: proxy, selector: #selector(DisplayLinkTarget.step(_:)))
+        link.add(to: .main, forMode: .common)
+        displayLink = link
+    }
+
+    private func stepFrameAnimation(_ link: CADisplayLink) {
+        guard let animation = frameAnimation else {
+            cancelFrameAnimation()
+            return
+        }
+        let elapsed = CACurrentMediaTime() - animation.startTime
+        let progress = min(max(elapsed / animation.duration, 0), 1)
+        // Smooth ease-out quartic curve: snappy start, silky 120 Hz deceleration,
+        // and no overshoot past display edges.
+        let eased = 1 - pow(1 - progress, 4)
+        let current = CGRect(
+            x: animation.from.minX + (animation.to.minX - animation.from.minX) * eased,
+            y: animation.from.minY + (animation.to.minY - animation.from.minY) * eased,
+            width: animation.from.width + (animation.to.width - animation.from.width) * eased,
+            height: animation.from.height + (animation.to.height - animation.from.height) * eased
+        )
+        applyFrameWithoutActions(current)
+        if progress >= 1 {
+            let completion = animation.completion
+            cancelFrameAnimation()
+            completion()
+        }
+    }
+
+    private func cancelFrameAnimation() {
+        displayLink?.invalidate()
+        displayLink = nil
+        frameAnimation = nil
+        isPresenting = false
     }
 
     // MARK: - Actions - Pointer
@@ -353,11 +518,21 @@ final class BrowserPictureInPictureWindow: NSPanel {
     }
 
     private func beginDrag(at point: CGPoint, time: TimeInterval) {
+        cancelFrameAnimation()
         let edges = resizeEdges(at: point)
         let start = NSEvent.mouseLocation
+        let visibleFrame =
+            screen?.visibleFrame
+            ?? NSScreen.screens.first { $0.frame.contains(start) }?.visibleFrame
+            ?? NSScreen.main?.visibleFrame
+            ?? frame
         drag = Drag(
-            original: frame, start: start, horizontalEdge: edges.horizontal, verticalEdge: edges.vertical,
+            original: frame, visibleFrame: visibleFrame, start: start,
+            horizontalEdge: edges.horizontal, verticalEdge: edges.vertical,
             samples: [PointerSample(location: start, time: time)])
+        if edges.horizontal != 0 || edges.vertical != 0 {
+            updateControlVisibility()
+        }
     }
 
     private func moveDrag(at time: TimeInterval) {
@@ -368,14 +543,17 @@ final class BrowserPictureInPictureWindow: NSPanel {
         let dx = mouse.x - drag.start.x
         let dy = mouse.y - drag.start.y
         if drag.resizes {
-            guard let visible = screen?.visibleFrame else { return }
-            let horizontal = dx * drag.horizontalEdge
-            let vertical = dy * drag.verticalEdge * aspect
-            let delta = abs(horizontal) >= abs(vertical) ? horizontal : vertical
-            let rect = resized(
-                drag.original, to: drag.original.width + delta, in: visible,
-                horizontal: drag.horizontalEdge, vertical: drag.verticalEdge)
-            setFrame(rect, display: true)
+            drag.didResize = true
+            self.drag = drag
+            let delta = Self.resizeWidthDelta(
+                dx: dx, dy: dy, horizontalEdge: drag.horizontalEdge, verticalEdge: drag.verticalEdge, aspect: aspect)
+            let rect = Self.resized(
+                drag.original, to: drag.original.width + delta, in: drag.visibleFrame,
+                horizontal: drag.horizontalEdge, vertical: drag.verticalEdge,
+                borderWidth: borderWidth, aspect: aspect, backingScale: backingScaleFactor)
+            if rect != frame {
+                applyFrameWithoutActions(rect)
+            }
         } else {
             setFrameOrigin(CGPoint(x: drag.original.minX + dx, y: drag.original.minY + dy))
         }
@@ -388,42 +566,163 @@ final class BrowserPictureInPictureWindow: NSPanel {
         defer {
             let local = surface.convert(convertPoint(fromScreen: mouse), from: nil)
             (frame.contains(mouse) ? resizeCursor(at: local) : .arrow).set()
+            updateControlVisibility()
         }
+        if drag.resizes {
+            if pendingAspectReconcile || !drag.didResize {
+                pendingAspectReconcile = false
+                let reconciled = Self.resized(
+                    frame, to: frame.width, in: drag.visibleFrame,
+                    horizontal: drag.horizontalEdge, vertical: drag.verticalEdge,
+                    borderWidth: borderWidth, aspect: aspect, backingScale: backingScaleFactor)
+                destination = reconciled
+                if reconciled != frame { applyFrameWithoutActions(reconciled) }
+            } else {
+                // Live resize already keeps the frame aspect-locked, pixel-aligned,
+                // and clamped to its anchored edges; leave it exactly where released.
+                destination = frame
+            }
+            refreshVideoSurface()
+            return
+        }
+        pendingAspectReconcile = false
         guard let visible = (NSScreen.screens.first { $0.frame.contains(mouse) } ?? screen)?.visibleFrame else {
             return
         }
-        let dropped =
-            drag.resizes ? frame : drag.original.offsetBy(dx: mouse.x - drag.start.x, dy: mouse.y - drag.start.y)
-        let settled = resized(dropped, to: dropped.width, in: visible)
-        guard !drag.resizes, let velocity = drag.flick(at: PointerSample(location: mouse, time: time)) else {
-            setFrame(settled, display: true)
+        let dropped = drag.original.offsetBy(dx: mouse.x - drag.start.x, dy: mouse.y - drag.start.y)
+        let settled = Self.resized(
+            dropped, to: dropped.width, in: visible,
+            borderWidth: borderWidth, aspect: aspect, backingScale: backingScaleFactor)
+        guard let velocity = drag.flick(at: PointerSample(location: mouse, time: time)) else {
+            if Self.framesNearlyEqual(frame, settled) {
+                destination = settled
+                if frame != settled { applyFrameWithoutActions(settled) }
+                refreshVideoSurface()
+            } else {
+                animateFrame(to: settled, duration: Self.settleDuration) { [weak self] in
+                    self?.refreshVideoSurface()
+                }
+            }
             return
         }
         let horizontal = abs(velocity.dx) >= abs(velocity.dy) * 0.25 ? velocity.dx > 0 : settled.midX > visible.midX
         let vertical = abs(velocity.dy) >= abs(velocity.dx) * 0.25 ? velocity.dy > 0 : settled.midY > visible.midY
         let x = horizontal ? visible.maxX - settled.width - Self.inset : visible.minX + Self.inset
         let y = vertical ? visible.maxY - settled.height - Self.inset : visible.minY + Self.inset
-        setFrame(
-            Self.contained(CGRect(origin: CGPoint(x: x, y: y), size: settled.size), in: visible), display: true,
-            animate: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+        let target = Self.contained(CGRect(origin: CGPoint(x: x, y: y), size: settled.size), in: visible)
+        animateFrame(to: target, duration: Self.flyDuration) { [weak self] in
+            self?.refreshVideoSurface()
+        }
     }
 
     // MARK: - Actions - Geometry
 
-    private func resized(
+    /// Projects a pointer delta onto the dragged edge or corner's aspect-locked
+    /// ray so corner resizing is continuous everywhere without sign-flip jumps.
+    static func resizeWidthDelta(
+        dx: CGFloat, dy: CGFloat, horizontalEdge: CGFloat, verticalEdge: CGFloat, aspect: CGFloat
+    ) -> CGFloat {
+        if verticalEdge == 0 {
+            return dx * horizontalEdge
+        }
+        if horizontalEdge == 0 {
+            return dy * verticalEdge * aspect
+        }
+        let horizontal = dx * horizontalEdge
+        let vertical = dy * verticalEdge * aspect
+        let aspectSquared = aspect * aspect
+        return (aspectSquared * horizontal + vertical) / (aspectSquared + 1)
+    }
+
+    /// Resizes `frame` to `width` while preserving the video's aspect ratio and
+    /// keeping any anchored edge or corner pinned inside `bounds`, so hitting a
+    /// display edge stops growth cleanly instead of pushing the window back in.
+    static func resized(
         _ frame: CGRect, to width: CGFloat, in bounds: CGRect,
-        horizontal: CGFloat = 0, vertical: CGFloat = 0
+        horizontal: CGFloat = 0, vertical: CGFloat = 0,
+        borderWidth: CGFloat, aspect: CGFloat, backingScale: CGFloat = 1
     ) -> CGRect {
+        let scale = max(1, backingScale)
         let border = borderWidth * 2
-        let maximum = min(bounds.width, (bounds.height - border) * aspect + border)
-        let w = min(max(Self.minimumWidth, width), maximum)
-        let h = (w - border) / aspect + border
-        let x = frame.midX - w / 2 + horizontal * (w - frame.width) / 2
-        let y = frame.midY - h / 2 + vertical * (h - frame.height) / 2
+        let availableWidth: CGFloat =
+            if horizontal < 0 {
+                min(bounds.width, max(0, min(frame.maxX, bounds.maxX) - bounds.minX))
+            } else if horizontal > 0 {
+                min(bounds.width, max(0, bounds.maxX - max(frame.minX, bounds.minX)))
+            } else {
+                bounds.width
+            }
+        let availableHeight: CGFloat =
+            if vertical < 0 {
+                min(bounds.height, max(0, min(frame.maxY, bounds.maxY) - bounds.minY))
+            } else if vertical > 0 {
+                min(bounds.height, max(0, bounds.maxY - max(frame.minY, bounds.minY)))
+            } else {
+                bounds.height
+            }
+
+        let screenMaximum = min(bounds.width, (bounds.height - border) * aspect + border)
+        let anchoredMaximum = min(availableWidth, (availableHeight - border) * aspect + border)
+        let maximum = max(border + 1, min(screenMaximum, anchoredMaximum))
+        let minimum = min(Self.minimumWidth, maximum)
+        let alignedMaximum = max(minimum, floor(maximum * scale) / scale)
+        let alignedMinimum = min(alignedMaximum, ceil(minimum * scale) / scale)
+
+        let rawWidth = min(max(alignedMinimum, width), alignedMaximum)
+        let w = min(max(alignedMinimum, round(rawWidth * scale) / scale), alignedMaximum)
+        let rawHeight = (w - border) / aspect + border
+        let h = min(availableHeight, max(1, floor(rawHeight * scale + 0.5) / scale))
+
+        let x: CGFloat =
+            if horizontal < 0 {
+                frame.maxX - w
+            } else if horizontal > 0 {
+                frame.minX
+            } else {
+                round((frame.midX - w / 2) * scale) / scale
+            }
+        let y: CGFloat =
+            if vertical < 0 {
+                frame.maxY - h
+            } else if vertical > 0 {
+                frame.minY
+            } else {
+                round((frame.midY - h / 2) * scale) / scale
+            }
         return Self.contained(CGRect(x: x, y: y, width: w, height: h), in: bounds)
     }
 
-    private static func contained(_ rect: CGRect, in bounds: CGRect) -> CGRect {
+    private static func nearestEdgeAnchor(of frame: CGRect, in bounds: CGRect) -> (
+        horizontal: CGFloat, vertical: CGFloat
+    ) {
+        let threshold = Self.inset * 2
+        let horizontal: CGFloat =
+            if abs(bounds.maxX - frame.maxX) <= threshold {
+                -1
+            } else if abs(frame.minX - bounds.minX) <= threshold {
+                1
+            } else {
+                0
+            }
+        let vertical: CGFloat =
+            if abs(bounds.maxY - frame.maxY) <= threshold {
+                -1
+            } else if abs(frame.minY - bounds.minY) <= threshold {
+                1
+            } else {
+                0
+            }
+        return (horizontal, vertical)
+    }
+
+    private static func framesNearlyEqual(_ a: CGRect, _ b: CGRect) -> Bool {
+        abs(a.minX - b.minX) < 0.5
+            && abs(a.minY - b.minY) < 0.5
+            && abs(a.width - b.width) < 0.5
+            && abs(a.height - b.height) < 0.5
+    }
+
+    static func contained(_ rect: CGRect, in bounds: CGRect) -> CGRect {
         CGRect(
             x: max(bounds.minX, min(rect.minX, bounds.maxX - rect.width)),
             y: max(bounds.minY, min(rect.minY, bounds.maxY - rect.height)),

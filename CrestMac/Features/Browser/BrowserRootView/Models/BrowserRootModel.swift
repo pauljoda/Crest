@@ -376,18 +376,31 @@ extension BrowserRootModel {
             return
         }
         let revision = beginSidebarMorph()
+        let startsCollapsed = sidebarPresentation == .collapsed
         sidebarMorphTask = Task { @MainActor [weak self] in
             await Task.yield()
             guard let self,
                 !Task.isCancelled,
                 self.sidebarMorphRevision == revision
             else { return }
-            withAnimation(slide.animation(CrestMotion.sidebarDockApproach)) {
-                self.isSidebarApproachingDock = true
+            if startsCollapsed {
+                // Slide the floating sidebar into view on the GPU first, then
+                // attach it to its docked seat so the page only reflows once
+                // underneath the opaque card.
+                withAnimation(slide.animation(CrestMotion.floatingPane)) {
+                    self.isFloatingSidebarPresented = true
+                }
+                try? await self.sidebarMorphWait(
+                    slide.delay(CrestMotion.sidebarDockApproachCompletionDelay)
+                )
+            } else {
+                withAnimation(slide.animation(CrestMotion.sidebarDockApproach)) {
+                    self.isSidebarApproachingDock = true
+                }
+                try? await self.sidebarMorphWait(
+                    slide.delay(CrestMotion.sidebarDockApproachCompletionDelay)
+                )
             }
-            try? await self.sidebarMorphWait(
-                slide.delay(CrestMotion.sidebarDockApproachCompletionDelay)
-            )
             guard !Task.isCancelled,
                 self.sidebarMorphRevision == revision
             else { return }

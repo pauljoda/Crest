@@ -21,7 +21,10 @@ struct BrowserPlatformAddressBarSettingsSection: View {
                 ForEach(BrowserAddressBarPlacement.all) { candidate in
                     CrestPreviewButton(
                         title: Text(candidate.title), isSelected: candidate == appearance.addressBarPlacement,
-                        previewSize: BrowserAppearancePreviewMetrics.previewSize
+                        previewSize: BrowserAppearancePreviewMetrics.previewSize,
+                        snapshotKey: AnyHashable([
+                            "address-bar", String(describing: candidate), appearance.spaceIcons.name,
+                        ])
                     ) {
                         choose(candidate)
                     } preview: {
@@ -49,8 +52,6 @@ struct BrowserPlatformAddressBarSettingsSection: View {
     // MARK: - Actions - Choice
 
     private func choose(_ placement: BrowserAddressBarPlacement) {
-        withAnimation(CrestMotion.chrome.unlessReducingMotion(reduceMotion)) {
-            appearance.addressBarPlacement = placement
-        }
+        appearance.addressBarPlacement = placement
     }
 }

@@ -138,6 +138,7 @@ final class BrowserSidebarReorderGeometry {
     @ObservationIgnored private var heldRows: [UUID: HeldRow] = [:]
     @ObservationIgnored private var heldRowCount = 0
     @ObservationIgnored private var heldZones: [UUID: RegisteredZone] = [:]
+    @ObservationIgnored private var heldVirtualRuns: [UUID: VirtualRowRun] = [:]
 
     /// `space`'s registration of the item, resolved into global coordinates.
     func row(_ id: BrowserSidebarReorderItemID, in space: BrowserSpaceRuntimeAssignment) -> RegisteredRow? {
@@ -243,14 +244,17 @@ final class BrowserSidebarReorderGeometry {
     func registerHeld() {
         let rows = heldRows.values.sorted { $0.order < $1.order }.map(\.registration)
         let zones = heldZones
+        let runs = heldVirtualRuns
         heldRows = [:]
         heldZones = [:]
+        heldVirtualRuns = [:]
         for held in rows {
             register(
                 row: held.row, owner: held.owner, scrollRegionID: held.scrollRegionID,
                 isContentRelative: held.isContentRelative)
         }
         for (id, held) in zones { self.zones[id] = held }
+        for held in runs.values { register(virtualRun: held) }
     }
 
     /// Snapshots scroll content origins at the start of a lift so rows stay
@@ -290,7 +294,17 @@ final class BrowserSidebarReorderGeometry {
         }
     }
 
+    func hasVirtualRun(for id: UUID, in space: BrowserSpaceRuntimeAssignment) -> Bool {
+        virtualRuns[space]?[id] != nil
+    }
+
+    func hold(virtualRun run: VirtualRowRun) {
+        heldVirtualRuns[run.id] = run
+        updateVirtualRunVisibleIndices(run.visibleIndices, for: run.id, in: run.space)
+    }
+
     func register(virtualRun run: VirtualRowRun) {
+        heldVirtualRuns[run.id] = nil
         virtualRuns[run.space, default: [:]][run.id] = run
         rowsRevision &+= 1
     }
@@ -305,6 +319,7 @@ final class BrowserSidebarReorderGeometry {
     }
 
     func removeVirtualRun(for id: UUID, in space: BrowserSpaceRuntimeAssignment) {
+        heldVirtualRuns[id] = nil
         virtualRuns[space]?[id] = nil
         if virtualRuns[space]?.isEmpty == true { virtualRuns[space] = nil }
         rowsRevision &+= 1
@@ -607,6 +622,7 @@ final class BrowserSidebarReorderGeometry {
         selectionTargets = selectionTargets.filter { $0.value.scrollRegionID != id }
         heldRows = heldRows.filter { $0.value.registration.scrollRegionID != id }
         heldZones = heldZones.filter { $0.value.scrollRegionID != id }
+        heldVirtualRuns = heldVirtualRuns.filter { $0.value.scrollRegionID != id }
         virtualRuns = virtualRuns.compactMapValues { spaceRuns in
             let kept = spaceRuns.filter { $0.value.scrollRegionID != id }
             return kept.isEmpty ? nil : kept

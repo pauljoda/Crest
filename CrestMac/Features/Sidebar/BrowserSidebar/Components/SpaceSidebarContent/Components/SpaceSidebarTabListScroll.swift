@@ -48,20 +48,6 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
                 .environment(\.browserSidebarVisibleBand, visibleBand)
                 .environment(\.browserSidebarScrollContentSpace, BrowserSidebarVisibleBand.contentSpace)
                 .background(alignment: .topLeading) {
-                    Color.clear
-                        .frame(width: 1, height: 1)
-                        .onGeometryChange(for: CGPoint.self) { proxy in
-                            proxy.frame(in: BrowserSidebarReorderSpace.globalSpace).origin
-                        } action: { origin in
-                            sidebarInteraction.sidebarReorderState.register(
-                                scrollContentOrigin: origin,
-                                for: scrollRegionID
-                            )
-                        }
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                }
-                .background(alignment: .topLeading) {
                     // A ScrollView's outer background is a native sibling of
                     // its NSScrollView. The bridge needs the document ancestry,
                     // kept at 1x1 so it never adds a document-tall NSView.
@@ -78,6 +64,11 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
                 $0.visibleRect
             } action: { _, rect in
                 visibleBand.follow(rect)
+                viewport.visibleOrigin = rect.origin
+                viewport.publishScrollContentOrigin(
+                    for: scrollRegionID,
+                    to: sidebarInteraction.sidebarReorderState
+                )
             }
             .onChange(of: sidebarInteraction.sidebarReorderState.hasLiftInFlight, initial: true) { _, isLifting in
                 visibleBand.hold(isLifting)
@@ -113,6 +104,18 @@ struct SpaceSidebarTabListScroll<Background: View, Content: View>: View {
 @MainActor
 private final class BrowserSidebarScrollViewport {
     var frame = CGRect.zero
+    /// Live scroll offset in content coordinates, kept outside `@Observable`
+    /// tracking so scrolling updates `scrollContentOrigin` without invalidating
+    /// views that only depend on the stationary viewport `frame`.
+    @ObservationIgnored var visibleOrigin = CGPoint.zero
+
+    func publishScrollContentOrigin(for regionID: UUID, to state: BrowserSidebarReorderState) {
+        guard !frame.isEmpty else { return }
+        state.register(
+            scrollContentOrigin: CGPoint(x: frame.minX - visibleOrigin.x, y: frame.minY - visibleOrigin.y),
+            for: regionID
+        )
+    }
 }
 
 private struct BrowserSidebarScrollViewportObserver: View {
@@ -127,6 +130,7 @@ private struct BrowserSidebarScrollViewportObserver: View {
             } action: { frame in
                 viewport.frame = frame
                 state.register(scrollRegionFrame: frame, for: regionID)
+                viewport.publishScrollContentOrigin(for: regionID, to: state)
             }
             .allowsHitTesting(false)
             .accessibilityHidden(true)

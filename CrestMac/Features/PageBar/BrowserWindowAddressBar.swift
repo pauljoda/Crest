@@ -40,14 +40,12 @@ struct BrowserWindowAddressBar: View {
                 besideWindowControls: false
             )
             .fixedSize()
-            .matchedGeometryEffect(
-                id: BrowserWindowChromeMorph.navigation, in: commandSurfaceNamespace, properties: .frame)
             BrowserPageBarFieldLayout(
                 fieldMinimumWidth: BrowserPageBarMetrics.pageCard.fieldMinimumWidth,
                 widthBeforeExtensions: BrowserPageBarMetrics.pageCard.widthBeforeExtensions,
                 spacing: BrowserPageBarMetrics.pageCard.spacing
             ) {
-                addressField
+                addressFieldSlot
                 BrowserEngineToolbarAccessory(page: model.pages.activePage, space: space, browser: model.browser)
             }
             .layoutPriority(1)
@@ -70,6 +68,23 @@ struct BrowserWindowAddressBar: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Address bar")
         .accessibilityIdentifier("window-address-bar")
+    }
+
+    /// Reserves the resting top-bar field frame so `pageBarFieldFrames`
+    /// records the destination once rather than mutating on every flight frame
+    /// of the sidebar-to-top matched-geometry morph.
+    private var addressFieldSlot: some View {
+        Color.clear
+            .frame(height: BrowserChromeLayout.addressHeight)
+            .onGeometryChange(for: CGRect.self) { proxy in
+                proxy.frame(in: .global)
+            } action: { frame in
+                model.pageBarFieldFrames.registerWindowFrame(frame)
+            }
+            .onDisappear { model.pageBarFieldFrames.registerWindowFrame(nil) }
+            .overlay {
+                addressField
+            }
     }
 
     /// The sidebar's own address field, reporting where it lies so the
@@ -97,16 +112,7 @@ struct BrowserWindowAddressBar: View {
             horizontalInset: 0
         )
         .modifier(SurfaceToneAppearance())
-        .matchedGeometryEffect(
-            id: BrowserWindowChromeMorph.addressField, in: commandSurfaceNamespace, properties: .frame
-        )
         .background { BrowserWindowTitleBarControlArea() }
-        .onGeometryChange(for: CGRect.self) { proxy in
-            proxy.frame(in: .global)
-        } action: { frame in
-            model.pageBarFieldFrames.registerWindowFrame(frame)
-        }
-        .onDisappear { model.pageBarFieldFrames.registerWindowFrame(nil) }
     }
 
     private var sidebarToggle: some View {
