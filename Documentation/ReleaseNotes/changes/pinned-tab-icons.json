@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "pinned-tab-icon-stays-visible-on-its-tile",
+      "category": "fixed",
+      "message": "A pinned tab's icon stays visible when it matches its tile, such as a white icon on the White selection or a yellow one tinted its own yellow: the icon sits on a small contrasting plate, and the tile keeps its color."
+    },
+    {
+      "id": "pinned-tab-dims-without-flicker",
+      "category": "fixed",
+      "message": "Pinned tabs no longer flicker as they dim when they unload with Dim unloaded tabs on."
+    }
+  ]
+}

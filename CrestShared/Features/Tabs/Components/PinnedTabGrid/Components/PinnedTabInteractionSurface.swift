@@ -1,7 +1,10 @@
 import SwiftUI
 
 struct PinnedTabInteractionSurface: ViewModifier {
-    let favicon: FaviconAssets.Image?
+    // MARK: - Variables
+
+    /// The colors the pin's favicon is seen in, once read from its image.
+    let palette: BrowserFaviconPalette?
     let siteTheme: BrowserTabIconAccent?
     let isSelected: Bool
     let isHovering: Bool
@@ -11,8 +14,9 @@ struct PinnedTabInteractionSurface: ViewModifier {
     var statusSource: BrowserTabStatusSource? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var palette: BrowserFaviconPalette?
     @Environment(\.sidebarSpacePresentation) private var presentation
+
+    // MARK: - Body
 
     func body(content: Content) -> some View {
         content
@@ -35,16 +39,9 @@ struct PinnedTabInteractionSurface: ViewModifier {
                 CrestMotion.palette.unlessReducingMotion(reduceMotion),
                 value: resolvedAccent
             )
-            .task(id: favicon?.identity) {
-                guard let favicon else {
-                    palette = nil
-                    return
-                }
-                let extracted = await BrowserFaviconPaletteLoader.shared.palette(for: favicon.data)
-                guard !Task.isCancelled else { return }
-                palette = extracted
-            }
     }
+
+    // MARK: - Actions - Accent
 
     private var accent: BrowserTabIconAccent? {
         siteTheme?.preferring(extracted: palette?.primary.iconAccent) ?? palette?.primary.iconAccent
