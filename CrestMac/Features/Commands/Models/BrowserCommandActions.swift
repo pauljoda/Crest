@@ -57,7 +57,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
             commands: Self.paletteCommands.filter(isListedInPalette),
             settingsPages: BrowserSettingsDestination.palettePages,
             shortcut: { shortcuts?.shortcut(for: $0) },
-            perform: perform,
+            perform: performFromPalette,
             openSettings: openSettings,
             switchSpace: selectSpace,
             reopenArchivedTab: reopenArchivedTab,
@@ -96,6 +96,14 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         else { return }
         if !action.managesPalette { chrome.dismissCommandPalette() }
         action.run(self, command)
+    }
+
+    /// Runs `command` picked in the palette. The pick puts the palette away
+    /// first, so the command acts on the window behind it, as Close Tab
+    /// closes the tab rather than only the palette.
+    func performFromPalette(_ command: ShortcutCommand) {
+        chrome.dismissCommandPalette()
+        perform(command)
     }
 
     /// Availability belongs to the same command used by menus and keys: the

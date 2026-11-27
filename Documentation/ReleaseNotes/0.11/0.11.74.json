@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "id": "palette-close-tab-closes-tab-again",
+      "category": "internal",
+      "platforms": [
+        "mac"
+      ],
+      "message": "Choosing Close Current Tab or Window in the command palette closes the tab, not only the palette."
+    }
+  ]
+}

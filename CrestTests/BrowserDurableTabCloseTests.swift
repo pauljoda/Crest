@@ -19,8 +19,8 @@ final class BrowserDurableTabCloseTests: XCTestCase {
         XCTAssertTrue(context.browser.shownSpace!.archive.contains(tabID: context.tab.id))
     }
 
-    /// Close Tab with the palette open puts only the palette away, as Escape
-    /// does; the shown tab closes on the next press.
+    /// Close Tab pressed with the palette open puts only the palette away, as
+    /// Escape does; picked in the palette, it closes the shown tab.
     func testCloseTabWithPaletteOpenClosesOnlyThePalette() throws {
         let address = try XCTUnwrap(URL(string: "https://example.com"))
         let shown = TabState.Seed(title: "Shown", url: address, placement: .current)
@@ -39,7 +39,8 @@ final class BrowserDurableTabCloseTests: XCTestCase {
         XCTAssertFalse(chrome.isCommandPalettePresented)
         XCTAssertTrue(try XCTUnwrap(browser.spaceModel(space.id)).tabs.contains(shown.id))
 
-        actions.perform(.closeTabOrWindow)
+        chrome.presentCommandPalette()
+        actions.paletteRegistry(shortcuts: nil).perform(.closeTabOrWindow)
 
         let closed = try XCTUnwrap(browser.spaceModel(space.id))
         XCTAssertFalse(closed.tabs.contains(shown.id))
