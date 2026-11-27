@@ -57,7 +57,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
             commands: Self.paletteCommands.filter(isListedInPalette),
             settingsPages: BrowserSettingsDestination.palettePages,
             shortcut: { shortcuts?.shortcut(for: $0) },
-            perform: perform,
+            perform: performFromPalette,
             openSettings: openSettings,
             switchSpace: selectSpace,
             reopenArchivedTab: reopenArchivedTab,
@@ -96,6 +96,14 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         else { return }
         if !action.managesPalette { chrome.dismissCommandPalette() }
         action.run(self, command)
+    }
+
+    /// Runs `command` picked in the palette. The pick puts the palette away
+    /// first, so the command acts on the window behind it, as Close Tab
+    /// closes the tab rather than only the palette.
+    func performFromPalette(_ command: ShortcutCommand) {
+        chrome.dismissCommandPalette()
+        perform(command)
     }
 
     /// Availability belongs to the same command used by menus and keys: the
@@ -239,9 +247,16 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
         NSApp.keyWindow?.performClose(nil)
     }
 
-    /// Closes the selected tab the way the core closes it, or the window when
-    /// the core says only the window is left to close.
+    /// Closes the palette when it is open, or else the selected tab the way
+    /// the core closes it, or the window when the core says only the window
+    /// is left to close.
     func closeTabOrWindow() {
+        // An open palette closes alone, as Escape closes it, since it is in
+        // front of everything else.
+        if chrome.isCommandPalettePresented {
+            chrome.dismissCommandPalette()
+            return
+        }
         // A Peek open over the tab closes first, as it is what shows.
         if pages.closePeek() { return }
         if closeSidebarSelection() { return }

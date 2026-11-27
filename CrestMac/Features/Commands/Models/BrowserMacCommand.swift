@@ -28,7 +28,7 @@ struct BrowserMacCommand {
         .newPrivateWindow, withoutWindow: .always { $0.openPrivateWindow() },
         run: { $0.openPrivateWindow() })
     static let closeTabOrWindow = BrowserMacCommand(
-        .closeTabOrWindow, withoutWindow: .closesShellWindow,
+        .closeTabOrWindow, withoutWindow: .closesShellWindow, managesPalette: true,
         run: { $0.closeTabOrWindow() })
     static let closeWindow = BrowserMacCommand(
         .closeWindow, withoutWindow: .closesShellWindow, run: { $0.closeKeyWindow() })
