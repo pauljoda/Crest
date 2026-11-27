@@ -55,6 +55,12 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
             .padding(.top, surfaceTopInset)
             .frame(width: surfaceRegionWidth)
             .frame(maxHeight: .infinity)
+            // Settle the docked/floating inset and height change once instead of
+            // resizing the native Space pager height on every animation frame;
+            // the horizontal slide (`hiddenOffset`) stays animated on the GPU.
+            .transaction(value: usesFloatingCardAppearance) { transaction in
+                transaction.animation = nil
+            }
             #if os(macOS)
                 .background {
                     // The gap around a floating card stands over the window's
@@ -120,30 +126,45 @@ struct BrowserRootSidebarSurfaceLayer<Content: View>: View {
                     }
                 }
             }
-            .compositingGroup()
             // A docked sidebar's list runs on under the bottom safe area, into
             // the display's corner, as the page beside it does; a floating
-            // card keeps to its rounded shape.
-            .mask {
-                shape.ignoresSafeArea(.container, edges: usesFloatingCardAppearance ? [] : .bottom)
+            // card clips directly to its rounded shape without an offscreen
+            // compositingGroup pass. Keeping one structural clip identity avoids
+            // tearing down the native Space pager when toggling docked/floating.
+            #if os(macOS)
+                .clipShape(shape)
+            #else
+                .mask {
+                    shape.ignoresSafeArea(.container, edges: usesFloatingCardAppearance ? [] : .bottom)
+                }
+            #endif
+            .background {
+                if usesFloatingCardAppearance, !reduceTransparency, presentation.showsSidebar {
+                    shape
+                        .fill(Self.shadowBackingColor)
+                        .crestElevation(.floatingSidebar, scale: 1)
+                        .allowsHitTesting(false)
+                }
             }
             .overlay {
-                shape
-                    .strokeBorder(
-                        .primary.opacity(
-                            usesFloatingCardAppearance
-                                ? BrowserRootMetrics.floatingSidebarBorderOpacity
-                                : 0
-                        ),
-                        lineWidth: BrowserRootMetrics.floatingSidebarBorderWidth
-                    )
-                    .allowsHitTesting(false)
+                if usesFloatingCardAppearance {
+                    shape
+                        .strokeBorder(
+                            .primary.opacity(BrowserRootMetrics.floatingSidebarBorderOpacity),
+                            lineWidth: BrowserRootMetrics.floatingSidebarBorderWidth
+                        )
+                        .allowsHitTesting(false)
+                }
             }
-            .crestElevation(
-                .floatingSidebar,
-                scale: reduceTransparency || !usesFloatingCardAppearance || !presentation.showsSidebar ? 0 : 1
-            )
             .contentShape(.interaction, shape)
+    }
+
+    private static var shadowBackingColor: Color {
+        #if os(macOS)
+            CrestColor.windowBackground
+        #else
+            Color(uiColor: .secondarySystemBackground)
+        #endif
     }
 
     private var usesFloatingCardAppearance: Bool {

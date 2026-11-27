@@ -6,7 +6,7 @@ namespace CrestCore.Contracts;
 /// policies spell a match as its `Name`, so a name never changes. A match
 /// travels as its index in `All`, so `All` is append-only.
 public sealed class LinkRouteMatch {
-    #region Variables
+    #region Static Variables
 
     /// The address holds the pattern as typed, ignoring case.
     public static readonly LinkRouteMatch Contains = new(name: "contains", title: "Contains",

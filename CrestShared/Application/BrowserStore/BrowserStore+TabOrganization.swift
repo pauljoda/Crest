@@ -34,37 +34,19 @@ extension BrowserStore {
     ) -> Bool {
         guard let actualSourceSpace = spaceModels.first(where: { $0.tabs.model(id) != nil }),
             !isDeleting(actualSourceSpace.id), !isDeleting(selectedSpaceID),
-            sourceSpaceID == nil || sourceSpaceID == actualSourceSpace.id
+            sourceSpaceID == nil || sourceSpaceID == actualSourceSpace.id,
+            let destinationSpace = shownSpace
         else {
             return false
         }
-        let actualSourceSpaceID = actualSourceSpace.id
-
-        let moved: Bool
-        if actualSourceSpaceID == selectedSpaceID {
-            // The core takes a tab out of its split for a section that keeps none.
-            moved = moveSessionTab(
-                id, in: actualSourceSpaceID, to: placement, folderID: folderID, before: destinationTabID)
-        } else {
-            moved = moveTabBetweenSpaces(
-                id,
-                from: actualSourceSpaceID,
-                into: selectedSpaceID,
-                to: placement,
-                folderID: folderID,
-                before: destinationTabID
-            )
-        }
-        guard moved else { return false }
-        if actualSourceSpaceID != selectedSpaceID {
-            guard let destinationSpace = shownSpace else { return false }
-            interactionObserver?.browserDidMoveTab(
-                from: BrowserTabRuntimeAssignment(
-                    tabID: id, spaceID: actualSourceSpace.id, profileID: actualSourceSpace.profileID),
-                to: BrowserSpaceRuntimeAssignment(space: destinationSpace)
-            )
-        }
-        return true
+        return commitTabMove(
+            id,
+            from: BrowserSpaceRuntimeAssignment(space: actualSourceSpace),
+            into: BrowserSpaceRuntimeAssignment(space: destinationSpace),
+            to: placement,
+            folderID: folderID,
+            before: destinationTabID
+        )
     }
 
     @discardableResult
@@ -106,26 +88,14 @@ extension BrowserStore {
         guard let source = spaceModel(matching: sourceAssignment), source.shownTab(item.tabID) != nil,
             spaceModel(matching: destinationAssignment) != nil, selectedSpaceID == destinationAssignment.spaceID
         else { return false }
-
-        let moved: Bool
-        if sourceAssignment == destinationAssignment {
-            moved = moveSessionTab(
-                item.tabID, in: sourceAssignment.spaceID, to: placement, folderID: folderID, before: destinationTabID)
-        } else {
-            moved = moveTabBetweenSpaces(
-                item.tabID,
-                from: sourceAssignment.spaceID,
-                into: destinationAssignment.spaceID,
-                to: placement,
-                folderID: folderID,
-                before: destinationTabID
-            )
-        }
-        guard moved else { return false }
-        if sourceAssignment != destinationAssignment {
-            interactionObserver?.browserDidMoveTab(from: item.runtimeAssignment, to: destinationAssignment)
-        }
-        return true
+        return commitTabMove(
+            item.tabID,
+            from: sourceAssignment,
+            into: destinationAssignment,
+            to: placement,
+            folderID: folderID,
+            before: destinationTabID
+        )
     }
 
     func canMoveTab(_ id: UUID, from sourceSpaceID: UUID, into destinationSpaceID: UUID) -> Bool {
@@ -162,13 +132,48 @@ extension BrowserStore {
         into destinationSpaceID: UUID
     ) -> Bool {
         guard !isDeleting(sourceSpaceID), !isDeleting(destinationSpaceID),
-            let sourceSpace = spaceModel(sourceSpaceID), sourceSpace.shownTab(id) != nil
-        else { return false }
-        let source = BrowserTabRuntimeAssignment(tabID: id, spaceID: sourceSpaceID, profileID: sourceSpace.profileID)
-        guard moveTabBetweenSpaces(id, from: sourceSpaceID, into: destinationSpaceID),
+            let sourceSpace = spaceModel(sourceSpaceID), sourceSpace.shownTab(id) != nil,
             let destinationSpace = spaceModel(destinationSpaceID)
         else { return false }
-        interactionObserver?.browserDidMoveTab(from: source, to: BrowserSpaceRuntimeAssignment(space: destinationSpace))
+        return commitTabMove(
+            id,
+            from: BrowserSpaceRuntimeAssignment(space: sourceSpace),
+            into: BrowserSpaceRuntimeAssignment(space: destinationSpace),
+            to: nil,
+            folderID: nil,
+            before: nil
+        )
+    }
+
+    private func commitTabMove(
+        _ id: UUID,
+        from source: BrowserSpaceRuntimeAssignment,
+        into destination: BrowserSpaceRuntimeAssignment,
+        to placement: TabPlacement?,
+        folderID: UUID?,
+        before destinationTabID: UUID?
+    ) -> Bool {
+        let moved: Bool
+        if source == destination, let placement {
+            // The core takes a tab out of its split for a section that keeps none.
+            moved = moveSessionTab(id, in: source.spaceID, to: placement, folderID: folderID, before: destinationTabID)
+        } else {
+            moved = moveTabBetweenSpaces(
+                id,
+                from: source.spaceID,
+                into: destination.spaceID,
+                to: placement,
+                folderID: folderID,
+                before: destinationTabID
+            )
+        }
+        guard moved else { return false }
+        if source != destination {
+            interactionObserver?.browserDidMoveTab(
+                from: BrowserTabRuntimeAssignment(tabID: id, in: source),
+                to: destination
+            )
+        }
         return true
     }
 

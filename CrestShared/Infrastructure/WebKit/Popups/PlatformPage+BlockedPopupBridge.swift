@@ -1,4 +1,27 @@
+import Foundation
 import WebKit
+
+private struct BlockedPopupBridgeMessage: Decodable {
+    let version: Int?
+    let event: String?
+    let userActivated: Bool?
+    let documentIdentifier: String?
+
+    init?(body: Any) {
+        guard JSONSerialization.isValidJSONObject(body),
+            let data = try? JSONSerialization.data(withJSONObject: body),
+            let decoded = try? JSONDecoder().decode(Self.self, from: data)
+        else { return nil }
+        self = decoded
+    }
+
+    var validatedDocumentIdentifier: String? {
+        guard version == 1, event == "blocked", userActivated == false,
+            let documentIdentifier, BrowserContentMessage.isValidIdentity(documentIdentifier)
+        else { return nil }
+        return documentIdentifier
+    }
+}
 
 /// Blocked-popup reports from the WebKit content bridge.
 extension BrowserPlatformPage {
@@ -10,12 +33,7 @@ extension BrowserPlatformPage {
         guard message.webView === webKitView,
             message.name == BrowserBlockedPopupContentBridge.messageHandlerName,
             message.frameInfo.isMainFrame,
-            let body = message.body as? [String: Any],
-            (body["version"] as? NSNumber)?.intValue == 1,
-            body["event"] as? String == "blocked",
-            body["userActivated"] as? Bool == false,
-            let documentIdentifier = body["documentIdentifier"] as? String,
-            BrowserContentMessage.isValidIdentity(documentIdentifier),
+            let documentIdentifier = BlockedPopupBridgeMessage(body: message.body)?.validatedDocumentIdentifier,
             let frameURL = message.frameInfo.request.url,
             let origin = SiteOrigin(url: frameURL),
             let currentURL = webKitView?.url,

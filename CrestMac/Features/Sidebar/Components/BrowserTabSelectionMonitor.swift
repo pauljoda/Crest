@@ -62,6 +62,7 @@ struct BrowserTabSelectionMonitor: View {
         private var monitor: Any?
         private var windowObservers: [NSObjectProtocol] = []
         private var consumedDown = false
+        private var pressedAuxiliaryTargetID: AnyHashable?
         override var acceptsFirstResponder: Bool { true }
         override var isFlipped: Bool { true }
         override func hitTest(_ point: NSPoint) -> NSView? { nil }
@@ -95,7 +96,8 @@ struct BrowserTabSelectionMonitor: View {
                     })
             }
             monitor = NSEvent.addLocalMonitorForEvents(matching: [
-                .leftMouseDown, .leftMouseDragged, .leftMouseUp, .rightMouseDown, .keyDown,
+                .leftMouseDown, .leftMouseDragged, .leftMouseUp, .rightMouseDown, .otherMouseDown, .otherMouseUp,
+                .keyDown,
             ]) {
                 [weak self] event in
                 guard let self else { return event }
@@ -113,8 +115,10 @@ struct BrowserTabSelectionMonitor: View {
         func handle(_ event: NSEvent) -> NSEvent? {
             guard let eventWindow = window, event.window === eventWindow else { return event }
             if event.type == .leftMouseDragged || event.type == .leftMouseUp {
+                let local = convert(event.locationInWindow, from: nil)
+                let global = CGPoint(x: globalFrame.minX + local.x, y: globalFrame.minY + local.y)
                 sidebarInteraction?.sidebarReorderState.forwardPointerContinuation(
-                    at: globalPoint(of: event), released: event.type == .leftMouseUp, eventTimestamp: event.timestamp)
+                    at: global, released: event.type == .leftMouseUp, eventTimestamp: event.timestamp)
                 if event.type == .leftMouseDragged { return event }
             }
             guard let browser, let sidebarInteraction, let spaceAccess, let assignment,
@@ -138,6 +142,22 @@ struct BrowserTabSelectionMonitor: View {
                 guard window?.firstResponder === self || selection.hasKeyboard(in: window) else { return event }
                 return handleKey(event, browser: browser)
             }
+            if event.type == .otherMouseDown || event.type == .otherMouseUp {
+                guard event.buttonNumber == 2 else { return event }
+                let local = convert(event.locationInWindow, from: nil)
+                let globalPoint = CGPoint(x: globalFrame.minX + local.x, y: globalFrame.minY + local.y)
+                let hit = sidebarInteraction.sidebarReorderState.auxiliaryClickTarget(
+                    at: globalPoint, in: assignment)
+                if event.type == .otherMouseDown {
+                    pressedAuxiliaryTargetID = hit?.id
+                } else if let pressedID = pressedAuxiliaryTargetID {
+                    pressedAuxiliaryTargetID = nil
+                    if let hit, hit.id == pressedID {
+                        hit.perform()
+                    }
+                }
+                return event
+            }
             if event.type == .leftMouseUp {
                 if consumedDown {
                     consumedDown = false
@@ -145,10 +165,14 @@ struct BrowserTabSelectionMonitor: View {
                 }
                 return event
             }
+            let local = convert(event.locationInWindow, from: nil)
+            let globalPoint = CGPoint(x: globalFrame.minX + local.x, y: globalFrame.minY + local.y)
             guard let window,
-                let id = BrowserTabSelectionTargets.shared.item(
-                    at: globalPoint(of: event), browser: browser, assignment: assignment,
-                    visibleFrame: sidebarInteraction.sidebarReorderState.scrollRegionFrame(for:))
+                let id = sidebarInteraction.sidebarReorderState.selectionItem(
+                    at: globalPoint, in: assignment)
+                    ?? BrowserTabSelectionTargets.shared.item(
+                        at: globalPoint, browser: browser, assignment: assignment,
+                        visibleFrame: sidebarInteraction.sidebarReorderState.scrollRegionFrame(for:))
             else {
                 selection.clear()
                 return event
@@ -173,13 +197,6 @@ struct BrowserTabSelectionMonitor: View {
             // set. The activation button collapses it only after a plain click.
             if !selection.contains(id) { selection.click(id, units: units) }
             return event
-        }
-
-        /// Where `event` happened in SwiftUI's global space of this window,
-        /// the space sidebar geometry registers in.
-        private func globalPoint(of event: NSEvent) -> CGPoint {
-            let local = convert(event.locationInWindow, from: nil)
-            return CGPoint(x: globalFrame.minX + local.x, y: globalFrame.minY + local.y)
         }
 
         private func handleKey(_ event: NSEvent, browser: BrowserStore) -> NSEvent? {

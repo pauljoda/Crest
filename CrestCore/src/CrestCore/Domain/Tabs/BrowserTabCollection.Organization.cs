@@ -5,7 +5,7 @@ using CrestCore.Contracts;
 namespace CrestCore.Domain;
 
 public sealed partial class BrowserTabCollection {
-    #region Variables
+    #region Static Variables
 
     private const int MaximumFolderSymbolBytes = 128;
 

@@ -4,7 +4,7 @@ namespace CrestCore.Domain;
 /// Two identifiers name the same translation language when their language
 /// codes and effective scripts agree; regions are aliases of one another.
 public sealed record LanguageTag(string Language, string? Script, string? Region) {
-    #region Variables
+    #region Static Variables
 
     /// CLDR likely scripts for languages with one usual script. A language
     /// without an entry compares only the scripts its identifiers spell out.
@@ -108,6 +108,10 @@ public sealed record LanguageTag(string Language, string? Script, string? Region
         [("zh", "MO")] = "Hant",
         [("zh", "TW")] = "Hant"
     };
+
+    #endregion
+
+    #region Variables
 
     public string? EffectiveScript => Script
         ?? (Region is { } region && RegionalScripts.TryGetValue((Language, region), out var regional) ? regional : null)

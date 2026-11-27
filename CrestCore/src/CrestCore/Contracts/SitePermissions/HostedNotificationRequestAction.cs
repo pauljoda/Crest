@@ -13,7 +13,7 @@ public sealed class HostedNotificationRequestAction {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     public static readonly HostedNotificationRequestAction RespondDefault = new(Kinds.RespondDefault, name: "respondDefault",
         answers: SitePermissionVerdict.Ask, answersUserActivation: false);
@@ -26,6 +26,10 @@ public sealed class HostedNotificationRequestAction {
 
     public static IReadOnlyList<HostedNotificationRequestAction> All { get; } =
         [RespondDefault, RespondDenied, ResolveSystemAuthorization, PromptForSitePermission];
+
+    #endregion
+
+    #region Variables
 
     public Kinds Kind { get; }
     public string Name { get; }

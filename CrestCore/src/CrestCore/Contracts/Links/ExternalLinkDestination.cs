@@ -7,7 +7,7 @@ namespace CrestCore.Contracts;
 /// `Name`, so a name never changes. A destination travels as its index in
 /// `All`, so `All` is append-only.
 public sealed class ExternalLinkDestination {
-    #region Variables
+    #region Static Variables
 
     /// A Quick Window on the Space remembered for the link's site, when the
     /// preferences remember one and it can open.
@@ -24,6 +24,10 @@ public sealed class ExternalLinkDestination {
             preferences.DestinationSpaceId is { } chosen && context.IsAvailable(chosen) ? chosen : context.Fallback());
 
     public static IReadOnlyList<ExternalLinkDestination> All { get; } = [QuickWindow, MostRecentSpace, ChosenSpace];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

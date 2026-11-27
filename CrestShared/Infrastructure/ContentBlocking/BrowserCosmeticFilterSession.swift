@@ -14,6 +14,26 @@ final class BrowserCosmeticFilterSession {
     typealias Evaluate =
         @MainActor (_ body: String, _ arguments: [String: Any], _ frame: BrowserContentFrame) async throws -> Any?
 
+    private struct WireResource: Decodable {
+        let kind: String?
+        let url: String?
+
+        var pageResource: PageResource? {
+            guard let kind = PageResourceKind.named(kind), let url else { return nil }
+            return PageResource(kind: kind, url: url)
+        }
+    }
+
+    private struct WireMessage: Decodable {
+        let url: String
+        let first: Bool?
+        let picker: BrowserElementPicker.Report?
+        let block: String?
+        let classes: [String]?
+        let ids: [String]?
+        let resources: [WireResource]?
+    }
+
     // MARK: - Variables
 
     private let core: CrestCore
@@ -49,32 +69,33 @@ final class BrowserCosmeticFilterSession {
 
     /// Answers one message from the bridge in `frame`'s document.
     func receive(_ body: Any, from frame: BrowserContentFrame) {
-        guard let message = body as? [String: Any], let documentURL = message["url"] as? String,
+        guard JSONSerialization.isValidJSONObject(body),
+            let data = try? JSONSerialization.data(withJSONObject: body),
+            let message = try? JSONDecoder().decode(WireMessage.self, from: data),
             let site = siteURL(), site.webScheme != nil
         else { return }
+        let isFirst = message.first ?? false
         if frame.isMainFrame {
             mainFrame = frame
             // A new top document has no picker running.
-            if message["first"] as? Bool == true { picker.end() }
-            if let report = message["picker"] as? [String: Any] { return picker.apply(report) }
-            if let selector = message["block"] as? String {
+            if isFirst { picker.end() }
+            if let report = message.picker { return picker.apply(report) }
+            if let selector = message.block {
                 // Only what the running picker holds, as the bar shows it.
                 guard picker.isActive, selector == picker.selector else { return }
                 _ = try? core.send(BlockElement(pageURL: site.absoluteString, selector: selector))
                 return
             }
         }
-        let resources = (message["resources"] as? [[String: Any]] ?? []).compactMap(Self.resource)
+        let resources = (message.resources ?? []).compactMap(\.pageResource)
         let query = DocumentCosmetics(
-            spaceID: spaceID, siteURL: site.absoluteString, documentURL: documentURL,
-            first: message["first"] as? Bool ?? false,
-            classes: message["classes"] as? [String] ?? [], ids: message["ids"] as? [String] ?? [],
+            spaceID: spaceID, siteURL: site.absoluteString, documentURL: message.url,
+            first: isFirst,
+            classes: message.classes ?? [], ids: message.ids ?? [],
             resources: resources)
         guard let answer = try? core.query(query) else { return }
         // A blocking document with nothing new to hide needs no answer.
-        if answer.blocks, answer.style.isEmpty, answer.procedural.isEmpty, answer.collapse.isEmpty,
-            !(message["first"] as? Bool ?? false)
-        {
+        if answer.blocks, answer.style.isEmpty, answer.procedural.isEmpty, answer.collapse.isEmpty, !isFirst {
             return
         }
         let reply: [String: Any] = [
@@ -83,14 +104,6 @@ final class BrowserCosmeticFilterSession {
         ]
         let evaluate = evaluate
         Task { _ = try? await evaluate(BrowserCosmeticFilterContentBridge.applyBody, ["answer": reply], frame) }
-    }
-
-    /// An element the bridge named, or nil for one it named oddly.
-    private static func resource(_ named: [String: Any]) -> PageResource? {
-        guard let kind = PageResourceKind.named(named["kind"] as? String), let url = named["url"] as? String else {
-            return nil
-        }
-        return PageResource(kind: kind, url: url)
     }
 
     // MARK: - Actions - Picker

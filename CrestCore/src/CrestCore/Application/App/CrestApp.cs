@@ -99,23 +99,14 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
         // One grant authority for the process: every session the device shows
         // consults it, so a borrowed workspace unlocks with its source.
         var grants = new SpaceAccessAuthority();
-        if (configuration.StorageDirectory is not { } directory) {
-            device = new(configuration.Platform, storage: null, DeviceRecords.Empty, grants, Announce, RequestTurn, CloseBorrower, clock);
-            filters = new(null, configuration.Platform, configuration.Languages, () => device.FilterChoices, Announce, clock, configuration.FilterResourcesUrl);
-            engines.Prefer(device.DefaultEngine);
-            pages = new(device, engines, clock, ids);
-            prompts = new(device, pages);
-            extensions = new(device, engines, prompts);
-            engineDownloads = new(downloads, device, pages, ids);
-            closePreparations = new(device, pages, downloads, dataDeletions, ids);
-            access = new(device, grants);
-            cloudTransport = new(storage: null, device);
-            cloudSync = new(cloudTransport, clock, StoredSessionIsDisposableSeed, StoredJournalPendingUploads);
-            return;
+        StoredSession? loaded = null;
+        if (configuration.StorageDirectory is { } directory) {
+            storage = SessionStorage.Open(directory, Announce, out loaded);
         }
-        storage = SessionStorage.Open(directory, Announce, out var loaded);
-        device = new(configuration.Platform, storage, storage.Device, grants, Announce, RequestTurn, CloseBorrower, clock);
-        filters = new(directory, configuration.Platform, configuration.Languages, () => device.FilterChoices, Announce, clock, configuration.FilterResourcesUrl);
+        device = new(configuration.Platform, storage, storage?.Device ?? DeviceRecords.Empty, grants, Announce, RequestTurn,
+            CloseBorrower, clock);
+        filters = new(configuration.StorageDirectory, configuration.Platform, configuration.Languages, () => device.FilterChoices,
+            Announce, clock, configuration.FilterResourcesUrl);
         engines.Prefer(device.DefaultEngine);
         pages = new(device, engines, clock, ids);
         prompts = new(device, pages);
@@ -125,8 +116,9 @@ public sealed partial class CrestApp : IQueryAnswers, IDisposable {
         access = new(device, grants);
         cloudTransport = new(storage, device);
         cloudSync = new(cloudTransport, clock, StoredSessionIsDisposableSeed, StoredJournalPendingUploads);
+        if (storage is null) return;
         try {
-            if (loaded.Session is { } stored) Establish(stored, loaded.Journal, loaded.LegacySelection);
+            if (loaded?.Session is { } stored) Establish(stored, loaded.Journal, loaded.LegacySelection);
         } catch (Exception error) {
             storage.Dispose();
             if (error is Rejected) throw;

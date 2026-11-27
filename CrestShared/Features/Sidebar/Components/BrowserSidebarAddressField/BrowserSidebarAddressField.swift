@@ -38,7 +38,7 @@ struct BrowserSidebarAddressField<LeadingAccessory: View, TrailingAccessory: Vie
     // MARK: - Actions - Drawing
 
     var body: some View {
-        BrowserSidebarAddressFieldContent(configuration: configuration) {
+        let base = BrowserSidebarAddressFieldContent(configuration: configuration) {
             leadingAccessory
         } trailingAccessory: {
             trailingAccessory
@@ -51,40 +51,26 @@ struct BrowserSidebarAddressField<LeadingAccessory: View, TrailingAccessory: Vie
             branding: configuration.branding,
             activate: configuration.surfaceActivation
         )
-        .matchedGeometryEffect(
-            id: BrowserCommandSurfaceMorph.utilitySearch(
-                spaceID: configuration.spaceID
-            ),
-            in: configuration.morphNamespace,
-            properties: .frame,
-            anchor: .center,
-            isSource: true
-        )
-        .animation(handoffAnimation) {
-            $0.opacity(configuration.commandPaletteHandoff.fieldOpacity)
-        }
-        .background { commandPaletteAnchor }
-    }
 
-    /// The field's frame, carrying the palette's identity while the field
-    /// holds it.
-    ///
-    /// A clear stand-in rather than the field itself: letting go of the
-    /// identity inserts and removes only the stand-in, never the field and
-    /// whatever it is showing or editing. Removing it in the transaction that
-    /// inserts the palette is what grows the palette out of this frame.
-    @ViewBuilder
-    private var commandPaletteAnchor: some View {
-        if configuration.commandPaletteHandoff.fieldHoldsMorph {
-            Color.clear.matchedGeometryEffect(
-                id: BrowserCommandSurfaceMorph.commandPalette(
-                    spaceID: configuration.spaceID
-                ),
-                in: configuration.morphNamespace,
-                properties: .frame,
-                anchor: .center,
-                isSource: true
-            )
-        }
+        #if os(macOS)
+            base
+                .animation(handoffAnimation) {
+                    $0.opacity(configuration.commandPaletteHandoff.fieldOpacity)
+                }
+        #else
+            base
+                .matchedGeometryEffect(
+                    id: BrowserCommandSurfaceMorph.utilitySearch(
+                        spaceID: configuration.spaceID
+                    ),
+                    in: configuration.morphNamespace,
+                    properties: .frame,
+                    anchor: .center,
+                    isSource: true
+                )
+                .animation(handoffAnimation) {
+                    $0.opacity(configuration.commandPaletteHandoff.fieldOpacity)
+                }
+        #endif
     }
 }

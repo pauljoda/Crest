@@ -92,8 +92,16 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
         let model: BrowserCommandPaletteModel
         let presentation: BrowserCommandPalettePresentation
         weak var field: NSTextField?
-        let suffixLabel = CompletionLabel(
-            rootView: BrowserURLCompletionSuffix(text: "", font: .title2, isVisible: false))
+        private var suffixLabelStorage: CompletionLabel?
+        var suffixLabel: CompletionLabel {
+            if let suffixLabelStorage { return suffixLabelStorage }
+            let label = CompletionLabel(
+                rootView: BrowserURLCompletionSuffix(text: "", font: .title2, isVisible: false))
+            label.sizingOptions = []
+            label.setAccessibilityElement(false)
+            suffixLabelStorage = label
+            return label
+        }
         var didRequestFocus = false
         /// Watches the modifier keys and modified Returns while the field edits.
         private var keyMonitor: Any?
@@ -102,8 +110,6 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
             self.model = model
             self.presentation = presentation
             super.init()
-            suffixLabel.sizingOptions = []
-            suffixLabel.setAccessibilityElement(false)
         }
 
         func controlTextDidBeginEditing(_ notification: Notification) {
@@ -112,8 +118,6 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
             editor.isAutomaticSpellingCorrectionEnabled = false
             editor.isAutomaticQuoteSubstitutionEnabled = false
             editor.isAutomaticDashSubstitutionEnabled = false
-            editor.addSubview(suffixLabel)
-            suffixLabel.nextResponder = editor
             NotificationCenter.default.removeObserver(self)
             NotificationCenter.default.addObserver(
                 self, selector: #selector(selectionChanged), name: NSTextView.didChangeSelectionNotification,
@@ -171,9 +175,11 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
         private func detachSuffix() {
             NotificationCenter.default.removeObserver(
                 self, name: NSTextView.didChangeSelectionNotification, object: nil)
-            suffixLabel.rootView.isVisible = false
-            suffixLabel.removeFromSuperview()
-            suffixLabel.nextResponder = nil
+            if let suffixLabelStorage {
+                suffixLabelStorage.rootView.isVisible = false
+                suffixLabelStorage.removeFromSuperview()
+                suffixLabelStorage.nextResponder = nil
+            }
             field?.setAccessibilityHelp(nil)
         }
 
@@ -190,8 +196,8 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
         func refreshSuffix() {
             field?.placeholderString = model.fieldPlaceholder
             if model.urlCompletion == nil, model.providerOffer != nil {
-                suffixLabel.isHidden = true
-                suffixLabel.rootView.isVisible = false
+                suffixLabelStorage?.isHidden = true
+                suffixLabelStorage?.rootView.isVisible = false
                 field?.setAccessibilityHelp(model.completionHelp)
                 return
             }
@@ -199,18 +205,23 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
                 !editor.hasMarkedText(), let proposal = model.urlCompletion,
                 let window = editor.window
             else {
-                suffixLabel.isHidden = true
-                suffixLabel.rootView.isVisible = false
+                suffixLabelStorage?.isHidden = true
+                suffixLabelStorage?.rootView.isVisible = false
                 field?.setAccessibilityHelp(nil)
                 return
             }
+            let label = suffixLabel
+            if label.superview !== editor {
+                editor.addSubview(label)
+                label.nextResponder = editor
+            }
             let screenRect = editor.firstRect(forCharacterRange: editor.selectedRange(), actualRange: nil)
             let rect = editor.convert(window.convertFromScreen(screenRect), from: nil)
-            suffixLabel.rootView = BrowserURLCompletionSuffix(
+            label.rootView = BrowserURLCompletionSuffix(
                 text: proposal.suffix, font: Font(field.font ?? .preferredFont(forTextStyle: .title2)))
-            suffixLabel.frame = NSRect(
+            label.frame = NSRect(
                 x: rect.maxX, y: rect.minY, width: max(0, editor.bounds.maxX - rect.maxX), height: rect.height)
-            suffixLabel.isHidden = false
+            label.isHidden = false
             field.setAccessibilityHelp(model.completionHelp)
         }
 

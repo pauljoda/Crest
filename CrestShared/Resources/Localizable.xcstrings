@@ -10361,6 +10361,12 @@
     "Picture in Picture" : {
 
     },
+    "Picture in Picture Settings" : {
+
+    },
+    "Picture in Picture preview" : {
+
+    },
     "Pile" : {
       "extractionState" : "manual"
     },
@@ -13122,6 +13128,9 @@
     "Show Blocked Elements" : {
 
     },
+    "Show border" : {
+
+    },
     "Show Code" : {
 
     },
@@ -13879,6 +13888,9 @@
       }
     },
     "Square" : {
+
+    },
+    "Square corners" : {
 
     },
     "Stable" : {

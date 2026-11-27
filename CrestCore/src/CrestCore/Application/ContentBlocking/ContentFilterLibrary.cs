@@ -66,7 +66,7 @@ internal static unsafe partial class ContentFilterLibrary {
 
     #endregion
 
-    #region Variables
+    #region Static Variables
 
     private const string Library = "crest_content_filter";
 

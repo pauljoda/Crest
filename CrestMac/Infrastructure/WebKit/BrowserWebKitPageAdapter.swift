@@ -64,7 +64,7 @@ final class BrowserWebKitPageAdapter: BrowserPageEngineAdapter {
     )
     private(set) lazy var readerModeSession: BrowserReaderModeSession? = page.map {
         BrowserReaderModeSession(
-            document: BrowserWebKitReaderModeDocument(webView: webView, translation: $0.translation))
+            document: BrowserContentReaderModeDocument(webView: webView, translation: $0.translation))
     }
     private(set) lazy var faviconSession: BrowserFaviconSession? = page.map {
         BrowserFaviconSession(

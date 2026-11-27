@@ -55,12 +55,15 @@ struct BrowserWindowAddressBarLayer: View {
 
     @ViewBuilder
     private var bar: some View {
-        if model.showsWindowTopBar, model.pages.activePage?.isContentFullscreen != true,
-            let space = model.browser.shownSpace
-        {
-            BrowserWindowAddressBar(model: model, space: space, commandSurfaceNamespace: commandSurfaceNamespace)
-                .transition(BrowserWindowChromeMorph.transition)
+        let isShown = model.showsWindowTopBar && model.pages.activePage?.isContentFullscreen != true
+        let sidebarOnRight = BrowserDeviceAppearanceStore.shared.sidebarOnRight
+        ZStack {
+            if isShown, let space = model.browser.shownSpace {
+                BrowserWindowAddressBar(model: model, space: space, commandSurfaceNamespace: commandSurfaceNamespace)
+                    .transition(BrowserWindowChromeMorph.topBarTransition(fromLeading: !sidebarOnRight))
+            }
         }
+        .animation(CrestMotion.chrome.unlessReducingMotion(reduceMotion), value: isShown)
     }
 
     /// Whether something drawn over the page has the top of it now.

@@ -9,12 +9,16 @@ namespace CrestCore.Contracts;
 /// The stored session spells a policy as its `Name`, so a name never changes.
 /// A policy travels as its index in `All`, so `All` is append-only.
 public sealed class ContentBlockingPolicy {
-    #region Variables
+    #region Static Variables
 
     public static readonly ContentBlockingPolicy Balanced = new(name: "balanced", title: "Balanced", blocksContent: true);
     public static readonly ContentBlockingPolicy Off = new(name: "off", title: "Off", blocksContent: false);
 
     public static IReadOnlyList<ContentBlockingPolicy> All { get; } = [Balanced, Off];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

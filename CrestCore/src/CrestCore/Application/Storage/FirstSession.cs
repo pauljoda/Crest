@@ -11,7 +11,7 @@ namespace CrestCore.Application;
 /// stands in when there is none to carry.
 internal sealed record FirstSession(SessionState Session, NativeSyncJournal? Journal, JsonObject? LegacySelection,
     IReadOnlyList<TabFavicon> Favicons, bool RequestsCloudRecovery) {
-    #region Variables
+    #region Static Variables
 
     private static readonly JsonDocumentOptions DocumentOptions = JsonDepth.Session.Options;
 

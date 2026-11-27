@@ -15,17 +15,32 @@ enum BrowserMacAppIconAssets {
     /// The palette images already loaded, by bundle and resource. Settings
     /// asks for every one on each layout pass of its icon grid.
     @MainActor private static var loadedImages: [String: NSImage] = [:]
+    @MainActor private static var cachedDefaultIcons: [String: NSImage] = [:]
+
+    @MainActor
+    static func defaultIcon(in bundle: Bundle) -> NSImage {
+        let key = bundle.bundlePath
+        if let cached = cachedDefaultIcons[key] { return cached }
+        let image = NSWorkspace.shared.icon(forFile: key)
+        cachedDefaultIcons[key] = image
+        return image
+    }
+
+    @MainActor
+    static func invalidateSystemAppearanceCache() {
+        cachedDefaultIcons.removeAll(keepingCapacity: true)
+    }
 
     @MainActor
     static func image(named name: String, in bundle: Bundle) -> NSImage? {
-        guard name.range(of: "^Crest[A-Z][a-z]{1,20}$", options: .regularExpression) != nil,
+        guard isValidPaletteIconName(name),
             let light = loadedImage(name + "DockLight", in: bundle)
         else { return nil }
         let theme = UserDefaults.standard.string(forKey: systemAppearanceKey)?.lowercased() ?? ""
         // All palette variants deliberately share their monochrome layers. Let Icon
         // Services render Clear and Tinted, including the system's glass treatment.
-        if usesSystemAppearance {
-            return NSWorkspace.shared.icon(forFile: bundle.bundlePath)
+        if theme.contains("clear") || theme.contains("tinted") || theme.contains("mono") {
+            return defaultIcon(in: bundle)
         }
         let dark =
             theme.contains("dark")
@@ -34,6 +49,15 @@ enum BrowserMacAppIconAssets {
         // Both exports contain the same macOS margin and explicit 1x/2x images.
         // Use the finished artwork directly in the Dock and settings selector.
         return dark ? loadedImage(name + "DockDark", in: bundle) : light
+    }
+
+    private static func isValidPaletteIconName(_ name: String) -> Bool {
+        guard name.hasPrefix("Crest") else { return false }
+        let suffix = name.dropFirst(5)
+        guard let first = suffix.first, first.isASCII, first.isUppercase else { return false }
+        let tail = suffix.dropFirst()
+        guard (1...20).contains(tail.count) else { return false }
+        return tail.allSatisfy { $0.isASCII && $0.isLowercase }
     }
 
     @MainActor

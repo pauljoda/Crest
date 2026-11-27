@@ -4,7 +4,7 @@ namespace CrestCore.Contracts;
 ///
 /// A phase travels as its index in `All`, so `All` is append-only.
 public sealed class CloudSyncPhase {
-    #region Variables
+    #region Static Variables
 
     public static readonly CloudSyncPhase Disabled = new(name: "disabled", isRetryable: false, title: "Off", symbol: "icloud.slash",
         tone: null, keepsCloudOutOfReach: false);
@@ -28,6 +28,10 @@ public sealed class CloudSyncPhase {
 
     public static IReadOnlyList<CloudSyncPhase> All { get; } =
         [Disabled, Checking, Ready, Syncing, NeedsReconciliation, WaitingForAccount, Failed, WaitingToUpload];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

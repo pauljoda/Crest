@@ -32,17 +32,18 @@ struct BrowserSidebarTabActivationButton: View {
             BrowserSidebarTabLabel(
                 tab: tab, favicons: favicons, profileID: profileID, isSelected: isSelected,
                 isLoaded: isLoaded, metrics: metrics, leadingInset: leadingInset,
-                restoreSavedLocation: restoreSavedLocation, faviconPrimaryClick: faviconPrimaryClick)
+                restoreSavedLocation: restoreSavedLocation, faviconPrimaryClick: faviconPrimaryClick
+            )
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity, maxHeight: maxHeight)
         .contentShape(.rect)
         #if os(macOS)
-            .simultaneousGesture(
-                TapGesture(count: 2).onEnded {
-                    guard tab.placement == .saved else { return }
-                    restoreSavedLocation?()
-                }
+            .modifier(
+                BrowserSavedTabDoubleClickRestore(
+                    isEnabled: tab.placement == .saved && restoreSavedLocation != nil,
+                    restore: restoreSavedLocation
+                )
             )
         #endif
         .overlay(alignment: .leading) {
@@ -97,3 +98,23 @@ struct BrowserSidebarTabActivationButton: View {
         metrics.fillsRowHeight ? .infinity : nil
     }
 }
+
+#if os(macOS)
+    private struct BrowserSavedTabDoubleClickRestore: ViewModifier {
+        let isEnabled: Bool
+        let restore: (() -> Void)?
+
+        @ViewBuilder
+        func body(content: Content) -> some View {
+            if isEnabled, let restore {
+                content.simultaneousGesture(
+                    TapGesture(count: 2).onEnded {
+                        restore()
+                    }
+                )
+            } else {
+                content
+            }
+        }
+    }
+#endif

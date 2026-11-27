@@ -5,7 +5,7 @@ namespace CrestCore.Contracts;
 ///
 /// A problem travels as its index in `All`, so `All` is append-only.
 public sealed class CloudSyncProblem {
-    #region Variables
+    #region Static Variables
 
     /// This build has no CloudKit container or no transport to reach it.
     public static readonly CloudSyncProblem NotConfigured = new(name: "notConfigured", reportsError: false, message: null);
@@ -17,6 +17,10 @@ public sealed class CloudSyncProblem {
     public static readonly CloudSyncProblem LocalChangesUnsaved = new(name: "localChangesUnsaved", reportsError: true, message: null);
 
     public static IReadOnlyList<CloudSyncProblem> All { get; } = [NotConfigured, EntitlementMissing, LocalChangesUnsaved];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

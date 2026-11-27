@@ -3,7 +3,7 @@ namespace CrestCore.Contracts;
 /// A named color Crest offers and draws Spaces with: the colors a Space picks
 /// from, and the tinctures each house's look is made of.
 public sealed class Tincture {
-    #region Variables
+    #region Static Variables
 
     public static readonly Tincture Ink = new("ink", "Ink", new(0.08, 0.15, 0.23));
     public static readonly Tincture Indigo = new("indigo", "Indigo", new(0.29, 0.25, 0.58));
@@ -113,6 +113,10 @@ public sealed class Tincture {
         CrestInk, CrestDusk, CrestSky, CrestButter, CrestCoral, CrestCream, CrestSage, MoonNight, MoonTide, SummitButter, LensMist,
         LensFern, SparkTwilight, SparkMulberry, GroveDeep, GroveMoss
     ];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

@@ -5,7 +5,7 @@ namespace CrestCore.Contracts;
 /// security, downloads, form submissions and rendering. A decision travels
 /// as its index in `All`, so `All` is append-only.
 public sealed class LinkNavigationDecision {
-    #region Variables
+    #region Static Variables
 
     public static readonly LinkNavigationDecision Navigate = new(name: "navigate");
     public static readonly LinkNavigationDecision PeekModifier = new(name: "peekModifier", opensPeek: true, stagesLink: true);
@@ -16,6 +16,10 @@ public sealed class LinkNavigationDecision {
 
     public static IReadOnlyList<LinkNavigationDecision> All { get; } =
         [Navigate, PeekModifier, PeekSavedSite, BackgroundTab, ForegroundTab];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

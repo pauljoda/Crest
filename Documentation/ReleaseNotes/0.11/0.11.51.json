@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "tidy-sorts-open-tabs-into-groups",
+      "category": "new",
+      "message": "Tidy sorts a Space's loose open tabs into Groups named for their topic, using Apple Intelligence on the device. Turn it on in Settings › Tabs, then press Tidy above the open tabs once six or more are loose. Running it again adds to the Groups it made, and its Groups sync like any other. Thanks to Ali Karbassi (@karbassi)."
+    }
+  ]
+}

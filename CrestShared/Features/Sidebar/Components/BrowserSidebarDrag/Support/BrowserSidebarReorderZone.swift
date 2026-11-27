@@ -7,41 +7,159 @@ import Foundation
 struct BrowserSidebarReorderZone: Equatable, Sendable {
     // MARK: - Types
 
-    enum Target: Hashable, Sendable {
-        /// An ordered run of rows.
-        case section(BrowserSidebarReorderSection)
-        /// A collapsed folder row: dropping lands the item inside the folder.
-        case folder(UUID)
-        /// An open tab at the top level: dropping makes a folder around it.
-        case currentTab(UUID)
-        /// A space picker segment: dropping moves the item to that space.
-        case space(BrowserSpaceRuntimeAssignment)
-        /// The window's web-content area for a Space: dropping a tab there adds
-        /// it to the cards already on show.
-        case splitContent(BrowserSpaceRuntimeAssignment)
+    /// Self-describing destination for a measured sidebar drop zone. Each kind
+    /// carries its own specificity, acceptance, projection and landing behavior
+    /// rather than switching on a case tag.
+    struct Target: Hashable, Sendable {
+        // MARK: - Types
+
+        private enum Identity: Hashable, Sendable {
+            case section(BrowserSidebarReorderSection)
+            case folder(UUID)
+            case currentTab(UUID)
+            case space(BrowserSpaceRuntimeAssignment)
+            case splitContent(BrowserSpaceRuntimeAssignment)
+        }
 
         // MARK: - Variables
 
+        private let identity: Identity
+        /// The ordered run when this target is a section, or nil for leaf targets.
+        let section: BrowserSidebarReorderSection?
+        /// Higher wins when zones overlap.
+        let specificity: Int
         /// Whether the target files what lands on it inside its own row: a
         /// collapsed folder, or an open tab a folder is made around. It claims
         /// only the middle of its row, so the edges stay available for
         /// reordering past it, and it wins over the section behind it.
-        var nests: Bool {
-            switch self {
-            case .folder, .currentTab: true
-            case .section, .space, .splitContent: false
-            }
-        }
-
+        let nests: Bool
         /// Whether a lift over the target lands there even where an open gap
         /// would hold it in place. A Space picker remains reachable when a tall
         /// batch's temporary gap overlaps it or the lifted folder's moving edge
         /// extends beyond it.
-        var outranksGap: Bool {
-            switch self {
-            case .space: true
-            case .section, .folder, .currentTab, .splitContent: false
-            }
+        let outranksGap: Bool
+        /// Whether this is the window's content area — the one zone a sidebar can
+        /// be drawn on top of, and the only one whose frame says nothing about what
+        /// the pointer is aiming at while it is.
+        let isContentArea: Bool
+        /// Breaks ties between zones of equal specificity: a run nested inside
+        /// another wins even when the two measure the same rectangle. Only sections
+        /// nest; every other target is a leaf.
+        let nestingDepth: Int
+        private let checkOffered: @Sendable (DropTargetList) -> Bool
+        private let checkAccepts: @Sendable (BrowserSidebarReorderItem) -> Bool
+        private let resolveReorderTarget:
+            @MainActor @Sendable (BrowserSidebarReorderAim) -> BrowserSidebarReorderTarget?
+        private let projectFrame: @Sendable (CGRect, BrowserSidebarReorderLayout) -> CGRect?
+        private let resolveAimingFrame: @Sendable (CGRect) -> CGRect
+
+        // MARK: - Actions - Factories
+
+        /// An ordered run of rows.
+        static func section(_ section: BrowserSidebarReorderSection) -> Self {
+            Self(
+                identity: .section(section),
+                section: section,
+                specificity: 1,
+                nests: false,
+                outranksGap: false,
+                isContentArea: false,
+                nestingDepth: section.nestingDepth,
+                checkOffered: { targets in section.isOffered(by: targets) },
+                checkAccepts: { item in item.isAccepted(by: section) },
+                resolveReorderTarget: { aim in aim.insertionTarget(in: section) },
+                projectFrame: { frame, layout in
+                    guard !section.usesGridOrdering else { return frame }
+                    if let parent = section.parentFolderID, layout.hiddenIDs.contains(.folder(parent)) { return nil }
+                    return layout.projected(frame, containsGap: layout.holdsGap(section, at: frame))
+                },
+                resolveAimingFrame: { frame in
+                    guard section.parentFolderID != nil else { return frame }
+                    return frame.insetBy(dx: 0, dy: min(8, frame.height / 4))
+                }
+            )
+        }
+
+        /// A collapsed folder row: dropping lands the item inside the folder.
+        static func folder(_ folderID: UUID) -> Self {
+            Self(
+                identity: .folder(folderID),
+                section: nil,
+                specificity: 2,
+                nests: true,
+                outranksGap: false,
+                isContentArea: false,
+                nestingDepth: 0,
+                checkOffered: { targets in targets.lists.contains { $0.folderID == folderID } },
+                checkAccepts: { _ in true },
+                resolveReorderTarget: { aim in
+                    aim.lift.item.id == .folder(folderID)
+                        ? nil : BrowserSidebarReorderTarget(kind: .intoFolder(folderID))
+                },
+                projectFrame: { frame, layout in
+                    guard !layout.hiddenIDs.contains(.folder(folderID)) else { return nil }
+                    return layout.projected(frame, containsGap: false)
+                },
+                resolveAimingFrame: { $0 }
+            )
+        }
+
+        /// An open tab at the top level: dropping makes a folder around it.
+        static func currentTab(_ tabID: UUID) -> Self {
+            Self(
+                identity: .currentTab(tabID),
+                section: nil,
+                specificity: 2,
+                nests: true,
+                outranksGap: false,
+                isContentArea: false,
+                nestingDepth: 0,
+                checkOffered: { targets in targets.folderAroundTabIDs.contains(tabID) },
+                checkAccepts: { item in item.foldsAround(tabID) },
+                resolveReorderTarget: { _ in BrowserSidebarReorderTarget(kind: .createCurrentFolder(tabID)) },
+                projectFrame: { frame, layout in
+                    guard !layout.hiddenIDs.contains(.tab(tabID)) else { return nil }
+                    return layout.projected(frame, containsGap: false)
+                },
+                resolveAimingFrame: { $0 }
+            )
+        }
+
+        /// A space picker segment: dropping moves the item to that space.
+        static func space(_ assignment: BrowserSpaceRuntimeAssignment) -> Self {
+            Self(
+                identity: .space(assignment),
+                section: nil,
+                specificity: 3,
+                nests: false,
+                outranksGap: true,
+                isContentArea: false,
+                nestingDepth: 0,
+                checkOffered: { targets in targets.spaceIDs.contains(assignment.spaceID) },
+                checkAccepts: { _ in true },
+                resolveReorderTarget: { _ in BrowserSidebarReorderTarget(kind: .space(assignment)) },
+                projectFrame: { frame, _ in frame },
+                resolveAimingFrame: { $0 }
+            )
+        }
+
+        /// The window's web-content area for a Space: dropping a tab there adds
+        /// it to the cards already on show.
+        static func splitContent(_ assignment: BrowserSpaceRuntimeAssignment) -> Self {
+            Self(
+                identity: .splitContent(assignment),
+                section: nil,
+                specificity: 0,
+                nests: false,
+                outranksGap: false,
+                isContentArea: true,
+                nestingDepth: 0,
+                checkOffered: { targets in targets.split.map { $0.refusal == nil } ?? false },
+                checkAccepts: { item in item.joinsCards(shownIn: assignment) },
+                resolveReorderTarget: { aim in aim.splitInsertTarget(in: assignment) },
+                projectFrame: { frame, _ in frame },
+                resolveAimingFrame: { $0 }
+            )
         }
 
         // MARK: - Actions - Offers
@@ -49,20 +167,7 @@ struct BrowserSidebarReorderZone: Equatable, Sendable {
         /// Whether the core lists a drop on this target among `targets`,
         /// refused or not.
         func isOffered(by targets: DropTargetList) -> Bool {
-            switch self {
-            case .section(.tabs(let placement, let folderID)):
-                targets.lists.contains { $0.section == placement && $0.folderID == folderID }
-            case .section(.folders(let parentID)):
-                targets.lists.contains { $0.folderID == parentID }
-            case .folder(let folderID):
-                targets.lists.contains { $0.folderID == folderID }
-            case .currentTab(let tabID):
-                targets.folderAroundTabIDs.contains(tabID)
-            case .space(let assignment):
-                targets.spaceIDs.contains(assignment.spaceID)
-            case .splitContent:
-                targets.split.map { $0.refusal == nil } ?? false
-            }
+            checkOffered(targets)
         }
 
         /// Whether the target takes `item` at all. A section only takes its own
@@ -70,12 +175,7 @@ struct BrowserSidebarReorderZone: Equatable, Sendable {
         /// frame, so filtering by acceptance before ranking is what stops a
         /// folder resolving against the tab section it overlaps.
         func accepts(_ item: BrowserSidebarReorderItem) -> Bool {
-            switch self {
-            case .section(let section): item.isAccepted(by: section)
-            case .currentTab(let tabID): item.foldsAround(tabID)
-            case .folder, .space: true
-            case .splitContent(let assignment): item.joinsCards(shownIn: assignment)
-            }
+            checkAccepts(item)
         }
 
         // MARK: - Actions - Landing
@@ -84,38 +184,30 @@ struct BrowserSidebarReorderZone: Equatable, Sendable {
         /// rows and cards around it, or nil where it lands nowhere.
         @MainActor
         func reorderTarget(for aim: BrowserSidebarReorderAim) -> BrowserSidebarReorderTarget? {
-            switch self {
-            case .currentTab(let tabID):
-                BrowserSidebarReorderTarget(kind: .createCurrentFolder(tabID))
-            case .space(let assignment):
-                BrowserSidebarReorderTarget(kind: .space(assignment))
-            case .folder(let folderID):
-                aim.lift.item.id == .folder(folderID)
-                    ? nil : BrowserSidebarReorderTarget(kind: .intoFolder(folderID))
-            case .section(let section):
-                aim.insertionTarget(in: section)
-            case .splitContent(let assignment):
-                aim.splitInsertTarget(in: assignment)
-            }
+            resolveReorderTarget(aim)
         }
 
         /// Where the target measured at `frame` stands in `layout` while a
         /// lift is in flight, or nil while the lift hides it.
         func frame(_ frame: CGRect, in layout: BrowserSidebarReorderLayout) -> CGRect? {
-            switch self {
-            case .space, .splitContent:
-                return frame
-            case .folder(let id):
-                guard !layout.hiddenIDs.contains(.folder(id)) else { return nil }
-                return layout.projected(frame, containsGap: false)
-            case .currentTab(let id):
-                guard !layout.hiddenIDs.contains(.tab(id)) else { return nil }
-                return layout.projected(frame, containsGap: false)
-            case .section(let section):
-                guard !section.usesGridOrdering else { return frame }
-                if let parent = section.parentFolderID, layout.hiddenIDs.contains(.folder(parent)) { return nil }
-                return layout.projected(frame, containsGap: layout.holdsGap(section, at: frame))
-            }
+            projectFrame(frame, layout)
+        }
+
+        /// The frame that owns the pointer. A folder owns its contents, while its
+        /// outer edge belongs to its parent. This makes a seam between siblings
+        /// usable.
+        func aimingFrame(for frame: CGRect) -> CGRect {
+            resolveAimingFrame(frame)
+        }
+
+        // MARK: - Actions - Equality
+
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            lhs.identity == rhs.identity
+        }
+
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(identity)
         }
     }
 
@@ -141,42 +233,24 @@ struct BrowserSidebarReorderZone: Equatable, Sendable {
     var supportsTouch = false
 
     /// Higher wins when zones overlap.
-    ///
-    /// The content area sits at zero, below every sidebar zone. It is the
-    /// largest zone in the window and the only one a floating sidebar can be
-    /// drawn on top of, so it must never outrank a list the pointer is
-    /// genuinely inside.
-    var specificity: Int {
-        switch target {
-        case .space: 3
-        case .folder, .currentTab: 2
-        case .section: 1
-        case .splitContent: 0
-        }
-    }
+    var specificity: Int { target.specificity }
 
     /// Whether this is the window's content area — the one zone a sidebar can be
     /// drawn on top of, and the only one whose frame says nothing about what the
     /// pointer is aiming at while it is.
-    var isContentArea: Bool {
-        switch target {
-        case .splitContent: true
-        case .section, .folder, .currentTab, .space: false
-        }
-    }
+    var isContentArea: Bool { target.isContentArea }
 
     /// Breaks ties between zones of equal specificity: a run nested inside
     /// another wins even when the two measure the same rectangle. Only sections
     /// nest; every other target is a leaf.
-    var nestingDepth: Int {
-        switch target {
-        case .section(let section): section.nestingDepth
-        case .folder, .currentTab, .space, .splitContent: 0
-        }
-    }
+    var nestingDepth: Int { target.nestingDepth }
 
     private var area: CGFloat {
         frame.width * frame.height
+    }
+
+    private var aimingFrame: CGRect {
+        target.aimingFrame(for: frame)
     }
 
     // MARK: - Actions - Aiming
@@ -226,8 +300,7 @@ struct BrowserSidebarReorderZone: Equatable, Sendable {
         in zones: [BrowserSidebarReorderZone]
     ) -> BrowserSidebarReorderZone? {
         let sections = zones.filter { zone in
-            guard case .section = zone.target else { return false }
-            return point.x >= zone.frame.minX && point.x <= zone.frame.maxX
+            zone.target.section != nil && point.x >= zone.frame.minX && point.x <= zone.frame.maxX
         }
         let reachable = sections.compactMap { zone -> (BrowserSidebarReorderZone, CGFloat)? in
             let distance = zone.verticalDistance(from: point)
@@ -239,14 +312,6 @@ struct BrowserSidebarReorderZone: Equatable, Sendable {
         return reachable.min { lhs, rhs in
             lhs.1 == rhs.1 ? rhs.0.isLessSpecific(than: lhs.0) : lhs.1 < rhs.1
         }?.0
-    }
-
-    /// The frame that owns the pointer. A folder owns its contents, while its
-    /// outer edge belongs to its parent. This makes a seam between siblings
-    /// usable.
-    private var aimingFrame: CGRect {
-        guard case .section(let section) = target, section.parentFolderID != nil else { return frame }
-        return frame.insetBy(dx: 0, dy: min(8, frame.height / 4))
     }
 
     /// Ranks overlapping zones: more specific first, then the more deeply

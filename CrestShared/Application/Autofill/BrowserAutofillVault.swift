@@ -74,6 +74,30 @@ actor BrowserAutofillVault {
     }
 }
 
+/// Supplies the autofill vault that pairs with a credential vault, so callers
+/// never type-check concrete vault conformers to choose storage.
+protocol BrowserAutofillVaultProviding {
+    nonisolated func makeAutofillVault() -> BrowserAutofillVault
+}
+
+extension KeychainCredentialVault: BrowserAutofillVaultProviding {
+    nonisolated func makeAutofillVault() -> BrowserAutofillVault {
+        BrowserAutofillVault(store: store, servicePrefix: servicePrefix)
+    }
+}
+
+extension PrivateBrowsingCredentialVault: BrowserAutofillVaultProviding {
+    nonisolated func makeAutofillVault() -> BrowserAutofillVault {
+        .unavailable
+    }
+}
+
+extension InMemoryCredentialVault: BrowserAutofillVaultProviding {
+    nonisolated func makeAutofillVault() -> BrowserAutofillVault {
+        .inMemory
+    }
+}
+
 /// Keychain items held in memory, for launches that keep nothing.
 actor InMemoryCredentialKeychainStore: CredentialKeychainStoring {
     private var services: [String: [String: CredentialKeychainItem]] = [:]

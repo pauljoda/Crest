@@ -4,7 +4,7 @@ namespace CrestCore.Contracts;
 /// engine editor shows. A flaw travels as its index in `All`, so `All` is
 /// append-only.
 public sealed class SearchEngineFlaw {
-    #region Variables
+    #region Static Variables
 
     public static readonly SearchEngineFlaw InvalidIdentity = new(name: "invalidIdentity", message: "Enter a valid URL template.");
     public static readonly SearchEngineFlaw EmptyName = new(name: "emptyName", message: "Enter a name for this search engine.");
@@ -32,6 +32,10 @@ public sealed class SearchEngineFlaw {
     public static IReadOnlyList<SearchEngineFlaw> All { get; } = [InvalidIdentity, EmptyName, NameTooLong, TemplateTooLong,
         MissingPlaceholder, AmbiguousPlaceholder, InvalidTemplate, RequiresHttps, UnsafeHost, NonstandardPort, CredentialsInTemplate,
         PlaceholderInFragment, SecretInTemplate];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

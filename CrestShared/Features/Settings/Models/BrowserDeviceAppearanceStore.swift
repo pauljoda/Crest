@@ -192,6 +192,15 @@ extension BrowserAddressAppearance: @MainActor Codable {
 /// every step of a drag.
 @MainActor @Observable
 final class BrowserDeviceAppearanceStore {
+    // MARK: - Types
+
+    struct PictureInPictureAppearance: Equatable {
+        let borderWidth: CGFloat
+        let cornerRadius: CGFloat
+
+        var videoCornerRadius: CGFloat { max(0, cornerRadius - borderWidth) }
+    }
+
     // MARK: - Static Variables
 
     static let shared = BrowserDeviceAppearanceStore(
@@ -199,6 +208,8 @@ final class BrowserDeviceAppearanceStore {
     static let tabsKey = "crest.appearance.tabs"
     static let addressKey = "crest.appearance.address"
     static let cornerRadiusKey = "crest.appearance.cornerRadius"
+    static let pictureInPictureBorderKey = "crest.appearance.pictureInPictureBorder"
+    static let pictureInPictureSquareCornersKey = "crest.appearance.pictureInPictureSquareCorners"
     static let surfaceMaterialKey = "crest.appearance.surfaceMaterial"
     static let surfaceToneKey = "crest.appearance.surfaceTone"
     static let modeKey = "crest.appearance.mode"
@@ -243,6 +254,18 @@ final class BrowserDeviceAppearanceStore {
             isBorderless = BrowserChromeAppearance(borderWidth: windowBorderWidth).borderless
             saveSoon()
         }
+    }
+    var showsPictureInPictureBorder: Bool {
+        didSet { saveSoon() }
+    }
+    var usesSquarePictureInPictureCorners: Bool {
+        didSet { saveSoon() }
+    }
+    var pictureInPictureAppearance: PictureInPictureAppearance {
+        PictureInPictureAppearance(
+            borderWidth: showsPictureInPictureBorder
+                ? BrowserChromeAppearance(borderWidth: windowBorderWidth).frameWidth : 0,
+            cornerRadius: usesSquarePictureInPictureCorners ? 0 : CrestRadius.control)
     }
     /// Whether pages run to the window's edges. A view that only asks this
     /// reads it rather than the width, so a drag across the width leaves it be.
@@ -435,6 +458,8 @@ final class BrowserDeviceAppearanceStore {
             chrome.object(forKey: BrowserChromeAppearancePreference.borderWidthKey) as? Double
             ?? BrowserLookAndFeelDefaults.windowBorderWidth
         windowBorderWidth = borderWidth
+        showsPictureInPictureBorder = chrome.object(forKey: Self.pictureInPictureBorderKey) as? Bool ?? true
+        usesSquarePictureInPictureCorners = chrome.bool(forKey: Self.pictureInPictureSquareCornersKey)
         isBorderless = BrowserChromeAppearance(borderWidth: borderWidth).borderless
         sidebarOnRight = chrome.bool(forKey: BrowserChromeAppearancePreference.sidebarOnRightKey)
         addressBarPlacement =
@@ -607,6 +632,8 @@ final class BrowserDeviceAppearanceStore {
         write(groupsShowBorders, forKey: BrowserFolderAppearancePreference.groupsShowsBordersKey, in: defaults)
         write(groupsTintTitle, forKey: BrowserFolderAppearancePreference.groupsTintsTitleKey, in: defaults)
         write(windowBorderWidth, forKey: BrowserChromeAppearancePreference.borderWidthKey, in: chrome)
+        write(showsPictureInPictureBorder, forKey: Self.pictureInPictureBorderKey, in: chrome)
+        write(usesSquarePictureInPictureCorners, forKey: Self.pictureInPictureSquareCornersKey, in: chrome)
         write(sidebarOnRight, forKey: BrowserChromeAppearancePreference.sidebarOnRightKey, in: chrome)
         write(addressBarPlacement.name, forKey: BrowserChromeAppearancePreference.addressBarPlacementKey, in: chrome)
         write(sidebarRevealWidth, forKey: Self.sidebarRevealWidthKey, in: chrome)

@@ -45,8 +45,7 @@ extension BrowserTabDragItem: BrowserSidebarDraggedItem {
 
     /// A tab reorders only among tabs.
     func isAcceptedAlone(by section: BrowserSidebarReorderSection) -> Bool {
-        if case .tabs = section { return true }
-        return false
+        section.isTabs
     }
 
     func foldsAroundAlone(_ tabID: UUID) -> Bool {

@@ -9,20 +9,7 @@ final class MobileBrowserPageStore:
     BrowserPageOwner,
     BrowserDefaultPageZoomObserving
 {
-    typealias HTTPAuthenticationCredentialLoader =
-        @MainActor (
-            BrowserHTTPAuthenticationProtectionSpace,
-            UUID
-        ) async throws -> BrowserCredential?
-
-    typealias HTTPAuthenticationCredentialSaver =
-        @MainActor (
-            BrowserHTTPAuthenticationSaveRequest,
-            UUID
-        ) async throws -> Void
-
-    typealias ModifiedLinkOpener =
-        @MainActor (URL, UUID, Bool) -> BrowserModifiedLinkRegistration?
+    // MARK: - Variables
 
     /// The focused card: the one page the toolbar, find bar, navigation
     /// controls, and every lifecycle observer speak for. Split View adds cards
@@ -66,7 +53,7 @@ final class MobileBrowserPageStore:
     /// The certificate exceptions people accepted for this scene's pages, by
     /// profile.
     @ObservationIgnored let serverTrustOverrides = BrowserServerTrustOverrideStore()
-    @ObservationIgnored private let mediaSessionStore: BrowserMediaSessionStore?
+    @ObservationIgnored let mediaSessionStore: BrowserMediaSessionStore?
     @ObservationIgnored let linkDestinationHost: BrowserLinkDestinationHost
     @ObservationIgnored private let openModifiedLink: ModifiedLinkOpener
     @ObservationIgnored private let openPeek: (BrowserPeekRequest) -> Void
@@ -82,6 +69,8 @@ final class MobileBrowserPageStore:
     /// The window this store hosts pages for. Its pages open through the core
     /// from this window, in its workspace.
     @ObservationIgnored let browser: BrowserStore
+
+    // MARK: - Initializers
 
     init(
         browser: BrowserStore,
@@ -175,6 +164,8 @@ final class MobileBrowserPageStore:
             cancelStagedPeek: { id in transientBrowsing.cancelStagedPeek(id: id) })
     }
 
+    // MARK: - Actions - Selection and presentation
+
     var activeURL: URL? { activePage?.live.displayURL }
     var preferredContentModeActionTitle: LocalizedStringResource {
         activePage?.isRequestingDesktopSite == true
@@ -258,7 +249,7 @@ final class MobileBrowserPageStore:
             activate(existing, presenting: presented)
             return true
         }
-        releaseMismatchedPage(of: tab.id)
+        host.releaseMismatchedPage(of: tab.id)
 
         // The core refuses a page in a locked Space or one being deleted.
         guard let page = makeResidentPage(for: pageTab, in: space, loadsInitialURL: loadsInitialURL) else {
@@ -267,15 +258,6 @@ final class MobileBrowserPageStore:
         host.retain(page, for: tab.id)
         activate(page, presenting: presented)
         return true
-    }
-
-    /// Lets go of the page a tab kept in another Space: the state archived
-    /// under its old profile describes a runtime it no longer belongs to.
-    private func releaseMismatchedPage(of tabID: UUID) {
-        guard let mismatched = host.runtimes.removeValue(forKey: tabID) else { return }
-        host.tabState.removeState(profileID: mismatched.page.profileID, tabID: tabID)
-        mismatched.release(keepingState: false)
-        host.revision &+= 1
     }
 
     /// The cards `tab` brings on screen: the ones the core shows beside it in
@@ -309,7 +291,7 @@ final class MobileBrowserPageStore:
             existing.updateNavigationContext(tab: pageTab)
             return existing
         }
-        releaseMismatchedPage(of: tabID)
+        host.releaseMismatchedPage(of: tabID)
 
         guard let page = makeResidentPage(for: pageTab, in: space) else { return nil }
         host.retain(page, for: tabID)
@@ -391,17 +373,6 @@ final class MobileBrowserPageStore:
         if presentedTabIDs.contains(where: { !validTabIDs.contains($0) }) {
             presentedTabIDs = presentedTabIDs.filter { validTabIDs.contains($0) }
         }
-    }
-
-    /// The media session the tab's page publishes. A private window reports
-    /// no media sessions.
-    func mediaSession(matching assignment: BrowserTabRuntimeAssignment) -> BrowserMediaSessionSnapshot? {
-        mediaSessionStore?.session(of: assignment)
-    }
-
-    /// Mutes or unmutes the sound the tab's page plays.
-    func setMuted(_ muted: Bool, matching assignment: BrowserTabRuntimeAssignment) {
-        mediaSessionStore?.setMuted(muted, of: assignment)
     }
 
     /// Lets go of everything the private workspace kept, in each of the
@@ -518,31 +489,6 @@ final class MobileBrowserPageStore:
         host.retain(page, for: tabID)
         activate(page)
         return true
-    }
-
-    /// Retires an empty surface whose initial navigation became a download:
-    /// a transient one closes, and a tab's page asks the core to close it as
-    /// its own script would.
-    func discardDownloadOnlyPage(_ page: MobileBrowserPage) {
-        guard !host.discardDownloadOnlyTransientPage(page) else { return }
-        page.corePage.report(PageCloseRequested(pageID: page.corePage.id))
-    }
-
-    /// Hides a protected Space without unloading its tabs. Unlocking can reuse
-    /// the same WebKit pages, including scroll position and unsaved form state.
-    /// Resident pages remain subject to normal idle and memory-pressure limits.
-    ///
-    /// Previously archived state is still purged from disk. This preserves only
-    /// live pages, not a disk snapshot of a protected Space. The access views
-    /// gate ordinary and transient content until authentication succeeds.
-    func relockProtectedSpace(_ space: SpaceModel) {
-        guard space.settings.requiresAuthentication else { return }
-        if activePage?.spaceID == space.id
-            || presentedTabIDs.contains(where: { host.page(for: $0)?.spaceID == space.id })
-        {
-            deactivatePagePresentation()
-        }
-        host.tabState.removeStates(profileID: space.profileID)
     }
 
     func reloadOrStop() {

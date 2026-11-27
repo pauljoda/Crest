@@ -51,11 +51,13 @@ using CrestPictureInPictureBehavior = PictureInPictureWindowManager::UiBehavior;
 @interface CrestPictureInPictureVideoView : NSView
 @property(nonatomic, copy) void (^didResize)(void);
 @property(nonatomic, weak) NSView* inlineSuperview;
+@property(nonatomic, weak) NSView* crestPictureInPicturePageView;
 @end
 
 @implementation CrestPictureInPictureVideoView
 @synthesize didResize = _didResize;
 @synthesize inlineSuperview = _inlineSuperview;
+@synthesize crestPictureInPicturePageView = _crestPictureInPicturePageView;
 
 - (void)setFrameSize:(NSSize)size {
   [super setFrameSize:size];
@@ -355,6 +357,7 @@ class SystemVideoPictureInPictureWindow final
   void AttachAtSourceVideo() {
     NSView* page =
         controller_->GetWebContents()->GetNativeView().GetNativeNSView();
+    view_.crestPictureInPicturePageView = page;
     NSView* content = page.window.contentView;
     if (!content || !page.window.isVisible || !page.window.isOnActiveSpace)
       return;
@@ -391,6 +394,9 @@ class SystemVideoPictureInPictureWindow final
     video_.SetShowSurface(surface_, size,
                           cc::DeadlinePolicy::UseDefaultDeadline(),
                           /*stretch_content_to_fill_bounds=*/true);
+    // The floated view can move between windows without changing geometry.
+    // Same-size surface updates leave Viz clean unless we request a frame.
+    compositor_.compositor()->ScheduleFullRedraw();
     controller_->UpdateLayerBounds();
   }
 

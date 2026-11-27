@@ -17,6 +17,7 @@ struct BrowserPageLoadingChanged: BrowserPageEngineEvent {
         if page.hasCommittedNavigationAwaitingCompletion {
             page.hasCommittedNavigationAwaitingCompletion = false
             page.completedNavigationCount += 1
+            Task { [weak page] in await page?.refreshReaderModeAvailability() }
         }
     }
 }

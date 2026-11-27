@@ -42,10 +42,24 @@ final class BrowserSidebarVisibleBand {
         @ObservationIgnored fileprivate var farSince: Int?
     }
 
+    /// The scroll viewport's current vertical range in content coordinates,
+    /// quantized so recycled tab runs update in small batches while smooth
+    /// scrolling and immediately across large jumps.
+    @Observable
+    @MainActor
+    final class Viewport {
+        fileprivate(set) var visibleRange: ClosedRange<CGFloat>?
+    }
+
     // MARK: - Static Variables
 
     /// The content's own coordinates, in which frames don't move as it scrolls.
     static let contentSpace = NamedCoordinateSpace.named("browser-sidebar-scroll-content")
+
+    /// Step size for `viewport.visibleRange`, aligned to one row so smooth
+    /// scrolling updates at most one recycled slot per frame instead of
+    /// batching multiple row updates onto a single 120 Hz frame.
+    private static let viewportQuantizationStep: CGFloat = 42
 
     /// How far below the screen, in screens, a drawn folder may be before it
     /// is let go, and how near a block must come to be drawn again. The gap
@@ -55,6 +69,7 @@ final class BrowserSidebarVisibleBand {
 
     // MARK: - Variables
 
+    let viewport = Viewport()
     private var visible: ClosedRange<CGFloat>?
     private var step = 0
     private var isHolding = false
@@ -93,10 +108,18 @@ final class BrowserSidebarVisibleBand {
         decide(slot)
     }
 
-    /// Follows the scroll view's visible rect, in quarter-screen steps. The
-    /// first rect it is given is where it starts, not a step.
+    /// Follows the scroll view's visible rect, in quarter-screen steps for
+    /// offscreen folders and finer steps for recycled tab runs. The first rect
+    /// it is given is where it starts, not a step.
     func follow(_ visibleRect: CGRect) {
         guard visibleRect.height > 0 else { return }
+        let viewportStep = Self.viewportQuantizationStep
+        let viewportLower = (visibleRect.minY / viewportStep).rounded(.down) * viewportStep
+        let viewportUpper = viewportLower + visibleRect.height.rounded(.up) + viewportStep
+        let nextViewport = viewportLower...viewportUpper
+        if nextViewport != viewport.visibleRange {
+            viewport.visibleRange = nextViewport
+        }
         let quarter = visibleRect.height / 4
         let top = (visibleRect.minY / quarter).rounded(.down) * quarter
         let next = top...(visibleRect.maxY / quarter).rounded(.up) * quarter

@@ -9,26 +9,14 @@ final class BrowserPagePool:
     BrowserPageOwner,
     BrowserDefaultPageZoomObserving
 {
+    // MARK: - Static Variables
 
     /// How long a window a page asked for waits for its Quick Window to take
     /// its page before the page goes.
     private static let popupWindowWait: Duration = .seconds(30)
     @ObservationIgnored private static let lifecycleSignposter = DiagnosticLog.webKitLifecycle.signposter
 
-    typealias HTTPAuthenticationCredentialLoader =
-        @MainActor (
-            BrowserHTTPAuthenticationProtectionSpace,
-            UUID
-        ) async throws -> BrowserCredential?
-
-    typealias HTTPAuthenticationCredentialSaver =
-        @MainActor (
-            BrowserHTTPAuthenticationSaveRequest,
-            UUID
-        ) async throws -> Void
-
-    typealias ModifiedLinkOpener =
-        @MainActor (URL, UUID, Bool) -> BrowserModifiedLinkRegistration?
+    // MARK: - Variables
 
     /// The focused card: the one tab the URL bar, navigation controls, find,
     /// zoom, sharing, and every lifecycle observer speak for. Split View adds
@@ -117,7 +105,7 @@ final class BrowserPagePool:
     @ObservationIgnored private let splitLinkHost: BrowserSplitLinkHost
     @ObservationIgnored let linkDestinationHost: BrowserLinkDestinationHost
     @ObservationIgnored private let hostedNotificationCenter: (any BrowserHostedWebNotificationCentering)?
-    @ObservationIgnored private let mediaSessionStore: BrowserMediaSessionStore?
+    @ObservationIgnored let mediaSessionStore: BrowserMediaSessionStore?
     @ObservationIgnored private let activateHostedNotificationSource: (UUID, UUID) -> Void
     @ObservationIgnored private let loadHTTPAuthenticationCredential: HTTPAuthenticationCredentialLoader
     @ObservationIgnored private let saveHTTPAuthenticationCredential: HTTPAuthenticationCredentialSaver
@@ -126,6 +114,8 @@ final class BrowserPagePool:
     /// The pages every window over this workspace shares: tabs', leases' and
     /// the state tabs leave when their pages go.
     var host: BrowserPageHost { runtimeStore.host }
+
+    // MARK: - Initializers
 
     init(
         browser: BrowserStore,
@@ -212,6 +202,8 @@ final class BrowserPagePool:
         core.followClosedTransientPages(self) { [weak self] in self?.transientPageClosed($0) }
         host.showsTab = { [weak browser] spaceID, tabID in browser?.spaceModel(spaceID)?.shownTab(tabID) != nil }
     }
+
+    // MARK: - Actions - Window presentation
 
     var nativeTabs: BrowserNativeTabStore { runtimeStore.nativeTabs }
 
@@ -755,17 +747,6 @@ final class BrowserPagePool:
 
     // MARK: - Actions - Media sessions
 
-    /// The media session the tab's page publishes. A private window reports
-    /// no media sessions.
-    func mediaSession(matching assignment: BrowserTabRuntimeAssignment) -> BrowserMediaSessionSnapshot? {
-        mediaSessionStore?.session(of: assignment)
-    }
-
-    /// Mutes or unmutes the sound the tab's page plays.
-    func setMuted(_ muted: Bool, matching assignment: BrowserTabRuntimeAssignment) {
-        mediaSessionStore?.setMuted(muted, of: assignment)
-    }
-
     /// The engine's measure of the sound the tab's page plays, when its engine
     /// measures it.
     func audioSpectrum(matching assignment: BrowserTabRuntimeAssignment) -> BrowserAudioSpectrumFeed? {
@@ -854,14 +835,6 @@ final class BrowserPagePool:
         return lease
     }
 
-    /// Retires an empty surface whose initial navigation became a download:
-    /// a transient one closes, and a tab's page asks the core to close it as
-    /// its own script would.
-    func discardDownloadOnlyPage(_ page: BrowserPage) {
-        guard !host.discardDownloadOnlyTransientPage(page) else { return }
-        page.corePage.report(PageCloseRequested(pageID: page.corePage.id))
-    }
-
     /// Brings this window and the app to the front, as the core asks when the
     /// person returns to a page from Picture in Picture. The window already
     /// shows the page's tab; selection claims its resident page and split
@@ -882,27 +855,13 @@ final class BrowserPagePool:
         activateHostedNotificationSource(page.spaceID, tabID)
     }
 
-    /// Hides a protected Space without unloading its tabs. Unlocking can reuse
-    /// the same WebKit pages, including scroll position and unsaved form state.
-    /// Resident pages remain subject to normal idle and memory-pressure limits.
-    ///
-    /// Previously archived state is still purged from disk. This preserves only
-    /// live pages, not a disk snapshot of a protected Space. The access views
-    /// gate ordinary and transient content until authentication succeeds.
-    func relockProtectedSpace(_ space: SpaceModel) {
-        guard space.settings.requiresAuthentication else { return }
-        // A background Space can still remember its editor after departure.
-        // Locking ends that focus session even though its pages stay resident.
+    /// Ends focus restoration and Picture in Picture for a Space's live pages
+    /// before relocking it.
+    func prepareRelock(of space: SpaceModel) {
         for page in host.livePages where page.spaceID == space.id {
             page.focusRestoration.invalidate()
             page.pictureInPicture?.invalidate()
         }
-        if activePage?.spaceID == space.id
-            || presentedTabIDs.contains(where: { tabRuntimes[$0]?.page.spaceID == space.id })
-        {
-            deactivatePagePresentation()
-        }
-        host.tabState.removeStates(profileID: space.profileID)
     }
 
     /// Reloads the shown tab, or brings its page back when it went.
@@ -952,11 +911,7 @@ final class BrowserPagePool:
             }
             // The tab moved to another Space, so the state archived under its old
             // profile describes a runtime it no longer belongs to.
-            host.tabState.removeState(
-                profileID: existingPage.profileID,
-                tabID: tab.id
-            )
-            tabRuntimes.removeValue(forKey: tab.id)?.release(keepingState: false)
+            host.releaseMismatchedPage(of: tab.id)
         }
         // A tab's page opens with the history its archive kept, on the engine
         // of the entry that history shows; a page another page opened keeps

@@ -7,7 +7,7 @@ namespace CrestCore.Contracts;
 /// The stored session spells a choice as its `Name`, so a name never changes.
 /// A choice travels as its index in `All`, so `All` is append-only.
 public sealed class DataRetention {
-    #region Variables
+    #region Static Variables
 
     public static readonly DataRetention OneDay = new(name: "oneDay", title: "1 Day", lifetime: TimeSpan.FromDays(1));
     public static readonly DataRetention OneWeek = new(name: "oneWeek", title: "1 Week", lifetime: TimeSpan.FromDays(7));
@@ -18,6 +18,10 @@ public sealed class DataRetention {
 
     /// The choices, in the order the settings offer them.
     public static IReadOnlyList<DataRetention> All { get; } = [OneDay, OneWeek, ThirtyDays, NinetyDays, OneYear, Forever];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

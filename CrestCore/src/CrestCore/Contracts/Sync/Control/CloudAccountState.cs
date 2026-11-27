@@ -4,7 +4,7 @@ namespace CrestCore.Contracts;
 ///
 /// A state travels as its index in `All`, so `All` is append-only.
 public sealed class CloudAccountState {
-    #region Variables
+    #region Static Variables
 
     public static readonly CloudAccountState Checking = new(name: "checking", title: "Checking");
     public static readonly CloudAccountState Available = new(name: "available", title: "Available");
@@ -15,6 +15,10 @@ public sealed class CloudAccountState {
 
     public static IReadOnlyList<CloudAccountState> All { get; } =
         [Checking, Available, NoAccount, Restricted, TemporarilyUnavailable, CouldNotDetermine];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

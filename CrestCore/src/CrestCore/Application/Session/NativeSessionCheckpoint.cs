@@ -12,9 +12,13 @@ namespace CrestCore.Application;
 /// part carries it. Storage writes these bytes; tests read them to see the
 /// stored format.
 internal sealed class NativeSessionCheckpoint {
-    #region Variables
+    #region Static Variables
 
     internal const string CorePart = "core";
+
+    #endregion
+
+    #region Variables
 
     private readonly SessionState session;
     private readonly ConcurrentDictionary<string, byte[]> parts = new();

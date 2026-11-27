@@ -49,12 +49,14 @@ struct CrestInteractiveSurfaceModifier: ViewModifier {
                     .overlay { if selectionEmphasis { shape.fill(CrestColor.hover) } }
             }
             .overlay {
-                shape
-                    .strokeBorder(
-                        isEmphasized ? selectedBorderColor : restingBorderColor,
-                        lineWidth: borderWidth
-                    )
-                    .allowsHitTesting(false)
+                if isEmphasized || restingBorderColor != .clear {
+                    shape
+                        .strokeBorder(
+                            isEmphasized ? selectedBorderColor : restingBorderColor,
+                            lineWidth: borderWidth
+                        )
+                        .allowsHitTesting(false)
+                }
             }
             .shadow(
                 color: shadowColor.opacity(shadowOpacity),

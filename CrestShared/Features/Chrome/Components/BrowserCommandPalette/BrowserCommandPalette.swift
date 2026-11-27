@@ -39,7 +39,8 @@ struct BrowserCommandPalette: View {
         fieldFrame: CGRect? = nil,
         destination: (any BrowserPaletteDestination)? = nil,
         openings: [BrowserCommandPaletteOpening] = [.here],
-        readPasteboard: () -> String? = { nil }
+        readPasteboard: () -> String? = { nil },
+        loadsInitialAnswerSynchronously: Bool = true
     ) {
         self.presentation = presentation
         self.morphNamespace = morphNamespace
@@ -60,7 +61,8 @@ struct BrowserCommandPalette: View {
                 dismiss: dismiss,
                 destination: destination,
                 openings: openings,
-                readPasteboard: readPasteboard
+                readPasteboard: readPasteboard,
+                loadsInitialAnswerSynchronously: loadsInitialAnswerSynchronously
             ))
     }
 

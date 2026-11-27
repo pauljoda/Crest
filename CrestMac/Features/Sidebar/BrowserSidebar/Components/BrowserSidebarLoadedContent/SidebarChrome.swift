@@ -21,12 +21,16 @@ struct SidebarChrome: View {
     /// buttons, rather than floating below the page cards' bars.
     var isDocked = true
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         if let space = selectedSpace {
             let isLocked = context.spaceAccess.isLocked(space)
+            let showsBarInPageCards = BrowserDeviceAppearanceStore.shared.addressBarPlacement.showsBarInPageCards
+            let sidebarOnRight = BrowserDeviceAppearanceStore.shared.sidebarOnRight
 
             VStack(spacing: 0) {
-                if BrowserDeviceAppearanceStore.shared.addressBarPlacement.showsBarInPageCards {
+                if showsBarInPageCards {
                     // The address bar stands along the top of the page, so the
                     // strip under the window's buttons is empty chrome that
                     // moves the window. A floating card hangs below the top
@@ -38,9 +42,10 @@ struct SidebarChrome: View {
                     VStack(spacing: 0) {
                         navigationAndAddress(space)
                     }
-                    .transition(BrowserWindowChromeMorph.transition)
+                    .transition(BrowserWindowChromeMorph.sidebarTransition(towardTrailing: !sidebarOnRight))
                 }
             }
+            .animation(CrestMotion.chrome.unlessReducingMotion(reduceMotion), value: showsBarInPageCards)
             .modifier(SpaceColorScheme(branding: space.settings.look))
             .modifier(SpaceForegroundBlend(spaces: context.availableSpaces, selectedSpaceID: space.id))
             .blur(radius: isLocked ? BrowserSidebarMetrics.lockedSpaceBlurRadius : 0)
@@ -59,7 +64,6 @@ struct SidebarChrome: View {
                 pages: pages, browser: context.browser, showHistory: context.chromeActions.presentHistory),
             capabilities: context.capabilities
         )
-        .matchedGeometryEffect(id: BrowserWindowChromeMorph.navigation, in: commandSurfaceNamespace, properties: .frame)
         .background {
             // Only the empty navigation-strip background acts as the
             // title bar. Controls and tab gestures keep their input.
@@ -90,8 +94,6 @@ struct SidebarChrome: View {
                 }
             )
             .modifier(SurfaceToneAppearance())
-            .matchedGeometryEffect(
-                id: BrowserWindowChromeMorph.addressField, in: commandSurfaceNamespace, properties: .frame)
         }
     }
 

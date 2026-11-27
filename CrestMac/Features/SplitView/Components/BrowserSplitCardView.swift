@@ -37,10 +37,9 @@ struct BrowserSplitCardView: View {
     let pages: BrowserPagePool
     let spaceAccess: BrowserSpaceAccessController
     let tabPromotionNamespace: Namespace.ID
-    let startPageFocusRequest: Int
-    let isCommandPalettePresented: Bool
-    /// The window's commands, for a Start Page card's palette.
-    let commands: BrowserCommandPaletteCommandRegistry
+    let chrome: BrowserChromeState
+    /// Builds the window's commands lazily, only when a Start Page card draws.
+    let makeCommands: () -> BrowserCommandPaletteCommandRegistry
     /// Where this card records its bounds for the surface's click monitor.
     let cardFrames: BrowserSplitCardFrameRegistry
     /// Asked with the pointer's location in the card-frame space as it enters
@@ -85,9 +84,8 @@ struct BrowserSplitCardView: View {
                 pages: pages,
                 spaceAccess: spaceAccess,
                 tabPromotionNamespace: tabPromotionNamespace,
-                startPageFocusRequest: startPageFocusRequest,
-                isCommandPalettePresented: isCommandPalettePresented,
-                commands: commands
+                chrome: chrome,
+                makeCommands: makeCommands
             )
         }
         .overlay {

@@ -38,10 +38,7 @@ struct BrowserCommandPaletteCommandRegistry {
     /// The commands as the palette ranks them, with the titles this device
     /// shows for them.
     var paletteCommands: [PaletteCommand] {
-        commands.map {
-            PaletteCommand(
-                command: $0, title: $0.title(locale: .current), sectionTitle: $0.section.title(locale: .current))
-        }
+        BrowserPaletteCommandTitleCache.paletteCommands(for: commands, locale: .current)
     }
 
     func shortcut(for command: ShortcutCommand) -> BrowserShortcut? {
@@ -70,5 +67,30 @@ struct BrowserCommandPaletteCommandRegistry {
     /// Copies `text` and says so in the window's notice.
     func copy(_ text: String) {
         copier(text)
+    }
+}
+
+/// Caches localized command and section titles per locale so opening the
+/// command palette or typing in it never repeats ~120 localization lookups.
+@MainActor
+private enum BrowserPaletteCommandTitleCache {
+    private static var cachedLocaleIdentifier: String?
+    private static var entries: [ShortcutCommand: PaletteCommand] = [:]
+
+    static func paletteCommands(for commands: [ShortcutCommand], locale: Locale) -> [PaletteCommand] {
+        if cachedLocaleIdentifier != locale.identifier {
+            cachedLocaleIdentifier = locale.identifier
+            entries.removeAll(keepingCapacity: true)
+        }
+        return commands.map { command in
+            if let cached = entries[command] { return cached }
+            let entry = PaletteCommand(
+                command: command,
+                title: command.title(locale: locale),
+                sectionTitle: command.section.title(locale: locale)
+            )
+            entries[command] = entry
+            return entry
+        }
     }
 }

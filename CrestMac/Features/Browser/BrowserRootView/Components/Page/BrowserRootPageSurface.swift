@@ -84,9 +84,6 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
     var body: some View {
         let presentation = pageSurfacePresentation
         return surface(presentation)
-            // The address bar moving on top or back moves the card with the
-            // window's chrome.
-            .animation(CrestMotion.chrome.unlessReducingMotion(reduceMotion), value: isAddressBarOnTop)
             // Every edge of the window's frame around this Space's pages moves
             // the window.
             .overlay { BrowserPageFrameTitleBarSurface(docked: model.sidebarPresentation.reservesSidebarWidth) }
@@ -170,12 +167,11 @@ struct BrowserRootPageSurface: View, @MainActor Equatable {
                             pages: model.pages,
                             spaceAccess: model.spaceAccess,
                             tabPromotionNamespace: tabPromotionNamespace,
-                            startPageFocusRequest:
-                                model.chrome.startPageFocusRequest,
-                            isCommandPalettePresented:
-                                model.chrome.isCommandPalettePresented,
-                            commands: model.paletteRegistry(
-                                windows: windows, layoutDirection: layoutDirection, shortcuts: shortcuts),
+                            chrome: model.chrome,
+                            makeCommands: {
+                                model.paletteRegistry(
+                                    windows: windows, layoutDirection: layoutDirection, shortcuts: shortcuts)
+                            },
                             previewsStartPage: previewsStartPage
                         )
                     }

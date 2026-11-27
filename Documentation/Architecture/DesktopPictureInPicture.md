@@ -1,10 +1,13 @@
 # Desktop Picture in Picture
 
 Crest hosts WebKit and Chromium video in the same floating Picture in Picture
-window, with playback, return and close controls. Drag the window to place it
-freely, flick it toward a corner to snap it there, or resize it by dragging an
-edge. Settings → General → Picture in Picture
-has separate automatic entry options for switching tabs, switching apps, and
+window, with playback, return, settings and close controls. Drag the window
+to place it freely, flick it toward a corner to snap it there, or drag from a
+resize cursor at an edge or corner. The settings button opens General →
+Picture in Picture in Crest’s Settings tab. The optional border uses the
+source Space’s theme and the device’s window border width. The Settings
+preview updates as you change the border or choose square corners. The same
+section has separate automatic entry options for switching tabs, switching apps, and
 leaving Crest's macOS desktop. Tab switching and returning video on focus are
 enabled by default. Site Controls → Site Settings can block automatic entry
 for a site in the page's Space. Manual entry is available regardless of these
@@ -13,8 +16,10 @@ settings.
 The Mac shell receives the live video view from each engine through the native
 picture-in-picture presentation entry point. It preserves the engine's playback
 and presentation callbacks while hosting the view in its own AppKit panel.
-Placement and gesture state belong to the panel. The core owns behavior
-preferences and routes the return to the source page. When the presentation
+Placement, gesture state and border appearance belong to the shell.
+The panel refreshes the hosted video at its settled size and after app or
+desktop transitions, including transitions that leave its geometry unchanged.
+The core owns behavior preferences and routes the return to the source page. When the presentation
 bridge is unavailable, the system presenter handles the video.
 
 ## WebKit integration

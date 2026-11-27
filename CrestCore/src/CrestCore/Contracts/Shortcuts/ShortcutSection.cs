@@ -3,7 +3,7 @@ namespace CrestCore.Contracts;
 /// The group a shortcut command sits in on the shortcut settings list and in
 /// the launcher. Sections are listed in `All` order.
 public sealed class ShortcutSection {
-    #region Variables
+    #region Static Variables
 
     public static readonly ShortcutSection Everyday = new(name: "everyday", title: "Everyday Use");
     public static readonly ShortcutSection Tabs = new(name: "tabs", title: "Tabs");
@@ -12,6 +12,10 @@ public sealed class ShortcutSection {
     public static readonly ShortcutSection View = new(name: "view", title: "View & Tools");
 
     public static IReadOnlyList<ShortcutSection> All { get; } = [Everyday, Tabs, Spaces, Page, View];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

@@ -4,7 +4,7 @@ namespace CrestCore.Contracts;
 ///
 /// A choice travels as its index in `All`, so `All` is append-only.
 public sealed class CloudZoneLoss {
-    #region Variables
+    #region Static Variables
 
     /// Somebody deleted Crest's data from iCloud: a decision Crest does not
     /// overrule by uploading everything again.
@@ -16,6 +16,10 @@ public sealed class CloudZoneLoss {
     public static readonly CloudZoneLoss EncryptedDataReset = new(name: "encryptedDataReset", restoresLocalRecords: true);
 
     public static IReadOnlyList<CloudZoneLoss> All { get; } = [Deleted, Purged, EncryptedDataReset];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "picture-in-picture-settings-window-fallback",
+      "category": "fixed",
+      "message": "Picture in Picture can open its settings in another Crest window after the source window closes.",
+      "platforms": ["mac"]
+    }
+  ]
+}

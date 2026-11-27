@@ -44,8 +44,9 @@ struct BrowserCommandPaletteResultList: View {
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 .onGeometryChange(for: CGFloat.self) {
                     $0.size.height
-                } action: {
-                    contentHeight = $0
+                } action: { newHeight in
+                    guard !fillsHeight, contentHeight != newHeight else { return }
+                    contentHeight = newHeight
                 }
             }
             .defaultScrollAnchor(listsUpward ? .bottom : .top)

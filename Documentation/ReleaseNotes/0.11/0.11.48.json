@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "core-content-bridges-http-auth-and-shared-reader-mode",
+      "category": "internal",
+      "message": "Move shared JavaScript content bridges and HTTP authentication decision rules into CrestCore and unify Reader Mode across WebKit and Chromium."
+    }
+  ]
+}

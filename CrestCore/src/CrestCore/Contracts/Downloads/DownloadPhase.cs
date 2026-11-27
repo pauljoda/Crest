@@ -6,7 +6,7 @@ namespace CrestCore.Contracts;
 ///
 /// A phase travels as its index in `All`, so `All` is append-only.
 public sealed class DownloadPhase {
-    #region Variables
+    #region Static Variables
 
     public static readonly DownloadPhase Preparing = new(name: "preparing", title: "Preparing…", symbol: null,
         primaryAction: DownloadRowAction.Cancel, isLive: true);
@@ -28,6 +28,10 @@ public sealed class DownloadPhase {
 
     public static IReadOnlyList<DownloadPhase> All { get; } =
         [Preparing, AwaitingApproval, Downloading, Finished, BlockedAutomaticDownload, Canceled, Failed];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

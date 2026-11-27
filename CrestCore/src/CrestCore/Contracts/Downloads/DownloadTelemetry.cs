@@ -5,9 +5,13 @@ namespace CrestCore.Contracts;
 /// transfer stops. `EstimatedTimeRemaining` is in seconds.
 public sealed record DownloadTelemetry(long BytesReceived, long? TotalBytes, double? BytesPerSecond,
     double? EstimatedTimeRemaining, bool IsPaused) {
-    #region Variables
+    #region Static Variables
 
     public static DownloadTelemetry Empty { get; } = new(0, null, null, null, false);
+
+    #endregion
+
+    #region Variables
 
     public bool IsValid => BytesReceived >= 0 && (TotalBytes ?? 0) >= 0
         && IsMeasure(BytesPerSecond) && IsMeasure(EstimatedTimeRemaining);

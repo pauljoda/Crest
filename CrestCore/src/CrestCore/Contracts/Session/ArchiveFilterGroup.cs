@@ -3,7 +3,7 @@ namespace CrestCore.Contracts;
 /// A filter of a Space's archive list, which shows the tabs archived for the
 /// reasons that name it. `All` is the order the list offers them in.
 public sealed class ArchiveFilterGroup {
-    #region Variables
+    #region Static Variables
 
     public static readonly ArchiveFilterGroup Closed = new(name: "closed", title: "Closed", symbol: "xmark.circle.fill");
     public static readonly ArchiveFilterGroup Automatic = new(name: "automatic", title: "Automatically Cleaned", symbol: "archivebox.fill");
@@ -12,6 +12,10 @@ public sealed class ArchiveFilterGroup {
     public static readonly ArchiveFilterGroup QuickWindow = new(name: "quickWindow", title: "Quick Windows", symbol: "timer");
 
     public static IReadOnlyList<ArchiveFilterGroup> All { get; } = [Closed, Automatic, Synced, QuickWindow];
+
+    #endregion
+
+    #region Variables
 
     public string Name { get; }
 

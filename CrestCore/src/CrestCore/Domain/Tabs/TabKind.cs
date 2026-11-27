@@ -10,6 +10,18 @@ public enum TabRenderType { WebRender, UiNative }
 
 /// <summary>The content a tab presents. Persisted native kind names are resolved at the boundary.</summary>
 public sealed record TabKind {
+    #region Static Variables
+
+    public static TabKind Web { get; } = new("New tab", TabRenderType.WebRender, null, "globe");
+    public static TabKind StartPage { get; } = new("Start Page", TabRenderType.UiNative, null, "flag.fill", true);
+
+    /// <summary>The content of each native view this build knows, titled and drawn as the
+    /// view is.</summary>
+    private static readonly IReadOnlyDictionary<NativeView, TabKind> Views = NativeView.All.ToDictionary(view => view,
+        view => new TabKind(view.Title, TabRenderType.UiNative, view.Name, view.Symbol));
+
+    #endregion
+
     #region Variables
 
     public string Name { get; }
@@ -18,13 +30,6 @@ public sealed record TabKind {
     public string Symbol { get; }
     public bool IsStartPage { get; }
     public bool IsWebPage => RenderType == TabRenderType.WebRender && !IsStartPage;
-    public static TabKind Web { get; } = new("New tab", TabRenderType.WebRender, null, "globe");
-    public static TabKind StartPage { get; } = new("Start Page", TabRenderType.UiNative, null, "flag.fill", true);
-
-    /// <summary>The content of each native view this build knows, titled and drawn as the
-    /// view is.</summary>
-    private static readonly IReadOnlyDictionary<NativeView, TabKind> Views = NativeView.All.ToDictionary(view => view,
-        view => new TabKind(view.Title, TabRenderType.UiNative, view.Name, view.Symbol));
 
     #endregion
 
