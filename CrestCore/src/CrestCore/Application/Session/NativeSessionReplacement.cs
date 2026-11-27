@@ -18,6 +18,9 @@ internal sealed class NativeSessionReplacement : IDisposable {
     internal WindowFollowUp? FollowUp { get; }
     /// What the command did that the states cannot tell.
     internal SessionTabEvents Events { get; }
+    /// The clear of a Space's open tabs the command made, which the session
+    /// remembers once the state commits.
+    internal NativeSessionAuthority.ClearMark? Clear { get; }
     internal NativeSessionCheckpoint Checkpoint { get; }
     internal NativeSyncTransaction? SyncTransaction { get; private set; }
 
@@ -27,11 +30,12 @@ internal sealed class NativeSessionReplacement : IDisposable {
 
     internal NativeSessionReplacement(NativeSessionAuthority owner, SessionState session,
         ulong revision, NativeSessionCheckpoint checkpoint, Guid? transientCompletion = null,
-        WindowFollowUp? followUp = null, SessionTabEvents? events = null) {
+        WindowFollowUp? followUp = null, SessionTabEvents? events = null, NativeSessionAuthority.ClearMark? clear = null) {
         this.owner = owner; Session = session; Revision = revision; Checkpoint = checkpoint;
         TransientCompletion = transientCompletion;
         FollowUp = followUp;
         Events = events ?? SessionTabEvents.None;
+        Clear = clear;
     }
 
     #endregion

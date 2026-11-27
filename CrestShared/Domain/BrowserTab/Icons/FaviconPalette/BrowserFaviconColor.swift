@@ -1,15 +1,11 @@
 import Foundation
 
 struct BrowserFaviconColor: Equatable, Sendable {
+    // MARK: - Variables
+
     let red: Double
     let green: Double
     let blue: Double
-
-    init(red: Double, green: Double, blue: Double) {
-        self.red = min(max(red, 0), 1)
-        self.green = min(max(green, 0), 1)
-        self.blue = min(max(blue, 0), 1)
-    }
 
     var iconAccent: BrowserTabIconAccent {
         BrowserTabIconAccent(red: red, green: green, blue: blue)
@@ -41,6 +37,14 @@ struct BrowserFaviconColor: Equatable, Sendable {
         )
     }
 
+    // MARK: - Initializers
+
+    init(red: Double, green: Double, blue: Double) {
+        self.red = min(max(red, 0), 1)
+        self.green = min(max(green, 0), 1)
+        self.blue = min(max(blue, 0), 1)
+    }
+
     init(perceptualComponents value: SIMD3<Double>) {
         let lRoot = value.x + 0.396_337_777_4 * value.y + 0.215_803_757_3 * value.z
         let mRoot = value.x - 0.105_561_345_8 * value.y - 0.063_854_172_8 * value.z
@@ -61,6 +65,17 @@ struct BrowserFaviconColor: Equatable, Sendable {
         )
     }
 
+    // MARK: - Actions - Comparing
+
+    /// How far apart this color and `other` look, as their distance in the
+    /// perceptual space ``perceptualComponents`` measures.
+    func perceptualDistance(to other: BrowserFaviconColor) -> Double {
+        let difference = perceptualComponents - other.perceptualComponents
+        return (difference * difference).sum().squareRoot()
+    }
+
+    // MARK: - Actions - Encoding
+
     private static func linearComponent(_ value: Double) -> Double {
         value <= 0.04045
             ? value / 12.92
@@ -76,5 +91,24 @@ struct BrowserFaviconColor: Equatable, Sendable {
 
 /// The colors a favicon's artwork reads as, which its tab's accent takes.
 struct BrowserFaviconPalette: Equatable, Sendable {
+    // MARK: - Static Variables
+
+    /// The share of an icon's artwork a color must cover for the icon to be
+    /// seen in it.
+    static let prominentShare = 0.1
+
+    // MARK: - Variables
+
     let primary: BrowserFaviconColor
+    /// The colors that each cover at least ``prominentShare`` of the icon,
+    /// the one covering most first: what the icon is seen as against what it
+    /// lies on.
+    let prominent: [BrowserFaviconColor]
+
+    // MARK: - Initializers
+
+    init(primary: BrowserFaviconColor, prominent: [BrowserFaviconColor] = []) {
+        self.primary = primary
+        self.prominent = prominent.isEmpty ? [primary] : prominent
+    }
 }

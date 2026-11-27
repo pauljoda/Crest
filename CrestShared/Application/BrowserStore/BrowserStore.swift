@@ -54,6 +54,9 @@ final class BrowserStore {
     @ObservationIgnored weak var interactionObserver: (any BrowserStoreInteractionObserving)?
     @ObservationIgnored weak var tabLinkProvider: (any BrowserTabLinkProviding)?
     @ObservationIgnored weak var tabCopying: (any BrowserTabCopying)?
+    /// What offers to take back a clear of a Space's open tabs from this
+    /// window, where the platform has an Undo for it.
+    @ObservationIgnored weak var clearUndo: (any BrowserTabsClearUndoing)?
     /// What this window showed when it last read the core, which it keeps
     /// showing once the core no longer has it open.
     @ObservationIgnored private var lastWindow: WindowState

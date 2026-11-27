@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct PinnedTabSelectionButton: View {
+    // MARK: - Variables
+
     let tab: TabStateModel
     let favicons: FaviconAssets
     let profileID: UUID
@@ -17,13 +19,28 @@ struct PinnedTabSelectionButton: View {
     @Environment(\.browserInteractionCapabilities) private var capabilities
     @Environment(\.tabFaviconIsReplaced) private var isIconReplaced
     @State private var isHovering = false
+    /// The colors the pin's favicon is seen in, once read from its image.
+    @State private var palette: BrowserFaviconPalette?
     private var iconScale: Double { BrowserDeviceAppearanceStore.shared.tabScale }
+    private var favicon: FaviconAssets.Image? { tab.iconMode.showsFavicon ? favicons.icon(of: tab.id) : nil }
+
+    // MARK: - Body
 
     var body: some View {
+        let contentScale = BrowserSidebarDensity(iconScale).contentScale
+        let iconSize = 19 * contentScale
+        let plateInset = CrestSpacing.extraSmall * contentScale
         Button(action: select) {
             icon
+                .modifier(PinnedTabIconPlate(palette: palette, size: iconSize, inset: plateInset))
                 .opacity(isIconReplaced ? 0 : 1)
-                .font(.system(size: 17 * BrowserSidebarDensity(iconScale).contentScale, weight: .medium))
+                .font(.system(size: 17 * contentScale, weight: .medium))
+                // The icon and its plate dim as one flattened layer. Dimming
+                // animates here, and animating it on the live layers let the
+                // icon flash back for a frame as the animation settled.
+                .padding(plateInset)
+                .drawingGroup()
+                .padding(-plateInset)
                 .browserTabResidency(isLoaded: tab.nativeContent != nil || isLoaded)
                 .browserIconCustomizationPopover(iconCustomization, arrowEdge: iconPickerArrowEdge)
                 .overlay(alignment: .bottomTrailing) {
@@ -37,7 +54,7 @@ struct PinnedTabSelectionButton: View {
                 .contentShape(.rect)
                 .modifier(
                     PinnedTabInteractionSurface(
-                        favicon: tab.iconMode.showsFavicon ? favicons.icon(of: tab.id) : nil,
+                        palette: palette,
                         siteTheme: siteTheme,
                         isSelected: isSelected,
                         isHovering: isHovering || isMultiSelected,
@@ -49,7 +66,18 @@ struct PinnedTabSelectionButton: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
+        .task(id: favicon?.identity) {
+            guard let favicon else {
+                palette = nil
+                return
+            }
+            let extracted = await BrowserFaviconPaletteLoader.shared.palette(for: favicon.data)
+            guard !Task.isCancelled else { return }
+            palette = extracted
+        }
     }
+
+    // MARK: - Actions - Icon
 
     private var icon: some View {
         TabStateFaviconView(

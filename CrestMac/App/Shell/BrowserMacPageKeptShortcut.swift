@@ -53,16 +53,23 @@ final class BrowserMacPageKeptShortcut {
 
     /// Remembers `event`, a press of `command`'s keys that the page sees
     /// first. If the page has not let it go once it has had time to, the
-    /// window says how to run the command instead.
+    /// window says how to run the command instead. Keys typed after a press
+    /// that opens the palette wait for the page's answer: the palette takes
+    /// them if the page lets the press go, and the page if it keeps it.
     func pageSees(_ event: NSEvent, of command: ShortcutCommand, shortcut: BrowserShortcut) {
         guard press?.timestamp != event.timestamp, !event.isARepeat else { return }
         forget()
         let pressed = Press(
             command: command, shortcut: shortcut, timestamp: event.timestamp, receiver: event.window?.firstResponder)
         press = pressed
+        let window = event.window
+        if BrowserMacCommand.of(command)?.managesPalette == true {
+            BrowserCommandPaletteTypeahead.awaitPage(in: window)
+        }
         Task { [weak self] in
             try? await Task.sleep(for: Self.hintDelay)
             guard let self, self.press?.timestamp == pressed.timestamp else { return }
+            BrowserCommandPaletteTypeahead.pageKept(in: window)
             let notice = BrowserNotice.pressAgain(shortcut, for: command)
             if let notices = BrowserNoticeCenter.shared.post(notice) { self.hint = (notice, notices) }
         }

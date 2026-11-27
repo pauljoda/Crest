@@ -63,6 +63,16 @@ struct BrowserNotice: Equatable, Hashable {
         )
     }
 
+    /// What the window says once Clear archived a Space's open tabs, offering
+    /// `undo`, which takes the clear back.
+    static func tabsCleared(undo: @escaping @MainActor () -> Void) -> BrowserNotice {
+        BrowserNotice(
+            message: String(localized: "Tabs Cleared"),
+            systemImage: "archivebox",
+            action: BrowserNoticeAction(title: String(localized: "Undo"), perform: undo)
+        )
+    }
+
     /// What the window says once `count` passwords moved to the Space `spaceName`.
     static func passwordsMoved(count: Int, to spaceName: String) -> BrowserNotice {
         BrowserNotice(

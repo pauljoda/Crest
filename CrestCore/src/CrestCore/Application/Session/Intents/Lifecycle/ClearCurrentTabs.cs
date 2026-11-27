@@ -6,15 +6,18 @@ namespace CrestCore.Contracts;
 /// Archives the open tabs of a Space and keeps its saved and pinned tabs. With
 /// `KeepsShownTab`, the open tab the window that asked shows there stays too,
 /// with the rest of its split. The window that asked shows the tab it showed
-/// there when that tab stays, or the one its Space falls back to. Refused with
-/// `NoCurrentTabs` when the Space has no open tab to archive.
-public sealed record ClearCurrentTabs(Guid WorkspaceId, Guid WindowId, Guid SpaceId, bool KeepsShownTab = false)
+/// there when that tab stays, or the one its Space falls back to. The
+/// workspace remembers the clear as `ClearId`, which `RestoreClearedTabs`
+/// takes back. Refused with `NoCurrentTabs` when the Space has no open tab to
+/// archive.
+public sealed record ClearCurrentTabs(Guid WorkspaceId, Guid WindowId, Guid SpaceId, Guid ClearId, bool KeepsShownTab = false)
     : SessionIntent(WorkspaceId) {
     #region Actions - Session
 
     /// Archives the Space's open tabs, but for the shown one when it is kept.
     /// The issuing window shows the tab it showed there when that tab stays,
-    /// or the one the Space falls back to.
+    /// or the one the Space falls back to. The Space as it stood is
+    /// remembered with the clear.
     internal override SessionEdit? Edit(NativeSessionAuthority workspace, SessionTurn turn) {
         var space = workspace.Editable(turn.Basis, SpaceId);
         var edited = BrowserTabCollection.Restore(space);
@@ -25,7 +28,8 @@ public sealed record ClearCurrentTabs(Guid WorkspaceId, Guid WindowId, Guid Spac
         var selected = edited.DismissTabs(open, shown, null, turn.Now, ArchiveReason.Closed, ensureSelection: true);
         edited.PruneSplitMetadata();
         followUp.ShowTab(space.Id, selected);
-        return new(turn.Basis.Replacing(edited.Capture(space)), SyncStaging.Creation, followUp);
+        return new(turn.Basis.Replacing(edited.Capture(space)), SyncStaging.Creation, followUp,
+            Clears: new(ClearId, space, open.ToHashSet(), shown));
     }
 
     /// The open tabs of `tabs` clearing archives: every one, or with

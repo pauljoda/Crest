@@ -72,11 +72,8 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
         if focused, canFocus, !context.coordinator.didRequestFocus {
             context.coordinator.didRequestFocus = true
             DispatchQueue.main.async { [weak field, weak coordinator = context.coordinator] in
-                guard let field, coordinator?.field === field, field.isEditable, let window = field.window else {
-                    return
-                }
-                window.makeFirstResponder(field)
-                field.currentEditor()?.selectAll(nil)
+                guard let field, let coordinator, coordinator.field === field else { return }
+                coordinator.takeKeyboard()
             }
         }
     }
@@ -110,6 +107,19 @@ struct BrowserPlatformCommandPaletteField: NSViewRepresentable {
             self.model = model
             self.presentation = presentation
             super.init()
+        }
+
+        /// Gives the field the keyboard with its text selected, so typing
+        /// replaces it, then hands it the keys typed while the palette was on
+        /// its way. A field SwiftUI's focus already gave the keyboard keeps
+        /// its selection, so nothing typed is selected and replaced.
+        func takeKeyboard() {
+            guard let field, field.isEditable, let window = field.window else { return }
+            if field.currentEditor() == nil || window.firstResponder !== field.currentEditor() {
+                window.makeFirstResponder(field)
+                field.currentEditor()?.selectAll(nil)
+            }
+            BrowserCommandPaletteTypeahead.handOver(in: window)
         }
 
         func controlTextDidBeginEditing(_ notification: Notification) {

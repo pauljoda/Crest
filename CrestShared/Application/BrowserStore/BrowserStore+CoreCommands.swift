@@ -142,11 +142,27 @@ extension BrowserStore {
             from: self) != nil
     }
 
-    func clearSessionTabs(in spaceID: UUID, keepingShownTab: Bool) -> Bool {
-        family.perform(
-            ClearCurrentTabs(
-                workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID, keepsShownTab: keepingShownTab),
-            from: self) != nil
+    /// Archives the open tabs of `spaceID`, but for the tab this window shows
+    /// there when `keepingShownTab`, and answers the clear the core remembers,
+    /// which `restoreClearedTabs` takes back; nil when a rule refused it.
+    func clearSessionTabs(in spaceID: UUID, keepingShownTab: Bool) -> UUID? {
+        let clearID = UUID()
+        let clearing = ClearCurrentTabs(
+            workspaceID: family.workspaceID, windowID: windowID, spaceID: spaceID, clearID: clearID,
+            keepsShownTab: keepingShownTab)
+        return family.perform(clearing, from: self) == nil ? nil : clearID
+    }
+
+    /// Takes back `clearing`: the core opens the tabs it archived again where
+    /// they stood, and this window shows its Space on the tab it showed then.
+    /// Throws the rule that refused it, such as `ClearedTabsGone` once nothing
+    /// is left to bring back.
+    func restoreClearedTabs(_ clearing: BrowserTabsClearing) throws(Rejection) {
+        try family.commit(
+            RestoreClearedTabs(
+                workspaceID: family.workspaceID, windowID: windowID, spaceID: clearing.space.spaceID,
+                clearID: clearing.id),
+            from: self)
     }
 
     func renameSessionTab(_ title: String?, tabID: UUID, in spaceID: UUID) -> Bool {

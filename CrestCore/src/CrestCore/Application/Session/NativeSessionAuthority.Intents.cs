@@ -8,9 +8,11 @@ namespace CrestCore.Application;
 /// What one session intent changes: the next session, how it stages (null
 /// for an edit no journal ever reads), what the window that issued it
 /// shows next, what it did that the two states cannot tell, the sweep it
-/// records, and the Quick Window or Peek page it kept or archived.
+/// records, the Quick Window or Peek page it kept or archived, and the clear
+/// of a Space's open tabs it made, which a later intent may take back.
 internal sealed record SessionEdit(SessionState Next, SyncStaging? Staging, WindowFollowUp? FollowUp = null,
-    SessionTabEvents? Events = null, NativeSessionAuthority.SweepMark? Sweep = null, Guid? Completes = null);
+    SessionTabEvents? Events = null, NativeSessionAuthority.SweepMark? Sweep = null, Guid? Completes = null,
+    NativeSessionAuthority.ClearMark? Clears = null);
 
 /// What one session intent's edit reads: the accepted session it edits, the
 /// time it is stamped with, where new identities come from, what the device's
@@ -53,9 +55,10 @@ public sealed partial class NativeSessionAuthority {
             if (edit.Next.Equals(previous)) {
                 if (edit.Events is null && edit.FollowUp is null) return;
             } else if (edit.Staging is { Urgency.StagesWithSave: true }) {
-                reserved = Reserve(edit.Next, edit.Completes, edit.FollowUp, edit.Events);
+                reserved = Reserve(edit.Next, edit.Completes, edit.FollowUp, edit.Events, edit.Clears);
             } else {
                 if (edit.Completes is { } completed) completedTransients.Add(completed);
+                if (edit.Clears is { } clear) Remember(clear);
                 _ = Accept(edit.Next);
             }
         }
