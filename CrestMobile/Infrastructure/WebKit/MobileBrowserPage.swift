@@ -458,7 +458,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
 
     func routeModifiedLink(_ request: URLRequest, selecting: Bool) {
         guard let url = request.url,
-            let registration = openModifiedLink(url, spaceID, selecting)
+            let registration = openModifiedLink(url, linkNavigationContext?.spaceID ?? spaceID, selecting)
         else { return }
         host?.loadOpenedLink(registration, request: request, selecting: selecting, opener: corePage.id)
     }
@@ -1193,7 +1193,7 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             return
         }
         // A held press on a link opens its Peek.
-        guard let request = event.peekRequest(context: navigationContext, sourcePresentation: sourcePresentation)
+        guard let request = event.peekRequest(context: linkNavigationContext, sourcePresentation: sourcePresentation)
         else { return }
         let frame = message.frameInfo
         linkPeekPressCoordinator.begin(

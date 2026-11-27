@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "shared-pin-links-open-in-shown-space",
+      "category": "fixed",
+      "message": "A link in a pinned tab that Sub-Spaces share opens its Peek, new tab or Quick Window in the Space you're in, not in the Space that opened the tab first. Thanks to Flair1365 (@Flair1365)."
+    }
+  ]
+}

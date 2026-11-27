@@ -7,7 +7,7 @@ struct BrowserPageNavigationContext: Equatable, Sendable {
     let placement: TabPlacement
     let savedURL: URL?
     let iconMode: TabIconMode
-    let spaceAssignment: BrowserSpaceRuntimeAssignment
+    var spaceAssignment: BrowserSpaceRuntimeAssignment
     let keepsPageLoaded: Bool
 
     var spaceID: UUID { spaceAssignment.spaceID }

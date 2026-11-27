@@ -36,6 +36,12 @@ struct BrowserQuickWindowUnlockedContent: View {
         ZStack(alignment: .top) {
             BrowserQuickWindowPageSurface(model: model)
                 .padding(.top, BrowserQuickWindowLayout.toolbarHeight)
+            if let downloadCenter = model.pages?.downloadCenter {
+                BrowserMacDownloadTrayLayer(tray: model.downloadTray, downloadCenter: downloadCenter)
+                    .padding(.top, BrowserQuickWindowLayout.toolbarHeight)
+                    // Keeps the cards inside the page surface's frame.
+                    .padding([.horizontal, .bottom], BrowserQuickWindowLayout.horizontalPadding)
+            }
             BrowserQuickWindowToolbar(
                 model: model,
                 addressText: $addressText,

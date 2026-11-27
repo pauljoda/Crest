@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "generic-download-type-not-a-mismatch",
+      "category": "fixed",
+      "message": "An app or installer you click on a site that sends every file as a generic download, such as a GitHub release, saves without asking whether its type matches its name. Thanks to @athousanddetails."
+    }
+  ]
+}

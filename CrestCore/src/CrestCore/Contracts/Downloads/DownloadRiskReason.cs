@@ -16,7 +16,7 @@ public sealed class DownloadRiskReason {
         applies: facts => facts.HasDeceptiveFilename, confirmsUserInitiated: true,
         message: "The original filename used invisible or direction-changing characters that can disguise its real extension.");
     public static readonly DownloadRiskReason DangerousTypeMismatch = new(name: "dangerousTypeMismatch",
-        applies: facts => facts.RunsCode && facts.TypesRelated == false, confirmsUserInitiated: true,
+        applies: facts => facts.RunsCode && facts.TypesDisagree, confirmsUserInitiated: true,
         message: "The server-reported file type does not match the filename and one of those types can run software.");
 
     public static IReadOnlyList<DownloadRiskReason> All { get; } = [ExecutableOrInstaller, DeceptiveFilename, DangerousTypeMismatch];

@@ -255,7 +255,7 @@ struct BrowserPageContextMenu {
 /// person picks.
 extension BrowserPage {
     func contextMenuActions(linkURL: URL?, selectionText: String?) -> [BrowserPageContextMenuAction] {
-        guard let context = navigationContext else {
+        guard let context = linkNavigationContext else {
             guard let linkURL, ExternalWebLink.accepts(linkURL) else { return [] }
             return [.quickWindow(linkURL)]
         }
@@ -299,7 +299,7 @@ extension BrowserPage {
             contextMenuActions(linkURL: action.linkURL, selectionText: action.selectionText)
                 .contains(where: { $0.kind == action.kind })
         else { return false }
-        let context = navigationContext
+        let context = linkNavigationContext
         let source = context.map {
             BrowserTabRuntimeAssignment(tabID: $0.tabID, spaceID: $0.spaceID, profileID: $0.assignment.profileID)
         }

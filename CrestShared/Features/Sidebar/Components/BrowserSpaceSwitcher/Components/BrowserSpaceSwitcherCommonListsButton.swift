@@ -1,9 +1,18 @@
 import SwiftUI
 
 /// The switcher's page-side accessory: one control for the archive, history,
-/// and downloads lists, badged when downloads have finished unseen. It wears
-/// the symbol of the list it opens, which its menu changes.
+/// and downloads lists, badged when downloads have finished unseen and ringed
+/// by their progress while downloads run. It wears the symbol of the list it
+/// opens, which its menu changes.
 struct BrowserSpaceSwitcherCommonListsButton: View {
+    // MARK: - Static Variables
+
+    /// The width of the ring that shows the running downloads' progress
+    /// around the button.
+    private static let progressLineWidth: CGFloat = 2.5
+
+    // MARK: - Variables
+
     let isExpanded: Bool
     let surface: BrowserUtilitySurface
     let downloads: [DownloadState]
@@ -28,6 +37,16 @@ struct BrowserSpaceSwitcherCommonListsButton: View {
                 height: BrowserSpaceSwitcherLayout.utilityButtonSize
             )
             .symbolVariant(isExpanded ? .fill : .none)
+            .background {
+                if isDownloading {
+                    BrowserDownloadProgressRing(
+                        fraction: downloads.notificationProgress, tint: badgeColor,
+                        lineWidth: Self.progressLineWidth
+                    )
+                    .transition(.opacity)
+                }
+            }
+            .animation(CrestMotion.contentState.unlessReducingMotion(reduceMotion), value: isDownloading)
             .contextMenu {
                 Picker(selection: Binding(get: { surface }, set: choose)) {
                     ForEach(BrowserUtilitySurface.all) { surface in
@@ -53,7 +72,8 @@ struct BrowserSpaceSwitcherCommonListsButton: View {
                     BrowserUtilityNotificationBadge(
                         count: newDownloads.count,
                         tint: downloads.badgeTint(otherwise: badgeColor),
-                        progress: downloads.notificationProgress
+                        // The ring around the button carries the progress.
+                        progress: nil
                     )
                     .offset(
                         x: BrowserUtilitySwitcherLayout.notificationBadgeOffset,
@@ -71,6 +91,11 @@ struct BrowserSpaceSwitcherCommonListsButton: View {
             } action: { frame in
                 recordFrame(frame)
             }
+    }
+
+    /// Whether a download is moving bytes, which rings the button.
+    private var isDownloading: Bool {
+        downloads.contains { $0.phase.isTransferring }
     }
 
     /// The list a press opens now: unseen finished downloads take it to
