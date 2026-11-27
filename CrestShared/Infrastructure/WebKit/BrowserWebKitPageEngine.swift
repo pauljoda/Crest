@@ -21,6 +21,9 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
     /// Whether the web view runs `WebKitRestoredTraversalBridge`, which it
     /// takes on the first restore of saved history.
     @ObservationIgnored private var runsRestoredTraversalBridge = false
+    /// Whether the current history restore should trigger a fresh reload once
+    /// its restored entry commits, so unloaded tabs refresh cached content.
+    @ObservationIgnored private var reloadsAfterRestore = false
     #if os(macOS)
         @ObservationIgnored private var closeCompletion: (@MainActor (Bool) -> Void)?
         @ObservationIgnored private var closeTimeout: Task<Void, Never>?
@@ -65,7 +68,53 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
             WebKitRestoredTraversalBridge.install(in: webView.configuration.userContentController)
         }
         webView.interactionState = state
-        return webView.backForwardList.currentItem != nil
+        guard webView.backForwardList.currentItem != nil else { return false }
+        // WebKit restores interactionState from cache and drops a reload asked
+        // before the restored entry commits, so wait for commit to refresh it.
+        reloadsAfterRestore = true
+        return true
+    }
+
+    /// Skips the post-restore reload when the restored entry would repost form
+    /// data.
+    func noteRestoredRequest(_ request: URLRequest) {
+        guard reloadsAfterRestore else { return }
+        if request.httpMethod?.uppercased() == "POST" {
+            reloadsAfterRestore = false
+        }
+    }
+
+    /// Skips the post-restore reload when WebKit already fetched fresh content
+    /// or the restored entry is not an HTTP response.
+    func noteRestoredResponse(_ response: URLResponse) {
+        guard reloadsAfterRestore else { return }
+        guard let http = response as? HTTPURLResponse else {
+            reloadsAfterRestore = false
+            return
+        }
+        let cacheControl = (http.value(forHTTPHeaderField: "Cache-Control") ?? "").lowercased()
+        let pragma = (http.value(forHTTPHeaderField: "Pragma") ?? "").lowercased()
+        if cacheControl.contains("no-store")
+            || cacheControl.contains("no-cache")
+            || cacheControl.contains("max-age=0")
+            || pragma.contains("no-cache")
+        {
+            reloadsAfterRestore = false
+        }
+    }
+
+    /// Starts the fresh reload after a cached history restore commits, keeping
+    /// the restored back/forward list intact.
+    func reloadAfterRestoreIfNeeded() -> WKNavigation? {
+        guard reloadsAfterRestore else { return nil }
+        reloadsAfterRestore = false
+        return webView.reload()
+    }
+
+    /// Drops any pending post-restore reload when a restored navigation fails
+    /// or another navigation replaces it.
+    func cancelPendingRestoreReload() {
+        reloadsAfterRestore = false
     }
 
     var currentURL: URL? { webView.url }
@@ -84,6 +133,7 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
     }
 
     func load(_ request: URLRequest) {
+        reloadsAfterRestore = false
         if let staged = stagedRequest {
             stagedRequest = nil
             if staged.url == request.url {
@@ -104,6 +154,7 @@ final class BrowserWebKitPageEngine: BrowserPageEngine {
     /// Shows the history entry `entryID` names, as WebKit keeps it; false
     /// when the page no longer keeps it.
     func goToHistoryEntry(_ entryID: UUID) -> Bool {
+        reloadsAfterRestore = false
         history.synchronize(with: webView.backForwardList)
         guard let item = history.item(entryID) else { return false }
         // WebKit starts nothing for an item it no longer keeps.

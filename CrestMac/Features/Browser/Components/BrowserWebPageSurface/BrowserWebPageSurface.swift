@@ -193,33 +193,71 @@ struct BrowserWebPageSurface: View {
 
 private struct BrowserPageLoadingPresentation: View {
     /// How long a page's first load runs before the surface says it is
-    /// opening. A load that finishes sooner goes straight from the page
-    /// before to the page, as a browser's does, with nothing in between.
+    /// opening. A load that finishes sooner shows only the subtle top hairline,
+    /// going straight to the painted page without flashing centered status text.
     private static let initialLoadingStatusDelay: Duration = .milliseconds(400)
+    private static let topProgressHeight: CGFloat = 2
 
     let page: BrowserPage
     /// Whether the page shows in front of this presentation yet.
     let revealsWebContent: Bool
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.spaceChromeAccent) private var spaceAccent
+
     /// Whether the first load has run long enough to say the page is opening.
     @State private var initialStatusIsDue = false
 
+    private var showsDelayedStatus: Bool {
+        showsInitialStatus && initialStatusIsDue
+    }
+
+    private var loadingProgress: CGFloat {
+        BrowserPageSurfacePresentation.loadingProgress(
+            estimatedProgress: page.estimatedProgress,
+            isNavigating: showsInitialStatus
+        )
+    }
+
     var body: some View {
-        Color.clear
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay {
-                if showsInitialStatus, initialStatusIsDue {
+        ZStack(alignment: .top) {
+            GeometryReader { geometry in
+                Rectangle()
+                    .fill(spaceAccent ?? CrestBrandTheme.accent)
+                    .frame(width: geometry.size.width * loadingProgress, height: Self.topProgressHeight)
+                    .animation(
+                        CrestMotion.loadingProgress.unlessReducingMotion(reduceMotion),
+                        value: loadingProgress
+                    )
+            }
+            .frame(height: Self.topProgressHeight)
+            .opacity(showsInitialStatus ? 1 : 0)
+            .animation(
+                CrestMotion.contentReveal.unlessReducingMotion(reduceMotion),
+                value: showsInitialStatus
+            )
+
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay {
                     initialStatus
+                        .opacity(showsDelayedStatus ? 1 : 0)
+                        .scaleEffect(showsDelayedStatus || reduceMotion ? 1 : CrestMotion.entranceScale)
+                        .animation(
+                            CrestMotion.surface.unlessReducingMotion(reduceMotion),
+                            value: showsDelayedStatus
+                        )
+                        .accessibilityHidden(!showsDelayedStatus)
                 }
-            }
-            .task(id: showsInitialStatus) {
-                initialStatusIsDue = false
-                guard showsInitialStatus else { return }
-                try? await Task.sleep(for: Self.initialLoadingStatusDelay)
-                guard !Task.isCancelled else { return }
-                initialStatusIsDue = true
-            }
-            .allowsHitTesting(false)
+        }
+        .task(id: showsInitialStatus) {
+            initialStatusIsDue = false
+            guard showsInitialStatus else { return }
+            try? await Task.sleep(for: Self.initialLoadingStatusDelay)
+            guard !Task.isCancelled else { return }
+            initialStatusIsDue = true
+        }
+        .allowsHitTesting(false)
     }
 
     private var initialStatus: some View {

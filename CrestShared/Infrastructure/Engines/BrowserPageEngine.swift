@@ -14,6 +14,9 @@ protocol BrowserPageEngine: AnyObject {
     /// takes failures from those reports instead of deriving them from
     /// navigation callbacks.
     var reportsNavigationState: Bool { get }
+    /// True when the engine reports its own first visually non-empty paint
+    /// directly, so the page does not need the JavaScript Paint Timing bridge.
+    var reportsFirstPaint: Bool { get }
     /// Brings supplemental history up to date with the engine's own list and
     /// answers the URL of its current entry.
     @discardableResult func synchronizeHistory() -> URL?
@@ -31,6 +34,7 @@ protocol BrowserPageEngine: AnyObject {
 
 extension BrowserPageEngine {
     var reportsNavigationState: Bool { false }
+    var reportsFirstPaint: Bool { false }
     @discardableResult func synchronizeHistory() -> URL? { nil }
     func stageNavigation(_ navigation: BrowserEngineNavigation, expecting url: URL) -> Bool { false }
     var contentScripting: (any BrowserPageContentScripting)? { nil }

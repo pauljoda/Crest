@@ -27,6 +27,10 @@ public sealed record PageCaptured(Guid PageId, Guid CaptureId, byte[]? Png) : En
 /// The export `ExportId` asked for: its document, or why there is none.
 public sealed record PageExported(Guid PageId, Guid ExportId, byte[]? Document, PageExportFailure? Failure) : EnginePagePresentation(PageId);
 
+/// The page painted its first visually non-empty content, so its surface can
+/// reveal it without flashing an unstyled background.
+public sealed record PageContentPainted(Guid PageId) : EnginePagePresentation(PageId);
+
 /// The person typed, clicked or scrolled in the page. Presented at most once a
 /// second, for timers that close pages left idle.
 public sealed record PageInteracted(Guid PageId) : EnginePagePresentation(PageId);
@@ -35,6 +39,9 @@ public sealed record PageInteracted(Guid PageId) : EnginePagePresentation(PageId
 /// profile, as a password manager's does, so Crest leaves passwords and codes
 /// to it there. Presented when the page goes live and when it changes.
 public sealed record PagePasswordControlChanged(Guid PageId, bool ExtensionControlsPasswords) : EnginePagePresentation(PageId);
+
+/// How far the page's navigation has progressed, from 0 to 1.
+public sealed record PageLoadProgressed(Guid PageId, double Progress) : EnginePagePresentation(PageId);
 
 /// The page started or stopped loading.
 public sealed record PageLoadingChanged(Guid PageId, bool IsLoading) : EnginePagePresentation(PageId);

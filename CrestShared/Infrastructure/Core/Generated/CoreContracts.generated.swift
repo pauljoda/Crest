@@ -1862,9 +1862,11 @@ enum EnginePresentation: Equatable, Sendable {
     case linkHovered(LinkHovered)
     case mediaSessionChanged(MediaSessionChanged)
     case pageCaptured(PageCaptured)
+    case pageContentPainted(PageContentPainted)
     case pageExported(PageExported)
     case pageInputDelivered(PageInputDelivered)
     case pageInteracted(PageInteracted)
+    case pageLoadProgressed(PageLoadProgressed)
     case pageLoadingChanged(PageLoadingChanged)
     case pageNavigationCommitted(PageNavigationCommitted)
     case pageNavigationFailed(PageNavigationFailed)
@@ -1907,9 +1909,11 @@ enum EnginePresentation: Equatable, Sendable {
         case .linkHovered(let value): value.pageID
         case .mediaSessionChanged(let value): value.pageID
         case .pageCaptured(let value): value.pageID
+        case .pageContentPainted(let value): value.pageID
         case .pageExported(let value): value.pageID
         case .pageInputDelivered(let value): value.pageID
         case .pageInteracted(let value): value.pageID
+        case .pageLoadProgressed(let value): value.pageID
         case .pageLoadingChanged(let value): value.pageID
         case .pageNavigationCommitted(let value): value.pageID
         case .pageNavigationFailed(let value): value.pageID
@@ -6373,6 +6377,10 @@ struct PageConsoleMessage: Equatable, Sendable {
     let at: Date
 }
 
+struct PageContentPainted: Equatable, Sendable {
+    let pageID: UUID
+}
+
 struct PageCrashed: EngineEvent, PageEvent, Equatable, Sendable {
     let pageID: UUID
     let domain: String
@@ -6520,6 +6528,11 @@ struct PageLiveState: Equatable, Sendable {
     let failure: PageFailure?
     let media: PageMediaActivity
     let address: String?
+}
+
+struct PageLoadProgressed: Equatable, Sendable {
+    let pageID: UUID
+    let progress: Double
 }
 
 struct PageLoadingChanged: Equatable, Sendable {

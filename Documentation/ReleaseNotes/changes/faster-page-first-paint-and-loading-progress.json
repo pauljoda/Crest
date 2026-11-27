@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "faster-page-first-paint-and-loading-progress",
+      "category": "improved",
+      "message": "Pages appear as soon as they paint instead of lingering on the loading screen, with a slim top progress bar while a page loads.",
+      "platforms": ["mac"]
+    },
+    {
+      "id": "reawaken-unloaded-tabs-fresh",
+      "category": "improved",
+      "message": "Reopening an unloaded tab reloads fresh content while keeping its back and forward history."
+    }
+  ]
+}

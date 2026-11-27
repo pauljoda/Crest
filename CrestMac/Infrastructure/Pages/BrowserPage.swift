@@ -32,7 +32,7 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored private static let sharePickerDelay: Duration = .milliseconds(100)
     /// How long after its first commit a page waits to paint content of its
     /// own before its surface shows it anyway.
-    @ObservationIgnored private static let firstPaintWaitLimit: Duration = .milliseconds(1500)
+    @ObservationIgnored private static let firstPaintWaitLimit: Duration = .milliseconds(800)
     /// The Spaces this launch already told an extension handles passwords in.
     @ObservationIgnored private static var spacesToldOfPasswordExtension: Set<UUID> = []
     /// The engine's settings pages for passwords, payment methods and
@@ -432,9 +432,11 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
             }
         }
         if let scripting = pageEngine.contentScripting {
-            _ = scripting.install(BrowserFirstPaintContentBridge.script) { [weak self] message in
-                guard message.frame.isMainFrame else { return }
-                self?.receive(BrowserPageContentPainted())
+            if !pageEngine.reportsFirstPaint {
+                _ = scripting.install(BrowserFirstPaintContentBridge.script) { [weak self] message in
+                    guard message.frame.isMainFrame else { return }
+                    self?.receive(BrowserPageContentPainted())
+                }
             }
             cosmeticFilters = BrowserCosmeticFilterSession(
                 core: downloadCenter.core, spaceID: spaceID, picker: elementPicker,

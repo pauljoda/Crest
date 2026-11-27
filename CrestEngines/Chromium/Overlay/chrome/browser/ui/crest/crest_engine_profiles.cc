@@ -289,6 +289,12 @@ void EngineProfiles::Load(const std::string& id, bool is_private, base::OnceCall
     Loaded(id, is_private, std::move(done), root_.get());
     return;
   }
+  // A regular profile already loaded answers at once instead of bouncing
+  // through ProfileManager's asynchronous queue on every new tab.
+  if (Profile* loaded = Find(id)) {
+    std::move(done).Run(loaded);
+    return;
+  }
   manager->CreateProfileAsync(ProfilePath(manager, id), base::BindOnce(&EngineProfiles::Loaded,
                                                                      weak_factory_.GetWeakPtr(), id, is_private,
                                                                      std::move(done)));

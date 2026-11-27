@@ -265,6 +265,9 @@ class EnginePage final : public content::WebContentsObserver,
   void DidFinishNavigation(content::NavigationHandle* navigation) override;
   void DidStartLoading() override;
   void DidStopLoading() override;
+  void LoadProgressChanged(double progress) override;
+  void DidFirstVisuallyNonEmptyPaint() override;
+  void OnFirstContentfulPaintInPrimaryMainFrame(base::TimeTicks presentation_time) override;
   void TitleWasSet(content::NavigationEntry* entry) override;
   void NavigationEntriesDeleted() override;
   void DidChangeVisibleSecurityState() override;
@@ -298,6 +301,7 @@ class EnginePage final : public content::WebContentsObserver,
   void OnFindTabHelperDestroyed(find_in_page::FindTabHelper* helper) override;
 
   void ApplyZoom();
+  void NoteContentPainted();
   void Present(engine::EnginePresentation presentation);
   // Presents the page's part in tab sharing.
   void PresentSharing();
@@ -364,6 +368,9 @@ class EnginePage final : public content::WebContentsObserver,
   std::optional<int64_t> loading_navigation_;
   // A new document committed and has not finished loading.
   bool awaits_finish_ = false;
+  // The page painted visually non-empty content, which the platform waits on
+  // before revealing a fresh surface.
+  bool painted_content_ = false;
   // The page was adopted with a committed document the platform has not
   // heard of, which it hears when it first shows the page.
   bool presents_adopted_commit_ = false;

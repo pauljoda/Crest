@@ -5,7 +5,9 @@
         @MainActor func present(on engine: ChromiumEngine) {
             guard let page = engine.presentedPage(pageID) else { return }
             page.observer(BrowserPageLoadingChanged(isLoading: isLoading))
-            page.observer(BrowserPageProgressChanged(progress: isLoading ? 0.5 : 1))
+            if !isLoading {
+                page.observer(BrowserPageProgressChanged(progress: 1))
+            }
         }
     }
 #endif

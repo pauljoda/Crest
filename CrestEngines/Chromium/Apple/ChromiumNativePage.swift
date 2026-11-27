@@ -94,6 +94,9 @@
         /// The binding presents the page's loading and failures, so the page
         /// reads them from its presentations.
         var reportsNavigationState: Bool { true }
+        /// The binding presents Chromium's native first visually non-empty
+        /// paint directly without injecting the Paint Timing script.
+        var reportsFirstPaint: Bool { true }
 
         func load(_ request: URLRequest) {
             guard let url = request.url else { return }
