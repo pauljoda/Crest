@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-11-new-look",
-    "development": "close-tab-shortcut-closes-only-search-field",
+    "development": "close-tab-walks-background-tabs",
     "nightly": "picture-in-picture-settings-window-fallback"
   }
 }
