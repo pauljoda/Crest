@@ -22,48 +22,65 @@ struct BrowserPrivacySettingsPane: View {
     var body: some View {
         BrowserSettingsPane(.privacy) {
             if fixedSpaceID == nil {
-                BrowserPrivacySpaceSection(
-                    selectedSpaceID: selectedSpaceBinding,
-                    spaces: browser.spaceModels
-                )
+                BrowserSettingsSectionSlot(.privacySpace) {
+                    BrowserPrivacySpaceSection(
+                        selectedSpaceID: selectedSpaceBinding,
+                        spaces: browser.spaceModels
+                    )
+                }
             }
 
             if canRevealSelectedSpaceData {
                 if fixedSpaceID != nil, let selectedSpace {
-                    BrowserSpaceAccessPolicySection(browser: browser, space: selectedSpace, spaceAccess: spaceAccess)
+                    BrowserSettingsSectionSlot(.spaceLock) {
+                        BrowserSpaceAccessPolicySection(
+                            browser: browser, space: selectedSpace, spaceAccess: spaceAccess)
+                    }
                 }
 
                 if let selectedSpaceID {
-                    BrowserDataRetentionSettingsSection(
-                        browser: browser,
-                        spaceID: selectedSpaceID
-                    )
+                    BrowserSettingsSectionSlot(.dataRetention) {
+                        BrowserDataRetentionSettingsSection(
+                            browser: browser,
+                            spaceID: selectedSpaceID
+                        )
+                    }
                 }
 
                 if browser.core.state.offers(.permissions) {
-                    BrowserSavedSitePermissionSection(
-                        records: records,
-                        permissionCenter: permissionCenter,
-                        resetAll: { confirmsReset = true }
-                    )
+                    BrowserSettingsSectionSlot(.sitePermissions) {
+                        BrowserSavedSitePermissionSection(
+                            records: records,
+                            permissionCenter: permissionCenter,
+                            resetAll: { confirmsReset = true }
+                        )
+                    }
                 }
 
                 if let selectedSpace {
-                    BrowserWebsiteDataSection(
-                        list: websiteData?.profileID == selectedSpace.profileID ? websiteData : nil,
-                        spaceName: selectedSpace.settings.name,
-                        isSharedByGroup: browser.groupMembers(of: selectedSpace).count > 1)
-                    BrowserClearBrowsingDataSection(browser: browser, space: selectedSpace) {
-                        Task { await websiteData?.read() }
+                    BrowserSettingsSectionSlot(.websiteData) {
+                        BrowserWebsiteDataSection(
+                            list: websiteData?.profileID == selectedSpace.profileID ? websiteData : nil,
+                            spaceName: selectedSpace.settings.name,
+                            isSharedByGroup: browser.groupMembers(of: selectedSpace).count > 1)
+                    }
+                    BrowserSettingsSectionSlot(.clearBrowsingData) {
+                        BrowserClearBrowsingDataSection(browser: browser, space: selectedSpace) {
+                            Task { await websiteData?.read() }
+                        }
                     }
                 }
-                BrowserSpaceGroupSharingNote(browser: browser, spaceID: selectedSpaceID)
+                BrowserSettingsPaneNote {
+                    BrowserSpaceGroupSharingNote(browser: browser, spaceID: selectedSpaceID)
+                }
             } else if let selectedSpace {
-                BrowserSettingsPrivateSpaceAccessSection(
-                    space: selectedSpace,
-                    accessController: spaceAccess,
-                    detail: "Unlock this Space to see its privacy settings."
-                )
+                BrowserSettingsPaneNote {
+                    BrowserSettingsPrivateSpaceAccessSection(
+                        space: selectedSpace,
+                        accessController: spaceAccess,
+                        detail: "Unlock this Space to see its privacy settings."
+                    )
+                }
             }
         }
         .crestRepairsSpaceSelection(selectedSpaceBinding, in: browser)

@@ -68,8 +68,37 @@ struct BrowserSettingsSidebar: View {
                 }
                 .settingsSidebarRow(.destination(destination), hovered: $hoveredItem, selection: selection)
                 .accessibilityIdentifier("settings-\(destination.name)")
+                ForEach(listedSections(of: destination)) { section in
+                    sectionRow(section, item: .section(section, of: destination))
+                        .accessibilityIdentifier("settings-result-\(destination.name)-\(section.name)")
+                }
             }
         }
+    }
+
+    // MARK: - Search results
+
+    /// The sections of `destination` a search lists under its row: every one
+    /// it matches, once the search is long enough to mean something.
+    private func listedSections(of destination: BrowserSettingsDestination) -> [BrowserSettingsSection] {
+        guard navigation.listsSections else { return [] }
+        return destination.sections(matching: navigation.query, locale: locale, in: state)
+    }
+
+    /// The sections of a Space's pages a search lists under each Space's row.
+    private var listedSpaceSections: [(tab: BrowserSpaceSettingsTab, section: BrowserSettingsSection)] {
+        guard navigation.listsSections else { return [] }
+        return BrowserSpaceSettingsTab.sections(matching: navigation.query, locale: locale, in: state)
+    }
+
+    /// A section a search matched, indented under the row of the page it's
+    /// on. Choosing it opens the page there.
+    private func sectionRow(_ section: BrowserSettingsSection, item: BrowserSettingsSidebarItem) -> some View {
+        Text(section.title)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .padding(.leading, BrowserSettingsSidebarMetrics.sectionRowIndent)
+            .settingsSidebarRow(item, hovered: $hoveredItem, selection: selection)
     }
 
     /// The catalog's groups, keeping only the destinations the search shows.
@@ -92,6 +121,20 @@ struct BrowserSettingsSidebar: View {
                             guard source.count == 1, let from = source.first else { return }
                             place(spaces[from], before: destination, in: spaces)
                         }
+                } else if navigation.listsSections {
+                    // While searching, each Space lists the sections of its
+                    // pages the search matched.
+                    let sections = listedSpaceSections
+                    ForEach(spaces) { space in
+                        spaceRow(space)
+                        ForEach(sections, id: \.section) { result in
+                            sectionRow(
+                                result.section,
+                                item: .spaceSection(result.section, tab: result.tab, space: space.id)
+                            )
+                            .accessibilityIdentifier("settings-result-space-\(space.id)-\(result.section.name)")
+                        }
+                    }
                 } else {
                     ForEach(spaces) { space in spaceRow(space) }
                         .onInsert(of: [.plainText]) { index, _ in
@@ -254,8 +297,12 @@ struct BrowserSettingsSidebar: View {
         Binding {
             navigation.selection.row
         } set: { item in
-            item?.select(on: tabState) { id in
-                openSpace(id, tab: navigation.matchingSpaceTab(locale: locale, in: state))
+            let spaceTab = navigation.matchingSpaceTab(locale: locale, in: state)
+            // A section row opens its page at the section; a page row opens
+            // the page as it always does.
+            tabState.requestedSection = item?.section
+            item?.select(on: tabState) { id, tab in
+                openSpace(id, tab: tab ?? spaceTab)
             }
         }
     }
@@ -301,6 +348,8 @@ private enum BrowserSettingsSidebarMetrics {
     static let headerTrailingInset: CGFloat = 6
     static let headerButtonSize = CGSize(width: 22, height: 22)
     static let spaceRowSpacing: CGFloat = 6
+    /// Lines a search result's section up with the title of the page above it.
+    static let sectionRowIndent: CGFloat = 26
 }
 
 /// Lets a Space's Settings row take a Space dragged onto it, from another row

@@ -14,27 +14,39 @@ struct BrowserSpaceSettingsSections: View {
     var downloads: BrowserSpaceDownloadSettings?
     var dismissKeyboard: @MainActor () -> Void = {}
 
-    var body: some View {
-        BrowserSpaceBrowsingSection(
-            browser: browser,
-            space: space,
-            dismissKeyboard: dismissKeyboard
-        )
+    var body: BrowserSettingsSectionList<some View> {
+        BrowserSettingsSectionList {
+            BrowserSettingsSectionSlot(.spaceBrowsing) {
+                BrowserSpaceBrowsingSection(
+                    browser: browser,
+                    space: space,
+                    dismissKeyboard: dismissKeyboard
+                )
+            }
 
-        BrowserSpaceGroupPinnedTabsSection(browser: browser, space: space)
+            BrowserSettingsSectionSlot(.spaceSeparatePinnedTabs) {
+                BrowserSpaceGroupPinnedTabsSection(browser: browser, space: space)
+            }
 
-        BrowserSpaceAccessPolicySection(
-            browser: browser,
-            space: space,
-            spaceAccess: spaceAccess
-        )
+            BrowserSettingsSectionSlot(.spaceLock) {
+                BrowserSpaceAccessPolicySection(
+                    browser: browser,
+                    space: space,
+                    spaceAccess: spaceAccess
+                )
+            }
 
-        if let downloads { BrowserSpaceDownloadsSection(settings: downloads) }
+            if let downloads {
+                BrowserSettingsSectionSlot(.spaceDownloads) { BrowserSpaceDownloadsSection(settings: downloads) }
+            }
 
-        BrowserSpaceDeletionSection(
-            browser: browser,
-            spaceID: space.id,
-            dataDeleter: dataDeleter
-        )
+            BrowserSettingsSectionSlot(.spaceDeletion) {
+                BrowserSpaceDeletionSection(
+                    browser: browser,
+                    spaceID: space.id,
+                    dataDeleter: dataDeleter
+                )
+            }
+        }
     }
 }

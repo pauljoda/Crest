@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "settings-search-finds-every-section",
+      "category": "fixed",
+      "message": "Settings search finds settings anywhere on a page, such as Tidy on the Tabs page, and lists the matching sections under each page. Thanks to Grayson Harrington (@grayson-harrington)."
+    },
+    {
+      "id": "settings-search-opens-matching-section",
+      "category": "improved",
+      "message": "Choosing a matching section in Settings search opens its page at that section. Thanks to Grayson Harrington (@grayson-harrington)."
+    }
+  ]
+}

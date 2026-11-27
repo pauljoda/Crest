@@ -43,12 +43,14 @@ struct BrowserCrestForge: View {
 
     var body: some View {
         BrowserSettingsPane(.spaces) {
-            if !showsStepBar {
-                stepSections
-            } else if showsMore {
-                morePage
-            } else {
-                page
+            BrowserSettingsSectionSlot(.crestStudio) {
+                if !showsStepBar {
+                    stepSections
+                } else if showsMore {
+                    morePage
+                } else {
+                    page
+                }
             }
         }
         // Going into More Customization or back out starts at its top.

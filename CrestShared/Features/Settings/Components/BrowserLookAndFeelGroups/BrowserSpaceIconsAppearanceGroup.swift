@@ -15,16 +15,31 @@ struct BrowserSpaceIconsAppearanceGroup: View {
 
     // MARK: - Actions - Drawing
 
+    /// Whether the group has rows for `filter`'s part of the page: the
+    /// choices always show on the page, and the sizing shows wherever its
+    /// row lives while the icons aren't dots.
+    @MainActor
+    static func hasRows(in filter: BrowserAppearanceSettingFilter) -> Bool {
+        !filter.isMore || showsSizing(in: filter)
+    }
+
+    @MainActor
+    private static func showsSizing(in filter: BrowserAppearanceSettingFilter) -> Bool {
+        filter.shows(.spaceIconSize) && !BrowserDeviceAppearanceStore.shared.spaceIcons.showsDots
+    }
+
     var body: some View {
         let showsSizing = filter.shows(.spaceIconSize) && !appearance.spaceIcons.showsDots
-        if !filter.isMore || showsSizing {
-            CrestSettingsGroup("Space icons", settings: settings(showsSizing: showsSizing)) {
-                if !filter.isMore {
-                    choices
-                }
-                if showsSizing {
-                    sizing
-                }
+        // Drawn even with nothing to show, as an empty section, so a search
+        // result can still scroll to it and to the groups after it.
+        CrestSettingsGroup(
+            "Space icons", settings: settings(showsSizing: showsSizing), isShown: Self.hasRows(in: filter)
+        ) {
+            if !filter.isMore {
+                choices
+            }
+            if showsSizing {
+                sizing
             }
         }
     }

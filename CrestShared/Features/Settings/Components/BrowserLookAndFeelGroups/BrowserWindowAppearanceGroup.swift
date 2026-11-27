@@ -21,16 +21,16 @@ struct BrowserWindowAppearanceGroup<Extra: View>: View {
     // MARK: - Actions - Drawing
 
     var body: some View {
-        let settings = filter.settings(rows)
-        if !settings.isEmpty {
-            group(settings: settings)
-        }
+        // Drawn even with nothing to show, as an empty section, so a search
+        // result can still scroll to it and to the groups after it.
+        group(settings: filter.settings(rows))
     }
 
     private func group(settings: [CrestResettableSetting]) -> some View {
         CrestSettingsGroup(
             "Window",
-            settings: settings
+            settings: settings,
+            isShown: !settings.isEmpty
         ) {
             if showsPreview {
                 BrowserLookAndFeelPreview(space: space, focus: .window)

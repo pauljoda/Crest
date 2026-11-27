@@ -38,92 +38,121 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
 
     // MARK: - Static Variables
 
+    // Pages whose sections differ by platform list each platform's own.
+    #if os(macOS)
+        private static let platformGeneralSections: [BrowserSettingsSection] = [
+            .defaultBrowser, .startup, .translation, .webpages, .pictureInPicture, .developerToolbar, .quitting,
+        ]
+        private static let platformTabsSections: [BrowserSettingsSection] = [
+            .newTabs, .durableTabs, .splitFocus, .recentTabs, .tidy, .sidebarWidgets,
+        ]
+        /// The Mac shows each Space's pages instead of a Spaces page; these
+        /// keep the command palette's Spaces result findable by their words.
+        private static let platformSpacesSections: [BrowserSettingsSection] = [
+            .crestStudio, .spaceBrowsing, .spaceAutofill, .spaceSeparatePinnedTabs, .spaceDownloads, .spaceDeletion,
+        ]
+        /// Each Space's own privacy is a page of that Space.
+        private static let platformPrivacySections: [BrowserSettingsSection] = [.systemPermissions, .spacePrivacyPages]
+        private static let platformAboutSections: [BrowserSettingsSection] = [
+            .version, .softwareUpdates, .whatsNew, .community,
+        ]
+    #else
+        private static let platformGeneralSections: [BrowserSettingsSection] = [
+            .defaultBrowser, .startup, .floatingSidebar, .translation,
+        ]
+        private static let platformTabsSections: [BrowserSettingsSection] = [
+            .newTabs, .durableTabs, .tidy, .sidebarWidgets,
+        ]
+        private static let platformSpacesSections: [BrowserSettingsSection] = [
+            .spaceList, .spaceGroup, .spaceCustomization, .spaceBrowsing, .spaceSeparatePinnedTabs, .spaceLock,
+            .spaceDownloads, .spaceDeletion, .crestStudio,
+        ]
+        private static let platformPrivacySections: [BrowserSettingsSection] = [
+            .privacySpace, .spaceLock, .dataRetention, .sitePermissions, .websiteData, .clearBrowsingData,
+        ]
+        private static let platformAboutSections: [BrowserSettingsSection] = [.version, .whatsNew, .community]
+    #endif
+
     // Each destination is a tile of Crest's paper in one of its brand colors,
     // its glyph solid, the colors taken in turn so neighbouring rows never
     // share one on either platform.
     static let general = BrowserSettingsDestination(
         kind: .general, name: "general", title: "General", subtitle: "Browsing and startup",
-        searchTerms:
-            "browser startup default Space typing spelling spell check text editing Picture in Picture video developer toolbar localhost local pages translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair new tab floating sidebar",
+        sections: platformGeneralSections,
         symbol: "gearshape.fill", color: CrestBrandPalette.crestBlue)
     static let tabs = BrowserSettingsDestination(
         kind: .tabs, name: "tabs", title: "Tabs", subtitle: "New, pinned and saved tabs",
-        searchTerms:
-            "focus switch new tabs follow move between Spaces Command-click middle-click Shift pinned saved close resume restore root URL favicon Split View focus follows mouse pointer sidebar widgets Now Playing media cards",
+        sections: platformTabsSections,
         symbol: "square.fill.on.square.fill", color: CrestBrandPalette.sky)
     static let search = BrowserSettingsDestination(
         kind: .search, name: "search", title: "Search", subtitle: "Search engine, command palette and site searches",
-        searchTerms:
-            "search engine Google suggestions command palette address bar results order top hit blended sections complete addresses inline autocomplete learn choices clear site searches shortcuts Tab YouTube Wikipedia scopes calculator paste and go reasons",
+        sections: [.defaultSearch, .paletteResults, .paletteTyping, .searchProviders],
         symbol: "magnifyingglass", color: CrestBrandPalette.butter)
     static let lookAndFeel = BrowserSettingsDestination(
         kind: .lookAndFeel, name: "lookAndFeel", title: "Appearance", subtitle: "Window, tabs, zoom and motion",
-        searchTerms:
-            "look and feel theme accent color transparency page zoom percentage sidebar left right borderless window fullscreen layout interface animation motion page cards folder groups highlights counts borders preview density spacing padding scale icons space size fit automatic",
+        sections: [
+            .addressBar, .spaceIcons, .windowAppearance, .pageZoom, .tabAppearance, .tabStatus, .addressAppearance,
+            .folderAppearance, .groupAppearance, .hoverPreviews, .appIcon, .moreCustomization, .resetAppearance,
+        ],
         symbol: "paintpalette.fill", color: CrestBrandPalette.coral)
     static let engines = BrowserSettingsDestination(
         kind: .engines, name: "engines", title: "Engines", subtitle: "Default engine and website rules",
-        searchTerms: "Chromium WebKit hybrid default browser engine websites rules protected video DRM compatibility",
+        sections: [.defaultEngine, .engineRules],
         symbol: "cpu.fill", color: CrestBrandPalette.crestBlue, platforms: [.desktop])
     static let links = BrowserSettingsDestination(
         kind: .links, name: "links", title: "Links", subtitle: "Quick Window and Peek",
-        searchTerms: "external apps Quick Window Peek pinned saved routing open", symbol: "link",
+        sections: [.externalLinks, .quickWindow, .peek, .linkRouting], symbol: "link",
         color: CrestBrandPalette.sage)
     static let shortcuts = BrowserSettingsDestination(
         kind: .shortcuts, name: "shortcuts", title: "Shortcuts", subtitle: "Keyboard commands",
-        searchTerms: "keyboard keys commands rebind remap hotkeys navigation tabs Spaces page",
+        sections: [.keyboardShortcuts],
         symbol: "keyboard.fill",
         color: CrestBrandPalette.butter, platforms: [.desktop])
     static let spaces = BrowserSettingsDestination(
         kind: .spaces, name: "spaces", title: "Spaces", subtitle: "Profiles and appearance",
-        searchTerms:
-            "profile name identity icon color appearance theme search cleanup isolation reorder browsing archive independence folder intensity text color light dark automatic preview",
+        sections: platformSpacesSections,
         symbol: "square.grid.2x2.fill", color: CrestBrandPalette.crestBlue)
     static let sync = BrowserSettingsDestination(
         kind: .sync, name: "sync", title: "Sync", subtitle: "iCloud setup and status",
-        searchTerms: "iCloud CloudKit account upload download conflict status monitor diagnostics pending records",
+        sections: [.iCloud, .syncConflict, .syncScope, .syncDiagnostics],
         symbol: "arrow.triangle.2.circlepath.icloud.fill", color: CrestBrandPalette.sky)
     // The macOS sidebar row cannot fit "Privacy & Permissions" on one line at
     // its compact row height.
     static let privacy = BrowserSettingsDestination(
         kind: .privacy, name: "privacy", title: "Privacy & Permissions", navigationTitle: "Privacy",
         subtitle: "Site access and data",
-        searchTerms: "camera microphone site access history cookies data website cache clear browsing",
+        sections: platformPrivacySections,
         symbol: "hand.raised.fill", color: CrestBrandPalette.coral)
     static let adBlocking = BrowserSettingsDestination(
         kind: .adBlocking, name: "adBlocking", title: "Ad Blocking", subtitle: "Filter lists, your rules and sites",
-        searchTerms:
-            "ads trackers content blocking filter lists subscribe EasyList uBlock AdGuard my filters custom rules block element cookie notices strict balanced",
+        sections: [.adBlockingLevel, .filterLists, .customFilterLists, .customFilters, .blockingSites],
         symbol: "shield.fill", color: CrestBrandPalette.sage, requiredCapability: .contentBlocking)
     static let passwords = BrowserSettingsDestination(
         kind: .passwords, name: "passwords", title: "Autofill", subtitle: "Passwords, codes, addresses and cards",
-        searchTerms:
-            "passwords credentials autofill iCloud Keychain passkeys synchronization one-time codes authenticator two-factor addresses payment cards credit",
+        sections: [.passwordsSpace, .crestPasswords, .savedPasswords, .systemPasskeys, .addresses, .paymentCards],
         symbol: "key.fill",
         color: CrestBrandPalette.butter)
     static let extensions = BrowserSettingsDestination(
         kind: .extensions, name: "extensions", title: "Extensions", subtitle: "Space extensions and permissions",
-        searchTerms: "extensions permissions Chromium Chrome Web Store install copies Spaces",
+        sections: [.extensionsSpace, .installedExtensions],
         symbol: "puzzlepiece.extension.fill", color: CrestBrandPalette.sky,
         requiredCapability: .extensions)
     static let featureFlags = BrowserSettingsDestination(
         kind: .featureFlags, name: "featureFlags", title: "Feature Flags", subtitle: "Engine experiments",
-        searchTerms: "WebKit Chromium experimental preview testable developer stable runtime flags features",
+        sections: [.engineFeatureFlags],
         symbol: "flag.2.crossed.fill", color: CrestBrandPalette.coral,
         requiredCapability: .featureFlags, platforms: [.desktop])
     static let advanced = BrowserSettingsDestination(
         kind: .advanced, name: "advanced", title: "Advanced", subtitle: "Import, export, and runtime",
-        searchTerms: "import export backup portability data records", symbol: "switch.2",
+        sections: [.setup, .featureFlagsLink, .dataPortability], symbol: "switch.2",
         color: CrestBrandPalette.coral)
     static let agents = BrowserSettingsDestination(
         kind: .agents, name: "agents", title: "Agents", subtitle: "Coding agents and scripts",
-        searchTerms:
-            "agents AI MCP model context protocol coding agents scripts automation Claude Codex Cursor command line terminal",
+        sections: [.agentAccess, .agentConnection, .agentSpaces, .agentScripts, .agentSessions, .allowedAgents],
         symbol: "sparkles", color: CrestBrandPalette.butter, platforms: [.desktop])
     static let about = BrowserSettingsDestination(
         kind: .about, name: "about", title: "About", subtitle: "Version, updates, and support",
-        searchTerms:
-            "version build updates changelog what's new feedback Reddit GitHub issues roadmap support community",
+        sections: platformAboutSections,
         symbol: "info.circle.fill", color: CrestBrandPalette.sky)
 
     /// Every destination, in catalog order.
@@ -143,11 +172,12 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
 
     let subtitle: LocalizedStringResource
 
-    /// Localized vocabulary that supplements the visible destination metadata.
-    ///
-    /// The terms are the union of the vocabulary each platform used before this
-    /// catalog was shared, so neither shell loses a search route.
-    let searchTerms: LocalizedStringResource
+    /// The sections this platform draws on the destination's page, in the
+    /// order it draws them. They are its search vocabulary beyond its title
+    /// and subtitle, so nothing on the page can go unsearchable. A page that
+    /// draws its own list rather than a ``BrowserSettingsPane``, such as
+    /// Shortcuts or Feature Flags, names one section for the whole page.
+    let sections: [BrowserSettingsSection]
 
     let symbol: String
 
@@ -170,7 +200,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
 
     private init(
         kind: Kinds, name: String, title: LocalizedStringResource, navigationTitle: LocalizedStringResource? = nil,
-        subtitle: LocalizedStringResource, searchTerms: LocalizedStringResource, symbol: String,
+        subtitle: LocalizedStringResource, sections: [BrowserSettingsSection], symbol: String,
         color: Color, requiredCapability: EngineCapability? = nil,
         platforms: Set<DevicePlatform> = Set(DevicePlatform.all)
     ) {
@@ -179,7 +209,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         self.title = title
         self.navigationTitle = navigationTitle ?? title
         self.subtitle = subtitle
-        self.searchTerms = searchTerms
+        self.sections = sections
         self.symbol = symbol
         self.color = color
         self.requiredCapability = requiredCapability
@@ -209,7 +239,7 @@ struct BrowserSettingsDestination: Hashable, Identifiable, Sendable {
         let provided = platformCases(in: state)
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return provided }
-        let matches = provided.filter { $0.matchesSearchQuery(query, locale: locale) }
+        let matches = provided.filter { $0.matchesSearchQuery(query, locale: locale, in: state) }
         return provided.filter { destination in
             matches.contains(destination) || matches.contains { parent($0) == destination }
         }

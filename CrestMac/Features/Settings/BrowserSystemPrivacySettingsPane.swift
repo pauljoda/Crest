@@ -8,32 +8,36 @@ struct BrowserSystemPrivacySettingsPane: View {
 
     var body: some View {
         BrowserSettingsPane(.privacy) {
-            BrowserSystemPermissionSettingsSection(browser: browser, spaceAccess: spaceAccess)
+            BrowserSettingsSectionSlot(.systemPermissions) {
+                BrowserSystemPermissionSettingsSection(browser: browser, spaceAccess: spaceAccess)
+            }
 
-            if let openSpace {
-                Section {
-                    ForEach(browser.spaceModels) { space in
-                        Button {
-                            openSpace(space.id, tab: .privacy)
-                        } label: {
-                            LabeledContent {
-                                CrestFormDisclosureChevron()
+            BrowserSettingsSectionSlot(.spacePrivacyPages) {
+                if let openSpace {
+                    Section {
+                        ForEach(browser.spaceModels) { space in
+                            Button {
+                                openSpace(space.id, tab: .privacy)
                             } label: {
-                                Label {
-                                    Text(space.settings.name)
-                                } icon: {
-                                    BrowserSpaceIdentityIcon(space: space, size: 18)
+                                LabeledContent {
+                                    CrestFormDisclosureChevron()
+                                } label: {
+                                    Label {
+                                        Text(space.settings.name)
+                                    } icon: {
+                                        BrowserSpaceIdentityIcon(space: space, size: 18)
+                                    }
                                 }
+                                .contentShape(.rect)
                             }
-                            .contentShape(.rect)
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("settings-space-privacy-\(space.id)")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("settings-space-privacy-\(space.id)")
+                    } header: {
+                        Text("Spaces")
+                    } footer: {
+                        CrestFormFootnote("Each Space keeps its own history and site permissions.")
                     }
-                } header: {
-                    Text("Spaces")
-                } footer: {
-                    CrestFormFootnote("Each Space keeps its own history and site permissions.")
                 }
             }
         }

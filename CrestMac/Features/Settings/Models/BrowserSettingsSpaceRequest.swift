@@ -7,6 +7,8 @@ struct BrowserSettingsSpaceRequest: BrowserSettingsRequest {
 
     let tab: BrowserSpaceSettingsTab
     var intent: BrowserSettingsSpaceIntent = .none
+    /// The section of the page a search result opens it at.
+    var section: BrowserSettingsSection?
 
     // MARK: - Actions - Route
 
@@ -14,5 +16,6 @@ struct BrowserSettingsSpaceRequest: BrowserSettingsRequest {
     func apply(to tabState: BrowserSettingsTabState, spaceID: UUID?) {
         guard let spaceID else { return }
         tabState.showSpace(spaceID, tab: tab, intent: intent)
+        tabState.requestedSection = section
     }
 }

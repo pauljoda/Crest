@@ -10,14 +10,26 @@ struct BrowserAdBlockingSettingsPane: View {
 
     var body: some View {
         BrowserSettingsPane(.adBlocking) {
-            BrowserAdBlockingLevelSection(core: browser.core, errorDescription: contentBlockingErrorDescription)
-            Group {
-                BrowserFilterListsSettingsSection(core: browser.core)
-                BrowserCustomFilterListsSettingsSection(core: browser.core)
-                BrowserCustomFiltersSettingsSection(core: browser.core)
-                BrowserBlockingSitesSettingsSection(core: browser.core)
+            BrowserSettingsSectionSlot(.adBlockingLevel) {
+                BrowserAdBlockingLevelSection(core: browser.core, errorDescription: contentBlockingErrorDescription)
             }
-            .disabled(!browser.core.state.filterLists.level.blocksContent)
+            BrowserSettingsSectionSlot(.filterLists) {
+                BrowserFilterListsSettingsSection(core: browser.core).disabled(isOff)
+            }
+            BrowserSettingsSectionSlot(.customFilterLists) {
+                BrowserCustomFilterListsSettingsSection(core: browser.core).disabled(isOff)
+            }
+            BrowserSettingsSectionSlot(.customFilters) {
+                BrowserCustomFiltersSettingsSection(core: browser.core).disabled(isOff)
+            }
+            BrowserSettingsSectionSlot(.blockingSites) {
+                BrowserBlockingSitesSettingsSection(core: browser.core).disabled(isOff)
+            }
         }
+    }
+
+    /// Everything below the level waits while blocking is off.
+    private var isOff: Bool {
+        !browser.core.state.filterLists.level.blocksContent
     }
 }

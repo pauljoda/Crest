@@ -49,33 +49,41 @@ struct MobileSpaceSettingsView: View {
 
     private var compactSettings: some View {
         BrowserSettingsPane(.spaces) {
-            MobileSpaceSelectionSection(
-                browser: browser,
-                selectedSpaceID: Binding(get: { editedSpaceID }, set: { selectEditedSpace($0) }),
-                addSubSpace: addSubSpace,
-                requestGroupChange: { pendingGroupChange = $0 },
-                requestDeletion: { pendingDeletion = $0 }
-            )
+            BrowserSettingsSectionSlot(.spaceList) {
+                MobileSpaceSelectionSection(
+                    browser: browser,
+                    selectedSpaceID: Binding(get: { editedSpaceID }, set: { selectEditedSpace($0) }),
+                    addSubSpace: addSubSpace,
+                    requestGroupChange: { pendingGroupChange = $0 },
+                    requestDeletion: { pendingDeletion = $0 }
+                )
+            }
 
             if let space, !browser.isPrivateBrowsing {
-                Section {
-                    groupCrestRow(for: space)
+                BrowserSettingsSectionSlot(.spaceGroup) {
+                    Section {
+                        groupCrestRow(for: space)
+                    }
                 }
             }
 
             if let space, canReveal(space) {
-                MobileSpaceCustomizationSection(
-                    space: space,
-                    editAppearance: { editingAppearanceSpace = space }
-                )
+                BrowserSettingsSectionSlot(.spaceCustomization) {
+                    MobileSpaceCustomizationSection(
+                        space: space,
+                        editAppearance: { editingAppearanceSpace = space }
+                    )
+                }
 
                 detailSections(for: space)
             } else if let space {
-                BrowserSettingsPrivateSpaceAccessSection(
-                    space: space,
-                    accessController: spaceAccess,
-                    detail: "Unlock this Space to see its settings."
-                )
+                BrowserSettingsPaneNote {
+                    BrowserSettingsPrivateSpaceAccessSection(
+                        space: space,
+                        accessController: spaceAccess,
+                        detail: "Unlock this Space to see its settings."
+                    )
+                }
             }
         }
     }
@@ -115,9 +123,11 @@ struct MobileSpaceSettingsView: View {
                     .id(space.id)
                 } else {
                     BrowserSettingsPane(.spaces) {
-                        BrowserSettingsPrivateSpaceAccessSection(
-                            space: space, accessController: spaceAccess,
-                            detail: "Unlock this Space to see its settings.")
+                        BrowserSettingsPaneNote {
+                            BrowserSettingsPrivateSpaceAccessSection(
+                                space: space, accessController: spaceAccess,
+                                detail: "Unlock this Space to see its settings.")
+                        }
                     }
                 }
             } else {
@@ -149,7 +159,7 @@ struct MobileSpaceSettingsView: View {
         selectEditedSpace(browser.selectedSpaceID)
     }
 
-    private func detailSections(for space: SpaceModel) -> some View {
+    private func detailSections(for space: SpaceModel) -> BrowserSpaceSettingsSections {
         BrowserSpaceSettingsSections(
             browser: browser,
             space: space,

@@ -107,7 +107,9 @@ struct BrowserPasswordSettingsPane<Header: View>: View {
     var body: some View {
         BrowserSettingsPane(.passwords) {
             settingsSections
-            BrowserSpaceGroupSharingNote(browser: browser, spaceID: selectedSpaceID)
+            BrowserSettingsPaneNote {
+                BrowserSpaceGroupSharingNote(browser: browser, spaceID: selectedSpaceID)
+            }
         }
         .crestRepairsSpaceSelection(selectedSpaceBinding, in: browser)
         .task(id: credentialLoadRequest) {
@@ -233,106 +235,119 @@ struct BrowserPasswordSettingsPane<Header: View>: View {
 
     // MARK: - Sections
 
-    @ViewBuilder
-    private var settingsSections: some View {
-        header
-        if fixedSpaceID == nil {
-            Section {
-                CrestSpaceMenuPicker(
-                    "Space",
-                    selection: selectedSpaceBinding,
-                    spaces: CrestSpaceIdentity.list(browser.spaceModels)
-                )
-            }
-        }
-
-        if let space {
-            if canRevealSelectedSpaceData {
-                Section {
-                    Toggle(
-                        "Use Crest Passwords",
-                        isOn: browser.credentialPreferenceBinding(
-                            \.isEnabled,
-                            in: space
+    private var settingsSections: BrowserSettingsSectionList<some View> {
+        BrowserSettingsSectionList {
+            BrowserSettingsPaneNote { header }
+            if fixedSpaceID == nil {
+                BrowserSettingsSectionSlot(.passwordsSpace) {
+                    Section {
+                        CrestSpaceMenuPicker(
+                            "Space",
+                            selection: selectedSpaceBinding,
+                            spaces: CrestSpaceIdentity.list(browser.spaceModels)
                         )
-                    )
-                    .accessibilityIdentifier(
-                        "space-crest-passwords-enabled"
-                    )
-
-                    Group {
-                        if layout.showsCredentialPreferences {
-                            credentialPreferences(in: space)
-                        }
-
-                        if layout.showsManageAction {
-                            Button("Manage Saved Passwords…") {
-                                manage?()
-                            }
-                        }
-
-                    }
-                    .disabled(!space.settings.credentialPreferences.isEnabled)
-                } header: {
-                    Text("Crest Passwords")
-                } footer: {
-                    if !space.settings.credentialPreferences.isEnabled {
-                        Text(Self.disabledDescription).crestFormFootnote()
-                    } else if layout.showsCredentialPreferences {
-                        CrestFormFootnote("iCloud Keychain and Passwords choices apply to this device only.")
                     }
                 }
+            }
 
-                if layout.showsSavedPasswords {
-                    Section {
-                        listBar(space: space)
-                        healthChips
-                        if isSelectingCredentials {
-                            selectionActions
+            if let space {
+                if canRevealSelectedSpaceData {
+                    BrowserSettingsSectionSlot(.crestPasswords) {
+                        Section {
+                            Toggle(
+                                "Use Crest Passwords",
+                                isOn: browser.credentialPreferenceBinding(
+                                    \.isEnabled,
+                                    in: space
+                                )
+                            )
+                            .accessibilityIdentifier(
+                                "space-crest-passwords-enabled"
+                            )
+
+                            Group {
+                                if layout.showsCredentialPreferences {
+                                    credentialPreferences(in: space)
+                                }
+
+                                if layout.showsManageAction {
+                                    Button("Manage Saved Passwords…") {
+                                        manage?()
+                                    }
+                                }
+
+                            }
+                            .disabled(!space.settings.credentialPreferences.isEnabled)
+                        } header: {
+                            Text("Crest Passwords")
+                        } footer: {
+                            if !space.settings.credentialPreferences.isEnabled {
+                                Text(Self.disabledDescription).crestFormFootnote()
+                            } else if layout.showsCredentialPreferences {
+                                CrestFormFootnote("iCloud Keychain and Passwords choices apply to this device only.")
+                            }
                         }
-                        savedPasswords
-                        if credentials.unreadableCount > 0 {
-                            unreadablePasswords
-                        }
-                        if !isSelectingCredentials {
-                            Button("Add Password", systemImage: "plus") {
-                                newPasswordPresentation = credentialLoadRequest.assignment.map {
-                                    BrowserNewPasswordPresentation(assignment: $0)
+                    }
+
+                    BrowserSettingsSectionSlot(.savedPasswords) {
+                        if layout.showsSavedPasswords {
+                            Section {
+                                listBar(space: space)
+                                healthChips
+                                if isSelectingCredentials {
+                                    selectionActions
+                                }
+                                savedPasswords
+                                if credentials.unreadableCount > 0 {
+                                    unreadablePasswords
+                                }
+                                if !isSelectingCredentials {
+                                    Button("Add Password", systemImage: "plus") {
+                                        newPasswordPresentation = credentialLoadRequest.assignment.map {
+                                            BrowserNewPasswordPresentation(assignment: $0)
+                                        }
+                                    }
+                                    .disabled(!space.settings.credentialPreferences.isEnabled || credentials.isLoading)
+                                    .accessibilityIdentifier("add-password")
+                                }
+                            } header: {
+                                Text("Saved passwords")
+                            } footer: {
+                                if !credentials.descriptors.isEmpty {
+                                    Text(passwordCountLabel).crestFormFootnote()
                                 }
                             }
-                            .disabled(!space.settings.credentialPreferences.isEnabled || credentials.isLoading)
-                            .accessibilityIdentifier("add-password")
-                        }
-                    } header: {
-                        Text("Saved passwords")
-                    } footer: {
-                        if !credentials.descriptors.isEmpty {
-                            Text(passwordCountLabel).crestFormFootnote()
+
+                            neverSavedSites(in: space)
                         }
                     }
 
-                    neverSavedSites(in: space)
-                }
+                    BrowserSettingsSectionSlot(.systemPasskeys) {
+                        if fixedSpaceID == nil || Header.self != EmptyView.self {
+                            Section("System passkeys") {
+                                BrowserPasskeyAccessView()
+                            }
+                        }
+                    }
 
-                if fixedSpaceID == nil || Header.self != EmptyView.self {
-                    Section("System passkeys") {
-                        BrowserPasskeyAccessView()
+                    BrowserSettingsPaneNote {
+                        if let errorMessage = credentials.errorMessage {
+                            Section {
+                                Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                                    .font(.footnote)
+                                    .foregroundStyle(CrestColor.danger)
+                            }
+                        }
+                    }
+                } else {
+                    BrowserSettingsPaneNote {
+                        BrowserSettingsPrivateSpaceAccessSection(
+                            space: space,
+                            accessController: spaceAccess,
+                            detail: "Unlock this Space to see its passwords."
+                        )
                     }
                 }
-
-                if let errorMessage = credentials.errorMessage {
-                    Section {
-                        Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                            .font(.footnote)
-                            .foregroundStyle(CrestColor.danger)
-                    }
-                }
-            } else {
-                BrowserSettingsPrivateSpaceAccessSection(
-                    space: space,
-                    accessController: spaceAccess,
-                    detail: "Unlock this Space to see its passwords."
-                )
             }
         }
     }

@@ -17,19 +17,16 @@ struct BrowserSpaceSettingsTab: Hashable, Identifiable, Sendable {
 
     static let appearance = BrowserSpaceSettingsTab(
         kind: .appearance, name: "appearance", title: "Appearance",
-        searchTerms: "crest studio name icon emblem colors theme banner background sidebar pattern gradient accent",
-        destination: .spaces)
+        sections: [.crestStudio], destination: .spaces)
     static let browsing = BrowserSpaceSettingsTab(
         kind: .browsing, name: "browsing", title: "Browsing",
-        searchTerms: "search engine suggestions archive tabs cleanup downloads folder save location delete Space")
+        sections: [.spaceBrowsing, .spaceAutofill, .spaceSeparatePinnedTabs, .spaceDownloads, .spaceDeletion])
     static let privacy = BrowserSpaceSettingsTab(
         kind: .privacy, name: "privacy", title: "Privacy",
-        searchTerms:
-            "privacy lock Touch ID password private history retention archive downloads records content blocking ads trackers site permissions camera microphone location notifications"
-    )
+        sections: [.spaceLock, .dataRetention, .sitePermissions, .websiteData, .clearBrowsingData])
     static let extensions = BrowserSpaceSettingsTab(
         kind: .extensions, name: "extensions", title: "Extensions",
-        searchTerms: "extensions add-ons Chrome Web Store install remove", destination: .extensions,
+        sections: [.installedExtensions], destination: .extensions,
         requiredCapability: .extensions)
 
     /// Every page, in tab-bar order.
@@ -41,8 +38,9 @@ struct BrowserSpaceSettingsTab: Hashable, Identifiable, Sendable {
     let name: String
     let title: LocalizedStringResource
 
-    /// Words that find this page from the Settings search field.
-    let searchTerms: LocalizedStringResource
+    /// The sections the page draws, in order: what finds it from the
+    /// Settings search field beyond its title.
+    let sections: [BrowserSettingsSection]
 
     /// The settings destination whose subject this page holds for one Space,
     /// so a request for that destination opens this page instead.
@@ -56,13 +54,13 @@ struct BrowserSpaceSettingsTab: Hashable, Identifiable, Sendable {
     // MARK: - Initializers
 
     private init(
-        kind: Kinds, name: String, title: LocalizedStringResource, searchTerms: LocalizedStringResource,
+        kind: Kinds, name: String, title: LocalizedStringResource, sections: [BrowserSettingsSection],
         destination: BrowserSettingsDestination? = nil, requiredCapability: EngineCapability? = nil
     ) {
         self.kind = kind
         self.name = name
         self.title = title
-        self.searchTerms = searchTerms
+        self.sections = sections
         self.destination = destination
         self.requiredCapability = requiredCapability
     }
@@ -90,16 +88,36 @@ struct BrowserSpaceSettingsTab: Hashable, Identifiable, Sendable {
         all.filter { $0.isProvided(in: state) }
     }
 
-    /// The first tab whose words match a search, if any.
+    /// The first tab whose title or sections match a search, if any.
     @MainActor
     static func matching(_ query: String, locale: Locale, in state: CoreState) -> BrowserSpaceSettingsTab? {
         provided(in: state).first { tab in
-            [tab.title, tab.searchTerms].contains { resource in
-                var resource = resource
-                resource.locale = locale
-                return String(localized: resource).localizedStandardContains(query)
-            }
+            var title = tab.title
+            title.locale = locale
+            return String(localized: title).localizedStandardContains(query)
+                || tab.firstSection(matching: query, locale: locale, in: state) != nil
         }
+    }
+
+    /// Every section of every page the device offers, in tab-bar and drawing
+    /// order, whose words the query finds, each with the page it's on, which a
+    /// search lists under each Space.
+    @MainActor
+    static func sections(
+        matching query: String, locale: Locale, in state: CoreState
+    ) -> [(tab: BrowserSpaceSettingsTab, section: BrowserSettingsSection)] {
+        provided(in: state).flatMap { tab in
+            tab.sections
+                .filter { $0.isProvided(in: state) && $0.matchesSearchQuery(query, locale: locale) }
+                .map { (tab: tab, section: $0) }
+        }
+    }
+
+    /// The first section on the page, in drawing order, whose words the query
+    /// finds, where a search result opens the page.
+    @MainActor
+    func firstSection(matching query: String, locale: Locale, in state: CoreState) -> BrowserSettingsSection? {
+        sections.first { $0.isProvided(in: state) && $0.matchesSearchQuery(query, locale: locale) }
     }
 
     // MARK: - Actions - Identity

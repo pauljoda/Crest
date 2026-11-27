@@ -14,24 +14,30 @@ struct BrowserAdvancedSettingsPane: View {
 
     var body: some View {
         BrowserSettingsPane(.advanced) {
-            BrowserAdvancedSetupSection(setupActions: setupActions)
-            if let openFeatureFlags {
-                Section {
-                    Button(action: openFeatureFlags) {
-                        LabeledContent(String(localized: BrowserSettingsDestination.featureFlags.title)) {
-                            Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+            BrowserSettingsSectionSlot(.setup) {
+                BrowserAdvancedSetupSection(setupActions: setupActions)
+            }
+            BrowserSettingsSectionSlot(.featureFlagsLink) {
+                if let openFeatureFlags {
+                    Section {
+                        Button(action: openFeatureFlags) {
+                            LabeledContent(String(localized: BrowserSettingsDestination.featureFlags.title)) {
+                                Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+                            }
+                            .contentShape(.rect)
                         }
-                        .contentShape(.rect)
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("settings-featureFlags")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("settings-featureFlags")
                 }
             }
-            BrowserDataPortabilitySection(
-                browser: browser,
-                spaceAccess: spaceAccess,
-                showsMacOSImportRequirement: showsMacOSImportRequirement
-            )
+            BrowserSettingsSectionSlot(.dataPortability) {
+                BrowserDataPortabilitySection(
+                    browser: browser,
+                    spaceAccess: spaceAccess,
+                    showsMacOSImportRequirement: showsMacOSImportRequirement
+                )
+            }
         }
     }
 }

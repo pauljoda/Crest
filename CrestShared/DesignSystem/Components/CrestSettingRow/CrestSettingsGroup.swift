@@ -10,6 +10,11 @@ struct CrestSettingsGroup<Preview: View, Content: View>: View {
     private let title: LocalizedStringKey
     private let settings: [CrestResettableSetting]
     private let footnote: LocalizedStringKey?
+    /// Whether the group draws its heading, preview and footer. A group with
+    /// nothing to show for part of a page stays a section whose rows have
+    /// all hidden themselves, rather than leaving the form, so a scroll can
+    /// still find it and the sections around it by their `id`s.
+    private let isShown: Bool
     private let preview: Preview
     private let content: Content
 
@@ -19,40 +24,51 @@ struct CrestSettingsGroup<Preview: View, Content: View>: View {
         _ title: LocalizedStringKey,
         settings: [CrestResettableSetting] = [],
         footnote: LocalizedStringKey? = nil,
+        isShown: Bool = true,
         @ViewBuilder preview: () -> Preview,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.settings = settings
         self.footnote = footnote
+        self.isShown = isShown
         self.preview = preview()
         self.content = content()
     }
 
     var body: some View {
         Section {
-            preview
+            if isShown { preview }
             content
         } header: {
-            HStack(spacing: CrestSpacing.small) {
-                CrestSettingsSectionHeading(title: title)
-                Spacer(minLength: CrestSpacing.small)
-                Button("Reset", action: settings.resetAll)
-                    .buttonStyle(.borderless)
-                    .controlSize(.small)
-                    .opacity(isModified ? 1 : 0)
-                    .animation(
-                        CrestMotion.surface.unlessReducingMotion(reduceMotion),
-                        value: isModified
-                    )
-                    .disabled(!isModified)
-                    .accessibilityHidden(!isModified)
-                    .accessibilityLabel(Text("Reset \(Text(title)) to defaults"))
-            }
+            // Collapsed rather than left out: a heading behind an `if`
+            // keeps a scroll from finding any section after it by `id`.
+            header
+                .frame(height: isShown ? nil : 0)
+                .opacity(isShown ? 1 : 0)
+                .accessibilityHidden(!isShown)
         } footer: {
-            if let footnote {
+            if isShown, let footnote {
                 CrestFormFootnote(footnote)
             }
+        }
+    }
+
+    private var header: some View {
+        HStack(spacing: CrestSpacing.small) {
+            CrestSettingsSectionHeading(title: title)
+            Spacer(minLength: CrestSpacing.small)
+            Button("Reset", action: settings.resetAll)
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+                .opacity(isModified ? 1 : 0)
+                .animation(
+                    CrestMotion.surface.unlessReducingMotion(reduceMotion),
+                    value: isModified
+                )
+                .disabled(!isModified)
+                .accessibilityHidden(!isModified)
+                .accessibilityLabel(Text("Reset \(Text(title)) to defaults"))
         }
     }
 
@@ -64,10 +80,11 @@ extension CrestSettingsGroup where Preview == EmptyView {
         _ title: LocalizedStringKey,
         settings: [CrestResettableSetting] = [],
         footnote: LocalizedStringKey? = nil,
+        isShown: Bool = true,
         @ViewBuilder content: () -> Content
     ) {
         self.init(
-            title, settings: settings, footnote: footnote,
+            title, settings: settings, footnote: footnote, isShown: isShown,
             preview: { EmptyView() }, content: content
         )
     }

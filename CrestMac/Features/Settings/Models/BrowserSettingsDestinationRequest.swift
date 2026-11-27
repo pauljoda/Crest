@@ -2,16 +2,10 @@ import Foundation
 
 /// A request to show a settings destination.
 struct BrowserSettingsDestinationRequest: BrowserSettingsRequest {
-    // MARK: - Types
-
-    enum Section: Hashable {
-        case pictureInPicture
-    }
-
     // MARK: - Variables
 
     let destination: BrowserSettingsDestination
-    var section: Section?
+    var section: BrowserSettingsSection?
     var pictureInPicturePreviewSpace: BrowserSpaceRuntimeAssignment?
 
     // MARK: - Actions - Route

@@ -18,7 +18,9 @@ final class BrowserSettingsTabState {
     var draggedSpaceID: UUID?
     let sidebarScroll = BrowserNativeScrollState()
     private(set) var consumedRouteRevision = 0
-    var requestedSection: BrowserSettingsDestinationRequest.Section?
+    /// The section the shown page scrolls to and marks: a search result's,
+    /// or a route's.
+    var requestedSection: BrowserSettingsSection?
     var pictureInPicturePreviewSpace: BrowserSpaceRuntimeAssignment?
     @ObservationIgnored private var scrollStates: [String: BrowserNativeScrollState] = [:]
     @ObservationIgnored private var shortcuts: BrowserShortcutSettingsModel?

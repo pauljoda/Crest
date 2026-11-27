@@ -116,6 +116,9 @@ struct BrowserSettingsView: View {
                     addSubSpace: addSubSpace
                 )
             }
+        case .section, .spaceSection:
+            // A section row is chosen, never shown: choosing it shows its page.
+            EmptyView()
         }
     }
 
@@ -160,8 +163,12 @@ struct BrowserSettingsView: View {
             if spaceAccess.isLocked(space) { browser.selectSpace(id) }
             return
         }
+        // The Space's own Settings tab opens the page at the section a search
+        // result asked this one for.
+        let section = tabState.requestedSection
+        tabState.requestedSection = nil
         spaceSettingsPresentation.present(
-            BrowserSettingsSpaceRequest(tab: tab, intent: intent),
+            BrowserSettingsSpaceRequest(tab: tab, intent: intent, section: section),
             assignment: BrowserSpaceRuntimeAssignment(spaceID: selected.spaceID, profileID: selected.profileID),
             searchText: tabState.navigation.searchText
         )

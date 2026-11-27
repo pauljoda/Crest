@@ -8,6 +8,8 @@ struct MobileBrowserSettingsDestinationList: View {
 
     @Binding var selection: BrowserSettingsDestination
     @Binding var searchText: String
+    /// The section a section row opens its page at.
+    @Binding var requestedSection: BrowserSettingsSection?
     /// The read model whose engines say which destinations exist.
     let state: CoreState
 
@@ -23,6 +25,9 @@ struct MobileBrowserSettingsDestinationList: View {
             Section {
                 ForEach(filteredDestinations) { destination in
                     Button {
+                        // A page row opens the page as it always does; only a
+                        // section row opens it at a section.
+                        requestedSection = nil
                         selection = destination
                     } label: {
                         MobileSettingsDestinationRow(destination: destination)
@@ -37,6 +42,19 @@ struct MobileBrowserSettingsDestinationList: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .accessibilityAddTraits(selection == destination ? .isSelected : [])
+                    ForEach(listedSections(of: destination)) { section in
+                        Button {
+                            requestedSection = section
+                            selection = destination
+                        } label: {
+                            MobileSettingsSectionResultRow(section: section)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(CrestFormRowButtonStyle(isSelected: false, cornerRadius: CrestRadius.control))
+                        .accessibilityIdentifier("settings-result-\(destination.name)-\(section.name)")
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    }
                 }
             }
         }
@@ -46,6 +64,14 @@ struct MobileBrowserSettingsDestinationList: View {
             min: Self.minimumColumnWidth, ideal: Self.idealColumnWidth, max: Self.maximumColumnWidth
         )
         .searchable(text: $searchText, prompt: "Search settings")
+    }
+
+    /// The sections of `destination` a search lists under its row, once the
+    /// search is long enough to mean something.
+    private func listedSections(of destination: BrowserSettingsDestination) -> [BrowserSettingsSection] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard query.count >= 2 else { return [] }
+        return destination.sections(matching: query, locale: locale, in: state)
     }
 
     private var filteredDestinations: [BrowserSettingsDestination] {
