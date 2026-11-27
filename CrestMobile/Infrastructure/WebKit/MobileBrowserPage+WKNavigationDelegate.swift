@@ -95,6 +95,14 @@ extension MobileBrowserPage: WKNavigationDelegate {
         decidePolicyFor navigationAction: WKNavigationAction,
         decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
     ) {
+        let followsLinkTap = navigationAction.navigationType == .linkActivated
+        if navigationAction.targetFrame?.isMainFrame == true { mainFrameFollowsLinkTap = followsLinkTap }
+        // A new-tab link to a file downloads from this page, so no tab slides
+        // in only to close again once the file arrives.
+        if followsLinkTap, navigationAction.targetFrame == nil, Self.namesFile(navigationAction.request.url) {
+            decisionHandler(.download)
+            return
+        }
         navigationDecider.decision(
             for: navigationAction,
             isAppInitiated: isAppInitiated(navigationAction)
@@ -116,6 +124,12 @@ extension MobileBrowserPage: WKNavigationDelegate {
         decidePolicyFor navigationResponse: WKNavigationResponse,
         decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy) -> Void
     ) {
+        // Only a link the person tapped downloads its file: a reload, a
+        // history step or a tab restoring what it showed keeps showing it.
+        if navigationResponse.isForMainFrame, mainFrameFollowsLinkTap, Self.isFile(navigationResponse) {
+            decisionHandler(.download)
+            return
+        }
         decideResponsePolicy(for: navigationResponse, in: webView, decisionHandler: decisionHandler)
     }
 

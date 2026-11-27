@@ -51,6 +51,9 @@ final class WebKitDownloads: NSObject {
         var staging: URL?
         var destination: URL?
         var isCanceling = false
+        /// Whether the finished file is moving into its place. A cancel lets
+        /// the move end, then takes the file away again.
+        var isMovingIn = false
         var hasEnded = false
 
         /// The engine's name for the download, which the core keeps it by.
@@ -156,6 +159,9 @@ final class WebKitDownloads: NSObject {
     func cancel(_ engineID: String) {
         guard let transfer = transfers[engineID], !transfer.hasEnded else { return }
         transfer.isCanceling = true
+        // The core has the download cancelled now; a file moving into place
+        // ends with the move, as canceled, so the core and the folder agree.
+        guard !transfer.isMovingIn else { return }
         if let download = transfer.download {
             download.cancel { _ in }
         } else {
@@ -275,15 +281,27 @@ final class WebKitDownloads: NSObject {
             end(transfer, .failed, interruption: .fileAccess, detail: "The completed download has no destination.")
             return
         }
-        do {
-            let size = try? staging.resourceValues(forKeys: [.fileSizeKey]).fileSize.map(Int64.init)
-            try BrowserDownloadTransfer.finish(
-                from: staging, to: destination, quarantine: BrowserDownloadQuarantine(sourceURL: transfer.sourceURL))
-            transfer.received = size ?? transfer.received
-            transfer.total = max(transfer.total, transfer.received)
-            end(transfer, .finished)
-        } catch {
-            end(transfer, .failed, interruption: .fileAccess, detail: error.localizedDescription)
+        let size = try? staging.resourceValues(forKeys: [.fileSizeKey]).fileSize.map(Int64.init)
+        let quarantine = BrowserDownloadQuarantine(sourceURL: transfer.sourceURL)
+        transfer.isMovingIn = true
+        Task { @MainActor in
+            do {
+                let placed = try await BrowserDownloadTransfer.finish(
+                    from: staging, to: destination, quarantine: quarantine)
+                guard !transfer.isCanceling else {
+                    try? FileManager.default.removeItem(at: placed)
+                    return end(transfer, .canceled)
+                }
+                transfer.destination = placed
+                transfer.filename = placed.lastPathComponent
+                transfer.received = size ?? transfer.received
+                transfer.total = max(transfer.total, transfer.received)
+                end(transfer, .finished)
+            } catch  where transfer.isCanceling {
+                end(transfer, .canceled)
+            } catch {
+                end(transfer, .failed, interruption: .fileAccess, detail: error.localizedDescription)
+            }
         }
     }
 

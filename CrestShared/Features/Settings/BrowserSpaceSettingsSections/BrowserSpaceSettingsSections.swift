@@ -10,6 +10,8 @@ struct BrowserSpaceSettingsSections: View {
     let space: SpaceModel
     let spaceAccess: BrowserSpaceAccessController
     let dataDeleter: any BrowserSpaceDataDeleting
+    /// Where the Space's downloads go, for a shell that lets the person choose.
+    var downloads: BrowserSpaceDownloadSettings?
     var dismissKeyboard: @MainActor () -> Void = {}
 
     var body: some View {
@@ -26,6 +28,8 @@ struct BrowserSpaceSettingsSections: View {
             space: space,
             spaceAccess: spaceAccess
         )
+
+        if let downloads { BrowserSpaceDownloadsSection(settings: downloads) }
 
         BrowserSpaceDeletionSection(
             browser: browser,

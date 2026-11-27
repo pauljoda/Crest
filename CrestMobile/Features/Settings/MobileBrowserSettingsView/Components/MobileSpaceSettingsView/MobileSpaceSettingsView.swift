@@ -15,6 +15,7 @@ struct MobileSpaceSettingsView: View {
     @State private var forgeStep = BrowserCrestStudioStep.shape
     @State private var pendingGroupChange: BrowserSpaceGroupChange?
     @State private var pendingDeletion: BrowserSpaceDeletionRequest?
+    @State private var downloads = MobileSpaceDownloadSettingsModel()
 
     var body: some View {
         Group {
@@ -29,6 +30,9 @@ struct MobileSpaceSettingsView: View {
         .browserSpaceDeletionConfirmation(
             $pendingDeletion, browser: browser, spaceAccess: spaceAccess, dataDeleter: dataDeleter
         )
+        .task(id: editedSpaceID) {
+            if let editedSpaceID { downloads.refresh(for: editedSpaceID) }
+        }
         .fullScreenCover(item: $editingAppearanceSpace) { requested in
             NavigationStack {
                 appearanceWorkspace(for: requested)
@@ -151,6 +155,7 @@ struct MobileSpaceSettingsView: View {
             space: space,
             spaceAccess: spaceAccess,
             dataDeleter: dataDeleter,
+            downloads: downloads.settings(for: space),
             dismissKeyboard: dismissKeyboard)
     }
 

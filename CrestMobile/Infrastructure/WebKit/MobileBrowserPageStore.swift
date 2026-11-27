@@ -554,18 +554,18 @@ final class MobileBrowserPageStore:
         downloadCenter.clear(itemID)
     }
 
-    func exportDownload(
-        _ itemID: UUID,
-        to destination: MobileBrowserFileExportDestination
-    ) {
+    /// Hands the finished download `itemID` to `destination`: Quick Look,
+    /// the share sheet or the Files picker.
+    func openDownload(_ itemID: UUID, in destination: BrowserUtilityDownloadDestination) {
         guard let item = downloadCenter.item(itemID),
             item.phase.isComplete,
             let destinationURL = item.destinationURL
         else { return }
-        MobileBrowserDialogPresenter.exportDownloadedFile(
-            at: destinationURL,
-            to: destination
-        )
+        // A file saved in a folder the person chose reads only while that
+        // folder's access is open.
+        BrowserPlatformDownloadPreferences.shared.openDirectories(
+            for: browser.spaceModels.lazy.filter { $0.profileID == item.profileID }.map(\.id))
+        MobileBrowserDialogPresenter.openDownloadedFile(at: destinationURL, in: destination)
     }
 
     /// Opens a page for `tab` in `space` through the core and hosts what WebKit

@@ -53,11 +53,13 @@ struct BrowserNotice: Equatable, Hashable {
 
     // MARK: - Actions - Notices
 
-    /// What the window says once `filename` has finished downloading.
-    static func downloadFinished(_ filename: String) -> BrowserNotice {
+    /// What the window says once `filename` has finished downloading, with
+    /// an Open action where the platform has `open` for the file.
+    static func downloadFinished(_ filename: String, open: (@MainActor () -> Void)? = nil) -> BrowserNotice {
         BrowserNotice(
             message: String(localized: "Downloaded \(filename)"),
-            systemImage: downloadFinishedSymbol
+            systemImage: downloadFinishedSymbol,
+            action: open.map { BrowserNoticeAction(title: String(localized: "Open"), perform: $0) }
         )
     }
 

@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "ios-downloads-open-in-quick-look",
+      "category": "new",
+      "message": "On iPhone and iPad, tapping a finished download or the Open button on its notice opens it in Quick Look, or in the share sheet when Quick Look can't show the file, and its menu offers Share and Save to Files. Tapping a link to a PDF, a document or another file downloads it, and each Space can save its downloads in a folder you choose, such as Downloads in Files. Thanks to Chris (@advenimus).",
+      "platforms": ["ios"]
+    }
+  ]
+}

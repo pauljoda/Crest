@@ -55,6 +55,9 @@ final class MobileBrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored weak var historySwipe: MobileHistorySwipe?
     /// Documents the page committed and finished, which reveal its surface.
     var committedNavigationCount = 0
+    /// Whether the top-level navigation under way follows a link the person
+    /// tapped, which downloads a file instead of showing it.
+    @ObservationIgnored var mainFrameFollowsLinkTap = false
     private(set) var completedNavigationCount = 0
     var blockedPopupState = BrowserBlockedPopupPageState()
     var pendingServerTrustIdentity: BrowserServerTrustIdentity?

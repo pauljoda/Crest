@@ -9,6 +9,9 @@ final class BrowserDownloadNotices {
     private weak var access: BrowserSpaceAccessController?
     private var announcedDownloadIDs: Set<UUID> = []
     private let startedAt: Date
+    /// Opens a finished download where the platform shows files, which a
+    /// notice offers as Open; nil offers none.
+    var open: (@MainActor (DownloadState) -> Void)?
 
     // MARK: - Initializers
 
@@ -28,7 +31,16 @@ final class BrowserDownloadNotices {
         guard !matches.isEmpty, matches.allSatisfy({ !access.isLocked($0) }),
             announcedDownloadIDs.insert(download.id).inserted
         else { return }
-        BrowserNoticeCenter.shared.post(.downloadFinished(download.filename))
+        let opening = open.map { open in
+            { @MainActor [weak self] in
+                // A Space locked since the notice showed keeps its file.
+                guard let self, let access = self.access,
+                    self.spaces(for: download).allSatisfy({ !access.isLocked($0) })
+                else { return }
+                open(download)
+            }
+        }
+        BrowserNoticeCenter.shared.post(.downloadFinished(download.filename, open: opening))
     }
 
     /// Every non-private Space browsing with the download's profile.

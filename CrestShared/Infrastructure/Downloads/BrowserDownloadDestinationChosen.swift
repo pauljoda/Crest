@@ -20,13 +20,16 @@ struct BrowserDownloadDestinationChosen: BrowserPlatformDownloadResolution {
     }
 
     @MainActor func save(_ data: Data, as itemID: UUID, from originatingURL: URL, in center: BrowserDownloadCenter) {
-        let scoped = securityScopedURL?.startAccessingSecurityScopedResource() ?? false
-        defer { if scoped { securityScopedURL?.stopAccessingSecurityScopedResource() } }
-        do {
-            try center.saveDataToDestination(data, itemID: itemID, destination: url, originatingURL: originatingURL)
-            center.send(FinishDownload(downloadID: itemID, finalByteCount: Int64(data.count)))
-        } catch {
-            center.send(FailDownload(downloadID: itemID, reason: .fileAccess, message: error.localizedDescription))
+        Task { @MainActor in
+            let scoped = securityScopedURL?.startAccessingSecurityScopedResource() ?? false
+            defer { if scoped { securityScopedURL?.stopAccessingSecurityScopedResource() } }
+            do {
+                try await center.saveDataToDestination(
+                    data, itemID: itemID, destination: url, originatingURL: originatingURL)
+                center.send(FinishDownload(downloadID: itemID, finalByteCount: Int64(data.count)))
+            } catch {
+                center.send(FailDownload(downloadID: itemID, reason: .fileAccess, message: error.localizedDescription))
+            }
         }
     }
 }

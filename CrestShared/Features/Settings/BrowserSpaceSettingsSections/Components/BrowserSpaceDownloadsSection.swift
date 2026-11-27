@@ -9,27 +9,26 @@ import SwiftUI
 struct BrowserSpaceDownloadsSection: View {
     let settings: BrowserSpaceDownloadSettings
 
+    @Environment(\.browserInteractionCapabilities) private var capabilities
+
     var body: some View {
         Section("Downloads") {
-            Toggle(
-                "Ask where to save each download",
-                isOn: settings.asksWhereToSave
-            )
-            .accessibilityIdentifier("space-download-save-panel")
+            if let asksWhereToSave = settings.asksWhereToSave {
+                Toggle("Ask where to save each download", isOn: asksWhereToSave)
+                    .accessibilityIdentifier("space-download-save-panel")
+            }
 
             LabeledContent("Download location") {
                 Text(settings.directoryName)
                     .foregroundStyle(.secondary)
             }
 
-            HStack {
-                Button("Choose Folder…") {
-                    settings.chooseDirectory()
-                }
-                Button("Use Downloads") {
-                    settings.resetDirectory()
-                }
-                .disabled(!settings.usesCustomDirectory)
+            // A touch form row takes every tap in it, so each button keeps a
+            // row of its own there.
+            if capabilities.supportsTouch {
+                folderButtons
+            } else {
+                HStack { folderButtons }
             }
 
             if let errorMessage = settings.errorMessage {
@@ -41,5 +40,14 @@ struct BrowserSpaceDownloadsSection: View {
                 .foregroundStyle(CrestColor.danger)
             }
         }
+    }
+
+    @ViewBuilder
+    private var folderButtons: some View {
+        Button("Choose Folder…") { settings.chooseDirectory() }
+            .accessibilityIdentifier("space-download-choose-folder")
+        Button(settings.resetTitle) { settings.resetDirectory() }
+            .disabled(!settings.usesCustomDirectory)
+            .accessibilityIdentifier("space-download-reset-folder")
     }
 }

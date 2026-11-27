@@ -253,7 +253,7 @@ final class BrowserDownloadCenter: NSObject {
     /// the quarantine of the page it came from.
     func saveDataToDestination(
         _ data: Data, itemID: UUID, destination: URL, originatingURL: URL
-    ) throws {
+    ) async throws {
         let fileManager = FileManager.default
         let applicationSupport = try fileManager.url(
             for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
@@ -268,8 +268,15 @@ final class BrowserDownloadCenter: NSObject {
         defer { try? fileManager.removeItem(at: staging) }
         setDestination(destination, for: itemID)
         try data.write(to: staging, options: .atomic)
-        try BrowserDownloadTransfer.finish(
+        let placed = try await BrowserDownloadTransfer.finish(
             from: staging, to: destination, quarantine: BrowserDownloadQuarantine(sourceURL: originatingURL))
+        // The core cancelled the save while its file moved in, so the file
+        // goes too.
+        guard item(itemID)?.phase.isLive ?? false else {
+            try? fileManager.removeItem(at: placed)
+            throw CancellationError()
+        }
+        if placed != destination { setDestination(placed, for: itemID) }
     }
 
     // MARK: - Actions - Feedback
