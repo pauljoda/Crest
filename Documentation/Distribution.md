@@ -36,7 +36,7 @@ release before signing.
 | --- | --- | --- | --- |
 | Stable | Push an exact `v<marketing-version>` tag | `v<version>`, Latest, non-prerelease | Default |
 | Nightly | Daily schedule or manual dispatch, only when the source commit changes | New `nightly-<version>-<date>-<build>-r<run>.<attempt>` prerelease | `nightly` |
-| Development | PR merged into `main`, or manual workflow dispatch | New `development-<version>-<date>-<build>-r<run>.<attempt>` prerelease | `development` |
+| Development | The push to `main` that merges a PR, or manual workflow dispatch | New `development-<version>-<date>-<build>-r<run>.<attempt>` prerelease | `development` |
 | Experimental | Manual dispatch of **Publish experimental macOS release** for a branch | New `experimental-<version>-<branch>-<date>-<build>-r<run>.<attempt>` prerelease | `experimental` |
 
 Browse [Stable](https://github.com/crest-browser/Crest/releases?q=prerelease%3Afalse),
@@ -52,11 +52,16 @@ Only stable releases receive GitHub's Latest designation. Manual dispatch of
 **Publish macOS release** offers development and nightly; stable publication
 requires a tag push. Experimental builds test a branch before it reaches `main`.
 
-**Publish macOS release** also runs when a PR is merged into `main`, including
-PRs from forks, and publishes Development from the merge commit. Closing an
-unmerged PR does nothing. It never checks out the PR's own code: it builds the
-merge commit on `main` with the existing `production` environment and
-serialized publication queue. A direct push to `main` publishes nothing.
+**Publish macOS release** also runs on pushes to `main`, and publishes
+Development when the pushed commit is the merge commit of a PR merged into
+`main`, including PRs from forks. The preflight looks the PR up from the
+commit, or from the `(#N)` GitHub adds to a merge's subject when that lookup
+lags, and requires the PR's merge commit to be the pushed commit. It never
+checks out the PR's own code: it builds the merge commit with `main`'s own
+workflow, the existing `production` environment and the serialized publication
+queue. A direct push to `main`, a commit pushed from a clone rather than made by
+GitHub, publishes nothing and stays out of the queue. The release never uses
+`pull_request_target`, which GitHub blocks in public repositories.
 
 A build's marketing version is its commit's version, which
 `Scripts/crest_version.py` computes from git: the anchor version in
@@ -299,7 +304,7 @@ built from; the product site then lists it under App Store.
 Nightly, development, and experimental builds use the same signing,
 notarization, and verification gates as a stable build. Each prerelease retains
 its own asset set after the signed appcast has advanced. Development
-publication keeps only the latest queued public commit when dispatches arrive
+publication keeps only the latest queued public commit when merges arrive
 faster than Apple notarization. Stable, nightly, and development builds default
 to their own channel, and experimental builds default to Development. An
 existing user choice remains authoritative.

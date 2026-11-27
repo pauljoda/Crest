@@ -22,8 +22,8 @@ concurrency:
 
 jobs:
   build:
-    # A skipped release, such as a closed pull request that never merged,
-    # pushed nothing. A failed or cancelled one may have, and publishing the
+    # A skipped release, such as the run for a direct push to main, pushed
+    # nothing. A failed or cancelled one may have, and publishing the
     # branch again is harmless.
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion != 'skipped'
     runs-on: ubuntu-latest

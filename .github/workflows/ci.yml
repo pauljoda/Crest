@@ -34,10 +34,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_sha || github.sha }}
-          # The release calls this workflow for a merged PR. A fork PR's merge
-          # commit is already on main, but checkout refuses it under
-          # pull_request_target unless the step opts in.
-          allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
 
       - name: Check the publishable source and dependency licenses
         run: |
@@ -74,7 +70,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_sha || github.sha }}
-          allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
 
       - name: Install the repository shell
         run: |
@@ -92,7 +87,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_sha || github.sha }}
-          allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
 
       - name: Install the repository shell
         run: |
@@ -129,7 +123,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_sha || github.sha }}
-          allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
           fetch-depth: 2
 
       - name: Decide which apps the change can affect
@@ -176,7 +169,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_sha || github.sha }}
-          allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
 
       - uses: ./.github/actions/prepare-apple-build
 
@@ -218,7 +210,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_sha || github.sha }}
-          allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
 
       - uses: ./.github/actions/prepare-apple-build
 
@@ -252,7 +243,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_sha || github.sha }}
-          allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
 
       - uses: ./.github/actions/prepare-apple-build
 
@@ -288,7 +278,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_sha || github.sha }}
-          allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:

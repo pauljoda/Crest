@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import pathlib
 import re
@@ -71,6 +72,10 @@ class ReleasePreflightTests(unittest.TestCase):
             "arguments = sys.argv[1:]\n"
             "with open(os.environ['TEST_GITHUB_LOG'], 'a') as log:\n"
             "    log.write(json.dumps(arguments) + '\\n')\n"
+            "responses = json.loads(os.environ.get('TEST_GITHUB_RESPONSES', '{}'))\n"
+            "if arguments[0] == 'api' and arguments[-1] in responses:\n"
+            "    print(json.dumps(responses[arguments[-1]]))\n"
+            "    sys.exit(0)\n"
             "if arguments[0] == 'api' and 'releases?per_page=100' in arguments[-1]:\n"
             "    prereleases = [{'tag_name': 'nightly-old', 'draft': False, 'prerelease': True}] * 100\n"
             "    stable = [{'tag_name': 'v0.5.24', 'draft': False, 'prerelease': False}]\n"
@@ -138,10 +143,9 @@ class ReleasePreflightTests(unittest.TestCase):
         outputs = dict(line.split("=", 1) for line in output_path.read_text().splitlines()) if output_path.exists() else {}
         return result, outputs
 
-    def test_stable_dispatch_branch_push_and_mismatched_tags_are_rejected(self) -> None:
+    def test_stable_dispatch_and_mismatched_tags_are_rejected(self) -> None:
         scenarios = (
             {"GITHUB_EVENT_NAME": "workflow_dispatch", "REQUESTED_CHANNEL": "stable", "GITHUB_REF_TYPE": "tag", "GITHUB_REF_NAME": "v0.5.25"},
-            {"GITHUB_EVENT_NAME": "push"},
             {"GITHUB_EVENT_NAME": "push", "GITHUB_REF_TYPE": "tag", "GITHUB_REF_NAME": "v0.5.24"},
         )
         for environment in scenarios:
@@ -149,6 +153,66 @@ class ReleasePreflightTests(unittest.TestCase):
                 result, outputs = self.preflight(**environment)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(outputs, {})
+
+    def test_the_release_never_runs_for_a_pull_request_event(self) -> None:
+        # The release holds the signing secrets, so it runs only for pushes to
+        # main and its tags, the schedule, and dispatch, and checks out only
+        # the commit its event names.
+        workflow = WORKFLOW.read_text()
+        triggers = re.search(r"(?ms)^on:\n(.*?)^\S", workflow).group(1)
+        self.assertEqual(set(re.findall(r"(?m)^  ([a-z_]+):", triggers)), {"push", "schedule", "workflow_dispatch"})
+        push = triggers.split("  push:\n", 1)[1].split("\n  schedule:", 1)[0]
+        self.assertIn("    branches: [main]", push)
+        self.assertIn('      - "v*.*.*"', push)
+        self.assertNotIn("allow-unsafe-pr-checkout", workflow)
+
+    def test_a_push_to_main_publishes_development_only_as_a_pull_requests_merge_commit(self) -> None:
+        def merged(number: int, merge_commit: str, base: str = "main") -> dict[str, object]:
+            return {"number": number, "merged_at": "2026-11-27T22:48:12Z", "base": {"ref": base},
+                    "merge_commit_sha": merge_commit}
+
+        def push(responses: dict[str, object]) -> tuple[subprocess.CompletedProcess[str], dict[str, str]]:
+            return self.preflight(GITHUB_EVENT_NAME="push", TEST_GITHUB_RESPONSES=json.dumps(responses))
+
+        listed = f"repos/crest-browser/Crest/commits/{self.current_commit}/pulls"
+        result, outputs = push({listed: [merged(1415, self.current_commit)]})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            (outputs["channel"], outputs["should_publish"], outputs["source_sha"], outputs["marketing_version"]),
+            ("development", "true", self.current_commit, "0.5.26"),
+        )
+        self.assertIn("the merge commit of #1415", (self.root / "summary").read_text())
+
+        # A direct push, a pull request merged with another commit or into
+        # another branch, and one still open publish nothing, without failing.
+        for pull_requests in (
+            [],
+            [merged(1404, self.previous_commit)],
+            [merged(1415, self.current_commit, base="release")],
+            [merged(1415, self.current_commit) | {"merged_at": None}],
+        ):
+            with self.subTest(pull_requests=pull_requests):
+                result, outputs = push({listed: pull_requests})
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("publishes nothing", result.stdout)
+                self.assertEqual(outputs, {"should_publish": "false"})
+
+        # When GitHub's list lags behind the push, the subject GitHub gives a
+        # squash or a merge names the pull request, which must still be merged
+        # as this commit.
+        for subject in ("Walk background tabs (#1415)", "Merge pull request #1415 from crest-browser/close-tab"):
+            with self.subTest(subject=subject):
+                self.git("commit", "--allow-empty", "-m", subject)
+                commit = self.git("rev-parse", "HEAD")
+                lagging = {f"repos/crest-browser/Crest/commits/{commit}/pulls": []}
+                named = "repos/crest-browser/Crest/pulls/1415"
+                named_merge, named_outputs = push(lagging | {named: merged(1415, commit)})
+                other_merge, other_outputs = push(lagging | {named: merged(1415, self.current_commit)})
+                self.git("reset", "--hard", self.current_commit)
+                self.assertEqual(named_merge.returncode, 0, named_merge.stderr)
+                self.assertEqual((named_outputs["channel"], named_outputs["source_sha"]), ("development", commit))
+                self.assertEqual(other_merge.returncode, 0, other_merge.stderr)
+                self.assertEqual(other_outputs, {"should_publish": "false"})
 
     def test_stable_tag_must_name_the_version_git_gives_its_commit_on_main(self) -> None:
         stable = {"GITHUB_EVENT_NAME": "push", "GITHUB_REF_TYPE": "tag"}

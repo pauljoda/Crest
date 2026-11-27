@@ -4,11 +4,11 @@ on:
   push:
     tags:
       - "v*.*.*"
-  # A PR merged into main publishes Development from the merge commit, never
-  # from the PR's own code; closing an unmerged PR does nothing.
-  pull_request_target:
+    # A push to main publishes Development only when the pushed commit is the
+    # merge commit of a pull request merged into main, and builds that commit
+    # with main's own workflow, never the pull request's code. GitHub blocks
+    # pull_request_target in public repositories, so the release never uses it.
     branches: [main]
-    types: [closed]
   schedule:
     - cron: "15 8 * * *"
   workflow_dispatch:
@@ -29,15 +29,16 @@ permissions:
   artifact-metadata: write
 
 concurrency:
-  # A PR closed without merging publishes nothing, so it stays out of the
-  # queue instead of replacing a publication waiting there.
-  group: ${{ github.event_name == 'pull_request_target' && !github.event.pull_request.merged && format('crest-unmerged-pr-{0}', github.run_id) || 'crest-macos-release' }}
+  # GitHub commits every pull request merge it makes. A commit pushed to main
+  # from a clone is a direct push, which publishes nothing, so it stays out of
+  # the queue instead of replacing a publication waiting there.
+  group: ${{ github.event_name == 'push' && github.ref_type == 'branch' && github.event.head_commit.committer.email != 'noreply@github.com' && format('crest-direct-push-{0}', github.run_id) || 'crest-macos-release' }}
   cancel-in-progress: false
 
 jobs:
   preflight:
     name: Resolve publication
-    if: github.event_name != 'pull_request_target' || github.event.pull_request.merged
+    if: github.event_name != 'push' || github.ref_type == 'tag' || github.event.head_commit.committer.email == 'noreply@github.com'
     runs-on: ubuntu-latest
     outputs:
       asset_base: ${{ steps.release.outputs.asset_base }}
@@ -53,11 +54,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Empty except for a merged PR, whose event commit is not main's.
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
-          # checkout refuses a fork PR's merge commit under pull_request_target.
-          # Only a merged PR gets here, and its merge commit is already on main.
-          allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
           fetch-depth: 0
 
       - name: Resolve release identity and previous publication
@@ -94,17 +90,41 @@ jobs:
           release_date="$(date -u +%Y-%m-%d)"
           source_sha="$(git rev-parse HEAD)"
           short_sha="$(git rev-parse --short=7 "$source_sha")"
-          retry_github git fetch origin updates
-          # Reruns and delayed runs must also outrank completed publications.
-          build_number="$(
-            python3 Scripts/next-release-build-number.py \
-              --git-ref FETCH_HEAD \
-              --minimum "$build_number"
-          )"
 
-          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF_TYPE" == "tag" ]]; then
             channel=stable
-          elif [[ "$GITHUB_EVENT_NAME" == "pull_request_target" ]]; then
+          elif [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            # A push to main publishes Development only as the merge commit of
+            # a pull request merged into main. GitHub lists the pull request
+            # that brought a commit to main; when that list lags, the subject
+            # GitHub gives a merge, "Title (#N)" or "Merge pull request #N
+            # from ...", names it.
+            fetch_pull_requests() {
+              gh api "repos/${GITHUB_REPOSITORY}/$1" > "$2"
+            }
+            merge_of_source='[.[] | select(.merged_at != null and .base.ref == "main" and .merge_commit_sha == $sha)][0].number // empty'
+            pull_requests="$RUNNER_TEMP/crest-source-pull-requests.json"
+            retry_github fetch_pull_requests "commits/${source_sha}/pulls" "$pull_requests"
+            pull_request="$(jq -r --arg sha "$source_sha" "$merge_of_source" "$pull_requests")"
+            subject="$(git log -1 --format=%s "$source_sha")"
+            squash_subject='\(#([0-9]+)\)$'
+            merge_subject='^Merge pull request #([0-9]+) from '
+            if [[ -z "$pull_request" ]] \
+                && [[ "$subject" =~ $squash_subject || "$subject" =~ $merge_subject ]]; then
+              named_pull_request="${BASH_REMATCH[1]}"
+              if retry_github fetch_pull_requests "pulls/${named_pull_request}" "$pull_requests"; then
+                pull_request="$(jq -rs --arg sha "$source_sha" "$merge_of_source" "$pull_requests")"
+              fi
+            fi
+            if [[ -z "$pull_request" ]]; then
+              message="${short_sha} is not the merge commit of a pull request merged into main, so it publishes nothing."
+              printf '::warning::%s\n' "$message"
+              printf '%s\n' "$message" >> "$GITHUB_STEP_SUMMARY"
+              printf 'should_publish=false\n' >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            printf 'Development publishes %s, the merge commit of #%s.\n' \
+              "$short_sha" "$pull_request" >> "$GITHUB_STEP_SUMMARY"
             channel=development
           elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             channel="$REQUESTED_CHANNEL"
@@ -115,6 +135,14 @@ jobs:
           else
             channel=nightly
           fi
+
+          retry_github git fetch origin updates
+          # Reruns and delayed runs must also outrank completed publications.
+          build_number="$(
+            python3 Scripts/next-release-build-number.py \
+              --git-ref FETCH_HEAD \
+              --minimum "$build_number"
+          )"
 
           # The version comes from git: the anchor in Config/Version.xcconfig
           # plus the commits on main since it (Scripts/crest_version.py). A
@@ -270,8 +298,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
-          allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
           fetch-depth: 0
 
       - name: Ensure build tools are available
