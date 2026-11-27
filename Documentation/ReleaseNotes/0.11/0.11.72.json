@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "id": "recent-tab-switcher-close-highlighted-tab",
+      "category": "new",
+      "platforms": [
+        "mac"
+      ],
+      "message": "While you hold Control-Tab, Control-W closes the highlighted tab and the next one takes its place. A page that asks before you leave keeps its tab if you stay, and saved and pinned tabs keep their place. Thanks to Tim (@timh1004)."
+    }
+  ]
+}
