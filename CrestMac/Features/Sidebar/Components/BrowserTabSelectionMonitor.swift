@@ -174,9 +174,6 @@ struct BrowserTabSelectionMonitor: View {
             guard let window,
                 let id = sidebarInteraction.sidebarReorderState.selectionItem(
                     at: globalPoint, in: assignment)
-                    ?? BrowserTabSelectionTargets.shared.item(
-                        at: globalPoint, browser: browser, assignment: assignment,
-                        visibleFrame: sidebarInteraction.sidebarReorderState.scrollRegionFrame(for:))
             else {
                 selection.clear()
                 return event

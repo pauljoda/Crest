@@ -36,8 +36,7 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                     }
                     .sidebarScrollContent()
                     .padding(.bottom, CrestSpacing.small)
-                    .frame(maxWidth: .infinity, minHeight: geometry.size.height, alignment: .top)
-                    .background {
+                    .sidebarRemainderBackground(viewportHeight: geometry.size.height) {
                         Color.clear
                             .contentShape(.rect)
                             .modifier(

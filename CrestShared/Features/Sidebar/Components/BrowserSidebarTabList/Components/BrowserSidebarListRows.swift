@@ -668,6 +668,7 @@ private struct BrowserSidebarRecycledTabSlot: View, @MainActor Equatable {
         if case .tab(let tab) = item.content {
             BrowserSidebarTabRow(tab: tab, context: context)
                 .equatable()
+                .environment(\.sidebarRecycledRowOffset, baseY)
                 .modifier(BrowserSidebarFolderRowIndent(depth: item.depth))
                 .environment(\.sidebarLayerDepth, item.depth)
                 .offset(y: dragShift)
@@ -681,4 +682,11 @@ private struct BrowserSidebarRecycledTabSlot: View, @MainActor Equatable {
                 .offset(y: baseY)
         }
     }
+}
+
+extension EnvironmentValues {
+    /// Where in its recycled run the view showing a row sits, or nil for a row
+    /// the list makes for its tab alone. A row tells from it whether it moved
+    /// or another tab took its place under a pointer that has not moved.
+    @Entry var sidebarRecycledRowOffset: CGFloat? = nil
 }

@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-empty-space-below-list-only",
+      "category": "fixed",
+      "message": "Only the empty space below the tab list acts as the sidebar's background again. The line between saved and current tabs and the gaps between sections no longer move the window, show the Space menu, or open a new tab with a double-click."
+    }
+  ]
+}
