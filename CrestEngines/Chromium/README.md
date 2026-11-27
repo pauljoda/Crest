@@ -304,7 +304,9 @@ installed, so the Dock keeps the icon the person picked.
 Site state reaches Crest through the location bar Chromium already calls.
 `CrestLocationBar::UpdateContentSettingsIcons` forwards to
 `crest::UpdateSiteIndicators`, which relays a pop-up the engine's blocker held
-back to Crest's Site Controls. Crest's per-Space permission record stays the
+back to Crest's Site Controls. On Windows every page a Crest window shows
+lives in its Browser, and the page Crest shows need not be the tab Chromium
+calls active, so the location bar has each page check its own state. Crest's per-Space permission record stays the
 source of truth: each committed page applies its automatic-pop-up decision to
 the engine, and allowing a blocked site opens the pop-ups the blocker kept.
 Chromium's confirm info bars, such as tab sharing and `chrome.debugger`, have no Views
@@ -654,7 +656,27 @@ It refuses to publish unless the checkout holds this branch's patch output,
 overlay, and contract headers, uses the pinned performance configuration, and
 the build has nothing left to do. It uploads the zipped `Chromium.app`, checksum,
 and provenance into a draft, then publishes `chromium-engine-<key>` only when all
-uploads succeed. Published artifacts are never overwritten. The release
+uploads succeed. Published artifacts are never overwritten.
+
+The Windows engine has its own key, over the same inputs and
+`Hosts/win-x64.json`, so a change to a common input needs it published too.
+Publish it from the Windows build machine, from a performance build of
+`out/CrestBaseline`:
+
+```
+py -3 Scripts/control-plane/configure-chromium.py --source <chromium src> --configuration performance
+py -3 Scripts/control-plane/build-chromium-baseline.py --source <chromium src>
+py -3 Scripts/control-plane/publish-chromium-engine.py --source <chromium src> --ninja <chromium src>/third_party/ninja/ninja.exe
+```
+
+It makes the same checks, with the output holding exactly the lock's and the
+host's performance arguments, then zips the runtime files Crest's Windows
+Setup installs (`Scripts/package-windows.py` picks them by Chromium's
+installer list) in a `Chromium` folder and publishes
+`chromium-engine-win-x64-<key>`, which `windows-release.yml` downloads. Only
+the Mac's scheduled updates leave `--candidate` drafts.
+
+The release
 workflows download the engine matching their commit, build the native
 core and `CrestChromiumUIProduct`, and packages the product with
 `package-chromium-host.py --product --distribution`: every executable, library

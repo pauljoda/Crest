@@ -1,6 +1,10 @@
 #include "chrome/browser/ui/crest/crest_engine_screen_sharing.h"
 
+#include "build/build_config.h"
+
+#if BUILDFLAG(IS_MAC)
 #include <CoreGraphics/CoreGraphics.h>
+#endif
 
 #include <algorithm>
 #include <map>
@@ -326,10 +330,16 @@ bool AnswerShareChoice(const engine::ChooseShareSource& choice) {
 }
 
 bool SharesScreenThroughSystem(const content::MediaStreamRequest& request) {
+#if BUILDFLAG(IS_MAC)
   return IsEnabled() &&
          (request.video_type == blink::mojom::MediaStreamType::DISPLAY_VIDEO_CAPTURE ||
           request.video_type == blink::mojom::MediaStreamType::DISPLAY_VIDEO_CAPTURE_THIS_TAB) &&
          base::FeatureList::IsEnabled(media::kUseSCContentSharingPicker);
+#else
+  // Only macOS has a system picker for windows and displays; elsewhere
+  // Chromium's own picker shows.
+  return false;
+#endif
 }
 
 std::unique_ptr<DesktopMediaPicker> CreateScreenSharingPicker(const content::MediaStreamRequest& request) {
@@ -503,6 +513,10 @@ bool AllowsScreenCapture(content::WebContents* contents, const content::DesktopM
   if (!needs_access) {
     return true;
   }
+#if !BUILDFLAG(IS_MAC)
+  // Only macOS asks a person to allow an app to record the screen.
+  return true;
+#else
   static bool asked = false;
   static bool missing = false;
   if (missing) {
@@ -522,6 +536,7 @@ bool AllowsScreenCapture(content::WebContents* contents, const content::DesktopM
     EngineBinding::Get().Present(engine::ScreenCaptureAccessMissing{.page_id = page->id()});
   }
   return false;
+#endif
 }
 
 }  // namespace crest

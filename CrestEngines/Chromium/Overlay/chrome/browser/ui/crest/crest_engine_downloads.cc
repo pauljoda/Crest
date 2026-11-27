@@ -295,7 +295,7 @@ bool EngineDownloads::Settle(const engine::SettleDownloadDestination& answer) {
   }
   std::move(destination.callback)
       .Run(DownloadConfirmationResult::CONTINUE_WITHOUT_CONFIRMATION,
-           ui::SelectedFileInfo(base::FilePath(*answer.path)));
+           ui::SelectedFileInfo(base::FilePath::FromUTF8Unsafe(*answer.path)));
   return true;
 }
 

@@ -1,0 +1,56 @@
+name: Prepare Windows Chromium engine
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        type: boolean
+        description: Publish the verified engine for Windows packaging
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  engine:
+    # The persistent builder only executes reviewed code from the default branch.
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: [self-hosted, Windows, X64, crest-chromium-windows]
+    timeout-minutes: 1440
+    permissions:
+      contents: write
+    concurrency:
+      group: crest-chromium-windows-engine
+      cancel-in-progress: false
+    env:
+      PYTHONUTF8: "1"
+      JOBS: ${{ vars.CHROMIUM_BUILD_JOBS || '8' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Prepare pinned sources
+        shell: pwsh
+        run: |
+          if (-not $env:CREST_CHROMIUM_WORKSPACE) { throw "Set CREST_CHROMIUM_WORKSPACE on the builder" }
+          $key = py -3 Scripts/control-plane/chromium_engine.py key --host win-x64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $source = Join-Path $env:CREST_CHROMIUM_WORKSPACE "$($key.Substring(0,16))/src"
+          if (-not (Test-Path $source)) {
+            py -3 Scripts/control-plane/prepare-chromium.py --source $source --downloads "$env:CREST_CHROMIUM_WORKSPACE/downloads"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          "ENGINE_SOURCE=$source" >> $env:GITHUB_ENV
+          py -3 Scripts/control-plane/apply-chromium-host.py --source $source --apply
+      - name: Configure performance build
+        run: py -3 Scripts/control-plane/configure-chromium.py --source $env:ENGINE_SOURCE --configuration performance
+      - name: Build Chromium
+        run: py -3 Scripts/control-plane/build-chromium-baseline.py --source $env:ENGINE_SOURCE --jobs $env:JOBS
+      - name: Verify and package engine
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          $options = @()
+          if ($env:PUBLISH -ne 'true') { $options += '--dry-run' }
+          py -3 Scripts/control-plane/publish-chromium-engine.py --source $env:ENGINE_SOURCE --host win-x64 --ninja "$env:ENGINE_SOURCE/third_party/ninja/ninja.exe" --repository $env:GITHUB_REPOSITORY @options

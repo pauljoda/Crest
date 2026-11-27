@@ -31,6 +31,12 @@ CrestCore/**/obj/
 CrestCore/artifacts/
 CrestCore/native/ContentFilter/target/
 
+# Desktop interface and development bridge products
+CrestDesktop/ui/**/node_modules/
+CrestDesktop/ui/**/dist/
+CrestDesktop/devhost/bin/
+CrestDesktop/devhost/obj/
+
 # Local environment files
 .env
 .env.*

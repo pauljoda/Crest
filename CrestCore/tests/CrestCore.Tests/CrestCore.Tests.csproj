@@ -21,7 +21,7 @@
       <CrestContentFilterPathFile>$(IntermediateOutputPath)content-filter.path</CrestContentFilterPathFile>
     </PropertyGroup>
     <MakeDir Directories="$(IntermediateOutputPath)" />
-    <Exec Command="python3 &quot;$(MSBuildThisFileDirectory)../../../Scripts/control-plane/fetch-content-filter.py&quot; --runtime host &gt; &quot;$(CrestContentFilterPathFile)&quot;"
+    <Exec Command="$(CrestPython) &quot;$(MSBuildThisFileDirectory)../../../Scripts/control-plane/fetch-content-filter.py&quot; --runtime host &gt; &quot;$(CrestContentFilterPathFile)&quot;"
         IgnoreStandardErrorWarningFormat="true" />
     <ReadLinesFromFile File="$(CrestContentFilterPathFile)">
       <Output TaskParameter="Lines" PropertyName="CrestContentFilterLibraryPath" />

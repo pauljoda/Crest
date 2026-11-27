@@ -1,0 +1,131 @@
+name: Publish Windows release
+
+# The opt-in Development release publishes Setup beside the Mac build and adds
+# its Ed25519 signature to the Windows Development feed on the updates branch.
+on:
+  workflow_call:
+    inputs:
+      source_sha:
+        required: true
+        type: string
+      build_number:
+        required: true
+        type: string
+      marketing_version:
+        required: true
+        type: string
+      release_tag:
+        required: true
+        type: string
+      asset_base:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+jobs:
+  package:
+    name: Package and publish for Windows
+    runs-on: windows-2025
+    timeout-minutes: 90
+    environment: production
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source_sha }}
+          allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
+          fetch-depth: 0
+
+      - uses: ./.github/actions/package-windows
+        with:
+          asset_base: ${{ inputs.asset_base }}
+          build_number: ${{ inputs.build_number }}
+          certificate: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_BASE64 }}
+          certificate_password: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_PASSWORD }}
+
+      - name: Attest Setup
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ runner.temp }}/crest-windows/out/Installer-${{ inputs.asset_base }}-windows-x64.exe
+
+      - name: Upload Setup to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ASSET_BASE: ${{ inputs.asset_base }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          out="$(cygpath -u "$RUNNER_TEMP")/crest-windows/out"
+          gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --clobber \
+            "$out/Installer-${RELEASE_ASSET_BASE}-windows-x64.exe" \
+            "$out/Checksum-${RELEASE_ASSET_BASE}-windows-x64.exe.sha256"
+
+      - name: Publish the signed Windows feed
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ASSET_BASE: ${{ inputs.asset_base }}
+          RELEASE_BUILD_NUMBER: ${{ inputs.build_number }}
+          RELEASE_CHANNEL: development
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_VERSION: ${{ inputs.marketing_version }}
+          SPARKLE_EDDSA_PRIVATE_KEY: ${{ secrets.SPARKLE_EDDSA_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          retry_github() {
+            local attempt delay=2
+            for attempt in 1 2 3 4 5 6; do
+              if "$@"; then return 0; fi
+              [[ "$attempt" == 6 ]] && return 1
+              echo "GitHub request failed; retrying in ${delay} seconds." >&2
+              sleep "$delay"
+              delay=$((delay * 2))
+            done
+          }
+          installer_name="Installer-${RELEASE_ASSET_BASE}-windows-x64.exe"
+          installer="$(cygpath -u "$RUNNER_TEMP")/crest-windows/out/$installer_name"
+          feed=appcast-development-windows.xml
+          updates="$(cygpath -u "$RUNNER_TEMP")/crest-windows/updates"
+          git init --initial-branch=updates "$updates"
+          git -C "$updates" remote add origin "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          authorization_header="$(git config --get "http.${GITHUB_SERVER_URL}/.extraheader")"
+          git -C "$updates" config "http.${GITHUB_SERVER_URL}/.extraheader" "$authorization_header"
+          unset authorization_header
+          git -C "$updates" config user.name "github-actions[bot]"
+          git -C "$updates" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          publish() {
+            retry_github git -C "$updates" fetch --depth=1 origin updates || return 1
+            git -C "$updates" checkout -B updates FETCH_HEAD || return 1
+            printf '%s' "$SPARKLE_EDDSA_PRIVATE_KEY" | python Scripts/windows_update_feed.py publish "$installer" \
+              --key-file - \
+              --feed "$updates/$feed" \
+              --output "$updates/$feed" \
+              --version "$RELEASE_VERSION" \
+              --build "$RELEASE_BUILD_NUMBER" \
+              --channel "$RELEASE_CHANNEL" \
+              --url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${installer_name}" \
+              --release-notes-url "https://github.com/${GITHUB_REPOSITORY}/releases/tag/${RELEASE_TAG}" \
+              --maximum-versions 1 || return 1
+            git -C "$updates" add "$feed" || return 1
+            if git -C "$updates" diff --cached --quiet; then return 0; fi
+            git -C "$updates" commit -m "chore(updates): publish ${RELEASE_TAG} for Windows" || return 1
+            git -C "$updates" push origin HEAD:updates
+          }
+          # Another publication may have moved the branch meanwhile.
+          for attempt in 1 2 3; do
+            if publish; then exit 0; fi
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Remove generated release data
+        if: always()
+        shell: bash
+        run: rm -rf "$(cygpath -u "$RUNNER_TEMP")/crest-windows"

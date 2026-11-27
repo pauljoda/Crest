@@ -127,10 +127,13 @@ public sealed class ShortcutCommand {
         ShortcutSection.Everyday, title: "Open Location", symbol: "magnifyingglass",
         shortcuts: Everywhere(Character("l", Command)), searchTerms: "change current tab url address focus", offersInPalette: false,
         whenPageUsesKeys: ShortcutPreference.UseBoth);
+    // Windows goes back and forward with Alt and an arrow, as its browsers do.
     public static readonly ShortcutCommand Back = new(Kinds.Back, name: "back", ShortcutSection.Everyday, title: "Back",
-        symbol: "chevron.left", shortcuts: Everywhere(Character("[", Command)));
+        symbol: "chevron.left",
+        shortcuts: ElseOnWindows(Character("[", Command), Special(ShortcutSpecialKey.LeftArrow, Option)));
     public static readonly ShortcutCommand Forward = new(Kinds.Forward, name: "forward", ShortcutSection.Everyday,
-        title: "Forward", symbol: "chevron.right", shortcuts: Everywhere(Character("]", Command)));
+        title: "Forward", symbol: "chevron.right",
+        shortcuts: ElseOnWindows(Character("]", Command), Special(ShortcutSpecialKey.RightArrow, Option)));
     public static readonly ShortcutCommand ReloadPage = new(Kinds.ReloadPage, name: "reloadPage", ShortcutSection.Everyday,
         title: "Reload Page", symbol: "arrow.clockwise", shortcuts: Everywhere(Character("r", Command)), availableWhen: ShowingWebPage);
     public static readonly ShortcutCommand StopLoading = new(Kinds.StopLoading, name: "stopLoading", ShortcutSection.Everyday,
@@ -159,24 +162,32 @@ public sealed class ShortcutCommand {
         title: "Archive Tab", symbol: "archivebox",
         shortcuts: [
             new(DevicePlatform.Desktop, Character("e", Command | Shift), YieldsToOverrides: true),
-            new(DevicePlatform.Mobile, Character("e", Command), YieldsToOverrides: false)
+            new(DevicePlatform.Mobile, Character("e", Command), YieldsToOverrides: false),
+            new(DevicePlatform.Windows, Character("e", Command | Shift), YieldsToOverrides: false)
         ],
         availableWhen: facts => facts.ShownTab is { IsStartPage: false } shown && !shown.Placement.IsDurable);
+    // Windows' browsers move between tabs with Ctrl+PgUp and Ctrl+PgDn.
     public static readonly ShortcutCommand PreviousTab = new(Kinds.PreviousTab, name: "previousTab", ShortcutSection.Tabs,
-        title: "Previous Tab", symbol: "chevron.up", shortcuts: Everywhere(Special(ShortcutSpecialKey.UpArrow, Command | Option)),
+        title: "Previous Tab", symbol: "chevron.up",
+        shortcuts: ElseOnWindows(Special(ShortcutSpecialKey.UpArrow, Command | Option), Special(ShortcutSpecialKey.PageUp, Command)),
         searchTerms: "switch cycle tabs up down arrow", reservedFromPages: true);
     public static readonly ShortcutCommand NextTab = new(Kinds.NextTab, name: "nextTab", ShortcutSection.Tabs,
-        title: "Next Tab", symbol: "chevron.down", shortcuts: Everywhere(Special(ShortcutSpecialKey.DownArrow, Command | Option)),
+        title: "Next Tab", symbol: "chevron.down",
+        shortcuts: ElseOnWindows(Special(ShortcutSpecialKey.DownArrow, Command | Option), Special(ShortcutSpecialKey.PageDown, Command)),
         searchTerms: "switch cycle tabs up down arrow", reservedFromPages: true);
+    // The Mac's ⌃Tab is Ctrl+Tab on Windows, whose Windows key and Tab is the system's.
     public static readonly ShortcutCommand MostRecentTab = new(Kinds.MostRecentTab, name: "mostRecentTab",
         ShortcutSection.Tabs, title: "Most Recent Tab", symbol: "arrow.left.arrow.right",
-        shortcuts: Everywhere(Special(ShortcutSpecialKey.Tab, Control)), searchTerms: "toggle recent switch tabs",
-        reservedFromPages: true);
+        shortcuts: ElseOnWindows(Special(ShortcutSpecialKey.Tab, Control), Special(ShortcutSpecialKey.Tab, Command)),
+        searchTerms: "toggle recent switch tabs", reservedFromPages: true);
     public static readonly ShortcutCommand MostRecentTabBackward = new(Kinds.MostRecentTabBackward,
         name: "mostRecentTabBackward", ShortcutSection.Tabs, title: "Most Recent Tab Backward",
         symbol: "arrow.left.arrow.right",
-        shortcuts: [.. DevicePlatform.All.Select(platform =>
-            new ShortcutDefault(platform, Special(ShortcutSpecialKey.Tab, Control | Shift), YieldsToOverrides: true))],
+        shortcuts: [
+            .. ApplePlatforms.Select(platform =>
+                new ShortcutDefault(platform, Special(ShortcutSpecialKey.Tab, Control | Shift), YieldsToOverrides: true)),
+            new(DevicePlatform.Windows, Special(ShortcutSpecialKey.Tab, Command | Shift), YieldsToOverrides: false)
+        ],
         searchTerms: "toggle recent switch tabs oldest back", reservedFromPages: true);
     public static readonly ShortcutCommand SelectTab1 = SelectingTab(name: "selectTab1", number: 1);
     public static readonly ShortcutCommand SelectTab2 = SelectingTab(name: "selectTab2", number: 2);
@@ -220,8 +231,9 @@ public sealed class ShortcutCommand {
         availableWhen: ShowingWebPage);
     public static readonly ShortcutCommand FindInPage = new(Kinds.FindInPage, name: "findInPage", ShortcutSection.Page,
         title: "Find in Page", symbol: "text.magnifyingglass", shortcuts: Everywhere(Character("f", Command)), whenPageUsesKeys: ShortcutPreference.UseBoth);
+    // Windows keyboards type + with Shift, so Windows zooms in on Ctrl and =, as its browsers do.
     public static readonly ShortcutCommand ZoomIn = new(Kinds.ZoomIn, name: "zoomIn", ShortcutSection.Page, title: "Zoom In",
-        symbol: "plus.magnifyingglass", shortcuts: Everywhere(Character("+", Command)));
+        symbol: "plus.magnifyingglass", shortcuts: ElseOnWindows(Character("+", Command), Character("=", Command)));
     public static readonly ShortcutCommand ZoomOut = new(Kinds.ZoomOut, name: "zoomOut", ShortcutSection.Page,
         title: "Zoom Out", symbol: "minus.magnifyingglass", shortcuts: Everywhere(Character("-", Command)));
     public static readonly ShortcutCommand ActualSize = new(Kinds.ActualSize, name: "actualSize", ShortcutSection.Page,
@@ -232,7 +244,8 @@ public sealed class ShortcutCommand {
         searchTerms: "copy url address clipboard", whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand CopyPageLinkAsMarkdown = new(Kinds.CopyPageLinkAsMarkdown,
         name: "copyPageLinkAsMarkdown", ShortcutSection.Page, title: "Copy Page Link as Markdown", symbol: "link",
-        shortcuts: Everywhere(Character("c", Command | Option | Shift)), searchTerms: "copy url address markdown clipboard",
+        shortcuts: ElseOnWindows(Character("c", Command | Option | Shift), windows: null),
+        searchTerms: "copy url address markdown clipboard",
         whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand SharePage = new(Kinds.SharePage, name: "sharePage", ShortcutSection.Page,
         title: "Share Page", symbol: "square.and.arrow.up", menuTitle: "Share…");
@@ -246,39 +259,46 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand ToggleSidebar = new(Kinds.ToggleSidebar, name: "toggleSidebar",
         ShortcutSection.View, title: "Show or Hide Sidebar", symbol: "sidebar.leading",
         shortcuts: Everywhere(Character("s", Command)), menuTitle: "Toggle Sidebar", paletteRest: 5, whenPageUsesKeys: ShortcutPreference.UseBoth);
+    // Ctrl+Y is Redo on Windows, which shows history on Ctrl+H.
     public static readonly ShortcutCommand ShowHistory = new(Kinds.ShowHistory, name: "showHistory", ShortcutSection.View,
-        title: "Show History", symbol: "clock", shortcuts: Everywhere(Character("y", Command)),
+        title: "Show History", symbol: "clock", shortcuts: ElseOnWindows(Character("y", Command), Character("h", Command)),
         searchTerms: "visited pages history", paletteRest: 3, whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand ShowArchive = new(Kinds.ShowArchive, name: "showArchive", ShortcutSection.View,
         title: "Show Archive", symbol: "archivebox", searchTerms: "closed tabs archive", availableWhen: ShowingSpace);
     public static readonly ShortcutCommand ShowDownloads = new(Kinds.ShowDownloads, name: "showDownloads",
         ShortcutSection.View, title: "Show Downloads", symbol: "arrow.down.circle",
-        shortcuts: Everywhere(Character("j", Command | Shift)), searchTerms: "download files transfers", paletteRest: 4,
-        whenPageUsesKeys: ShortcutPreference.UseBoth);
-    // The stored name is the one this command shipped with.
+        shortcuts: ElseOnWindows(Character("j", Command | Shift), Character("j", Command)),
+        searchTerms: "download files transfers", paletteRest: 4, whenPageUsesKeys: ShortcutPreference.UseBoth);
+    // The stored name is the one this command shipped with. Windows inspects
+    // pages with F12, as its browsers do.
     public static readonly ShortcutCommand ShowWebInspector = new(Kinds.ShowWebInspector, name: "webInspectorInstructions",
-        ShortcutSection.View, title: "Show Web Inspector", symbol: "hammer", shortcuts: Everywhere(Character("i", Command | Option)),
+        ShortcutSection.View, title: "Show Web Inspector", symbol: "hammer",
+        shortcuts: ElseOnWindows(Character("i", Command | Option), Special(ShortcutSpecialKey.F12, ShortcutModifiers.None)),
         searchTerms: "developer tools inspect element webkit safari", whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand SplitWithNextTab = new(Kinds.SplitWithNextTab, name: "splitWithNextTab",
         ShortcutSection.Tabs, title: "Split With Next Tab", symbol: "rectangle.split.2x1",
         searchTerms: "split view cards side by side columns", availableWhen: facts => facts.HasSplitCandidate);
     // ⌃⌘←/→ is the one arrow pair left free: ⌥⌘←/→ switch Spaces and ⌥⌘↑/↓ tabs.
     // Splitting a single card stays menu-only because ⌘⇧+ collides with
-    // zoom and ⌘W already closes the focused card.
+    // zoom and ⌘W already closes the focused card. On Windows the same keys
+    // move between virtual desktops, so the cards there wait for keys a
+    // person chooses.
     public static readonly ShortcutCommand FocusNextSplitCard = new(Kinds.FocusNextSplitCard, name: "focusNextSplitCard",
         ShortcutSection.Tabs, title: "Focus Next Split Card", symbol: "rectangle.righthalf.filled",
-        shortcuts: Everywhere(Special(ShortcutSpecialKey.RightArrow, Control | Command)),
+        shortcuts: ElseOnWindows(Special(ShortcutSpecialKey.RightArrow, Control | Command), windows: null),
         searchTerms: "split view cards focus cycle left right arrow", availableWhen: ShowingSplit, whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand FocusPreviousSplitCard = new(Kinds.FocusPreviousSplitCard,
         name: "focusPreviousSplitCard", ShortcutSection.Tabs, title: "Focus Previous Split Card",
-        symbol: "rectangle.lefthalf.filled", shortcuts: Everywhere(Special(ShortcutSpecialKey.LeftArrow, Control | Command)),
+        symbol: "rectangle.lefthalf.filled",
+        shortcuts: ElseOnWindows(Special(ShortcutSpecialKey.LeftArrow, Control | Command), windows: null),
         searchTerms: "split view cards focus cycle left right arrow", availableWhen: ShowingSplit, whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand RemoveTabFromSplit = new(Kinds.RemoveTabFromSplit, name: "removeTabFromSplit",
         ShortcutSection.Tabs, title: "Remove Tab From Split", symbol: "minus.rectangle",
         searchTerms: "split view card remove leave unsplit", availableWhen: ShowingSplit);
     public static readonly ShortcutCommand SeparateSplitTabs = new(Kinds.SeparateSplitTabs, name: "separateSplitTabs",
         ShortcutSection.Tabs, title: "Separate All Tabs", symbol: "rectangle.split.2x1.slash",
-        shortcuts: Everywhere(Character("u", Command | Option)), searchTerms: "split view break up unsplit separate cards",
+        shortcuts: ElseOnWindows(Character("u", Command | Option), windows: null),
+        searchTerms: "split view break up unsplit separate cards",
         availableWhen: ShowingSplit, whenPageUsesKeys: ShortcutPreference.UseBoth);
     // A fixed-direction arrow, not a mirroring backward or forward one: the
     // command names a side of the screen, and it still names that side in a
@@ -296,7 +316,7 @@ public sealed class ShortcutCommand {
         searchTerms: "split view cards move reorder rearrange left right arrow", availableWhen: ShowingSplit);
     public static readonly ShortcutCommand ToggleDeveloperToolbar = new(Kinds.ToggleDeveloperToolbar,
         name: "toggleDeveloperToolbar", ShortcutSection.View, title: "Show or Hide Developer Toolbar",
-        symbol: "macbook.and.iphone", shortcuts: Everywhere(Character("i", Command | Shift)),
+        symbol: "macbook.and.iphone", shortcuts: ElseOnWindows(Character("i", Command | Shift), Character("m", Command | Shift)),
         searchTerms: "developer toolbar viewport preview responsive custom size", menuTitle: "Show Developer Toolbar",
         whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand ToggleTranslationToolbar = new(Kinds.ToggleTranslationToolbar,
@@ -306,19 +326,30 @@ public sealed class ShortcutCommand {
     public static readonly ShortcutCommand OpenFile = new(Kinds.OpenFile, name: "openFile", ShortcutSection.Everyday,
         title: "Open File", symbol: "folder", searchTerms: "open local file document html pdf archive webarchive mhtml",
         menuTitle: "Open File…", availableWhen: ShowingSpace);
-    // Only the Mac steps through matches from its menus, so only the Mac has these chords. They came after
-    // people could customize, so they yield to keys someone already chose.
+    // The Mac steps through matches from its menus, and Windows with F3, as its
+    // browsers do; iPad has neither. The Mac's came after people could
+    // customize, so they yield to keys someone already chose.
     public static readonly ShortcutCommand FindNext = new(Kinds.FindNext, name: "findNext", ShortcutSection.Page,
         title: "Find Next", symbol: "chevron.down", searchTerms: "next match search again",
-        shortcuts: [new(DevicePlatform.Desktop, Character("g", Command), YieldsToOverrides: true)],
+        shortcuts: [
+            new(DevicePlatform.Desktop, Character("g", Command), YieldsToOverrides: true),
+            new(DevicePlatform.Windows, Special(ShortcutSpecialKey.F3, ShortcutModifiers.None), YieldsToOverrides: false)
+        ],
         availableWhen: ShowingWebPage);
     public static readonly ShortcutCommand FindPrevious = new(Kinds.FindPrevious, name: "findPrevious", ShortcutSection.Page,
         title: "Find Previous", symbol: "chevron.up", searchTerms: "previous match search again back",
-        shortcuts: [new(DevicePlatform.Desktop, Character("g", Command | Shift), YieldsToOverrides: true)],
+        shortcuts: [
+            new(DevicePlatform.Desktop, Character("g", Command | Shift), YieldsToOverrides: true),
+            new(DevicePlatform.Windows, Special(ShortcutSpecialKey.F3, Shift), YieldsToOverrides: false)
+        ],
         availableWhen: ShowingWebPage);
+    // Windows captures a page on Ctrl+Shift+S, as Edge does.
     public static readonly ShortcutCommand CapturePage = new(Kinds.CapturePage, name: "capturePage", ShortcutSection.Page,
         title: "Capture Page", symbol: "camera", searchTerms: "screenshot snapshot region selection image clipboard",
-        shortcuts: [new(DevicePlatform.Desktop, Character("2", Command | Shift), YieldsToOverrides: true)],
+        shortcuts: [
+            new(DevicePlatform.Desktop, Character("2", Command | Shift), YieldsToOverrides: true),
+            new(DevicePlatform.Windows, Character("s", Command | Shift), YieldsToOverrides: false)
+        ],
         requiredCapability: EngineCapability.ViewportCapture, availableWhen: ShowingWebPage, whenPageUsesKeys: ShortcutPreference.UseBoth);
     public static readonly ShortcutCommand ClearSiteCookies = new(Kinds.ClearSiteCookies, name: "clearSiteCookies",
         ShortcutSection.Page, title: "Clear Cookies for This Site", symbol: "person.crop.circle.badge.xmark",
@@ -337,7 +368,10 @@ public sealed class ShortcutCommand {
     // came after people could customize, so it yields to keys someone chose.
     public static readonly ShortcutCommand OpenNextExtension = new(Kinds.OpenNextExtension, name: "openNextExtension",
         ShortcutSection.Page, title: "Open Next Extension", symbol: "puzzlepiece.extension",
-        shortcuts: [new(DevicePlatform.Desktop, Character("e", Command), YieldsToOverrides: true)],
+        shortcuts: [
+            new(DevicePlatform.Desktop, Character("e", Command), YieldsToOverrides: true),
+            new(DevicePlatform.Windows, Character("e", Command), YieldsToOverrides: false)
+        ],
         searchTerms: "extensions popup menu cycle pinned toolbar", requiredCapability: EngineCapability.Extensions,
         availableWhen: ShowingSpace);
     // Clear with Option: it archives the shown tab too. It came after people
@@ -501,10 +535,12 @@ public sealed class ShortcutCommand {
         title: "Select Tab %lld", symbol: "square.on.square", shortcuts: Everywhere(Character(Digit(number), Command)),
         selects: NumberedSelectionTarget.Tab, number: number, offersInPalette: false, whenPageUsesKeys: ShortcutPreference.UseBoth);
 
-    /// ⌃1–⌃9 select the Nth Space.
+    /// ⌃1–⌃9 select the Nth Space; on Windows, whose Windows key and a number
+    /// opens a taskbar app, Alt+1–Alt+9.
     private static ShortcutCommand SelectingSpace(string name, int number) => new(Kinds.SelectNumbered, name,
         ShortcutSection.Spaces, title: "Select Space %lld", symbol: "rectangle.3.group",
-        shortcuts: Everywhere(Character(Digit(number), Control)), selects: NumberedSelectionTarget.Space, number: number,
+        shortcuts: ElseOnWindows(Character(Digit(number), Control), Character(Digit(number), Option)),
+        selects: NumberedSelectionTarget.Space, number: number,
         offersInPalette: false, whenPageUsesKeys: ShortcutPreference.PreferCrest);
 
     #endregion
@@ -547,8 +583,21 @@ public sealed class ShortcutCommand {
 
     #region Actions - Catalog
 
+    /// The Mac and iPad, which share one set of keys.
+    private static IReadOnlyList<DevicePlatform> ApplePlatforms => [DevicePlatform.Desktop, DevicePlatform.Mobile];
+
+    /// The same keys on every platform. Command is each platform's shortcut
+    /// key, so most commands read the same on Windows.
     private static IReadOnlyList<ShortcutDefault> Everywhere(KeyCombination keys) =>
         [.. DevicePlatform.All.Select(platform => new ShortcutDefault(platform, keys, YieldsToOverrides: false))];
+
+    /// `keys` on the Mac and iPad, and on Windows `windows`: the keys its
+    /// browsers use for the command, or none where the Apple keys would be the
+    /// system's there or would type a character on some keyboards.
+    private static IReadOnlyList<ShortcutDefault> ElseOnWindows(KeyCombination keys, KeyCombination? windows) => [
+        .. ApplePlatforms.Select(platform => new ShortcutDefault(platform, keys, YieldsToOverrides: false)),
+        .. windows is null ? [] : new[] { new ShortcutDefault(DevicePlatform.Windows, windows, YieldsToOverrides: false) }
+    ];
 
     private static KeyCombination Character(string character, ShortcutModifiers modifiers) => new(character, false, modifiers);
 

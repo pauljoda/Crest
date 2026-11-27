@@ -1,0 +1,142 @@
+name: Package Windows Development
+description: Build the desktop interface and native core, package Setup and check the installed app.
+inputs:
+  asset_base:
+    description: Installer asset prefix
+    required: true
+  build_number:
+    description: Development feed build number
+    required: true
+  certificate:
+    description: Optional Authenticode certificate (base64 PFX)
+    default: ""
+  certificate_password:
+    description: Password for the signing certificate
+    default: ""
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      with:
+        global-json-file: CrestCore/global.json
+
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 24
+
+    - name: Ensure Inno Setup
+      shell: pwsh
+      run: |
+        $find = {
+          @("$env:ProgramFiles\Inno Setup 7", "${env:ProgramFiles(x86)}\Inno Setup 6") |
+            ForEach-Object { Join-Path $_ "ISCC.exe" } | Where-Object { Test-Path $_ } | Select-Object -First 1
+        }
+        $iscc = & $find
+        if (-not $iscc) {
+          choco install innosetup --no-progress -y
+          $iscc = & $find
+        }
+        if (-not $iscc) { throw "Inno Setup's ISCC.exe is missing" }
+        "ISCC=$iscc" >> $env:GITHUB_ENV
+
+    - name: Download the Windows engine
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        engine_root="$(cygpath -u "$RUNNER_TEMP")/crest-windows/engine"
+        mkdir -p "$engine_root"
+        python Scripts/control-plane/chromium_artifact.py --require --host win-x64
+        tag="$(python Scripts/control-plane/chromium_engine.py tag --host win-x64)"
+        asset="$(python Scripts/control-plane/chromium_engine.py asset --host win-x64)"
+        if ! gh release download "$tag" --repo "$GITHUB_REPOSITORY" \
+            --pattern "$asset" --pattern "${asset}.sha256" --dir "$engine_root"; then
+          echo "No Windows Chromium engine is published for this branch's engine sources ($tag)." >&2
+          exit 1
+        fi
+        (cd "$engine_root" && sha256sum -c "${asset}.sha256")
+        python -m zipfile -e "$engine_root/$asset" "$engine_root/unpacked"
+        chrome="$(find "$engine_root/unpacked" -maxdepth 2 -name chrome.exe -print -quit)"
+        test -n "$chrome"
+        echo "CREST_ENGINE=$(cygpath -w "$(dirname "$chrome")")" >> "$GITHUB_ENV"
+
+    - name: Publish the Native AOT core
+      shell: pwsh
+      working-directory: CrestCore
+      run: |
+        $env:Path += ";${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
+        dotnet publish src/CrestCore.Native -c Release -r win-x64 -o "$env:RUNNER_TEMP/crest-windows/core"
+
+    - name: Build the interface
+      shell: bash
+      working-directory: CrestDesktop/ui
+      run: |
+        npm ci --no-audit --no-fund
+        npm run build
+
+    - name: Import the signing certificate
+      shell: pwsh
+      env:
+        SIGNING_CERTIFICATE_BASE64: ${{ inputs.certificate }}
+        SIGNING_CERTIFICATE_PASSWORD: ${{ inputs.certificate_password }}
+      run: |
+        if (-not $env:SIGNING_CERTIFICATE_BASE64) { return }
+        $pfx = Join-Path $env:RUNNER_TEMP 'crest-windows/signing.pfx'
+        try {
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:SIGNING_CERTIFICATE_BASE64))
+          $options = @{}
+          if ($env:SIGNING_CERTIFICATE_PASSWORD) {
+            $options.Password = ConvertTo-SecureString $env:SIGNING_CERTIFICATE_PASSWORD -AsPlainText -Force
+          }
+          $certs = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My @options
+          $cert = @($certs | Where-Object HasPrivateKey)
+          if ($cert.Count -ne 1) { throw "Expected one Authenticode signing key in the PFX" }
+          "CREST_SIGNING_THUMBPRINT=$($cert[0].Thumbprint)" >> $env:GITHUB_ENV
+        } finally {
+          Remove-Item -LiteralPath $pfx -ErrorAction SilentlyContinue
+        }
+
+    - name: Package Setup
+      shell: bash
+      env:
+        RELEASE_ASSET_BASE: ${{ inputs.asset_base }}
+        RELEASE_BUILD_NUMBER: ${{ inputs.build_number }}
+        RELEASE_CHANNEL: development
+      run: |
+        set -euo pipefail
+        root="$(cygpath -u "$RUNNER_TEMP")/crest-windows"
+        name="Installer-${RELEASE_ASSET_BASE}-windows-x64"
+        arguments=(
+          --engine "$CREST_ENGINE"
+          --core "$root/core/CrestCore.Native.dll"
+          --interface CrestDesktop/ui/app/dist
+          --build "$RELEASE_BUILD_NUMBER"
+          --channel "$RELEASE_CHANNEL"
+          --output "$root/out"
+          --name "$name"
+        )
+        if [[ -n "${CREST_SIGNING_THUMBPRINT:-}" ]]; then
+          signtool="$(find "/c/Program Files (x86)/Windows Kits/10/bin" -path '*x64/signtool.exe' | sort | tail -1)"
+          test -n "$signtool"
+          arguments+=(--sign "\"$(cygpath -w "$signtool")\" sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /sha1 $CREST_SIGNING_THUMBPRINT \$f")
+        else
+          echo "::warning::Setup is unsigned; Windows SmartScreen warns before it runs."
+        fi
+        python Scripts/package-windows.py "${arguments[@]}"
+        (cd "$root/out" && sha256sum "$name.exe" > "Checksum-${RELEASE_ASSET_BASE}-windows-x64.exe.sha256")
+
+    - name: Remove the signing key
+      if: always() && env.CREST_SIGNING_THUMBPRINT != ''
+      shell: pwsh
+      run: Remove-Item -LiteralPath "Cert:\CurrentUser\My\$env:CREST_SIGNING_THUMBPRINT" -DeleteKey
+
+    - name: Smoke-test the installed app
+      shell: pwsh
+      env:
+        ASSET_BASE: ${{ inputs.asset_base }}
+      run: |
+        $installer = "$env:RUNNER_TEMP/crest-windows/out/Installer-$env:ASSET_BASE-windows-x64.exe"
+        $setup = Start-Process $installer -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART") -PassThru -Wait
+        if ($setup.ExitCode -ne 0) { throw "Setup failed with exit code $($setup.ExitCode)" }
+        node Scripts/smoke-windows.mjs

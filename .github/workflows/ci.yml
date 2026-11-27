@@ -101,11 +101,69 @@ jobs:
         working-directory: CrestCore
         run: dotnet test tests/CrestCore.Tests/CrestCore.Tests.csproj --nologo
 
+      - name: Build the desktop development bridge
+        working-directory: CrestCore
+        run: dotnet build ../CrestDesktop/devhost -c Release --nologo
+
       - name: Check core analyzers and code style
         run: Scripts/control-plane/lint-dotnet.sh
 
       - name: Check architecture boundaries
         run: python3 Scripts/check-architecture.py
+
+  # The core every desktop app links, built and tested on Windows: its
+  # contracts, its Native AOT library with the system SQLite and the content
+  # filter, and the C exports the Chromium binding and the desktop bridge call.
+  windows-core:
+    name: .NET core on Windows
+    runs-on: windows-2025
+    timeout-minutes: 30
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+          allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: CrestCore/global.json
+
+      - name: Test core contracts
+        working-directory: CrestCore
+        run: dotnet test tests/CrestCore.Tests/CrestCore.Tests.csproj --nologo
+
+      - name: Publish the Native AOT core for win-x64
+        shell: pwsh
+        working-directory: CrestCore
+        run: |
+          $env:Path += ";${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
+          dotnet publish src/CrestCore.Native -c Release -r win-x64 -o "$env:RUNNER_TEMP/core"
+
+  # The Windows and Linux interface: its generated contracts must type-check
+  # against the hand-written client, and the window must bundle.
+  desktop-ui:
+    name: Desktop interface
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+          allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - name: Install
+        working-directory: CrestDesktop/ui
+        run: npm ci --no-audit --no-fund
+
+      - name: Type-check and bundle
+        working-directory: CrestDesktop/ui
+        run: npm run build
 
   # Pull requests and pushes to main build only the apps their files can
   # affect; release validation and manual runs build both.

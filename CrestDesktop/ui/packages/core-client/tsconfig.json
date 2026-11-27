@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "../../node_modules/.cache/tsc/core-client", "tsBuildInfoFile": "../../node_modules/.cache/tsc/core-client.tsbuildinfo" },
+  "include": ["src"],
+  "references": [{ "path": "../contracts" }]
+}

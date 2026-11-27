@@ -5,8 +5,8 @@ namespace CrestCore.Generator;
 /// Generates the contract codecs and models from the C# contract records.
 ///
 /// `dotnet run --project CrestCore/tools/CrestCore.Generator [-- --check] [--root PATH]`
-/// writes the C# codec, the two Swift files, the C tag header and the C++
-/// engine codec. With `--check` it writes nothing and fails when any output is
+/// writes the C# codec, the two Swift files, the C tag header, the C++
+/// engine codec and the desktop interface's TypeScript models and codec. With `--check` it writes nothing and fails when any output is
 /// stale. Either way it fails when a Swift source other than its own calls a
 /// wire initializer, or when a view source reads a read-model object's whole
 /// record.
@@ -30,7 +30,8 @@ internal static class Program {
                 ["CrestShared/Infrastructure/Core/Generated/CoreContracts.generated.swift"] = SwiftEmitter.EmitContracts(schema),
                 ["CrestShared/Infrastructure/Core/Generated/CoreCodec.generated.swift"] = SwiftEmitter.EmitCodec(schema),
                 ["CrestContracts/include/crest_contracts.h"] = CHeaderEmitter.Emit(schema),
-                ["CrestContracts/include/crest_engine_contract.h"] = CppCodecEmitter.Emit(schema.Engine)
+                ["CrestContracts/include/crest_engine_contract.h"] = CppCodecEmitter.Emit(schema.Engine),
+                ["CrestDesktop/ui/packages/contracts/src/contracts.generated.ts"] = TypeScriptEmitter.Emit(schema)
             };
             int result = check ? Check(root, outputs) : Write(root, outputs);
             var sources = SwiftSources(root, outputs.Keys).ToList();

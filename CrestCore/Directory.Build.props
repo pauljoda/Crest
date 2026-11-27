@@ -9,5 +9,9 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
     <Deterministic>true</Deterministic>
+    <!-- The Python the build's scripts run under. Windows has no python3; its
+         launcher picks the newest installed Python 3. -->
+    <CrestPython Condition="'$(CrestPython)' == '' and '$(OS)' == 'Windows_NT'">py -3</CrestPython>
+    <CrestPython Condition="'$(CrestPython)' == ''">python3</CrestPython>
   </PropertyGroup>
 </Project>

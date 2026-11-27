@@ -1,7 +1,11 @@
 #include "chrome/browser/ui/crest/crest_engine_page.h"
 
+#include "build/build_config.h"
+
+#if BUILDFLAG(IS_MAC)
 #include <os/log.h>
 #include <os/signpost.h>
+#endif
 
 #include <algorithm>
 #include <cmath>
@@ -14,6 +18,7 @@
 #include "base/pickle.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base/task/thread_pool.h"
 #include "base/uuid.h"
 #include "chrome/browser/ui/crest/crest_engine_agent.h"
 #include "chrome/browser/ui/crest/crest_engine_scriptlets.h"
@@ -108,11 +113,13 @@ constexpr double kMaximumZoom = 5;
 constexpr double kMaximumCaptureWidth = 16384;
 constexpr base::TimeDelta kCaptureTimeout = base::Seconds(2);
 
+#if BUILDFLAG(IS_MAC)
 // Where reading and reporting a page's history shows in Instruments.
 os_log_t HistoryLog() {
   static os_log_t log = os_log_create("com.pauldavis.crest", "PageHistory");
   return log;
 }
+#endif
 
 engine::Guid NewEntryId() {
   return *ParseGuid(base::Uuid::GenerateRandomV4().AsLowercaseString());
@@ -1131,14 +1138,18 @@ void EnginePage::ReportState() {
 }
 
 void EnginePage::ReportHistory() {
+#if BUILDFLAG(IS_MAC)
   const os_signpost_id_t signpost = os_signpost_id_generate(HistoryLog());
   os_signpost_interval_begin(HistoryLog(), signpost, "Report Page History");
+#endif
   engine::PageHistoryReported history = History();
   if (history != reported_history_) {
     reported_history_ = history;
     Report(std::move(history));
   }
+#if BUILDFLAG(IS_MAC)
   os_signpost_interval_end(HistoryLog(), signpost, "Report Page History");
+#endif
 }
 
 engine::PageHistoryReported EnginePage::History() {
@@ -1180,7 +1191,9 @@ void EnginePage::ExpectEntry(const std::optional<engine::Guid>& entry_id) {
 }
 
 void EnginePage::GoToEntry(const engine::Guid& entry_id) {
+#if BUILDFLAG(IS_MAC)
   os_signpost_event_emit(HistoryLog(), OS_SIGNPOST_ID_EXCLUSIVE, "Go To History Entry");
+#endif
   if (web_contents()) {
     auto& controller = web_contents()->GetController();
     for (int index = 0; index < controller.GetEntryCount(); ++index) {
@@ -1487,11 +1500,27 @@ bool EnginePage::Answer(const engine::CapturePage& request) {
             if (!page) {
               return;
             }
-            std::optional<std::vector<uint8_t>> png;
-            if (result.has_value() && !result->bitmap.drawsNothing()) {
-              png = gfx::PNGCodec::EncodeBGRASkBitmap(result->bitmap, false);
+            if (!result.has_value() || result->bitmap.drawsNothing()) {
+              page->Present(engine::PageCaptured{.page_id = page->id_, .capture_id = capture_id, .png = std::nullopt});
+              return;
             }
-            page->Present(engine::PageCaptured{.page_id = page->id_, .capture_id = capture_id, .png = std::move(png)});
+            // Encoding a whole page's picture takes long enough to hold up
+            // the input the browser's thread routes, a swipe's among it, so
+            // the picture is encoded beside it and presented once it is.
+            base::ThreadPool::PostTaskAndReplyWithResult(
+                FROM_HERE, {base::TaskPriority::USER_VISIBLE, base::TaskShutdownBehavior::SKIP_ON_SHUTDOWN},
+                base::BindOnce(
+                    [](const SkBitmap& bitmap) { return gfx::PNGCodec::EncodeBGRASkBitmap(bitmap, false); },
+                    result->bitmap),
+                base::BindOnce(
+                    [](base::WeakPtr<EnginePage> page, engine::Guid capture_id,
+                       std::optional<std::vector<uint8_t>> png) {
+                      if (page) {
+                        page->Present(
+                            engine::PageCaptured{.page_id = page->id_, .capture_id = capture_id, .png = std::move(png)});
+                      }
+                    },
+                    page, capture_id));
           },
           weak_factory_.GetWeakPtr(), request.capture_id));
   return true;

@@ -11,25 +11,48 @@ as it is, and publishing removes the engine's draft candidate.
 `--candidate` uploads the same verified engine to a draft release named by
 `chromium_engine.candidate_tag` instead, where a scheduled update leaves it for
 review. Release packaging never reads that release, and nothing publishes it.
+
+`--host win-x64` publishes the Windows engine from a Windows build machine
+instead: the runtime files of its one performance build in out/CrestBaseline,
+picked as Crest's Windows package picks them, zipped in a `Chromium` folder.
 """
 import argparse
 from contextlib import nullcontext
+import hashlib
+import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
+import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import chromium_engine  # noqa: E402
-from chromium_fork import (exclusive_workspace, performance_configuration_matches, read_json,  # noqa: E402
-                           require_crest_launch, sha256, universal_engine)
+import chromium_host  # noqa: E402
 from repository import REPOSITORY  # noqa: E402
 
 
 def run(*command, **kwargs):
     return subprocess.run(list(map(str, command)), check=True, text=True, **kwargs)
+
+
+def read_json(path):
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def sha256(path):
+    with Path(path).open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def mac_fork():
+    """The Mac's fork maintenance, which merges its universal engine and locks
+    its managed workspaces with POSIX file locks, so only the Mac loads it."""
+    import chromium_fork
+    return chromium_fork
 
 
 def main():
@@ -40,12 +63,18 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Verify and package without uploading")
     parser.add_argument("--candidate", action="store_true",
                         help="Upload to the engine's draft candidate release; publish nothing")
+    parser.add_argument("--host", choices=sorted(chromium_engine.HOST_INPUTS),
+                        help="The engine's host (default: this machine's): the Mac's universal engine, or another host's own")
     args = parser.parse_args()
+    args.host = args.host or chromium_host.detected()
+    if args.candidate and args.host != chromium_engine.MAC:
+        parser.error("Only the Mac's scheduled engine updates leave a candidate for review")
 
     source = args.source.resolve()
     # A managed source is <workspace>/sources/<preparation key>/src.
     managed = source.parent / "prepared.json"
-    guard = exclusive_workspace(source.parents[2]) if managed.is_file() else nullcontext()
+    mac = args.host == chromium_engine.MAC
+    guard = mac_fork().exclusive_workspace(source.parents[2]) if mac and managed.is_file() else nullcontext()
     with guard:
         publish(args)
 
@@ -53,15 +82,24 @@ def main():
 def publish(args):
     repo = Path(__file__).resolve().parents[2]
     source = args.source.resolve()
+    host = args.host
+    mac = host == chromium_engine.MAC
     lock = read_json(repo / "CrestEngines/Chromium/source.lock.json")
-    for cpu in lock["architectures"]:
-        if not performance_configuration_matches(source, lock, cpu=cpu):
-            raise SystemExit(f"Published engines require the pinned performance configuration, SDK and PGO profile "
-                             f"for {cpu}")
+    if mac:
+        for cpu in lock["architectures"]:
+            if not mac_fork().performance_configuration_matches(source, lock, cpu=cpu):
+                raise SystemExit(f"Published engines require the pinned performance configuration, SDK and PGO "
+                                 f"profile for {cpu}")
+        outputs = [architecture["output"] for architecture in lock["architectures"].values()]
+    else:
+        if not host_configuration_matches(source, lock, host):
+            raise SystemExit(f"Published engines require {host}'s pinned performance configuration in "
+                             f"{HOST_OUTPUT}; run configure-chromium.py --configuration performance")
+        outputs = [HOST_OUTPUT]
     run(sys.executable, repo / "Scripts/control-plane/prepare-chromium.py", "--source", source, "--verify-only")
-    key = chromium_engine.engine_key(repo)
-    tag, asset = chromium_engine.release_tag(key), chromium_engine.asset_name(key)
-    candidate = chromium_engine.candidate_tag(key)
+    key = chromium_engine.engine_key(repo, host)
+    tag, asset = chromium_engine.release_tag(key, host), chromium_engine.asset_name(key, host)
+    candidate = chromium_engine.candidate_tag(key) if mac else None
 
     # The tree must hold this branch's reviewed patch output and overlay.
     validation = run(sys.executable, repo / "Scripts/control-plane/apply-chromium-host.py",
@@ -81,22 +119,25 @@ def publish(args):
             raise SystemExit(f"The checkout's contract header differs from the branch: {header.name}")
 
     # And every architecture's build must have nothing left to do.
-    for architecture in lock["architectures"].values():
-        plan = run(args.ninja, "-C", source / architecture["output"], "-n", "chrome", capture_output=True).stdout
+    for output in outputs:
+        plan = run(args.ninja, "-C", source / output, "-n", "chrome", capture_output=True).stdout
         if "no work to do" not in plan:
-            raise SystemExit(f"The {architecture['output']} build is not current; run build-chromium-baseline.py first")
+            raise SystemExit(f"The {output} build is not current; run build-chromium-baseline.py first")
 
-    # The universal engine merges them again here, so it holds exactly what
-    # they built, every executable must hold every architecture, and the
-    # browser executable must be Crest's own entry point.
-    try:
-        browser = universal_engine(source, lock)
-        require_crest_launch(browser)
-    except ValueError as error:
-        raise SystemExit(str(error)) from None
-    helpers = browser.glob("Contents/Frameworks/*.framework/Versions/*/Helpers/*.app")
-    if unknown := chromium_engine.unknown_engine_helpers(helpers):
-        raise SystemExit(f"Unknown engine helpers {unknown}: add each to ENGINE_HELPER_KINDS in chromium_engine.py")
+    if mac:
+        # The universal engine merges them again here, so it holds exactly what
+        # they built, every executable must hold every architecture, and the
+        # browser executable must be Crest's own entry point.
+        try:
+            browser = mac_fork().universal_engine(source, lock)
+            mac_fork().require_crest_launch(browser)
+        except ValueError as error:
+            raise SystemExit(str(error)) from None
+        helpers = browser.glob("Contents/Frameworks/*.framework/Versions/*/Helpers/*.app")
+        if unknown := chromium_engine.unknown_engine_helpers(helpers):
+            raise SystemExit(f"Unknown engine helpers {unknown}: add each to ENGINE_HELPER_KINDS in chromium_engine.py")
+    else:
+        runtime = windows_engine_files(repo, source / HOST_OUTPUT)
     existing = subprocess.run(["gh", "release", "view", tag, "--repo", args.repository, "--json", "assets,isDraft,body"],
                               capture_output=True, text=True)
     release = json.loads(existing.stdout) if existing.returncode == 0 else None
@@ -104,7 +145,7 @@ def publish(args):
         names = {item["name"] for item in release["assets"]}
         if {asset, f"{asset}.sha256"} <= names and key in release["body"]:
             print(f"{tag} is already published.")
-            if not args.candidate and not args.dry_run:
+            if mac and not args.candidate and not args.dry_run:
                 remove_candidate(args.repository, candidate)
             return
         raise SystemExit("Published engine release is incomplete or has a different full key; refusing to overwrite it")
@@ -117,7 +158,10 @@ def publish(args):
 
     with tempfile.TemporaryDirectory(prefix="crest-engine-") as temporary:
         archive = Path(temporary) / asset
-        run("ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", browser, archive)
+        if mac:
+            run("ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", browser, archive)
+        else:
+            zip_engine(source / HOST_OUTPUT, runtime, archive)
         digest = sha256(archive)
         checksum = Path(temporary) / f"{asset}.sha256"
         checksum.write_text(f"{digest}  {asset}\n")
@@ -125,17 +169,23 @@ def publish(args):
         if args.dry_run:
             return
         provenance = Path(temporary) / f"{asset}.json"
+        source_commit = run("git", "-C", repo, "rev-parse", "HEAD", capture_output=True).stdout.strip()
+        if mac:
+            details = {"configuration": "performance", "sdkVersion": lock["performanceInputs"]["macSDKVersion"],
+                       "pgoSHA256": {cpu: architecture["pgoSHA256"] for cpu, architecture in lock["architectures"].items()},
+                       "architectures": list(lock["architectures"])}
+        else:
+            target = chromium_host.profile(host, lock)["performanceBuildArguments"]["target_cpu"]
+            details = {"host": host, "configuration": "performance", "architectures": [target]}
         provenance.write_text(json.dumps({"schemaVersion": 1, "engineKey": key,
             "chromium": lock["chromium"]["version"], "sourceArchiveSHA256": lock["chromium"]["sourceArchiveSha256"],
-            "configuration": "performance", "sdkVersion": lock["performanceInputs"]["macSDKVersion"],
-            "pgoSHA256": {cpu: architecture["pgoSHA256"] for cpu, architecture in lock["architectures"].items()},
-            "architectures": list(lock["architectures"]), "archiveSHA256": digest,
-            "sourceCommit": run("git", "-C", repo, "rev-parse", "HEAD", capture_output=True).stdout.strip()}, indent=2) + "\n")
+            **details, "archiveSHA256": digest, "sourceCommit": source_commit}, indent=2) + "\n")
         purpose = ("an unpublished candidate for review. Release packaging never reads it; a maintainer publishes "
                    f"the engine as `{chromium_engine.release_tag(key)}`" if args.candidate else "for release packaging")
-        notes = (f"Chromium {lock['chromium']['version']} with Crest's native host, {purpose}.\n\n"
+        hosted = "Crest's native host" if mac else f"Crest's desktop host, for {host}"
+        notes = (f"Chromium {lock['chromium']['version']} with {hosted}, {purpose}.\n\n"
                  f"Engine key `{key}`, computed by `Scripts/control-plane/chromium_engine.py` over the "
-                 f"engine inputs of commit `{run('git', '-C', repo, 'rev-parse', 'HEAD', capture_output=True).stdout.strip()}`.\n"
+                 f"engine inputs of commit `{source_commit}`.\n"
                  "This is not an installable browser; releases package it with Crest's UI and sign it.")
         if existing.returncode != 0:
             title = f"Crest Chromium engine {'candidate ' if args.candidate else ''}{key[:16]}"
@@ -152,7 +202,54 @@ def publish(args):
             return
         run("gh", "release", "edit", tag, "--repo", args.repository, "--draft=false", "--latest=false")
         print(f"Published {tag}.")
-        remove_candidate(args.repository, candidate)
+        if mac:
+            remove_candidate(args.repository, candidate)
+
+
+# Every host but the Mac builds its one architecture in the output preparation made.
+HOST_OUTPUT = "out/CrestBaseline"
+
+
+def host_configuration_matches(source, lock, host):
+    """Whether `host`'s output is configured exactly as configure-chromium.py
+    configures a performance build: the lock's arguments and the host's."""
+    expected = {**lock["buildArguments"], **chromium_host.profile(host, lock)["performanceBuildArguments"]}
+    try:
+        text = (source / HOST_OUTPUT / "args.gn").read_text(encoding="utf-8")
+    except OSError:
+        return False
+    values = {}
+    for line in text.splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        match = re.fullmatch(r"\s*(\w+)\s*=\s*(.+?)\s*", line)
+        if not match:
+            return False
+        try:
+            values[match[1]] = json.loads(match[2])
+        except ValueError:
+            return False
+    return values == expected
+
+
+def windows_engine_files(repo, output):
+    """The engine's runtime files in `output`, picked as Crest's Windows
+    package picks them, so the published engine holds what Setup installs."""
+    sys.path.insert(0, str(repo / "Scripts"))
+    specification = importlib.util.spec_from_file_location("package_windows", repo / "Scripts/package-windows.py")
+    packaging = importlib.util.module_from_spec(specification)
+    specification.loader.exec_module(packaging)
+    try:
+        return packaging.engine_files(output)
+    except packaging.PackagingError as error:
+        raise SystemExit(str(error)) from None
+
+
+def zip_engine(output, files, archive):
+    """`files`, relative to `output`, in the archive's `Chromium` folder."""
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as engine:
+        for relative in files:
+            engine.write(output / relative, f"Chromium/{relative.as_posix()}")
 
 
 def remove_candidate(repository, candidate):

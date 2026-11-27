@@ -1,0 +1,5 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": { "composite": false, "declaration": false, "noEmit": true, "verbatimModuleSyntax": true, "types": ["vite/client", "svelte"] },
+  "include": ["src/**/*.ts", "src/**/*.svelte"]
+}

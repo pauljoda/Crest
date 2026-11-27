@@ -4,3 +4,4 @@ self-hosted-runner:
     # bundled hosted-runner catalog.
     - xcode-27
     - crest-chromium
+    - crest-chromium-windows

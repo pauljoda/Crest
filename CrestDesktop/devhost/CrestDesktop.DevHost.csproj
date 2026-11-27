@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!-- A development bridge: it loads the published native core and pipes the
+       core's C ABI to the desktop interface over a local WebSocket, so the
+       interface can be built and reviewed in any browser against the real
+       core, with frames standing in for an engine. The shipping bridge is the
+       Chromium shell's, which pipes the same bytes over Mojo. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+</Project>

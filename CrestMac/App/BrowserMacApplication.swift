@@ -94,9 +94,10 @@ final class BrowserMacApplication {
         self.siteControlAnchor = siteControlAnchor
         _ = BrowserPictureInPicturePresenter.installed
         #if CREST_REVIEW_BUILD
-            // Naming the review's isolation under a test run would open the
-            // review app's own session, credentials and website data stores.
-            if !BrowserLaunchEnvironment.current.isXCTestRuntime {
+            // Tests and paired desktop comparisons each supply their own
+            // isolated session. Ordinary review launches reopen the named one.
+            let reviewLaunch = BrowserLaunchEnvironment.current
+            if !reviewLaunch.isXCTestRuntime && !reviewLaunch.presentsDesktopComparison {
                 BrowserLaunchEnvironment.applyReviewBuildDefaults(persistenceID: reviewPersistenceID)
             }
         #endif
