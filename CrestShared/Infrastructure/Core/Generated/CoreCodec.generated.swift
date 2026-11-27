@@ -7,7 +7,7 @@ import Foundation
 enum CoreCodec {
     /// SHA-256 of the canonical contract schema. The core refuses any other.
     static let fingerprint: [UInt8] = [
-        0xd6, 0x45, 0x93, 0x9c, 0xab, 0x5d, 0x75, 0x38, 0x89, 0xe0, 0x5f, 0x98, 0xd8, 0x1b, 0xbb, 0x06, 0xc3, 0x48, 0xb4, 0x23, 0xd2, 0x21, 0x65, 0x5f, 0x4f, 0x5e, 0x3b, 0x94, 0xf6, 0x7a, 0x86, 0x69
+        0xeb, 0xe4, 0x68, 0xa7, 0x1f, 0x2d, 0xb8, 0x96, 0x48, 0xff, 0xda, 0x05, 0x9a, 0x5e, 0x11, 0x49, 0x85, 0xe2, 0xb0, 0xc3, 0x50, 0xe6, 0x8c, 0x67, 0xd1, 0x40, 0xee, 0x62, 0x50, 0x27, 0x7a, 0x88
     ]
     /// SHA-256 of the engine contract alone, which an engine binding registers with.
     static let engineFingerprint: [UInt8] = [
@@ -721,16 +721,17 @@ extension Change {
         case 64: self = .tabSavedImageChanged(try TabSavedImageChanged(from: &reader))
         case 65: self = .tabsChanged(try TabsChanged(from: &reader))
         case 66: self = .tabsImported(try TabsImported(from: &reader))
-        case 67: self = .transientPageClosed(try TransientPageClosed(from: &reader))
-        case 68: self = .transientPagePromoted(try TransientPagePromoted(from: &reader))
-        case 69: self = .websiteDataRead(try WebsiteDataRead(from: &reader))
-        case 70: self = .windowBroughtForward(try WindowBroughtForward(from: &reader))
-        case 71: self = .windowChanged(try WindowChanged(from: &reader))
-        case 72: self = .windowClosed(try WindowClosed(from: &reader))
-        case 73: self = .windowRecordsAdopted(try WindowRecordsAdopted(from: &reader))
-        case 74: self = .workspaceChanged(try WorkspaceChanged(from: &reader))
-        case 75: self = .workspaceClosed(try WorkspaceClosed(from: &reader))
-        case 76: self = .workspaceOpened(try WorkspaceOpened(from: &reader))
+        case 67: self = .tabsOpened(try TabsOpened(from: &reader))
+        case 68: self = .transientPageClosed(try TransientPageClosed(from: &reader))
+        case 69: self = .transientPagePromoted(try TransientPagePromoted(from: &reader))
+        case 70: self = .websiteDataRead(try WebsiteDataRead(from: &reader))
+        case 71: self = .windowBroughtForward(try WindowBroughtForward(from: &reader))
+        case 72: self = .windowChanged(try WindowChanged(from: &reader))
+        case 73: self = .windowClosed(try WindowClosed(from: &reader))
+        case 74: self = .windowRecordsAdopted(try WindowRecordsAdopted(from: &reader))
+        case 75: self = .workspaceChanged(try WorkspaceChanged(from: &reader))
+        case 76: self = .workspaceClosed(try WorkspaceClosed(from: &reader))
+        case 77: self = .workspaceOpened(try WorkspaceOpened(from: &reader))
         default: throw WireError.malformed("Unknown Change tag \(tag)")
         }
     }
@@ -938,35 +939,38 @@ extension Change {
         case .tabsImported(let value):
             writer.writeTag(66)
             value.encode(into: &writer)
-        case .transientPageClosed(let value):
+        case .tabsOpened(let value):
             writer.writeTag(67)
             value.encode(into: &writer)
-        case .transientPagePromoted(let value):
+        case .transientPageClosed(let value):
             writer.writeTag(68)
             value.encode(into: &writer)
-        case .websiteDataRead(let value):
+        case .transientPagePromoted(let value):
             writer.writeTag(69)
             value.encode(into: &writer)
-        case .windowBroughtForward(let value):
+        case .websiteDataRead(let value):
             writer.writeTag(70)
             value.encode(into: &writer)
-        case .windowChanged(let value):
+        case .windowBroughtForward(let value):
             writer.writeTag(71)
             value.encode(into: &writer)
-        case .windowClosed(let value):
+        case .windowChanged(let value):
             writer.writeTag(72)
             value.encode(into: &writer)
-        case .windowRecordsAdopted(let value):
+        case .windowClosed(let value):
             writer.writeTag(73)
             value.encode(into: &writer)
-        case .workspaceChanged(let value):
+        case .windowRecordsAdopted(let value):
             writer.writeTag(74)
             value.encode(into: &writer)
-        case .workspaceClosed(let value):
+        case .workspaceChanged(let value):
             writer.writeTag(75)
             value.encode(into: &writer)
-        case .workspaceOpened(let value):
+        case .workspaceClosed(let value):
             writer.writeTag(76)
+            value.encode(into: &writer)
+        case .workspaceOpened(let value):
+            writer.writeTag(77)
             value.encode(into: &writer)
         }
     }
@@ -17198,6 +17202,19 @@ extension OpenWorkspace {
     }
 }
 
+extension OpenedTab {
+    init(from reader: inout WireReader) throws(WireError) {
+        let spaceID = try reader.readUUID()
+        let tabID = try reader.readUUID()
+        self.init(spaceID: spaceID, tabID: tabID)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(spaceID)
+        writer.writeUUID(tabID)
+    }
+}
+
 extension OpenedWindowSelected {
     init(from reader: inout WireReader) throws(WireError) {
         let selects = try reader.readBool()
@@ -28788,6 +28805,30 @@ extension TabsImported {
 
     func encode(into writer: inout WireWriter) {
         writer.writeUUID(workspaceID)
+        writer.writeCount(tabs.count)
+        for element0 in tabs {
+            element0.encode(into: &writer)
+        }
+    }
+}
+
+extension TabsOpened {
+    init(from reader: inout WireReader) throws(WireError) {
+        let workspaceID = try reader.readUUID()
+        let windowID = try reader.readUUID()
+        let tabsCount = try reader.readCount()
+        var tabs: [OpenedTab] = []
+        tabs.reserveCapacity(tabsCount)
+        for _ in 0..<tabsCount {
+            let tabsElement = try OpenedTab(from: &reader)
+            tabs.append(tabsElement)
+        }
+        self.init(workspaceID: workspaceID, windowID: windowID, tabs: tabs)
+    }
+
+    func encode(into writer: inout WireWriter) {
+        writer.writeUUID(workspaceID)
+        writer.writeUUID(windowID)
         writer.writeCount(tabs.count)
         for element0 in tabs {
             element0.encode(into: &writer)

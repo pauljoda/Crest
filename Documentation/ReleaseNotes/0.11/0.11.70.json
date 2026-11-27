@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-reveals-opened-tab",
+      "category": "improved",
+      "platforms": [
+        "mac"
+      ],
+      "message": "When you open a tab whose row is out of view, such as a link opened in the background, the sidebar scrolls just far enough to show it, landing on the last tab when several open at once. It never moves while you scroll, drag or rename. Thanks to Bruno Mengaldo (@brnom)."
+    }
+  ]
+}

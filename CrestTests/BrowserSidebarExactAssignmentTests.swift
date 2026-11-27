@@ -177,7 +177,7 @@ final class BrowserSidebarExactAssignmentTests: XCTestCase {
 
         let rootView = VStack(spacing: 0) {
             Color.clear.frame(height: 100)
-            SpaceSidebarTabListScroll(browser: browser) {
+            SpaceSidebarTabListScroll(browser: browser, space: liveSpace) {
                 Color.clear
             } content: {
                 BrowserSidebarTabList(

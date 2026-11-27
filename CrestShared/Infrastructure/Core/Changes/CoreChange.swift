@@ -21,6 +21,8 @@ struct CoreChangeBatch {
     var movedPages: [UUID] = []
     var rehostedPages: [PageRehosted] = []
     var adoptedPages: [OfferedPageAdopted] = []
+    /// The tabs each window's commands opened.
+    var openedTabs: [TabsOpened] = []
     var broughtForward: [WindowBroughtForward] = []
     var adoptedWindows: [OfferedWindowAdopted] = []
     var closedTransientPages: [TransientPageClosed] = []
