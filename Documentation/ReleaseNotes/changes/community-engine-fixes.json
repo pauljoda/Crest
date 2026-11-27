@@ -23,6 +23,14 @@
         "mac"
       ],
       "message": "Pages in Chromium see federated sign-in again, so sites' fraud checks no longer count it missing as a sign of a tampered browser. Thanks to Josue A. Mendives (@JosueM1109)."
+    },
+    {
+      "id": "chromium-private-web-store-redirect",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "A private or trusted-tester Chrome Web Store extension installs in Chromium for a Space signed in to an account that can see it, instead of failing with “Couldn’t download this extension.” Thanks to rajuGT (@rajuGT)."
     }
   ]
 }
