@@ -189,7 +189,7 @@ extension BrowserStore {
     }
 
     /// Archives the Space's open tabs, but for the tab this window shows there
-    /// when `keepingShownTab`.
+    /// when `keepingShownTab`, and offers this window's Undo for the clear.
     @discardableResult
     func clearCurrentTabs(
         matching assignment: BrowserSpaceRuntimeAssignment,
@@ -208,8 +208,10 @@ extension BrowserStore {
             // asked itself, so the Space stays as it is.
             guard let self, self.spaceModel(matching: assignment) != nil,
                 Set((try? self.core.query(clearing).tabIDs) ?? []) == Set(ids),
-                self.clearSessionTabs(in: assignment.spaceID, keepingShownTab: keepingShownTab)
+                let clearID = self.clearSessionTabs(in: assignment.spaceID, keepingShownTab: keepingShownTab)
             else { return false }
+            self.clearUndo?.offerUndo(
+                of: BrowserTabsClearing(id: clearID, space: assignment, keepsShownTab: keepingShownTab))
             return true
         }
     }

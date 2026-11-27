@@ -141,6 +141,7 @@ final class BrowserRootModel {
         _ = isAddressEditingBinding
         _ = isWindowFocusedBinding
         registerForNotices()
+        browser.clearUndo = self
     }
 
     private func registerForNotices() {

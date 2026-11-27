@@ -95,8 +95,10 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
     private func editMenu(in bar: BrowserMacMainMenu) {
         let edit = submenu(String(localized: "Edit"), in: bar)
         bar.editMenu = edit
-        standard(String(localized: "Undo"), Selector(("undo:")), key: "z", in: edit)
-        standard(String(localized: "Redo"), Selector(("redo:")), key: "z", modifiers: [.command, .shift], in: edit)
+        standard(String(localized: "Undo"), BrowserMacWindowUndo.undo, key: "z", in: edit, target: self)
+        standard(
+            String(localized: "Redo"), BrowserMacWindowUndo.redo, key: "z", modifiers: [.command, .shift], in: edit,
+            target: self)
         edit.addItem(.separator())
         standard(String(localized: "Cut"), #selector(NSText.cut(_:)), key: "x", in: edit)
         standard(String(localized: "Copy"), #selector(NSText.copy(_:)), key: "c", in: edit)
@@ -150,6 +152,27 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
         if item.action == #selector(pasteAsPlainText(_:)) {
             return BrowserPlainTextPaste(for: focusedResponder, validating: item) != nil
         }
+        if item.action == BrowserMacWindowUndo.undo || item.action == BrowserMacWindowUndo.redo {
+            return validateUndo(item)
+        }
+        return true
+    }
+
+    /// Edit › Undo or Redo as the window's own action names it when it comes
+    /// first (see `BrowserMacWindowUndo`), and otherwise as the responder
+    /// AppKit would send it to validates and names it.
+    private func validateUndo(_ item: NSMenuItem) -> Bool {
+        if let windowUndo = BrowserMacWindowUndo(item.action, in: NSApp.keyWindow) {
+            item.title = windowUndo.title
+            return true
+        }
+        item.title =
+            item.action == BrowserMacWindowUndo.redo ? String(localized: "Redo") : String(localized: "Undo")
+        guard let action = item.action, let target = NSApp.target(forAction: action, to: nil, from: item) else {
+            return false
+        }
+        if let validating = target as? NSMenuItemValidation { return validating.validateMenuItem(item) }
+        if let validating = target as? NSUserInterfaceValidations { return validating.validateUserInterfaceItem(item) }
         return true
     }
 
@@ -161,6 +184,25 @@ final class BrowserMacMenuBar: NSObject, NSMenuDelegate, NSMenuItemValidation {
     @objc private func runCommand(_ item: NSMenuItem) {
         guard let command = item.representedObject as? ShortcutCommand else { return }
         shell.perform(command)
+    }
+
+    /// Edit › Undo: the window's own action when it comes first, and
+    /// otherwise the focused responder's, as AppKit sends it.
+    @objc private func undo(_ item: NSMenuItem) {
+        undoOrRedo(item)
+    }
+
+    /// Edit › Redo, routed as Undo is.
+    @objc private func redo(_ item: NSMenuItem) {
+        undoOrRedo(item)
+    }
+
+    private func undoOrRedo(_ item: NSMenuItem) {
+        if let windowUndo = BrowserMacWindowUndo(item.action, in: NSApp.keyWindow) {
+            windowUndo.perform()
+        } else if let action = item.action {
+            NSApp.sendAction(action, to: nil, from: item)
+        }
     }
 
     /// Pastes as plain text into the focused field or page, whichever selector

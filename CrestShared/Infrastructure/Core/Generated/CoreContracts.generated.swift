@@ -620,6 +620,7 @@ enum Rejection: Equatable, Error, Sendable {
     case cannotDeleteLastSpace(CannotDeleteLastSpace)
     case cannotMoveSplitAcrossSpaces(CannotMoveSplitAcrossSpaces)
     case cannotPinSplit(CannotPinSplit)
+    case clearedTabsGone(ClearedTabsGone)
     case closePreparationUnderway(ClosePreparationUnderway)
     case contentRuleListUnavailable(ContentRuleListUnavailable)
     case credentialRecordLimitReached(CredentialRecordLimitReached)
@@ -899,6 +900,11 @@ enum Rejection: Equatable, Error, Sendable {
     /// The `CannotPinSplit` this rejection carries, or nil for another member.
     var cannotPinSplit: CannotPinSplit? {
         if case .cannotPinSplit(let value) = self { value } else { nil }
+    }
+
+    /// The `ClearedTabsGone` this rejection carries, or nil for another member.
+    var clearedTabsGone: ClearedTabsGone? {
+        if case .clearedTabsGone(let value) = self { value } else { nil }
     }
 
     /// The `ClosePreparationUnderway` this rejection carries, or nil for another member.
@@ -1745,6 +1751,7 @@ enum Rejection: Equatable, Error, Sendable {
         case .cannotDeleteLastSpace(let value): value.message
         case .cannotMoveSplitAcrossSpaces(let value): value.message
         case .cannotPinSplit(let value): value.message
+        case .clearedTabsGone(let value): value.message
         case .currentTabsOnly(let value): value.message
         case .duplicateSearchEngineName(let value): value.message
         case .duplicateSearchShortcut(let value): value.message
@@ -3184,6 +3191,7 @@ struct ClearCurrentTabs: Intent, SessionIntent, Equatable, Sendable {
     let workspaceID: UUID
     let windowID: UUID
     let spaceID: UUID
+    let clearID: UUID
     let keepsShownTab: Bool
 }
 
@@ -3203,6 +3211,14 @@ struct ClearedTabs: Query, Equatable, Sendable {
     let windowID: UUID
     let spaceID: UUID
     let keepsShownTab: Bool
+}
+
+struct ClearedTabsGone: Equatable, Sendable {
+    let clearID: UUID
+
+    var message: LocalizedStringResource {
+        LocalizedStringResource("The cleared tabs are no longer in the Archive.")
+    }
 }
 
 struct ClickPage: PageRequest, Equatable, Sendable {
@@ -7537,6 +7553,13 @@ struct RestoreArchivedTab: Intent, SessionIntent, Equatable, Sendable {
     let windowID: UUID
     let spaceID: UUID
     let tabID: UUID
+}
+
+struct RestoreClearedTabs: Intent, SessionIntent, Equatable, Sendable {
+    let workspaceID: UUID
+    let windowID: UUID
+    let spaceID: UUID
+    let clearID: UUID
 }
 
 struct RestoreInteractionState: PageRequest, Equatable, Sendable {

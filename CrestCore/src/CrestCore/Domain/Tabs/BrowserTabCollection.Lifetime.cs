@@ -25,6 +25,30 @@ public sealed partial class BrowserTabCollection {
         return tab;
     }
 
+    /// Opens again `returning`, open tabs a clear archived from this Space as
+    /// it stood `before`: each after the latest tab that came before it there
+    /// and is here now, or first among the open tabs, in the folder and split
+    /// it sat in while they can hold it. A folder or split the clear took goes
+    /// back as it stood, after the folder it followed there. Each tab keeps
+    /// its record, its place marked as moved `now`.
+    public void RestoreCleared(SpaceState before, IReadOnlyList<TabState> returning, DateTimeOffset now) {
+        ArgumentNullException.ThrowIfNull(before);
+        ArgumentNullException.ThrowIfNull(returning);
+        RestoreFolders(before.Folders, returning);
+        var states = returning.ToDictionary(tab => tab.Id);
+        for (int index = 0; index < before.Tabs.Count; index++) {
+            if (!states.TryGetValue(before.Tabs[index].Id, out var state)) continue;
+            var folder = state.FolderId is { } id && folders.Any(kept => kept.Id == id && kept.Location == state.Placement) ? id : (Guid?)null;
+            var tab = BrowserTab.Restore(state with { FolderId = folder, PositionModifiedAt = BrowserEditTimestamp.Normalize(now) });
+            var previous = before.Tabs.Take(index).LastOrDefault(earlier => tabs.Any(held => held.Id == earlier.Id));
+            InsertTab(tab, previous is null ? null : tabs.FindIndex(held => held.Id == previous.Id) + 1);
+        }
+        splitGroups.AddRange(before.SplitGroups.Where(group => returning.Any(tab => tab.SplitGroupId == group.Id)
+            && splitGroups.All(kept => kept.Id != group.Id)));
+        NormalizeSplits(now);
+        PruneSplitMetadata();
+    }
+
     /// Puts a saved or pinned tab's page away, returning the tab to its saved
     /// address when `returnToSavedUrl`, and answers the tab its window shows
     /// next: `fallback` in place of the tab when it showed it.
@@ -52,6 +76,29 @@ public sealed partial class BrowserTabCollection {
         if (selected is not null && !tabs.Any(t => t.Id == selected))
             selected = FallbackSelection();
         return selected;
+    }
+
+    /// Puts back the folders of `before` that the tabs `returning` sat in,
+    /// and the folders above them, that this Space no longer holds: each as it
+    /// stood, after the folder it followed there, at the top level once the
+    /// folder it sat in is gone or lies in another section.
+    private void RestoreFolders(IReadOnlyList<FolderState> before, IReadOnlyList<TabState> returning) {
+        var parents = before.ToDictionary(folder => folder.Id, folder => folder.ParentId);
+        HashSet<Guid> wanted = [];
+        foreach (var tab in returning)
+            for (var id = tab.FolderId; id is { } folder && parents.ContainsKey(folder) && wanted.Add(folder); id = parents[folder]) { }
+        for (int index = 0; index < before.Count; index++) {
+            var folder = before[index];
+            if (!wanted.Contains(folder.Id) || folders.Any(kept => kept.Id == folder.Id)) continue;
+            var previous = before.Take(index).LastOrDefault(earlier => folders.Any(kept => kept.Id == earlier.Id));
+            folders.Insert(previous is null ? 0 : folders.FindIndex(kept => kept.Id == previous.Id) + 1, folder);
+        }
+        for (int index = 0; index < folders.Count; index++) {
+            if (folders[index].ParentId is not { } parent || !wanted.Contains(folders[index].Id)) continue;
+            if (folders.FirstOrDefault(kept => kept.Id == parent) is not { } holder || holder.Location != folders[index].Location)
+                folders[index] = folders[index] with { ParentId = null };
+        }
+        new FolderTree(folders).Validate();
     }
 
     #endregion
