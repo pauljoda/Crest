@@ -6,28 +6,28 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.11.52</title>
-            <pubDate>Fri, 27 Nov 2026 03:24:27 +0000</pubDate>
+            <title>0.11.53</title>
+            <pubDate>Fri, 27 Nov 2026 04:41:46 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1724</sparkle:version>
-            <sparkle:shortVersionString>0.11.52</sparkle:shortVersionString>
+            <sparkle:version>1725</sparkle:version>
+            <sparkle:shortVersionString>0.11.53</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
-### New
+### Fixed
 
-- Tidy sorts a Space's loose open tabs into Groups named for their topic, using Apple Intelligence on the device. Turn it on in Settings › Tabs, then press Tidy above the open tabs once six or more are loose. Running it again adds to the Groups it made, and its Groups sync like any other. Thanks to Ali Karbassi (@karbassi).
+- Middle-clicking a saved tab inside a folder or folder preview card now reliably unloads it, including after moving tabs or collapsing and reopening folders.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[Release notes](https://crestbrowser.com/releases/mac/development/0.11.52/) · [View all changes](https://github.com/crest-browser/Crest/compare/46f6b309e2a61d32f9e9a2e288874640f11c3101...f0cf12262cbc7900040dc392958250db875f7883) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.11.52-2026-11-27-1724-r724.1/Installer-Crest-0.11.52-development-2026-11-27-f0cf122.dmg)
+[Release notes](https://crestbrowser.com/releases/mac/development/0.11.53/) · [View all changes](https://github.com/crest-browser/Crest/compare/f0cf12262cbc7900040dc392958250db875f7883...24a35a7d389d52fbe84688f753ea3a6de8b2d020) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.11.53-2026-11-27-1725-r725.1/Installer-Crest-0.11.53-development-2026-11-27-24a35a7.dmg)
 
 [Browse Development releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.11.52-2026-11-27-1724-r724.1/Installer-Crest-0.11.52-development-2026-11-27-f0cf122.dmg" length="414721013" type="application/octet-stream" sparkle:edSignature="CtTiGACpmqlzwy/Dc/Yh7JTbYcw1imSCPA/vEbNdfWnQnpaIdsnZWg5qjj9+NYZWTG+1n1ZMSDsrT3FyCmwEBw=="/>
+            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.11.53-2026-11-27-1725-r725.1/Installer-Crest-0.11.53-development-2026-11-27-24a35a7.dmg" length="414789110" type="application/octet-stream" sparkle:edSignature="Yff2lKJsfyIog/MpNPxT9SWjtmnq/Yc123zExbw9zqVP6xJNORARbrp0RIpLxvQQyfrYuMaFhbmiEjhgmOIKAg=="/>
         </item>
         <item>
             <title>0.10.138</title>
@@ -89,6 +89,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: 4j+4SwB5Z5xrcJpYJztYTbPwlZXxncsV+Uzso0bmP6i2gPVIw9yy0Z5G0PYu+WJ/0h+WycwW8Hp+Dit6DfW8CA==
-length: 7050
+edSignature: dta7yUr/aVYYhxOumWfA1f7MrsAMKqmHs48qDozToBe1Babz32c8bGGjgqXXOaAIvtKgg3e4WdOyhPRcW4h6Cg==
+length: 6883
 -->
