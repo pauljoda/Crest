@@ -173,7 +173,11 @@ class ReleaseNoteCatalogTests(unittest.TestCase):
         self.assertEqual(opened.returncode, 0, opened.stderr)
 
     def test_entries_on_main_never_change_but_write_ups_do(self) -> None:
-        self.write_fragment("merged-fix", [self.entry("merged-fix", "fixed", "Keep downloads reliable")])
+        merged = [
+            self.entry("merged-fix", "fixed", "Keep downloads reliable"),
+            self.entry("merged-polish", "improved", "Show downloads sooner"),
+        ]
+        self.write_fragment("merged-fix", merged)
         self.git("add", ".")
         self.git("commit", "-m", "merged pull request")
 
@@ -188,6 +192,10 @@ class ReleaseNoteCatalogTests(unittest.TestCase):
             ),
             "deleted fragment": (
                 lambda: self.notes_path("changes/merged-fix.json").unlink(),
+                "never change, move or go away",
+            ),
+            "reordered fragment": (
+                lambda: self.write_fragment("merged-fix", list(reversed(merged))),
                 "never change, move or go away",
             ),
             "entry moved to a fragment": (
@@ -211,11 +219,7 @@ class ReleaseNoteCatalogTests(unittest.TestCase):
             ),
             "new entry in a merged fragment": (
                 lambda: self.write_fragment(
-                    "merged-fix",
-                    [
-                        self.entry("merged-fix", "fixed", "Keep downloads reliable"),
-                        self.entry("late-change", "fixed", "Describe a late fix"),
-                    ],
+                    "merged-fix", [*merged, self.entry("late-change", "fixed", "Describe a late fix")]
                 ),
                 "new entries go in a new fragment",
             ),

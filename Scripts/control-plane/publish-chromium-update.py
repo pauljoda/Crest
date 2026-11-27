@@ -304,8 +304,8 @@ def blocked_body(version, plan, early):
             "resolve each conflict in the report's `conflicts`, and commit the patches. Plan again until nothing "
             f"stops it, then run `chromium-fork.py update {major}--version {version} --sdk <macOS SDK>` from the "
             "clean checkout: it "
-            "pins the release, refreshes the host hashes and builds the engine. Add the patch version and release "
-            "note before review.\n")
+            "pins the release, refreshes the host hashes and builds the engine. Add a release-note fragment under "
+            "`Documentation/ReleaseNotes/changes/` before review; the version comes from git.\n")
 
 
 if __name__ == "__main__":

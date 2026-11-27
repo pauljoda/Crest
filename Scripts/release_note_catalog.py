@@ -566,14 +566,20 @@ def validate_pull_request(repository_root: pathlib.Path, base: str, head: str = 
     before_files = {file.path: file for file in notes_files(documents_at(repository_root, merge_base_sha))}
     after_files = {file.path: file for file in notes_files(documents_at(repository_root, head))}
 
-    changed_entries = []
+    changed_entries: dict[str, None] = {}
     for path, file in before_files.items():
-        later = {entry.identifier: entry for entry in after_files[path].entries} if path in after_files else {}
-        changed_entries.extend(
-            entry.identifier
+        later_entries = after_files[path].entries if path in after_files else ()
+        later = {entry.identifier: entry for entry in later_entries}
+        changed_entries.update(
+            (entry.identifier, None)
             for entry in file.entries
             if entry.identifier not in later or later[entry.identifier].content != entry.content
         )
+        # Release order is as written, and the channels' cursors depend on it.
+        existing = {entry.identifier for entry in file.entries}
+        kept = [entry.identifier for entry in file.entries if entry.identifier in later]
+        reordered = [entry.identifier for entry in later_entries if entry.identifier in existing]
+        changed_entries.update((now, None) for now, then in zip(reordered, kept) if now != then)
     if changed_entries:
         raise CatalogValidationError(
             f"release-note entries on main never change, move or go away: {', '.join(changed_entries)}"
@@ -619,14 +625,22 @@ def format_document(document: dict[str, object]) -> str:
     return text + "\n"
 
 
-def write_fragment(repository_root: pathlib.Path, slug: str, entries: list[dict[str, object]]) -> pathlib.Path:
-    """Write a new fragment with `entries`, refusing to replace one."""
+def new_fragment(
+    repository_root: pathlib.Path, slug: str, entries: list[dict[str, object]]
+) -> tuple[pathlib.Path, str]:
+    """The path and checked text of a new fragment with `entries`, refusing to replace one."""
     relative_path = f"{FRAGMENT_DIRECTORY}/{slug}.json"
     path = repository_root / CATALOG_DIRECTORY / relative_path
     if path.exists():
         raise CatalogValidationError(f"{CATALOG_DIRECTORY}/{relative_path} already exists")
     text = format_document({"entries": entries})
     notes_file(relative_path, text)
+    return path, text
+
+
+def write_fragment(repository_root: pathlib.Path, slug: str, entries: list[dict[str, object]]) -> pathlib.Path:
+    """Write a new fragment with `entries`, refusing to replace one."""
+    path, text = new_fragment(repository_root, slug, entries)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
     return path

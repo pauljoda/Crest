@@ -35,9 +35,9 @@ from release_note_catalog import (  # noqa: E402
     documents_at,
     file_at,
     format_document,
+    new_fragment,
     notes_files,
     unique_json_object,
-    write_fragment,
 )
 
 
@@ -63,29 +63,34 @@ def legacy_entries(repository_root: pathlib.Path, commit: str) -> dict[str, dict
     return json.loads(contents, object_pairs_hook=unique_json_object)["entries"]
 
 
-def convert_legacy(repository_root: pathlib.Path, merge_base: str, known: set[str]) -> list[dict[str, object]]:
-    """Take the entries the branch added to the single catalog file back out, returning them."""
-    added = {
-        identifier: raw
+def legacy_additions(
+    repository_root: pathlib.Path, merge_base: str, known: set[str]
+) -> list[dict[str, object]]:
+    """The entries the branch added to the single catalog file, as fragment entries."""
+    earlier = legacy_entries(repository_root, merge_base)
+    return [
+        {"id": identifier, **{key: raw[key] for key in ("category", "message", "platforms") if key in raw}}
         for identifier, raw in legacy_entries(repository_root, "HEAD").items()
-        if identifier not in legacy_entries(repository_root, merge_base) and identifier not in known
-    }
-    if not added:
-        return []
-    path = repository_root / LEGACY_CATALOG_PATH
-    original = file_at(repository_root, f"{merge_base}:{LEGACY_CATALOG_PATH}")
+        if identifier not in earlier and identifier not in known
+    ]
+
+
+def restore(repository_root: pathlib.Path, merge_base: str, relative_path: str) -> None:
+    """Put a file back as it was at the merge base, removing it if it wasn't there."""
+    original = file_at(repository_root, f"{merge_base}:{relative_path}")
+    path = repository_root / relative_path
     if original is None:
         path.unlink()
     else:
         path.write_text(original)
-    return [
-        {"id": identifier, **{key: raw[key] for key in ("category", "message", "platforms") if key in raw}}
-        for identifier, raw in added.items()
-    ]
 
 
 def convert(repository_root: pathlib.Path, base: str, slug: str | None) -> list[str]:
-    """Rewrite the working tree; returns the paths it changed."""
+    """Rewrite the working tree; returns the paths it changed.
+
+    Everything is checked before the first write, so a failure leaves the
+    branch as it was.
+    """
     if git(repository_root, "status", "--porcelain", "--untracked-files=no"):
         raise CatalogValidationError("commit or set aside the branch's changes first")
     merge_base = git(repository_root, "merge-base", base, "HEAD")
@@ -93,6 +98,7 @@ def convert(repository_root: pathlib.Path, base: str, slug: str | None) -> list[
     after = notes_files(documents_at(repository_root, "HEAD"))
     known = {entry.identifier for file in before.values() for entry in file.entries}
 
+    legacy = legacy_additions(repository_root, merge_base, known)
     moved = []
     touched = []
     for file in sorted(after, key=lambda file: (file.named_version is None, file.named_version, file.path)):
@@ -102,29 +108,28 @@ def convert(repository_root: pathlib.Path, base: str, slug: str | None) -> list[
         if added:
             moved.extend(added)
             touched.append(file)
-
-    changed: list[str] = []
-    entries = convert_legacy(repository_root, merge_base, known)
-    if entries:
-        changed.append(LEGACY_CATALOG_PATH)
+    entries = legacy + [raw_entry(entry) for entry in moved]
+    fragment = new_fragment(repository_root, slug or str(entries[0]["id"]), entries) if entries else None
     version_file = repository_root / VERSION_FILE_PATH
     original_version_file = file_at(repository_root, f"{merge_base}:{VERSION_FILE_PATH}")
-    if original_version_file is not None and version_file.read_text() != original_version_file:
+    restores_version = original_version_file is not None and version_file.read_text() != original_version_file
+
+    changed: list[str] = []
+    if restores_version:
         version_file.write_text(original_version_file)
         changed.append(VERSION_FILE_PATH)
-    entries.extend(raw_entry(entry) for entry in moved)
-    if not entries:
-        return changed
-
+    if legacy:
+        restore(repository_root, merge_base, LEGACY_CATALOG_PATH)
+        changed.append(LEGACY_CATALOG_PATH)
     for file in touched:
         relative_path = f"{CATALOG_DIRECTORY}/{file.path}"
-        path = repository_root / relative_path
-        document = json.loads(path.read_text(), object_pairs_hook=unique_json_object)
         original = before.get(file.path)
         if original is not None and original.write_up == file.write_up:
             # The branch only added entries; the file goes back as it was.
-            path.write_text(file_at(repository_root, f"{merge_base}:{relative_path}"))
+            restore(repository_root, merge_base, relative_path)
         else:
+            path = repository_root / relative_path
+            document = json.loads(path.read_text(), object_pairs_hook=unique_json_object)
             remaining = [raw for raw in document.get("entries", []) if raw["id"] in known]
             document = {key: value for key, value in document.items() if key == "release"}
             if remaining:
@@ -134,9 +139,11 @@ def convert(repository_root: pathlib.Path, base: str, slug: str | None) -> list[
             else:
                 path.unlink()
         changed.append(relative_path)
-
-    fragment = write_fragment(repository_root, slug or str(entries[0]["id"]), entries)
-    changed.append(str(fragment.relative_to(repository_root)))
+    if fragment is not None:
+        path, text = fragment
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+        changed.append(str(path.relative_to(repository_root)))
     return changed
 
 

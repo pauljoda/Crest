@@ -126,10 +126,12 @@ notarizing, creating a release, or advancing an appcast. If no nightly appcast
 exists, preflight builds even if a GitHub Release exists, because that release
 may belong to an interrupted publication.
 
-Release notes come from `Documentation/ReleaseNotes`, one file per version.
-Every product or architecture commit adds entries, each with a stable ID,
-category, and purpose-written message, to the file for its version. A Stable
-release publishes its version's curated write-up. Other releases read the
+Release notes come from `Documentation/ReleaseNotes`. Every pull request that
+changes app code adds a fragment under `changes/` with its entries, each with a
+stable ID, category, and purpose-written message, and they belong to the
+version of the commit that merges it. The per-version files hold the versions
+from before then and the Stable write-ups. A Stable release publishes its
+version's curated write-up. Other releases read the
 selected channel's cursor, group the later public entries that reach the Mac
 into New, Improved, and Fixed highlights, omit `internal` entries, and limit
 long ranges to the 12 most recent highlights. Because entry identity and cursor
