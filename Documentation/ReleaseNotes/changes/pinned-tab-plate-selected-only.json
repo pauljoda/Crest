@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "pinned-tab-icon-no-box-at-rest",
+      "category": "fixed",
+      "message": "Pinned tabs that aren't selected no longer draw a box behind dark or white icons. Only a selected pin whose color would hide its icon puts the icon on a small plate."
+    }
+  ]
+}

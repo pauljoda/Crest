@@ -1,10 +1,11 @@
 import SwiftUI
 
-/// Lays a pin's icon on a plate of Crest's surface in the opposite tone where
-/// the icon would disappear into its tile: where none of the colors it is
-/// seen in stands apart from the tile, as a white icon on the White selection
-/// does, or a yellow one on its own yellow tint. The tile keeps its color;
-/// only the icon gains the plate.
+/// Lays a selected pin's icon on a plate of Crest's surface in the opposite
+/// tone where its selection would hide the icon: where none of the colors it
+/// is seen in stands apart from what the selection lays under it, as a white
+/// icon on the White selection does, or a yellow one on its own yellow tint.
+/// A pin at rest, or selected on the bare material, shows its icon as it is.
+/// The tile keeps its color; only the icon gains the plate.
 struct PinnedTabIconPlate: ViewModifier {
     // MARK: - Static Variables
 
@@ -28,7 +29,7 @@ struct PinnedTabIconPlate: ViewModifier {
     /// How far the plate reaches past the icon on each side.
     let inset: CGFloat
 
-    @Environment(\.browserTabSurfaceGround) private var ground
+    @Environment(\.browserTabSelectionGround) private var ground
 
     // MARK: - Body
 
@@ -47,9 +48,10 @@ struct PinnedTabIconPlate: ViewModifier {
 
     // MARK: - Actions - Contrast
 
-    /// The scheme of the plate the icon needs, or nil where it reads on its
-    /// tile. The plate takes the tone farther from the color the icon is
-    /// mostly seen in: charcoal under a light icon, paper under a dark one.
+    /// The scheme of the plate the icon needs, or nil where its selection lays
+    /// nothing under it or it reads on what the selection lays. The plate
+    /// takes the tone farther from the color the icon is mostly seen in:
+    /// charcoal under a light icon, paper under a dark one.
     private var plateScheme: ColorScheme? {
         guard let palette, let ground else { return nil }
         let environment = EnvironmentValues()
