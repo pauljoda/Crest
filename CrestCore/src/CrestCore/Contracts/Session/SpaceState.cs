@@ -149,6 +149,17 @@ public sealed record SpaceState(
 
     #endregion
 
+    #region Actions - Loading
+
+    /// <summary>The tabs a window shows without loading a page: those among
+    /// <paramref name="loaded"/>, whose page is loaded, and those with no page to load, a
+    /// Start Page or a native view. With no <paramref name="loaded"/> tabs known, only
+    /// those with no page to load.</summary>
+    internal IReadOnlySet<Guid> ShownWithoutLoading(IReadOnlySet<Guid>? loaded) =>
+        Tabs.Where(tab => !tab.Surface.ShowsPage || loaded?.Contains(tab.Id) == true).Select(tab => tab.Id).ToHashSet();
+
+    #endregion
+
     #region Actions - Imports
 
     /// The name and look the Space has, as a review or a setup offers them.

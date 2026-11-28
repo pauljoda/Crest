@@ -8,8 +8,9 @@ namespace CrestCore.Contracts;
 /// its saved address when the app's preferences say so for its section, as
 /// `CloseTab` closes one. A window that showed one of them returns to the tab it showed before
 /// outside them and their splits, so none of them comes back as the next
-/// closes. A tab that is not saved or pinned, or that the Space no longer
-/// holds, is passed over.
+/// closes, but only while that tab shows without loading a page, and
+/// otherwise shows none: putting pages away never loads another. A tab that
+/// is not saved or pinned, or that the Space no longer holds, is passed over.
 public sealed record PutAwayTabs(Guid WorkspaceId, Guid WindowId, Guid SpaceId, IReadOnlyList<Guid> TabIds) : SessionIntent(WorkspaceId) {
     #region Actions - Session
 
@@ -22,10 +23,12 @@ public sealed record PutAwayTabs(Guid WorkspaceId, Guid WindowId, Guid SpaceId, 
         var shown = followUp.Window?.Tab(space.Id);
         var ids = closing.Select(tab => tab.Id).ToHashSet();
         var splits = closing.Select(tab => tab.SplitGroupId).OfType<Guid>().ToHashSet();
-        var fallback = followUp.FallbackAfterDismissing(space.Id, ids, space.Tabs
+        var before = followUp.FallbackAfterDismissing(space.Id, ids, space.Tabs
             .Where(candidate => !ids.Contains(candidate.Id)
                 && (candidate.SplitGroupId is not { } split || !splits.Contains(split)))
             .Select(candidate => candidate.Id).ToHashSet());
+        var ready = space.ShownWithoutLoading(turn.Pages?.LoadedTabs(workspace.WorkspaceId));
+        var fallback = before is { } previous && ready.Contains(previous) ? previous : (Guid?)null;
         var selected = shown;
         List<SessionPagePutAway> putAways = [];
         List<SessionSavedImage> savedImages = [];

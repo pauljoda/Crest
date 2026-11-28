@@ -22,10 +22,12 @@ public sealed partial class BrowserContractsTests {
             article = Id("B61250D4-3D4E-4DD6-8871-0BB326669142"), start = Id("056F15C0-13CE-4ED0-B9FE-DD4A9D05A56D");
         var window = device.Open(space.Id);
         foreach (var tab in new[] { start, right, article }) device.Send(new ShowTab(window, space.Id, tab));
+        Load(device, window, space.Id, right);
 
         // A saved tab keeps its place, and its page returns to its saved
         // address when the app's preferences say so. The window that asked
-        // lets the tab's page go, keeping nothing of it.
+        // lets the tab's page go, keeping nothing of it, and goes back to the
+        // tab it showed before, whose page is loaded.
         var putAway = device.Send(new CloseTab(device.Workspace, window, space.Id, article)).OfType<TabPagePutAway>();
         var kept = core.Current.Spaces[0].Tabs.Single(tab => tab.Id == article);
         Assert.Equal((TabPlacement.Saved, "https://news.example/article"), (kept.Placement, kept.Url));
@@ -64,6 +66,38 @@ public sealed partial class BrowserContractsTests {
         device.Send(new ShowTab(window, fixture.Space, fixture.Last));
         device.Send(new CloseTab(device.Workspace, window, fixture.Space, fixture.Last));
         Assert.Equal(fixture.Pinned, device.Tab(window, fixture.Space));
+    }
+
+    [Fact]
+    public void PuttingAPageAwayNeverShowsATabTheWindowWouldHaveToLoad() {
+        var fixture = new BatchSpace();
+        using var device = new TestDevice(fixture.Session);
+
+        // A window that has shown nothing else, as after a relaunch, shows no
+        // tab once the pinned tab's page is put away, rather than the tab
+        // beside it, whose page is not loaded.
+        var window = device.Open(fixture.Space, (fixture.Space, fixture.Pinned));
+        Load(device, window, fixture.Space, fixture.Pinned);
+        device.Send(new CloseTab(device.Workspace, window, fixture.Space, fixture.Pinned));
+        Assert.Null(device.Tab(window, fixture.Space));
+
+        // Nor does it go back to the tab it showed before while that tab's
+        // page is not loaded, however its page was put away.
+        device.Send(new ShowTab(window, fixture.Space, fixture.Open));
+        device.Send(new ShowTab(window, fixture.Space, fixture.Pinned));
+        device.Send(new CloseTab(device.Workspace, window, fixture.Space, fixture.Pinned));
+        Assert.Null(device.Tab(window, fixture.Space));
+        device.Send(new ShowTab(window, fixture.Space, fixture.Open));
+        device.Send(new ShowTab(window, fixture.Space, fixture.Saved));
+        device.Send(new PutAwayTabs(device.Workspace, window, fixture.Space, [fixture.Saved, fixture.Pinned]));
+        Assert.Null(device.Tab(window, fixture.Space));
+
+        // A tab whose page is loaded, it goes back to.
+        Load(device, window, fixture.Space, fixture.Last);
+        device.Send(new ShowTab(window, fixture.Space, fixture.Last));
+        device.Send(new ShowTab(window, fixture.Space, fixture.Pinned));
+        device.Send(new CloseTab(device.Workspace, window, fixture.Space, fixture.Pinned));
+        Assert.Equal(fixture.Last, device.Tab(window, fixture.Space));
     }
 
     [Fact]
