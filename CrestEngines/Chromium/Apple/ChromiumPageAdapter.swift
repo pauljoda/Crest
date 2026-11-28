@@ -22,8 +22,7 @@
             context: { [weak self] in self?.page?.linkNavigationContext },
             dragsLinksToPeek: { [weak self] in self?.page?.corePage.linkPreferences?.dragsLinksToPeek == true },
             handle: { [weak self] event in self?.page?.handleLinkDrag(event) })
-        private(set) lazy var pictureInPicture: (any BrowserPagePictureInPictureController)? =
-            ChromiumPictureInPicturePageController(page: enginePage)
+        let pictureInPicture: (any BrowserPagePictureInPictureController)?
         /// Reader Mode runs through the engine's content scripting, sharing the
         /// exact same core-owned script and session as WebKit.
         private(set) lazy var readerModeSession: BrowserReaderModeSession? = page.map {
@@ -56,6 +55,7 @@
         init(_ native: ChromiumNativePage) {
             self.native = native
             enginePage = native.makeEnginePage()
+            pictureInPicture = ChromiumPictureInPicturePageController(page: enginePage, scripting: native)
         }
 
         // MARK: - Actions - Lifecycle
@@ -116,6 +116,36 @@
     {
         // MARK: - Static Variables
 
+        /// Child documents report their engine-issued handle only when they own
+        /// video PiP. The probe also reaches shadow players whose entry event
+        /// stays inside the shadow tree. No media state crosses frame origins.
+        private static let frameScript = BrowserContentScript(
+            source: #"""
+                (() => {
+                  const probe = 'crest-query-pip-owner';
+                  let lastProbe = -Infinity;
+                  const report = () => {
+                    if (window !== top && document.pictureInPictureElement)
+                      webkit.messageHandlers.crestPictureInPictureOwner.postMessage(true);
+                  };
+                  const children = () => {
+                    if (performance.now() - lastProbe < 1000) return;
+                    lastProbe = performance.now();
+                    report();
+                    for (let i = 0; i < window.frames.length; ++i)
+                      window.frames[i].postMessage(probe, '*');
+                  };
+                  globalThis.__crestFindChildPiP = children;
+                  if (window === top) return;
+                  addEventListener('message', event => {
+                    if (event.source !== parent || event.data !== probe) return;
+                    children();
+                  });
+                  document.addEventListener('enterpictureinpicture', report, true);
+                })();
+                """#,
+            handlerName: "crestPictureInPictureOwner", mainFrameOnly: false)
+
         private static let initialEntryCheckDelay: Duration = .milliseconds(600)
         private static let lateEntryCheckInterval: Duration = .milliseconds(100)
         private static let entryTimeout: Duration = .seconds(2)
@@ -123,6 +153,8 @@
         // MARK: - Variables
 
         private let page: EnginePage
+        private let scripting: any BrowserPageContentScripting
+        private var videoFrame: BrowserContentFrame?
         private let coordinator: BrowserAutomaticPictureInPictureCoordinator
         private var completion: (@MainActor (Bool) -> Void)?
         private var reconcileLateEntry: (@MainActor () -> Void)?
@@ -137,13 +169,37 @@
 
         // MARK: - Initializers
 
-        init(page: EnginePage, coordinator: BrowserAutomaticPictureInPictureCoordinator = .shared) {
+        init(
+            page: EnginePage, scripting: any BrowserPageContentScripting,
+            coordinator: BrowserAutomaticPictureInPictureCoordinator = .shared
+        ) {
             self.page = page
+            self.scripting = scripting
             self.coordinator = coordinator
+            _ = scripting.install(Self.frameScript) { [weak self] message in
+                guard !message.frame.isMainFrame else { return }
+                self?.videoFrame = message.frame
+            }
             coordinator.register(self)
         }
 
         // MARK: - Actions - Picture in Picture
+
+        func timeline(moving seek: BrowserPictureInPictureTimeline.Seek?) async -> BrowserPictureInPictureTimeline? {
+            if let videoFrame,
+                let result = await BrowserPictureInPictureTimeline.read(
+                    moving: seek,
+                    evaluate: { body, arguments in
+                        try await scripting.callAsyncJavaScript(body, arguments: arguments, in: videoFrame)
+                    })
+            {
+                return result
+            }
+            return await BrowserPictureInPictureTimeline.read(moving: seek) { body, arguments in
+                let probe = "if (!document.pictureInPictureElement) globalThis.__crestFindChildPiP?.();\n"
+                return try await scripting.callAsyncJavaScriptInMainFrame(probe + body, arguments: arguments)
+            }
+        }
 
         func requestAutomaticEntry(for trigger: BrowserAutomaticPictureInPictureCoordinator.Trigger) {
             coordinator.request(from: self, for: trigger)

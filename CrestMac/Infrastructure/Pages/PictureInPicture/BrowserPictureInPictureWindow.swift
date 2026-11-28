@@ -70,6 +70,7 @@ final class BrowserPictureInPictureWindow: NSPanel {
     private final class PointerSurface: NSView {
         weak var player: BrowserPictureInPictureWindow?
         weak var controls: NSView?
+        weak var scrubber: NSView?
         private var tracking: NSTrackingArea?
 
         override func layout() {
@@ -91,10 +92,13 @@ final class BrowserPictureInPictureWindow: NSPanel {
         override func hitTest(_ point: NSPoint) -> NSView? {
             let local = convert(point, from: superview)
             guard bounds.contains(local) else { return nil }
-            if let controls, player?.controlsVisible == true, controls.alphaValue > 0.01,
-                controls.frame.contains(local)
-            {
-                return controls.hitTest(local) ?? controls
+            if player?.controlsVisible == true {
+                if let controls, controls.frame.contains(local), let hit = controls.hitTest(local) { return hit }
+                if let scrubber, player?.hasTimeline == true, !scrubber.isHidden, scrubber.frame.contains(local),
+                    let hit = scrubber.hitTest(local)
+                {
+                    return hit
+                }
             }
             return self
         }
@@ -135,6 +139,9 @@ final class BrowserPictureInPictureWindow: NSPanel {
     private let surface = PointerSurface()
     private let backdrop = NSHostingView(rootView: BrowserWindowAtmosphere(space: nil))
     private var controls: NSHostingView<BrowserPictureInPictureControls>?
+    private let scrubber = NSHostingView(rootView: BrowserPictureInPictureScrubber(source: nil, isRevealed: false))
+    private var hasTimeline = false
+    private weak var timelineSource: (any BrowserPagePictureInPictureController)?
     private var frameAppearance: BrowserDeviceAppearanceStore.PictureInPictureAppearance
     private var borderWidth: CGFloat { frameAppearance.borderWidth }
     private var refreshPending = false
@@ -225,6 +232,9 @@ final class BrowserPictureInPictureWindow: NSPanel {
         surface.addSubview(controls)
         surface.controls = controls
         self.controls = controls
+        scrubber.alphaValue = 0
+        surface.addSubview(scrubber)
+        surface.scrubber = scrubber
         layoutContent()
         observeAppearance()
     }
@@ -266,6 +276,7 @@ final class BrowserPictureInPictureWindow: NSPanel {
     }
 
     func dismiss() {
+        setTimelineSource(nil)
         cancelFrameAnimation()
         NSApp.removeWindowsItem(self)
         orderOut(nil)
@@ -295,6 +306,18 @@ final class BrowserPictureInPictureWindow: NSPanel {
 
     func setSourceSpace(_ space: SpaceModel?) {
         backdrop.rootView = BrowserWindowAtmosphere(space: space)
+    }
+
+    func setTimelineSource(_ source: (any BrowserPagePictureInPictureController)?) {
+        hasTimeline = false
+        timelineSource = source
+        updateScrubber()
+    }
+
+    private func updateScrubber() {
+        scrubber.rootView = BrowserPictureInPictureScrubber(
+            source: timelineSource, isRevealed: controlsVisible,
+            availabilityChanged: { [weak self] in self?.hasTimeline = $0 })
     }
 
     private func observeAppearance() {
@@ -348,6 +371,13 @@ final class BrowserPictureInPictureWindow: NSPanel {
                 controls.setFrameOrigin(nextOrigin)
             }
         }
+        let inset = Self.inset + borderWidth
+        let width = min(280, max(0, bounds.width - 2 * inset))
+        let strip = CGRect(
+            x: round((bounds.width - width) / 2), y: borderWidth + CrestSpacing.extraSmall,
+            width: width, height: CrestLayout.minimumHitTarget + 2 * CrestSpacing.extraExtraSmall)
+        scrubber.isHidden = strip.maxY + CrestSpacing.extraSmall >= (controls?.frame.minY ?? bounds.maxY)
+        if scrubber.frame != strip { scrubber.frame = strip }
         CATransaction.commit()
     }
 
@@ -418,15 +448,18 @@ final class BrowserPictureInPictureWindow: NSPanel {
         let shouldShow = drag?.resizes != true && (pointerIsInside || isKeyWindow)
         guard shouldShow != controlsVisible, let controls else { return }
         controlsVisible = shouldShow
+        updateScrubber()
         let targetAlpha: CGFloat = shouldShow ? 1 : 0
         if animated && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = Self.controlsFadeDuration
                 context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
                 controls.animator().alphaValue = targetAlpha
+                scrubber.animator().alphaValue = targetAlpha
             }
         } else {
             controls.alphaValue = targetAlpha
+            scrubber.alphaValue = targetAlpha
         }
     }
 

@@ -61,6 +61,7 @@ protocol BrowserPageEngineAdapter: EngineHostedPage {
 protocol BrowserPagePictureInPictureController: AnyObject {
     var canRestoreSource: Bool { get }
     var protectsPageResidency: Bool { get }
+    func timeline(moving seek: BrowserPictureInPictureTimeline.Seek?) async -> BrowserPictureInPictureTimeline?
     func requestAutomaticEntry(for trigger: BrowserAutomaticPictureInPictureCoordinator.Trigger)
     func returnToTab(reconcileLateEntry: @escaping @MainActor () -> Void)
     func navigationDidCommit()

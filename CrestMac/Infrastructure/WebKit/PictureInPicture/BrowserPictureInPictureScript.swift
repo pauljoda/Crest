@@ -271,6 +271,7 @@ enum BrowserPictureInPictureScript {
           discover(document);
           updateObservation();
           globalThis.__crestPictureInPicture = Object.freeze({ enter, cancel, snapshot,
+            activeVideo: () => videos().find(isActive),
             emit() { lastState = ''; publish(true); } });
           if (window !== top) parent.postMessage({ crestPiPFrame: 'interest', interested: false }, '*');
           schedule();

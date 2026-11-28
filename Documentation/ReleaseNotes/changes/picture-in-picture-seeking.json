@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "picture-in-picture-seeking",
+      "category": "improved",
+      "message": "Skip back or forward ten seconds or drag the timeline in Picture in Picture when the video supports seeking. Thanks to Jayant Guru Shrivastava (@Jayant-Guru-Shrivastava).",
+      "platforms": ["mac"]
+    }
+  ]
+}

@@ -81,7 +81,7 @@ final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureCo
     private weak var webView: WKWebView?
     private let coordinator: BrowserAutomaticPictureInPictureCoordinator
     private var candidates: [String: FrameCandidate] = [:]
-    private var activeDocuments: Set<String> = [] {
+    private var activeDocuments: [String: WKFrameInfo] = [:] {
         didSet { residencyProtectionMayHaveChanged() }
     }
     private var nativeIsActive = false {
@@ -117,6 +117,23 @@ final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureCo
     }
 
     // MARK: - Actions - Picture in Picture
+
+    func timeline(moving seek: BrowserPictureInPictureTimeline.Seek?) async -> BrowserPictureInPictureTimeline? {
+        guard acceptsEvents, let webView else { return nil }
+        for frame in Array(activeDocuments.values) {
+            if let result = await BrowserPictureInPictureTimeline.read(
+                moving: seek,
+                evaluate: { body, arguments in
+                    try await webView.callAsyncJavaScript(
+                        body, arguments: arguments, in: frame,
+                        contentWorld: BrowserPictureInPictureContentBridge.contentWorld)
+                })
+            {
+                return result
+            }
+        }
+        return nil
+    }
 
     func requestAutomaticEntry(for trigger: BrowserAutomaticPictureInPictureCoordinator.Trigger) {
         coordinator.request(from: self, for: trigger)
@@ -180,12 +197,12 @@ final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureCo
 
     private func removeDocument(_ documentID: String) {
         candidates[documentID] = nil
-        activeDocuments.remove(documentID)
+        activeDocuments[documentID] = nil
     }
 
     private func receiveRequestOutcome(documentID: String, requestID: String?, succeeded: Bool) {
         guard requestID == automaticRequest?.id.uuidString else { return }
-        if succeeded { activeDocuments.insert(documentID) }
+        if succeeded { activeDocuments[documentID] = automaticRequest?.candidate.frame }
         finish(succeeded: succeeded)
     }
 
@@ -198,9 +215,9 @@ final class BrowserPictureInPicturePageController: BrowserPagePictureInPictureCo
         frame: WKFrameInfo
     ) {
         if active {
-            activeDocuments.insert(documentID)
+            activeDocuments[documentID] = frame
         } else {
-            activeDocuments.remove(documentID)
+            activeDocuments[documentID] = nil
         }
         guard eligible,
             let videoID, videoID.count <= 32,

@@ -215,6 +215,7 @@ final class BrowserPictureInPicturePresenter {
 
     private func bindSource(_ page: BrowserPage?) {
         sourcePage = page
+        active?.window.setTimelineSource(page?.pictureInPicture)
         let space = page.flatMap {
             $0.host?.browser.spaceModel(
                 matching: BrowserSpaceRuntimeAssignment(spaceID: $0.spaceID, profileID: $0.profileID))

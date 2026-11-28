@@ -3038,6 +3038,9 @@
         }
       }
     },
+    "Back 10 Seconds" : {
+
+    },
     "Back to %@" : {
 
     },
@@ -7058,6 +7061,9 @@
         }
       }
     },
+    "Forward 10 Seconds" : {
+
+    },
     "forward delete" : {
       "localizations" : {
         "ar" : {
@@ -10576,6 +10582,9 @@
 
     },
     "Play" : {
+
+    },
+    "Playback position" : {
 
     },
     "Playing Audio" : {

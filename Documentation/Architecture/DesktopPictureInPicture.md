@@ -3,7 +3,10 @@
 Crest hosts WebKit and Chromium video in the same floating Picture in Picture
 window, with playback, return, settings and close controls. Drag the window
 to place it freely, flick it toward a corner to snap it there, or drag from a
-resize cursor at an edge or corner. The settings button opens General →
+resize cursor at an edge or corner. For a video with a seekable range, the lower controls skip back or forward
+ten seconds or seek when you release the timeline slider. A live stream
+without a seekable range keeps only its playback controls.
+The settings button opens General →
 Picture in Picture in Crest’s Settings tab. The optional border uses the
 source Space’s theme and the device’s window border width. The Settings
 preview updates as you change the border or choose square corners. The same
