@@ -1120,22 +1120,32 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     /// its file. An engine that shows a PDF in a viewer of its own makes a
     /// PDF of that viewer, not of the document. Nil when the page shows
     /// something else or its engine runs no content scripts; throws when the
-    /// document can't be read.
+    /// document can't be read, what was read isn't a PDF, such as a sign-in
+    /// page the address serves now, or the page left the document meanwhile.
     private func shownPDFDocument() async throws -> Data? {
-        guard let scripting = pageEngine.contentScripting,
+        guard let scripting = pageEngine.contentScripting else { return nil }
+        let documentURL = live.documentURL
+        guard
             let answer = try await scripting.callAsyncJavaScriptInMainFrame(
                 Self.shownPDFDocumentScript, arguments: ["limit": Self.maximumShownPDFDocumentBytes])
                 as? [String: Any],
             answer["isPDF"] as? Bool == true
         else { return nil }
-        if let encoded = answer["data"] as? String, let document = Data(base64Encoded: encoded) {
-            return document
+        var document: Data?
+        if live.documentURL == documentURL {
+            if let encoded = answer["data"] as? String {
+                document = Data(base64Encoded: encoded)
+            } else if let documentURL, documentURL.isFileURL {
+                // A page's own scripts can't read a file, but Crest can.
+                document = try? await Task.detached(priority: .userInitiated) {
+                    try Data(contentsOf: documentURL)
+                }.value
+            }
         }
-        // A page's own scripts can't read a file, but Crest can.
-        if let url = live.documentURL, url.isFileURL {
-            return try await Task.detached(priority: .userInitiated) { try Data(contentsOf: url) }.value
+        guard let document, PDFDocument(data: document) != nil else {
+            throw BrowserPageExportError.renderingFailed("The PDF couldn’t be read.")
         }
-        throw BrowserPageExportError.renderingFailed("The PDF couldn’t be read.")
+        return document
     }
 
     func exportPDF() {
