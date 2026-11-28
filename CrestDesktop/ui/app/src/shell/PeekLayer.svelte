@@ -150,6 +150,8 @@
   });
   // Native gives a committed document two frames to display. The inner page
   // waits for contentful paint, or for its 1.5 s limit on documents with none.
+  // A page that failed has its own thing to say, committed or not, as the
+  // Mac's BrowserPeekUnlockedContent drops its loading cover for a failure.
   const guest = $derived(!!(session.shell || session.guests));
   let framesElapsed = $state(false);
   let paintWaitEnded = $state(false);
@@ -160,7 +162,7 @@
     const limit = setTimeout(() => { paintWaitEnded = true; }, 1500);
     return () => { clearTimeout(frames); clearTimeout(limit); };
   });
-  const canReveal = $derived(guest ? framesElapsed && (painted || paintWaitEnded || !!page?.live.failure) : !!page?.live.url);
+  const canReveal = $derived(guest ? !!page?.live.failure || (framesElapsed && (painted || paintWaitEnded)) : !!page?.live.url);
   $effect(() => {
     if (!guest || canReveal || page?.live.failure) return;
     const timer = setTimeout(() => { showStatus = true; }, 400);

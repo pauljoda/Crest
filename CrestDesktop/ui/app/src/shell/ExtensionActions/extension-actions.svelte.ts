@@ -50,12 +50,18 @@ export function useExtensionActions(session: Session, profileId: () => string, p
   const revision = $derived((extensionsVersion(), extensions.revision));
   let pinned = $state.raw<readonly ExtensionAction[]>([]);
   let page = $state.raw<readonly ExtensionAction[]>([]);
+  // Another profile's or page's actions go at once rather than standing for
+  // the new one's until its answer comes; a refresh of the same keeps them.
+  let asked: { readonly profile: string; readonly page: string | null } | null = null;
   $effect(() => {
     const profile = profileId();
     const shownPage = pageId();
     void pageKey();
     void revision;
     return untrack(() => {
+      if (asked?.profile !== profile) pinned = [];
+      if (asked?.page !== shownPage) page = [];
+      asked = { profile, page: shownPage };
       let current = true;
       void session.core.request(PinnedExtensions({ profileId: profile })).then((list) => {
         if (current) pinned = list.actions;

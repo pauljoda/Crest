@@ -1,10 +1,13 @@
 <script lang="ts" generics="T extends string">
   import SymbolIcon from "../../SymbolIcon.svelte";
+  import { radioKeys } from "./index";
 
   let { label, choices, value, choose, switcher = false }: {
     label: string; choices: readonly { value: T; label: string }[]; value: T;
     choose: (value: T) => void; switcher?: boolean;
   } = $props();
+
+  const chosenIndex = $derived(choices.findIndex((option) => option.value === value));
 
   const tabs = [
     ["🗂️", "Monday overview"], ["📄", "Launch notes"], ["🧠", "Decision log"], ["✅", "Launch checklist"],
@@ -12,8 +15,10 @@
 </script>
 
 <div class="settings-layout-choices" role="radiogroup" aria-label={label}>
-  {#each choices as option (option.value)}
-    <button type="button" role="radio" aria-checked={option.value === value} onclick={() => choose(option.value)}>
+  {#each choices as option, index (option.value)}
+    <button type="button" role="radio" aria-checked={index === chosenIndex}
+      tabindex={index === chosenIndex || (chosenIndex < 0 && index === 0) ? 0 : -1}
+      onclick={() => choose(option.value)} onkeydown={radioKeys(choices, index, choose)}>
       <span class="settings-preview-face" aria-hidden="true">
         <span class={["settings-preview-window", switcher && "switcher-crop"]}>
           {#if !switcher}

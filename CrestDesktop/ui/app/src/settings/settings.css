@@ -574,7 +574,7 @@
   gap: 6px;
   margin: 0;
   font-size: 11px;
-  color: rgb(138 90 8);
+  color: var(--settings-warning);
 }
 
 .shortcuts-empty {

@@ -78,6 +78,8 @@ export interface SidebarContext {
   readonly selectAll: () => void;
   /** Selects what a batch action leaves selected, given the copies it made by source. */
   readonly reselect: (how: Reselection, selected: SelectedTabs, copies: ReadonlyMap<string, string>) => void;
+  /** How many times the selection has been changed, which tells whether the person changed it while an action ran. */
+  readonly selectionChanges: number;
 }
 
 /**
@@ -458,12 +460,14 @@ export function batchIntents(session: Session, spaceId: string, selection: TabSe
  */
 export async function performBatch(context: SidebarContext, selected: SelectedTabs, intent: SessionIntent,
   reselection: Reselection): Promise<boolean> {
+  const changesBefore = context.selectionChanges;
   try {
     const changes = await context.session.core.send(intent);
     const copies = new Map(changes.flatMap((change) =>
       change.$kind === "TabCopied" && change.workspaceId === context.session.workspaceId
         ? [[change.sourceTabId, change.copyTabId] as const] : []));
-    context.reselect(reselection, selected, copies);
+    // A selection the person made while the action ran stays theirs.
+    if (context.selectionChanges === changesBefore) context.reselect(reselection, selected, copies);
     return true;
   } catch (error) {
     if (!(error instanceof CoreRejection)) throw error;

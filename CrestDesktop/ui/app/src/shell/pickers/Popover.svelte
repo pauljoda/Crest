@@ -100,7 +100,7 @@
   $effect(() => {
     const close = onClose;
     const ignored = ignore;
-    untrack(() => {
+    return untrack(() => {
       const away = (event: PointerEvent) => {
         if (!(event.target instanceof Node)) return close();
         if (panel?.contains(event.target) || ignored?.contains(event.target)) return;

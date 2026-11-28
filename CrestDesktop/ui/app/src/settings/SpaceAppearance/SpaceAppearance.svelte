@@ -61,7 +61,9 @@
   let pending: { branding: SpaceBranding; frame: number } | null = null;
   let well = $state.raw<{ role: WellRole; anchor: DOMRect; element: HTMLElement } | null>(null);
   const flushWell: { current: (() => void) | null } = { current: null };
-  const defaults = untrack(() => startingLook(space.settings.look) ?? space.settings.look);
+  // What Reset returns to, as BrowserCrestForge's defaults: the look's starting preset as it is now, else the look the page opened on.
+  const initialLook = untrack(() => space.settings.look);
+  const defaults = $derived(startingLook(branding) ?? initialLook);
 
   const send = (next: SpaceBranding) => {
     void session.core.send(SetSpaceBranding({ workspaceId: session.workspaceId, spaceId: space.id, branding: next })).catch(() => {});

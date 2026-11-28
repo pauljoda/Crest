@@ -27,7 +27,7 @@
     children?: Snippet;
   } = $props();
 
-  const failure = $derived(useAccessFailure());
+  const failure = $derived(useAccessFailure(space.id));
   const authenticating = $derived((useCoreVersion(session), isAuthenticating(session.core, space.id)));
   const anyAuthenticating = $derived((useCoreVersion(session), isAuthenticating(session.core)));
   const others = $derived(spaces.filter((candidate) => candidate.id !== space.id));

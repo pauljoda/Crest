@@ -120,6 +120,13 @@ internal sealed class CoreSession : IAsyncDisposable {
     #region Actions - Core
 
     private unsafe (int, byte[]) Create(ReadOnlySpan<byte> payload) {
+        // A session creates its app once; asking again answers the app it has,
+        // as the shell's bridge does, rather than leaving that one running.
+        if (app != 0) {
+            var existing = new byte[8];
+            BinaryPrimitives.WriteUInt64LittleEndian(existing, app);
+            return (CoreLibrary.Ok, existing);
+        }
         int length = checked((int)BinaryPrimitives.ReadUInt32LittleEndian(payload));
         var fingerprint = payload.Slice(4, length);
         var configuration = payload[(4 + length)..];

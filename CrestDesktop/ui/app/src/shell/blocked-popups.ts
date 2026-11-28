@@ -126,10 +126,13 @@ class BlockedPopups {
     const origin = siteOriginOf(url);
     const allows = origin ? (await this.#decision(core, page.spaceId, origin)).grants : false;
     if (always || this.#applied.get(page.pageId) !== allows) {
-      this.#applied.set(page.pageId, allows);
-      // An engine's own blocker takes the site's own allowance, and otherwise its default of blocking.
-      await core.request(SetSitePermission({ pageId: page.pageId, permission: SitePermission.popups, allowed: allows ? true : null }))
+      // An engine's own blocker takes the site's own allowance, and otherwise
+      // its default of blocking. Only what it took is remembered, so a choice
+      // it refused is applied again next time.
+      const applied = await core.request(SetSitePermission({ pageId: page.pageId, permission: SitePermission.popups, allowed: allows ? true : null }))
         .catch(() => false);
+      if (applied) this.#applied.set(page.pageId, allows);
+      else this.#applied.delete(page.pageId);
     }
     const notice = this.notice(page.pageId);
     if (!origin || !notice || !sameOrigin(notice.origin, origin)) return;

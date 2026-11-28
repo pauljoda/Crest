@@ -1234,6 +1234,12 @@ button {
   -webkit-app-region: drag;
 }
 
+/* A sidebar docked on the right takes the window's right inset away, so the
+   title bar already reaches the corner. */
+.browser-window.sidebar-right.sidebar-docked .title-bar {
+  margin-inline-end: 0;
+}
+
 .title-bar button {
   -webkit-app-region: no-drag;
 }
@@ -1848,7 +1854,9 @@ button {
   color: var(--fg);
 }
 
-.space-page:hover .current-tabs-clear {
+/* Shown under the pointer, and while the keyboard is in the Space's page, so Tab can reach it. */
+.space-page:hover .current-tabs-clear,
+.space-page:has(:focus-visible) .current-tabs-clear {
   display: inline-flex;
 }
 
@@ -4678,6 +4686,12 @@ embed.page-frame {
 .extension-review {
   width: min(460px, 100%);
   text-align: start;
+}
+
+/* The review takes focus itself when it has no button to give it, so Escape
+   reaches it; the sheet draws no ring for that. */
+.extension-review:focus {
+  outline: none;
 }
 
 .extension-review-header {

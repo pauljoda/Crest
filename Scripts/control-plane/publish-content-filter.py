@@ -53,17 +53,30 @@ def main():
     existing = subprocess.run(["gh", "release", "view", tag, "--repo", args.repository, "--json", "assets,isDraft,body"],
                               capture_output=True, text=True)
     release = json.loads(existing.stdout) if existing.returncode == 0 else None
+    checksum_text = f"{entry['sha256']}  {asset}\n"
+    held = set()
     if release:
         names = {item["name"] for item in release["assets"]}
         if key not in release["body"]:
             raise SystemExit("The content filter release has a different key; refusing to change it")
-        if {asset, f"{asset}.sha256"} <= names:
+        # A published release gains another family's archive beside the ones
+        # builds already download; nothing it holds is ever replaced. What an
+        # interrupted run left is kept when it is the locked archive and its
+        # checksum, and the rest is uploaded.
+        held = {name for name in (asset, f"{asset}.sha256") if name in names}
+        if held:
+            with tempfile.TemporaryDirectory(prefix="crest-content-filter-held-") as temporary:
+                for name in held:
+                    run("gh", "release", "download", tag, "--repo", args.repository, "--pattern", name,
+                        "--dir", temporary)
+                if asset in held and content_filter.sha256(Path(temporary) / asset) != entry["sha256"]:
+                    raise SystemExit(f"{tag} holds a different {asset}; refusing to overwrite it")
+                if f"{asset}.sha256" in held and \
+                        (Path(temporary) / f"{asset}.sha256").read_text(encoding="utf-8") != checksum_text:
+                    raise SystemExit(f"{tag} holds a different {asset}.sha256; refusing to overwrite it")
+        if len(held) == 2 and not release["isDraft"]:
             print(f"{asset} is already published in {tag}.")
             return
-        # A published release gains another family's archive beside the ones
-        # builds already download; nothing it holds is ever replaced.
-        if asset in names or f"{asset}.sha256" in names:
-            raise SystemExit(f"{tag} holds part of {asset}; refusing to overwrite it")
     print(f"Verified {asset} ({archive.stat().st_size // (1 << 20)} MiB, sha256 {entry['sha256']}).")
     if args.dry_run:
         return
@@ -71,7 +84,7 @@ def main():
     commit = run("git", "-C", repo, "rev-parse", "HEAD", capture_output=True).stdout.strip()
     with tempfile.TemporaryDirectory(prefix="crest-content-filter-") as temporary:
         checksum = Path(temporary) / f"{asset}.sha256"
-        checksum.write_text(f"{entry['sha256']}  {asset}\n", encoding="utf-8", newline="\n")
+        checksum.write_text(checksum_text, encoding="utf-8", newline="\n")
         notes = ("Crest's content filter, Brave's adblock engine behind Crest's C interface, compiled for "
                  "each platform family's runtimes for the native core to link; each family is one archive.\n\n"
                  f"Content filter key `{key}`, computed by `Scripts/control-plane/content_filter.py` over the "
@@ -79,7 +92,9 @@ def main():
         if release is None:
             run("gh", "release", "create", tag, "--repo", args.repository, "--draft", "--prerelease", "--latest=false",
                 "--title", f"Crest content filter {key[:16]}", "--notes", notes)
-        run("gh", "release", "upload", tag, archive, checksum, "--repo", args.repository)
+        missing = [path for path in (archive, checksum) if path.name not in held]
+        if missing:
+            run("gh", "release", "upload", tag, *missing, "--repo", args.repository)
         if release is None or release["isDraft"]:
             run("gh", "release", "edit", tag, "--repo", args.repository, "--draft=false", "--latest=false")
     print(f"Published {asset} in {tag}.")

@@ -23,6 +23,8 @@
   onclick={(event) => event.stopPropagation()}
   onkeydown={(event) => {
     event.stopPropagation();
+    // A key that composes text, as an input method's Enter does, is the field's.
+    if (event.isComposing || event.keyCode === 229) return;
     if (event.key === "Enter") end(event.currentTarget.value);
     if (event.key === "Escape") end(null);
   }}

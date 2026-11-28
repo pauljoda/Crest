@@ -72,16 +72,16 @@ function originKey(origin: SiteOrigin | null): string {
  * change. Null until the answers arrive.
  */
 export function useSiteDecisions(site: () => SiteInSpace): { readonly current: ReadonlyMap<string, SitePermissionDecision> | null } {
-  let decisions = $state<ReadonlyMap<string, SitePermissionDecision> | null>(null);
+  // The answers keep the site they are for, so another site's never show.
+  let decisions = $state.raw<{ readonly key: string; readonly answers: ReadonlyMap<string, SitePermissionDecision> } | null>(null);
+  const key = $derived(`${site().spaceId}|${originKey(site().origin)}`);
   // The origin is its key, asked again whenever a Space's choices change.
-  const asked = $derived.by(() => {
-    const { session, spaceId, origin } = site();
-    return `${spaceId}|${originKey(origin)}|${coreState(session).sitePermissionRevision}`;
-  });
+  const asked = $derived(`${key}|${coreState(site().session).sitePermissionRevision}`);
   $effect(() => {
     void asked;
     return untrack(() => {
       const { session, spaceId, origin } = site();
+      const askedKey = key;
       if (!origin) {
         decisions = null;
         return;
@@ -90,7 +90,7 @@ export function useSiteDecisions(site: () => SiteInSpace): { readonly current: R
       void Promise.all(SitePermission.all.map(async (permission) => [permission.name,
         (await session.core.query(SiteDecision({ spaceId, origin, permission, detail: null }))).decision] as const))
         .then((answers) => {
-          if (current) decisions = new Map(answers);
+          if (current) decisions = { key: askedKey, answers: new Map(answers) };
         }, () => undefined);
       return () => {
         current = false;
@@ -99,7 +99,7 @@ export function useSiteDecisions(site: () => SiteInSpace): { readonly current: R
   });
   return {
     get current() {
-      return decisions;
+      return decisions?.key === key ? decisions.answers : null;
     },
   };
 }
@@ -111,7 +111,9 @@ export function useSiteDecisions(site: () => SiteInSpace): { readonly current: R
  * asked again whenever the lists or the sites with blocking off change.
  */
 export function useSiteContentBlocking(site: () => SiteInSpace): { readonly current: boolean | null } {
-  let blocks = $state<boolean | null>(null);
+  // The answer keeps the site it is for: a site's last answer stands while
+  // it is asked again, and another site's never shows.
+  let blocks = $state.raw<{ readonly key: string; readonly blocks: boolean | null } | null>(null);
   const filterLists = $derived(coreState(site().session).filterLists);
   const blockingSites = $derived(coreState(site().session).blockingSites);
   // The origin is its key, asked again whenever the lists or the sites with blocking off change.
@@ -122,6 +124,7 @@ export function useSiteContentBlocking(site: () => SiteInSpace): { readonly curr
     void blockingSites;
     return untrack(() => {
       const { session, spaceId, origin } = site();
+      const askedKey = asked;
       if (!origin || (origin.scheme !== "http" && origin.scheme !== "https")) {
         blocks = null;
         return;
@@ -130,7 +133,7 @@ export function useSiteContentBlocking(site: () => SiteInSpace): { readonly curr
       void (async () => {
         const applies = await session.core.query(ContentBlockingApplies({ spaceId, origin: null }));
         const onSite = applies && await session.core.query(ContentBlockingApplies({ spaceId, origin }));
-        if (current) blocks = applies ? onSite : null;
+        if (current) blocks = { key: askedKey, blocks: applies ? onSite : null };
       })().catch(() => {
         if (current) blocks = null;
       });
@@ -141,7 +144,7 @@ export function useSiteContentBlocking(site: () => SiteInSpace): { readonly curr
   });
   return {
     get current() {
-      return blocks;
+      return blocks?.key === asked ? blocks.blocks : null;
     },
   };
 }
@@ -177,28 +180,34 @@ export function decide(core: CrestCore, spaceId: string, origin: SiteOrigin, per
  * review only where there is one, as on the Mac.
  */
 export function useCertificates(source: () => { readonly session: Session; readonly page: PageState | null }): { readonly current: readonly Uint8Array[] } {
-  let chain = $state<readonly Uint8Array[]>([]);
+  // The chain keeps the document it is for, so a document that has gone,
+  // or one still being asked about, offers none.
+  let chain = $state.raw<{ readonly document: string; readonly certificates: readonly Uint8Array[] } | null>(null);
   // The page's document and its security are what change its chain.
-  const asked = $derived.by(() => {
+  const shownDocument = $derived.by(() => {
     const { page } = source();
     return page ? `${page.id}|${page.live.url ?? ""}|${page.live.security.name}` : "";
   });
+  // A load that ends asks again, as a reload of the same address commits
+  // another document whose chain may differ.
+  const asked = $derived(`${shownDocument}|${source().page?.live.isLoading ?? false}`);
   $effect(() => {
     void asked;
     return untrack(() => {
       const { session, page } = source();
+      const askedDocument = shownDocument;
       const https = page?.live.url?.toLowerCase().startsWith("https:") ?? false;
       if (!page || !https || !session.shell) {
-        chain = [];
+        chain = null;
         return;
       }
       let current = true;
       void session.core.request(PageCertificates({ pageId: page.id })).then(
         (answer) => {
-          if (current) chain = answer.certificates;
+          if (current) chain = { document: askedDocument, certificates: answer.certificates };
         },
         () => {
-          if (current) chain = [];
+          if (current) chain = null;
         },
       );
       return () => {
@@ -208,7 +217,7 @@ export function useCertificates(source: () => { readonly session: Session; reado
   });
   return {
     get current() {
-      return chain;
+      return chain?.document === shownDocument ? chain.certificates : [];
     },
   };
 }

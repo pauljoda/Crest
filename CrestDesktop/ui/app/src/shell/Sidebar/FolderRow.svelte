@@ -31,13 +31,13 @@
     /** Whether a lift aims to drop inside this collapsed folder. */
     aimedInto: boolean;
     onPress: (event: PointerEvent & { currentTarget: HTMLElement }) => void;
-    onToggle: (event: MouseEvent) => void;
+    onToggle: (event: MouseEvent | KeyboardEvent) => void;
     onContextMenu: (event: MouseEvent) => void;
     onRenamed: (title: string | null) => void;
   } = $props();
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events, a11y_role_supports_aria_props -->
+<!-- svelte-ignore a11y_role_supports_aria_props -->
 <div
   role="button"
   tabindex="0"
@@ -53,6 +53,12 @@
   {...renaming ? {} : previewHandlers(folder.id, "folder")}
   onpointerdown={onPress}
   onclick={renaming ? undefined : onToggle}
+  onkeydown={(event) => {
+    // Enter or Space opens or closes the folder that has the keys; its rename field answers its own.
+    if (renaming || event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
+    event.preventDefault();
+    onToggle(event);
+  }}
   oncontextmenu={onContextMenu}
 >
   {#if !folder.isGroup}

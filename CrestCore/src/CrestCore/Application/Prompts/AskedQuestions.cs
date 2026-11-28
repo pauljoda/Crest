@@ -29,25 +29,11 @@ internal sealed class AskedQuestions {
     /// settlement answers.
     internal void Follow(Change change) {
         if (change is PromptSettled settled) {
-            lock (gate) asked.RemoveAll(question => PromptOf(question) == settled.PromptId);
-        } else if (PromptOf(change) is not null) {
+            lock (gate) asked.RemoveAll(question => question.AskedPromptId == settled.PromptId);
+        } else if (change.AskedPromptId is not null) {
             lock (gate) asked.Add(change);
         }
     }
-
-    #endregion
-
-    #region Actions - Rules
-
-    private static Guid? PromptOf(Change change) => change switch {
-        ScriptDialogAsked question => question.PromptId,
-        AuthenticationAsked question => question.PromptId,
-        PermissionAsked question => question.PromptId,
-        DownloadApprovalAsked question => question.PromptId,
-        DownloadDestinationAsked question => question.PromptId,
-        QuitWithDownloadsAsked question => question.PromptId,
-        _ => null,
-    };
 
     #endregion
 }

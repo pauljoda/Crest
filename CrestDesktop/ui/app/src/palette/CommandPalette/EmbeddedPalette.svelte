@@ -17,18 +17,19 @@
     /** Whether the field takes the keyboard as it opens, as the focused card's does. */
     readonly takesFocus: boolean;
   } = $props();
+  const listId = $props.id();
 
   const chips = $derived.by(() => (usePaletteVersion(model), model.providerChips));
   const showsResults = $derived.by(() => (usePaletteVersion(model), model.groups.some((group) => group.items.length > 0)));
 </script>
 
 <div class={["palette-card embedded", useOverlayPresent() && "overlaid"]} aria-hidden={obscured || undefined}>
-  <SearchField {model} embedded {takesFocus} />
+  <SearchField {model} embedded {takesFocus} {listId} />
   {#if chips.length > 0}
     <ProviderChips {model} />
   {/if}
   {#if showsResults}
     <div class="palette-divider"></div>
-    <ResultList {model} {bindings} {tabs} size={{ maxHeight: metrics.maximumResultAreaHeight }} />
+    <ResultList {model} {bindings} {tabs} {listId} size={{ maxHeight: metrics.maximumResultAreaHeight }} />
   {/if}
 </div>

@@ -41,9 +41,10 @@
     latest = width;
   });
   let active = $state(false);
-  const finish = () => {
+  // Only the pointer that began the drag ends it.
+  const finish = (event: PointerEvent) => {
     const begun = drag;
-    if (!begun) return;
+    if (!begun || event.pointerId !== begun.pointerId) return;
     drag = null;
     begun.release();
     active = false;

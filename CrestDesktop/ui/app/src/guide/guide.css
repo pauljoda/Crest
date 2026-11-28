@@ -4,13 +4,13 @@
 .getting-started {
   --guide-canvas: rgb(var(--crest-canvas-light));
   --guide-surface: rgb(var(--crest-surface-light));
-  --guide-line: rgb(234 223 198);
+  --guide-line: var(--crest-hairline);
   --guide-secondary: rgb(0 0 0 / 0.5);
   --guide-tertiary: rgb(0 0 0 / 0.26);
   --guide-label: rgb(var(--crest-label-light));
   --setup-ink: rgb(0 0 0 / 0.85);
   --settings-primary: 0 0 0;
-  --forge-tint: rgb(43 108 196);
+  --forge-tint: rgb(var(--crest-accent-light));
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -33,7 +33,7 @@
     --guide-label: rgb(var(--crest-label-dark));
     --setup-ink: rgb(255 255 255 / 0.85);
     --settings-primary: 255 255 255;
-    --forge-tint: rgb(79 142 224);
+    --forge-tint: rgb(var(--crest-accent-dark));
   }
 }
 
@@ -449,11 +449,11 @@
 }
 
 .practice-art.sage {
-  color: rgb(141 191 154);
+  color: var(--crest-sage);
 }
 
 .practice-art.sky {
-  color: rgb(98 169 216);
+  color: var(--crest-sky);
 }
 
 .practice-lead {

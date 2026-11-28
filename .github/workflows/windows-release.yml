@@ -46,14 +46,12 @@ jobs:
         with:
           asset_base: ${{ inputs.asset_base }}
           build_number: ${{ inputs.build_number }}
+          marketing_version: ${{ inputs.marketing_version }}
           certificate: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_BASE64 }}
           certificate_password: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_PASSWORD }}
 
-      - name: Attest Setup
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
-        with:
-          subject-path: ${{ runner.temp }}/crest-windows/out/Installer-${{ inputs.asset_base }}-windows-x64.exe
-
+      # A published installer never changes under its URL: a rerun keeps the
+      # one already on the release, and attests and signs the feed for it.
       - name: Upload Setup to the release
         shell: bash
         env:
@@ -63,9 +61,25 @@ jobs:
         run: |
           set -euo pipefail
           out="$(cygpath -u "$RUNNER_TEMP")/crest-windows/out"
-          gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --clobber \
-            "$out/Installer-${RELEASE_ASSET_BASE}-windows-x64.exe" \
-            "$out/Checksum-${RELEASE_ASSET_BASE}-windows-x64.exe.sha256"
+          installer="Installer-${RELEASE_ASSET_BASE}-windows-x64.exe"
+          checksum="Checksum-${RELEASE_ASSET_BASE}-windows-x64.exe.sha256"
+          published="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')"
+          if grep -qxF "$installer" <<<"$published" && grep -qxF "$checksum" <<<"$published"; then
+            echo "The release already holds $installer; keeping it."
+            gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --clobber --dir "$out" \
+              --pattern "$installer" --pattern "$checksum"
+            (cd "$out" && sha256sum -c "$checksum")
+          elif grep -qxF "$installer" <<<"$published" || grep -qxF "$checksum" <<<"$published"; then
+            echo "The release holds only part of $installer's assets; remove it before publishing again." >&2
+            exit 1
+          else
+            gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" "$out/$installer" "$out/$checksum"
+          fi
+
+      - name: Attest Setup
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ runner.temp }}/crest-windows/out/Installer-${{ inputs.asset_base }}-windows-x64.exe
 
       - name: Publish the signed Windows feed
         shell: bash

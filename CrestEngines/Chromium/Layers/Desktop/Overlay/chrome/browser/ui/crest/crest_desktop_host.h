@@ -189,8 +189,13 @@ class DesktopHost : public EngineBinding::Shell {
 
   // Claims the core's question about a download's destination for the window
   // that asks first; false when another window already answers it.
-  bool ClaimDownloadPrompt(const std::string& prompt) {
-    return claimed_download_prompts_.insert(base::ToLowerASCII(prompt)).second;
+  bool ClaimDownloadPrompt(const std::string& prompt, DesktopBridge* claimant) {
+    return claimed_download_prompts_.emplace(base::ToLowerASCII(prompt), claimant).second;
+  }
+  // Lets go of the questions `claimant` claimed, as its window goes or its
+  // interface stops answering, so another window can answer them.
+  void ReleaseDownloadPrompts(DesktopBridge* claimant) {
+    std::erase_if(claimed_download_prompts_, [claimant](const auto& claim) { return claim.second == claimant; });
   }
 
   // Chromium asked for something Crest does not offer here; the window in use
@@ -272,7 +277,9 @@ class DesktopHost : public EngineBinding::Shell {
   // The window showing the kept press's hint, or empty.
   std::string hint_window_;
   base::OneShotTimer hint_timer_;
-  std::set<std::string> claimed_download_prompts_;
+  // Each claimed download destination question, by prompt, and the window's
+  // bridge that answers it.
+  std::map<std::string, raw_ptr<DesktopBridge>> claimed_download_prompts_;
   // Links and documents launches brought that no window has opened yet.
   std::vector<std::string> launch_opens_;
   // The interfaces that took the launches' opens, which hear the next ones.

@@ -81,6 +81,8 @@ const SPARKLE = "http://www.andymatuschak.org/xml-namespaces/sparkle";
 const CHECK_INTERVAL = 60 * 60 * 1000;
 // A launch checks once it has settled, unless a check ran within the interval.
 const LAUNCH_DELAY = 30 * 1000;
+// A scheduled check that found another check or an update under way tries again after this long.
+const SKIPPED_CHECK_DELAY = 5 * 60 * 1000;
 const keys = {
   automatic: "crest.softwareUpdates.checksAutomatically",
   channel: "crest.softwareUpdates.channel",
@@ -119,6 +121,8 @@ export class SoftwareUpdates {
   #timer: ReturnType<typeof setTimeout> | null = null;
   #announced = new Set<number>();
   #version = 0;
+  /** Advances when the channel changes or an install starts, so a check that was asking the feed then says nothing. */
+  #generation = 0;
 
   /** Whether this Crest is installed, so it can update. */
   get isEnabled(): boolean {
@@ -158,13 +162,13 @@ export class SoftwareUpdates {
       if (phase.name === "downloading") this.#set({ ...phase, received, total });
     };
     this.#changed();
-    if (automatic) this.#schedule(true);
+    if (automatic) this.#schedule(LAUNCH_DELAY);
   }
 
   setChecksAutomatically(checks: boolean) {
     store(keys.automatic, checks ? "1" : "0");
     this.#changed();
-    this.#schedule(false);
+    this.#schedule(0);
   }
 
   /** Follows the channel named `name`, as the Update channel picker chooses it. */
@@ -172,7 +176,8 @@ export class SoftwareUpdates {
     const channel = updateChannels.find((candidate) => candidate.name === name);
     if (!channel) return;
     store(keys.channel, channel.name);
-    // An update found on another channel is no longer this one's.
+    // An update found on another channel is no longer this one's, nor is what a check still asking that channel finds.
+    this.#generation += 1;
     if (this.#phase.name !== "downloading" && this.#phase.name !== "installing") this.#phase = { name: "idle" };
     this.#changed();
   }
@@ -182,31 +187,38 @@ export class SoftwareUpdates {
     if (this.#phase.name === "upToDate" || this.#phase.name === "failed") this.#set({ name: "idle" });
   }
 
-  /** Asks the feed for an update, as the person's Check for Updates… does. */
-  async check(automatic = false) {
+  /**
+   * Asks the feed for an update, as the person's Check for Updates… does.
+   * Answers whether it asked: none does while another check or an update is under way.
+   */
+  async check(automatic = false): Promise<boolean> {
     const shell = this.#shell;
     const settings = this.#settings;
-    if (!shell || !settings) return;
+    if (!shell || !settings) return false;
     const name = this.#phase.name;
-    if (name === "checking" || name === "downloading" || name === "installing") return;
+    if (name === "checking" || name === "downloading" || name === "installing") return false;
     if (!automatic) this.#set({ name: "checking" });
     store(keys.lastCheck, String(Date.now()));
     const channel = this.channel;
+    const generation = this.#generation;
     const feed = await shell.updateFeed(channel.feed).catch(() => null);
+    // Another channel, or an install that started meanwhile, has made this answer stale.
+    if (generation !== this.#generation) return true;
     const update = feed === null ? undefined : newestUpdate(feed, channel, settings.build);
     if (update === undefined) {
       if (!automatic) this.#set({ name: "failed", message: "Crest couldn't reach its updates. Check your connection, then try again." });
-      return;
+      return true;
     }
     if (update === null) {
       if (!automatic) this.#set({ name: "upToDate" });
-      return;
+      return true;
     }
     this.#set({ name: "available", update });
     if (automatic && !this.#announced.has(update.build)) {
       this.#announced.add(update.build);
       notices.post({ message: `Crest ${update.version} is available in Settings › About`, symbol: "arrow.down.circle.fill" });
     }
+    return true;
   }
 
   /**
@@ -219,6 +231,7 @@ export class SoftwareUpdates {
     const phase = this.#phase;
     if (!shell || phase.name !== "available") return;
     const { update } = phase;
+    this.#generation += 1;
     this.#set({ name: "downloading", update, received: 0, total: update.length });
     const outcome = await shell.installUpdate(update.url, update.length, update.signature)
       .catch(() => ({ result: "failed", reason: "unavailable" }) as const);
@@ -229,14 +242,18 @@ export class SoftwareUpdates {
     this.#set({ name: "failed", message: failureMessages[outcome.reason] });
   }
 
-  #schedule(launching: boolean) {
+  /** Schedules the next automatic check, an interval after the last one and no sooner than `soonest`. */
+  #schedule(soonest: number) {
     if (this.#timer) clearTimeout(this.#timer);
     this.#timer = null;
     if (!this.checksAutomatically || !this.#settings) return;
     const last = Number(stored(keys.lastCheck) ?? 0);
-    const due = Math.max(last + CHECK_INTERVAL - Date.now(), launching ? LAUNCH_DELAY : 0);
+    const due = Math.max(last + CHECK_INTERVAL - Date.now(), soonest);
     this.#timer = setTimeout(() => {
-      void this.check(true).finally(() => this.#schedule(false));
+      // A check that didn't ask leaves the last check overdue, so it waits a while rather than asking again at once.
+      let asked = true;
+      void this.check(true).then((checked) => { asked = checked; })
+        .finally(() => this.#schedule(asked ? 0 : SKIPPED_CHECK_DELAY));
     }, Math.min(due, CHECK_INTERVAL));
   }
 

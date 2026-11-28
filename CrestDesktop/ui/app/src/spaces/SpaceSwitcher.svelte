@@ -307,15 +307,21 @@
   let edges = $state.raw({ previous: null as number | null, next: null as number | null });
 
   // The lane keeps the selection centred as it moves, as the Mac's clip view follows the pager.
-  let centred: number | null = null;
+  // It centres again when the selection, the lane or the segments' shape changes, and only then.
+  let scrolling: number | null = null;
   $effect(() => {
     void [position, laneWidth, overflows, geometry];
     untrack(() => {
       const element = lane;
       if (!element) return;
-      if (centred === position && element.dataset.width === `${laneWidth}`) return;
-      centred = position;
-      element.dataset.width = `${laneWidth}`;
+      const key = `${position} ${laneWidth} ${geometry.count} ${geometry.segmentWidth} ${geometry.offset} ${geometry.trackPadding}`;
+      if (element.dataset.centred === key) return;
+      element.dataset.centred = key;
+      // A reveal still scrolling gives way to the selection it would scroll away from.
+      if (scrolling !== null) {
+        cancelAnimationFrame(scrolling);
+        scrolling = null;
+      }
       // A lane its Spaces fit stays where it is. Scrolling it, or reading where
       // it stands, would lay the window out again in the middle of each frame
       // the pager moves.
@@ -329,7 +335,6 @@
     });
   });
 
-  let scrolling: number | null = null;
   const reveal = (forward: boolean) => {
     const element = lane;
     const target = forward ? edges.next : edges.previous;

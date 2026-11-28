@@ -62,13 +62,16 @@ export function useWebsiteData(session: () => Session, space: () => SpaceState):
   let listing = $state.raw<Listing>({ profileId: space().profileId, sites: null, complete: true, locked: false });
   let removing = $state(false);
   let removalFailed = $state(false);
+  // Only the newest read lands, so an older one that finishes later never puts back what it found.
+  let latest = "";
   const read = () => {
     const requested = profileId;
     const requestId = crypto.randomUUID();
+    latest = requestId;
     session().core.send(ReadWebsiteData({ requestId, profileId: requested, ephemeral: ephemeral(session()), host: null }))
       .then(() => websiteData(session().core, requestId))
       .then((found) => {
-        if (profileId !== requested) return;
+        if (latest !== requestId || profileId !== requested) return;
         const previous = listing;
         listing = {
           profileId: requested,
@@ -77,7 +80,7 @@ export function useWebsiteData(session: () => Session, space: () => SpaceState):
           locked: false,
         };
       }, (error: unknown) => {
-        if (profileId !== requested) return;
+        if (latest !== requestId || profileId !== requested) return;
         const locked = error instanceof CoreRejection && error.rejection.$kind === "SpaceLocked";
         listing = { profileId: requested, sites: [], complete: false, locked };
       });

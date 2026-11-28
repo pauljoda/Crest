@@ -33,7 +33,8 @@ const drawnTimeout = 1000;
  * latest few, in memory only.
  */
 class PageStills {
-  #stills = new Map<string, PageStill & { readonly image: HTMLImageElement }>();
+  /** Each still with its picture and when it was asked for, so an older capture never replaces a newer one. */
+  #stills = new Map<string, PageStill & { readonly image: HTMLImageElement; readonly askedAt: number }>();
   #asked = new Map<string, Asked>();
   #shown = new Map<HTMLElement, string>();
   #listeners = new Set<() => void>();
@@ -123,9 +124,13 @@ class PageStills {
     // Decoded before it's offered, so a card that shows it draws it on its first frame.
     image.decode().then(() => {
       const previous = this.#stills.get(asked.pageId);
+      if (previous && previous.askedAt > asked.at) {
+        URL.revokeObjectURL(url);
+        return;
+      }
       if (previous) URL.revokeObjectURL(previous.url);
       this.#stills.delete(asked.pageId);
-      this.#stills.set(asked.pageId, { url, width: asked.width, height: asked.height, image });
+      this.#stills.set(asked.pageId, { url, width: asked.width, height: asked.height, image, askedAt: asked.at });
       for (const [pageId, still] of this.#stills) {
         if (this.#stills.size <= kept) break;
         URL.revokeObjectURL(still.url);

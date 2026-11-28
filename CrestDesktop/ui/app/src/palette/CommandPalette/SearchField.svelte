@@ -4,10 +4,14 @@
 
   import SymbolIcon from "../../SymbolIcon.svelte";
   import { type PaletteModel, providerActionTitle } from "../palette-model";
-  import { brandColor, usePaletteVersion } from "./palette-view";
+  import { brandColor, paletteOptionId, usePaletteVersion } from "./palette-view";
   import ProviderIcon from "./ProviderIcon.svelte";
 
-  let { model, embedded, inline = false, takesFocus = true }: { model: PaletteModel; embedded: boolean; inline?: boolean; takesFocus?: boolean } = $props();
+  let { model, embedded, inline = false, takesFocus = true, listId }: {
+    model: PaletteModel; embedded: boolean; inline?: boolean; takesFocus?: boolean;
+    /** The result list's id: the field controls it and names the row the keyboard selected, keeping focus itself. */
+    listId: string;
+  } = $props();
 
   let input = $state<HTMLInputElement>();
   let composing = false;
@@ -29,6 +33,9 @@
         },
         replaceText(text) {
           field.value = text;
+          // Typing resumes in the field, as the Mac's replaceText makes it first responder: a chip's close button
+          // would otherwise keep the keyboard.
+          field.focus();
           field.setSelectionRange(text.length, text.length);
           report();
         },
@@ -128,6 +135,8 @@
   const placeholder = $derived(provider ? `${providerActionTitle(provider)}…` : scope ? `Search ${scope.title}…` : "Search or Enter URL…");
   const providerOffer = $derived.by(() => (usePaletteVersion(model), model.providerOffer));
   const scopeOffer = $derived.by(() => (usePaletteVersion(model), model.scopeOffer));
+  const expanded = $derived.by(() => (usePaletteVersion(model), model.items.length > 0));
+  const activeOption = $derived.by(() => (usePaletteVersion(model), expanded ? paletteOptionId(listId, model.selectedIndex) : undefined));
 
   /**
    * The rest of the address the core completes, after the caret, in the
@@ -212,7 +221,12 @@
   <div class="palette-input">
     <input
       bind:this={input}
+      role="combobox"
       aria-label="Command Palette"
+      aria-autocomplete="list"
+      aria-expanded={expanded}
+      aria-controls={expanded ? listId : undefined}
+      aria-activedescendant={activeOption}
       {placeholder}
       spellcheck={false}
       autocomplete="off"

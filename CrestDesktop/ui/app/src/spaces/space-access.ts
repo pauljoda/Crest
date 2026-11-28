@@ -25,11 +25,12 @@ export const failureMessages: Readonly<Record<SpaceAccessFailure, string>> = {
   unavailable: "Authentication didn’t complete. Try again.",
 };
 
-let failure: SpaceAccessFailure | null = null;
+/** The last unlock's failure and the Space it was for, so another Space's card never says it. */
+let failure: { readonly spaceId: string; readonly reason: SpaceAccessFailure } | null = null;
 const listeners = new Set<() => void>();
-function setFailure(next: SpaceAccessFailure | null) {
-  if (next === failure) return;
-  failure = next;
+function setFailure(spaceId: string, reason: SpaceAccessFailure | null) {
+  if (reason === null ? failure === null : failure?.spaceId === spaceId && failure.reason === reason) return;
+  failure = reason === null ? null : { spaceId, reason };
   for (const listener of listeners) listener();
 }
 
@@ -39,8 +40,10 @@ const readFailure = reader((listener) => {
   return () => listeners.delete(listener);
 }, () => failure);
 
-export function useAccessFailure(): SpaceAccessFailure | null {
-  return readFailure();
+/** Why the last unlock of `spaceId` failed, while it was the last one tried. */
+export function useAccessFailure(spaceId: string): SpaceAccessFailure | null {
+  const last = readFailure();
+  return last?.spaceId === spaceId ? last.reason : null;
 }
 
 /**
@@ -67,7 +70,7 @@ export async function unlockSpace(session: Session, space: SpaceState): Promise<
   const { core } = session;
   if (!isLocked(core, space)) return true;
   if (!session.shell) {
-    setFailure("unavailable");
+    setFailure(space.id, "unavailable");
     return false;
   }
   const requestId = crypto.randomUUID();
@@ -75,11 +78,11 @@ export async function unlockSpace(session: Session, space: SpaceState): Promise<
     await core.send(BeginUnlockingSpace({ workspaceId: session.workspaceId, spaceId: space.id, requestId }));
   } catch (error) {
     if (error instanceof CoreRejection && error.rejection.$kind === "AuthenticationBusy") return false;
-    setFailure("unavailable");
+    setFailure(space.id, "unavailable");
     return false;
   }
   if (!isAuthenticating(core, space.id)) return core.state.spaceAccess.get(space.id)?.isUnlocked === true;
-  setFailure(null);
+  setFailure(space.id, null);
   const verification = await session.shell.verifyOwner(`Authenticate to unlock the ${space.settings.name} Space in Crest.`);
   const authenticated = verification === "verified";
   const answered = await core.send(FinishUnlockingSpace({ spaceId: space.id, requestId, authenticated }))
@@ -89,7 +92,7 @@ export async function unlockSpace(session: Session, space: SpaceState): Promise<
     return false;
   }
   if (!authenticated) {
-    setFailure(verification === "unavailable" ? "unavailable" : "denied");
+    setFailure(space.id, verification === "unavailable" ? "unavailable" : "denied");
     return false;
   }
   return true;
@@ -104,6 +107,9 @@ export async function unlockSpace(session: Session, space: SpaceState): Promise<
 export async function setSpaceLock(session: Session, space: SpaceState, locks: boolean): Promise<boolean> {
   if (!locks && !(await unlockSpace(session, space))) return false;
   try {
+    // A grant is revoked before the policy asks for authentication, so a
+    // refused lock never leaves a locked Space with the grant it had.
+    if (locks) await session.core.send(LockSpace({ spaceId: space.id }));
     await session.core.send(SetSpaceAccess({
       workspaceId: session.workspaceId, spaceId: space.id,
       policy: locks ? SpaceAccessPolicy.DeviceOwnerAuthentication : SpaceAccessPolicy.Open,
@@ -112,7 +118,6 @@ export async function setSpaceLock(session: Session, space: SpaceState, locks: b
     notices.post(failureNotice(`Couldn’t change the lock on “${space.settings.name}”`));
     return false;
   }
-  if (locks) await session.core.send(LockSpace({ spaceId: space.id })).catch(() => undefined);
   return true;
 }
 

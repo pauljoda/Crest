@@ -71,18 +71,23 @@
 
   const revision = $derived((extensionsVersion(), extensions.revision));
   let refusal = $state<string | null>(null);
-  // The engine lists the profile's extensions again whenever they change.
+  // The engine lists the profile's extensions again whenever they change; only the latest request's refusal is said.
   $effect(() => {
     const spaceId = space.id;
     void revision;
+    let current = true;
     untrack(() => {
       refusal = null;
       session.core.send(ListExtensions({ spaceId, engine: EngineKind.chromium })).catch((error: unknown) => {
+        if (!current) return;
         const kind = error instanceof CoreRejection ? error.rejection.$kind : null;
         refusal = kind === "SpaceIsPrivate" ? "Private windows don’t run extensions."
           : kind === "SpaceLocked" ? "Unlock this Space to see its extensions." : "Couldn’t list this Space’s extensions.";
       });
     });
+    return () => {
+      current = false;
+    };
   });
   const listed = $derived((useCoreVersion(session), session.core.state.installedExtensions.get(space.profileId) ?? null));
   const icons = useExtensionIcons(() => session, () => space.profileId, () => listed);

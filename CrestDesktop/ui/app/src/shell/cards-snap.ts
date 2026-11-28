@@ -9,6 +9,8 @@ import { reader } from "../reactive";
  */
 let holds = 0;
 let settling = false;
+// Each release's settling, so only the latest one's frames end it.
+let releases = 0;
 const listeners = new Set<() => void>();
 
 function changed() {
@@ -30,7 +32,9 @@ export function holdCards(): () => void {
     holds--;
     if (holds > 0) return;
     settling = true;
+    const release = ++releases;
     requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (release !== releases) return;
       settling = false;
       if (holds === 0) changed();
     }));

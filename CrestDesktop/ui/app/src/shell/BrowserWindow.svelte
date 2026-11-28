@@ -2,6 +2,7 @@
   import { type PageState, type SpaceState, TabPlacement, TabSurface } from "@crest/contracts";
   import type { ShellShortcut } from "@crest/core-client";
 
+  import { isMenuOpen } from "../menus";
   import { reader } from "../reactive";
   import { keyCapture } from "../shortcuts";
   import type { SpaceCards } from "./shown-cards";
@@ -632,8 +633,9 @@
   $effect(() => {
     const handlers = commands;
     if (!session.shell) return;
+    // A field recording keys and an open menu hear every key themselves.
     const onKeyDown = (event: KeyboardEvent) => {
-      if (switcherStart || event.repeat) return;
+      if (switcherStart || event.repeat || keyCapture.active || isMenuOpen()) return;
       const name = commandForKey(event, offered.current.bindings ?? [], [...recentTabCommands]);
       if (!name) return;
       event.preventDefault();

@@ -21,6 +21,9 @@ const storeName = "icons";
 /** More tabs than anyone keeps; the images used longest ago go first. */
 const maximumCount = 1000;
 const keptCount = 800;
+/** The images kept between prunes while a window runs, so a long session can't pass the limit by much. */
+const writesBetweenPrunes = 100;
+let writesSincePrune = 0;
 
 let opened: Promise<IDBDatabase | null> | null = null;
 
@@ -100,7 +103,18 @@ export async function storeTabIcon(tabId: string, address: string, image: Uint8A
   if (!db) return;
   try {
     const value: StoredIcon = { tabId, address, image, updated: Date.now() };
-    db.transaction(storeName, "readwrite").objectStore(storeName).put(value);
+    const transaction = db.transaction(storeName, "readwrite");
+    transaction.objectStore(storeName).put(value);
+    transaction.oncomplete = () => {
+      writesSincePrune += 1;
+      if (writesSincePrune < writesBetweenPrunes) return;
+      writesSincePrune = 0;
+      try {
+        prune(db);
+      } catch {
+        // A store that can't be pruned now is pruned when the next window opens it.
+      }
+    };
   } catch {
     // An image that can't be kept is drawn again when its page next loads.
   }

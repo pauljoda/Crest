@@ -292,7 +292,7 @@
   the Space and Unlock, under "Locked", until Windows Hello unlocks it.
 -->
 {#snippet lockedSpaceSection()}
-  {@const failure = useAccessFailure()}
+  {@const failure = useAccessFailure(space.id)}
   <div class="settings-scroll">
     <div class="settings-column">
       <Group title="Locked" footer={failure ? failureMessages[failure] : "Unlock this Space to see its settings."}>

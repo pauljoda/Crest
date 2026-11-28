@@ -26,12 +26,24 @@
   const preferences = $derived(space.settings.browsingPreferences);
   const retention = $derived(preferences.dataRetention);
   let pending = $state.raw<{ readonly category: (typeof retentionCategories)[number]; readonly proposed: DataRetention } | null>(null);
+  // Changes sent and not answered yet, which a change to another category carries so it never undoes one.
+  let sending: Partial<Record<keyof DataRetentionPreferences, DataRetention>> = {};
   const apply = (field: keyof DataRetentionPreferences, proposed: DataRetention) => {
     pending = null;
+    sending = { ...sending, [field]: proposed };
+    const sent = sending;
     void send(session, SetBrowsingPreferences({
       workspaceId: session.workspaceId, spaceId: space.id, currentTabCleanup: preferences.currentTabCleanup,
-      contentBlocking: preferences.contentBlocking, dataRetention: { ...retention, [field]: proposed },
-    })).then((kept) => kept && send(session, SweepExpiredRecords({ workspaceId: session.workspaceId })));
+      contentBlocking: preferences.contentBlocking, dataRetention: { ...retention, ...sent },
+    })).then((kept) => {
+      // Once answered, the Space's own settings hold what this sent; a later change to the same category stays.
+      const still = { ...sending };
+      for (const key of Object.keys(sent) as (keyof DataRetentionPreferences)[]) {
+        if (still[key] === sent[key]) delete still[key];
+      }
+      sending = still;
+      return kept && send(session, SweepExpiredRecords({ workspaceId: session.workspaceId }));
+    });
   };
   // A shorter time deletes what is older at once, so it asks first.
   const shortens = (previous: DataRetention, proposed: DataRetention) => (proposed.lifetime ?? Infinity) < (previous.lifetime ?? Infinity);

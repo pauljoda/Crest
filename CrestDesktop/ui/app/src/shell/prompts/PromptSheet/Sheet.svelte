@@ -34,26 +34,32 @@
   let wraps = $state(false);
   $effect(() => {
     const element = body;
-    const lines = (line: Element | null | undefined) => {
-      if (!line) return 0;
+    const lines = (line: Element) => {
       const height = parseFloat(getComputedStyle(line).lineHeight) || 16;
       return Math.round(line.getBoundingClientRect().height / height);
     };
     // Measured again whenever what it holds changes size, as its title or message does.
     const observer = new ResizeObserver(() => {
-      wraps = lines(element.querySelector(".sheet-title")) > 1 || lines(element.querySelector(".sheet-message")) > 1;
+      wraps = [...element.querySelectorAll(".sheet-title, .sheet-message")].some((line) => lines(line) > 1);
     });
     observer.observe(element);
     return () => observer.disconnect();
   });
   $effect(() => {
-    untrack(() => {
+    return untrack(() => {
       // The page held the keyboard; the question takes it, its answer's
-      // default text selected, as the Mac's field has it.
+      // default text selected, as the Mac's field has it, and gives it back
+      // once answered unless something else has taken it since.
+      const previous = document.activeElement;
       const target = form.querySelector<HTMLElement>("[data-autofocus]")
         ?? form.querySelector<HTMLElement>("button[type=submit]");
       target?.focus();
       if (target instanceof HTMLInputElement) target.select();
+      return () => {
+        const active = document.activeElement;
+        if (active && active !== document.body && !form.contains(active)) return;
+        if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+      };
     });
   });
   const second = () => (onSecondary ?? onEscape)();
@@ -61,10 +67,25 @@
     event.preventDefault();
     onPrimary();
   };
-  const escape = (event: KeyboardEvent) => {
-    if (event.key !== "Escape") return;
-    event.preventDefault();
-    onEscape();
+  // Escape answers as `onEscape` says, and Tab goes round the sheet's own
+  // controls, as a modal sheet keeps the keyboard until it is answered.
+  const keys = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onEscape();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const controls = [...form.querySelectorAll<HTMLElement>("input, textarea, select, button, [tabindex]:not([tabindex='-1'])")]
+      .filter((control) => !control.matches(":disabled") && control.getClientRects().length > 0);
+    if (controls.length === 0) return;
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    const at = document.activeElement;
+    if (event.shiftKey ? at === first || !form.contains(at) : at === last || !form.contains(at)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    }
   };
 </script>
 
@@ -77,7 +98,7 @@
   out:presence={{ pose: { opacity: 0, scale: 0.98 }, timing: tokens.floatingPane }}
 >
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-  <form bind:this={form} onsubmit={submit} onkeydown={escape}>
+  <form bind:this={form} onsubmit={submit} onkeydown={keys}>
     <div bind:this={body} class="sheet-body">
       <h2 class="sheet-title">{title}</h2>
       {@render children?.()}

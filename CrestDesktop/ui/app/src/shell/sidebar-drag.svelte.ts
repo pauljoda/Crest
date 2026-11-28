@@ -215,6 +215,11 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
   let lift = $state.raw<Lift | null>(null);
   let current: Lift | null = null;
   let plan: { selected: SelectedTabs; targets: DropTargetList } | null = null;
+  // Which lift the core's answers belong to: it advances as a lift begins or
+  // ends, so an answer that arrives for an earlier one changes nothing.
+  let gesture = 0;
+  // Whether the pointer let go of the lift before the core said where it may land.
+  let releasedEarly = false;
   const checked = new Map<string, string | null | Promise<void>>();
   let cleanup: (() => void) | null = null;
   // The sidebar the lift started in, which alone it aims into, and the
@@ -289,6 +294,8 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
   const end = () => {
     cleanup?.();
     cleanup = null;
+    gesture++;
+    releasedEarly = false;
     plan = null;
     checked.clear();
     makeRoom(null, true);
@@ -300,6 +307,8 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
     const before = drawnOf(shownPage());
     cleanup?.();
     cleanup = null;
+    gesture++;
+    releasedEarly = false;
     plan = null;
     checked.clear();
     update(null);
@@ -351,13 +360,17 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
       const known = checked.get(key);
       if (typeof known === "string" || known === null) refusal = known;
       else if (known === undefined) {
+        const asked = gesture;
         checked.set(key, session.core.query(CanSend({ intent: intentFor(aim, planned.selected.selection) })).then(
           (answer) => {
+            if (gesture !== asked) return;
             checked.set(key, answer.refusal ? messageOfRejection(answer.refusal) ?? unplaceable : null);
             const now = current;
             if (now) aimAt(now.pointer.x, now.pointer.y);
           },
-          () => void checked.set(key, unplaceable),
+          () => {
+            if (gesture === asked) checked.set(key, unplaceable);
+          },
         ));
       }
     }
@@ -367,18 +380,27 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
   const drop = async () => {
     const lifted = current;
     const planned = plan;
+    // A release before the core said where the lift may go lands once it has.
+    if (lifted && !planned) {
+      releasedEarly = true;
+      cleanup?.();
+      cleanup = null;
+      return;
+    }
     if (!lifted?.aim || !planned || lifted.refusal) return void putBack();
     quietUntil = performance.now() + activationQuiet;
     // The lift holds its room until the drop's change has drawn the rows where the room was.
     cleanup?.();
     cleanup = null;
+    const own = gesture;
     let landed = false;
     try {
       const changes = await session.core.send(intentFor(lifted.aim, planned.selected.selection));
       landed = true;
       // A lifted selection stays selected where it landed, its copies in
       // place of the tabs that stayed behind; one that left the Space is let go.
-      if (lifted.item.carried) {
+      // A lift that ended meanwhile, with its Space, leaves the selection alone.
+      if (lifted.item.carried && gesture === own) {
         const copies = new Map(changes.flatMap((change) =>
           change.$kind === "TabCopied" && change.workspaceId === session.workspaceId
             ? [[change.sourceTabId, change.copyTabId] as const] : []));
@@ -390,8 +412,8 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
     } finally {
       if (landed) {
         await tick();
-        end();
-      } else {
+        if (gesture === own) end();
+      } else if (gesture === own) {
         void putBack();
       }
     }
@@ -418,7 +440,10 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
       const top = scrollBand - (now.pointer.y - bounds.top);
       const bottom = scrollBand - (bounds.bottom - now.pointer.y);
       const depth = Math.max(top, bottom) / scrollBand;
-      if (depth > 0 && now.pointer.x >= bounds.left && now.pointer.x <= bounds.right) {
+      // Only inside the list, as the Mac's: past it, the pinned tiles or other chrome own the drop.
+      const inside = now.pointer.x >= bounds.left && now.pointer.x <= bounds.right
+        && now.pointer.y >= bounds.top && now.pointer.y <= bounds.bottom;
+      if (depth > 0 && inside) {
         list.scrollTop += (top > bottom ? -1 : 1) * scrollStep * Math.min(depth, 1);
         aimAt(now.pointer.x, now.pointer.y);
       }
@@ -427,6 +452,8 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
 
     const begin = async (x: number, y: number) => {
       lifted = true;
+      const own = ++gesture;
+      releasedEarly = false;
       scope = { sidebar: element.closest<HTMLElement>(".sidebar"), practice: element.closest<HTMLElement>("[data-practice-window]") };
       letGo = holdPointer();
       element.setPointerCapture(pointerId);
@@ -447,6 +474,7 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
         let preview = carried
           ? await previewOf(carried.tabIds, carried.folderIds)
           : await previewOf(item.kind === "tab" ? [item.id] : [], item.kind === "folder" ? [item.id] : []);
+        if (gesture !== own) return;
         // Pinned tabs a selection would carry with other picks move apart, so
         // the selection lets them go; a press on one of them lifts nothing.
         const pins = preview.members.filter((member) => member.placement === TabPlacement.pinned).map((member) => member.id);
@@ -458,14 +486,16 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
           }
           const tabIds = carried.tabIds.filter((id) => !pins.includes(id));
           preview = await previewOf(tabIds, carried.folderIds);
-          if (current) update({ ...current, item: { ...item, carried: { tabIds, folderIds: carried.folderIds } } });
+          if (gesture !== own || !current) return;
+          update({ ...current, item: { ...item, carried: { tabIds, folderIds: carried.folderIds } } });
         }
         const targets = await session.core.query(DropTargets({ workspaceId, windowId, spaceId: space, selection: preview.selection }));
-        if (!current) return;
+        if (gesture !== own || !current) return;
         plan = { selected: preview, targets };
         aimAt(current.pointer.x, current.pointer.y);
+        if (releasedEarly) void drop();
       } catch {
-        end();
+        if (gesture === own) end();
       }
     };
 
@@ -494,14 +524,17 @@ export function useSidebarLift(session: Session, spaceId: () => string, selectio
       cancelAnimationFrame(scrolling);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", release);
-      window.removeEventListener("pointercancel", cancel);
+      window.removeEventListener("pointercancel", pointerCancel);
       window.removeEventListener("keydown", key, true);
       window.removeEventListener("contextmenu", cancel, true);
     };
     const cancel = () => void putBack();
+    const pointerCancel = (cancelled: PointerEvent) => {
+      if (cancelled.pointerId === pointerId) cancel();
+    };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", release);
-    window.addEventListener("pointercancel", cancel);
+    window.addEventListener("pointercancel", pointerCancel);
     window.addEventListener("keydown", key, true);
     window.addEventListener("contextmenu", cancel, true);
     cleanup = stop;

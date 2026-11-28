@@ -282,7 +282,7 @@
     <div class="color-wheel-handle" style:z-index={isChosen ? 1 : 0} {@attach travel(() => location(handle.color), () => travelSpring)}
       in:presence={{ pose: { scale: 0.2, opacity: 0 }, timing: pop }} out:presence={{ pose: { scale: 0.2, opacity: 0 }, timing: pop }}>
       <!-- svelte-ignore a11y_role_supports_aria_props -->
-      <span role="slider" tabindex={isChosen ? 0 : -1} aria-label={`Color ${handle.index + 1}`} aria-selected={isChosen}
+      <span role="slider" tabindex={0} aria-label={`Color ${handle.index + 1}`} aria-selected={isChosen}
         aria-valuemin={0} aria-valuemax={360} aria-valuenow={Math.round(readWheel(handle.color).hue * 360)}
         class={`color-wheel-dot${isChosen ? " chosen" : ""}${isChosen && lifted ? " lifted" : ""}`}
         style:background={css(handle.color)} onkeydown={handleKey(handle.index)} onfocusin={() => onChoose(handle.index)}></span>

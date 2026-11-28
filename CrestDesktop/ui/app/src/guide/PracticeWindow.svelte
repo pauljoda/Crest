@@ -199,7 +199,7 @@
             </div>
           {:else}
             <PageColumns windowId={session.windowId} {cards} focusedTabId={shownTabId} accent={coral} interactive
-              onFocus={(tabId: string, byPointer: boolean) => !byPointer && practice.focus(tabId)} onResize={() => Promise.resolve()}>
+              onFocus={(tabId: string, byPointer: boolean) => !byPointer && practice.focus(tabId)} onResize={(shares: readonly number[]) => practice.resize(shares)}>
               {#snippet renderCard(tabId: string)}
                 {@const tab = space.tabs.find((candidate) => candidate.id === tabId)}
                 {#if tab}

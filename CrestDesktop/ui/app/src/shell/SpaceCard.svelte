@@ -131,7 +131,9 @@
       if (still || !shownPage || shownPage.phase.name !== "live" || shownPage.live.url || shownPage.live.pendingUrl || !address) return;
       if (host.loading.has(shownPage.id)) return;
       host.loading.add(shownPage.id);
-      void host.session.core.send(Navigate({ pageId: shownPage.id, input: address }));
+      // A refused first load may be asked again the next time this runs.
+      void host.session.core.send(Navigate({ pageId: shownPage.id, input: address }))
+        .catch(() => host.loading.delete(shownPage.id));
     });
   });
 

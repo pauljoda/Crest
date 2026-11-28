@@ -81,8 +81,8 @@ export function deletionPlan(request: SpaceDeletionRequest, spaces: readonly Spa
   };
 }
 
-/** The Spaces this window is deleting now, which it never starts deleting twice. */
-const deleting = new Set<string>();
+/** The Spaces this window is deleting now, each with its deletion, which it never starts twice. */
+const deleting = new Map<string, Promise<void>>();
 
 /** Whether `spaceId` is being deleted, here or by a deletion a launch carries on. */
 export function isDeleting(session: Session, spaceId: string): boolean {
@@ -118,29 +118,33 @@ export async function runDeletion(session: Session, plan: SpaceDeletionPlan, spa
  * then the core lets the Space go. Windows keeps no passwords of its own, so
  * there are none to hand on or delete. Throws why a step failed.
  */
-async function deleteSpace(session: Session, spaceId: string, newPrimaryId: string | null) {
-  if (deleting.has(spaceId)) return;
-  deleting.add(spaceId);
-  try {
-    const { core, workspaceId, windowId } = session;
-    const deletions = () => core.state.workspaces.get(workspaceId)?.spaceDeletions ?? [];
-    const operationId = deletions().find((entry) => entry.spaceId === spaceId)?.id ?? crypto.randomUUID();
-    const tabIds = core.state.workspaces.get(workspaceId)?.spaces.get(spaceId)?.tabs.map((tab) => tab.id) ?? [];
-    await core.send(BeginDeletingSpace({ workspaceId, windowId, spaceId, operationId, newPrimaryId }));
-    const deletion = deletions().find((entry) => entry.spaceId === spaceId);
-    if (!deletion) throw new Error("The Space was already gone.");
-    await releasePages(session, deletion);
-    void forgetTabIcons(tabIds);
-    const ephemeral = core.state.workspaces.get(workspaceId)?.kind.isPrivate ?? false;
-    for (const profileId of deletion.erasing) {
-      const requestId = crypto.randomUUID();
-      await core.send(DeleteProfileData({ requestId, profileId, ephemeral }));
-      if (!(await erasure(core, requestId))) throw new Error("Crest couldn’t erase this Space’s browser data.");
-    }
-    await core.send(FinishDeletingSpace({ workspaceId, windowId, spaceId, operationId }));
-  } finally {
-    deleting.delete(spaceId);
+function deleteSpace(session: Session, spaceId: string, newPrimaryId: string | null): Promise<void> {
+  // A deletion already under way is waited for, so a group's primary goes only after its Sub-Spaces have.
+  const running = deleting.get(spaceId);
+  if (running) return running;
+  const deletion = deletingSpace(session, spaceId, newPrimaryId).finally(() => deleting.delete(spaceId));
+  deleting.set(spaceId, deletion);
+  return deletion;
+}
+
+/** The steps of deleting one Space, which `deleteSpace` never runs twice at once for a Space. */
+async function deletingSpace(session: Session, spaceId: string, newPrimaryId: string | null) {
+  const { core, workspaceId, windowId } = session;
+  const deletions = () => core.state.workspaces.get(workspaceId)?.spaceDeletions ?? [];
+  const operationId = deletions().find((entry) => entry.spaceId === spaceId)?.id ?? crypto.randomUUID();
+  const tabIds = core.state.workspaces.get(workspaceId)?.spaces.get(spaceId)?.tabs.map((tab) => tab.id) ?? [];
+  await core.send(BeginDeletingSpace({ workspaceId, windowId, spaceId, operationId, newPrimaryId }));
+  const deletion = deletions().find((entry) => entry.spaceId === spaceId);
+  if (!deletion) throw new Error("The Space was already gone.");
+  await releasePages(session, deletion);
+  void forgetTabIcons(tabIds);
+  const ephemeral = core.state.workspaces.get(workspaceId)?.kind.isPrivate ?? false;
+  for (const profileId of deletion.erasing) {
+    const requestId = crypto.randomUUID();
+    await core.send(DeleteProfileData({ requestId, profileId, ephemeral }));
+    if (!(await erasure(core, requestId))) throw new Error("Crest couldn’t erase this Space’s browser data.");
   }
+  await core.send(FinishDeletingSpace({ workspaceId, windowId, spaceId, operationId }));
 }
 
 /** Lets go of this window's pages of the Space `deletion` names, and of every page of a profile it erases. */

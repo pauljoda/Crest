@@ -192,7 +192,7 @@
   // Return goes forward, as the Mac's default button, unless what has focus takes it.
   $effect(() => {
     const keyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Enter" || event.defaultPrevented) return;
+      if (event.key !== "Enter" || event.defaultPrevented || event.isComposing) return;
       const target = event.target instanceof Element ? event.target : null;
       if (target?.closest("button, select, textarea, [role=dialog], [contenteditable]")) return;
       event.preventDefault();

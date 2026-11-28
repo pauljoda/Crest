@@ -1,4 +1,5 @@
 <script lang="ts" module>
+  import { reducesMotion } from "../motion";
   import type { FlightPath } from "./FlyingFile.svelte";
 
   /** BrowserDownloadFeedbackEvent.maximumVisible, at most this many at once. */
@@ -14,7 +15,7 @@
 
   /** From the middle of the shown card to the lists button, or null where it can't fly. */
   function pathFor(): Flight["path"] {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return null;
+    if (reducesMotion()) return null;
     const button = document.querySelector<HTMLElement>(".common-lists-button")?.getBoundingClientRect();
     const card = document.querySelector<HTMLElement>(".space-content-page.live .page-column.focused")?.getBoundingClientRect();
     if (!button || !card || button.width === 0 || button.right < 0) return null;
@@ -88,7 +89,8 @@
   });
 </script>
 
-<div class="download-flights" aria-hidden="true">
+<!-- The flights are only drawn; "Download started" is told. -->
+<div class="download-flights">
   {#each flights as flight (flight.id)}
     {#if flight.path}
       <FlyingFile path={flight.path} onLanded={() => land(flight.id)} />

@@ -155,15 +155,23 @@
 
   // The list, asked again every quarter second while the keys are held; the
   // highlight stays on its tab while the tab is listed, and an empty list ends it.
-  // The list is the window's; the direction is the opening press's.
+  // The list is the window's; the direction is the opening press's, which the
+  // first answer that arrives takes, whichever ask it answers.
   $effect(() => {
     const { core, windowId } = session;
     let current = true;
-    const ask = async (first: boolean) => {
-      const { items: listed } = await core.query(RecentTabs({ windowId }));
+    const ask = async () => {
+      let listed: readonly RecentTabItem[];
+      try {
+        ({ items: listed } = await core.query(RecentTabs({ windowId })));
+      } catch {
+        // A failed ask leaves the list as it was, or still to come: the next one asks again.
+        return;
+      }
       if (!current || ended) return;
       const capped = listed.slice(0, 5);
       if (capped.length === 0) return finish(false);
+      const first = items === null;
       let next: number;
       if (first) {
         const opening = start.direction > 0 ? Math.min(1, capped.length - 1) : capped.length - 1;
@@ -180,8 +188,8 @@
       if (first && start.lost) finish(false);
       else if (first && (start.released || commitsWhenListed)) finish(true);
     };
-    void ask(true);
-    const timer = setInterval(() => void ask(false), 250);
+    void ask();
+    const timer = setInterval(() => void ask(), 250);
     return () => {
       current = false;
       clearInterval(timer);

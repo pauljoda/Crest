@@ -33,7 +33,7 @@
     /** Whether a lift aims to make a folder around this tab. */
     readonly aimedAround: boolean;
     readonly onPress: (event: PointerEvent & { currentTarget: HTMLElement }) => void;
-    readonly onSelect: (event: MouseEvent) => void;
+    readonly onSelect: (event: MouseEvent | KeyboardEvent) => void;
     readonly onClose: () => void;
     readonly onMiddleClick: () => void;
     readonly onContextMenu: (event: MouseEvent) => void;
@@ -62,7 +62,7 @@
   const loaded = $derived(resident || (pageId !== null && coreState(session).pages.get(pageId)?.phase.name === "live"));
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events, a11y_role_supports_aria_props -->
+<!-- svelte-ignore a11y_role_supports_aria_props -->
 <div
   role="button"
   tabindex="0"
@@ -75,6 +75,12 @@
   aria-selected={held}
   onpointerdown={onPress}
   onclick={renaming ? undefined : onSelect}
+  onkeydown={(event) => {
+    // Enter or Space opens the row that has the keys; its close button and rename field answer their own.
+    if (renaming || event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
+    event.preventDefault();
+    onSelect(event);
+  }}
   onauxclick={(event) => event.button === 1 && onMiddleClick()}
   oncontextmenu={onContextMenu}
   {...previewHandlers(tab.id, "tab", preview)}

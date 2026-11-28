@@ -48,6 +48,8 @@ const defaultZoom = 1;
 class PageTools {
   #finds = new Map<string, FindSession>();
   #zooms = new Map<string, number>();
+  // Each page's zoom steps run one after another, each from the zoom the one before reached.
+  #zoomSteps = new Map<string, Promise<number | null>>();
   #listeners = new Set<() => void>();
   version = 0;
 
@@ -125,7 +127,17 @@ class PageTools {
    * Mac's page does; answers the zoom it reached, or null where it did not
    * change.
    */
-  async setZoom(core: CrestCore, pageId: string, step: "in" | "out" | "reset"): Promise<number | null> {
+  setZoom(core: CrestCore, pageId: string, step: "in" | "out" | "reset"): Promise<number | null> {
+    const before = this.#zoomSteps.get(pageId) ?? Promise.resolve(null);
+    const reached = before.then(() => this.#stepZoom(core, pageId, step)).catch(() => null);
+    this.#zoomSteps.set(pageId, reached);
+    void reached.then(() => {
+      if (this.#zoomSteps.get(pageId) === reached) this.#zoomSteps.delete(pageId);
+    });
+    return reached;
+  }
+
+  async #stepZoom(core: CrestCore, pageId: string, step: "in" | "out" | "reset"): Promise<number | null> {
     const current = this.zoom(pageId);
     const next = step === "reset" ? defaultZoom
       : step === "in" ? zoomLevels.find((level) => level > current + zoomTolerance) ?? Math.max(current, zoomLevels.at(-1)!)

@@ -35,7 +35,8 @@ engine.
 
 ## Develop the interface
 
-Publish the core for this machine, start the bridge, then the interface:
+Publish the core for this machine, start the bridge, then the interface. On
+Windows:
 
 ```sh
 dotnet publish CrestCore/src/CrestCore.Native -c Release -r win-x64 -o <core output>
@@ -43,6 +44,9 @@ dotnet run --project CrestDesktop/devhost -- --core <core output>/CrestCore.Nati
 npm ci --prefix CrestDesktop/ui
 npm run dev --prefix CrestDesktop/ui
 ```
+
+On a Mac, publish for `osx-arm64` and pass `<core output>/CrestCore.Native.dylib`;
+on Linux, publish for `linux-x64` and pass `<core output>/CrestCore.Native.so`.
 
 Open `http://127.0.0.1:5173`. A frame shows only sites that allow being
 framed; the engine contract, page lifecycle and every core rule are the real

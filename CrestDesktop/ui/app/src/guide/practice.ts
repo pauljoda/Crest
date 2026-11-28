@@ -9,6 +9,7 @@ import {
   OpenWindow,
   OpenWorkspace,
   PracticeTab,
+  ResizeSplitColumns,
   ShowTab,
   type SpaceState,
   TabPlacement,
@@ -60,15 +61,21 @@ export class Practice {
     const opened = changes.find((change): change is WorkspaceOpened => change.$kind === "WorkspaceOpened");
     if (!opened) throw new Error("The core opened no practice workspace.");
     const windowId = crypto.randomUUID();
-    await base.core.send(OpenWindow({
-      windowId, workspaceId: opened.workspaceId, saved: false, copyingWindowId: null, showingSpaceId: null,
-      showingTabs: [], restoresTabs: true,
-    }));
     const session: Session = {
       core: base.core, workspaceId: opened.workspaceId, windowId, engine: null, guests: base.guests, shell: base.shell,
       closing: { current: false }, setup: { current: null },
     };
-    return new Practice(session, registerPracticeTabs(practiceSpace(session)));
+    try {
+      await base.core.send(OpenWindow({
+        windowId, workspaceId: opened.workspaceId, saved: false, copyingWindowId: null, showingSpaceId: null,
+        showingTabs: [], restoresTabs: true,
+      }));
+      return new Practice(session, registerPracticeTabs(practiceSpace(session)));
+    } catch (error) {
+      // A practice that couldn't open its window leaves no workspace behind.
+      await new Practice(session, new Map()).close();
+      throw error;
+    }
   }
 
   /** Closes the practice, which leaves nothing behind. */
@@ -166,6 +173,14 @@ export class Practice {
   focus(tabId: string) {
     const space = this.space;
     if (space) void send(this.session, ShowTab({ windowId: this.session.windowId, spaceId: space.id, tabId }));
+  }
+
+  /** Keeps the shares a drag between the split's cards chose, as the window's split does. */
+  resize(shares: readonly number[]): Promise<unknown> {
+    const { groupId } = this.cards;
+    return groupId
+      ? send(this.session, ResizeSplitColumns({ windowId: this.session.windowId, groupId, shares }))
+      : Promise.resolve();
   }
 
   /** Whether a split member can move `offset` places. */

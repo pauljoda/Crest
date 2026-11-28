@@ -33,7 +33,9 @@
     pageTools.dismiss(core, pageId);
     requestAnimationFrame(focusShownPage);
   };
+  // A key that composes text, as an input method's Enter does, is the field's.
   const onKeyDown = (event: KeyboardEvent) => {
+    if (event.isComposing) return;
     if (event.key === "Escape") {
       event.preventDefault();
       close();

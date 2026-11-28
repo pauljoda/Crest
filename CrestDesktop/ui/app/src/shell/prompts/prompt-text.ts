@@ -5,11 +5,13 @@ const defaultPorts: Readonly<Record<string, number>> = { http: 80, https: 443 };
 
 /**
  * The page's server as a dialog names it: its host, with the port only when
- * it is not the scheme's default, as the Mac's dialogs do.
+ * it is not the scheme's default, as the Mac's dialogs do. A blob document
+ * names the server whose origin made it rather than Crest.
  */
 export function sourceLabel(address: string): string {
   try {
-    const url = new URL(address);
+    let url = new URL(address);
+    if (!url.hostname && url.protocol === "blob:" && url.origin !== "null") url = new URL(url.origin);
     if (!url.hostname) return "Crest";
     return url.port ? `${url.hostname}:${url.port}` : url.hostname;
   } catch {

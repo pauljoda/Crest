@@ -109,7 +109,7 @@ export interface PaletteHost {
 export interface PaletteField {
   /** Replaces `start`–`end` of the field with `text` and puts the caret at its end. */
   applyCompletion(text: string, start: number, end: number): void;
-  /** Replaces the field's whole text, as entering or leaving a scope does. */
+  /** Replaces the field's whole text, as entering or leaving a scope does, and gives the field the keyboard. */
   replaceText(text: string): void;
 }
 
@@ -206,10 +206,10 @@ export class PaletteModel {
     return item ? this.openingFor(item.row) : here;
   }
 
-  openingFor(row: PaletteRow): PaletteOpening {
+  openingFor(row: PaletteRow, held: HeldKeys = this.held): PaletteOpening {
     // The Start Page's palette opens only in its own tab.
     if (!row.kind.activation.opensWhereKeysChoose || this.mode.kind === "startPage") return here;
-    const { control, shift, alt } = this.held;
+    const { control, shift, alt } = held;
     if (control && !shift && !alt) return openings.backgroundTab;
     if (control && shift && !alt) return openings.newTab;
     if (!control && shift && !alt && this.host.tabId) return openings.splitView;
@@ -267,7 +267,9 @@ export class PaletteModel {
   }
 
   pressReturn() {
-    this.#waitForAnswer(() => this.activateSelected());
+    // Return opens where the keys held as it was pressed choose, even when they change while it waits for the answer.
+    const held = this.held;
+    this.#waitForAnswer(() => this.activateSelected(held));
   }
 
   pressDown() {
@@ -387,9 +389,9 @@ export class PaletteModel {
     return true;
   }
 
-  activateSelected() {
+  activateSelected(held: HeldKeys = this.held) {
     const item = this.items[this.selectedIndex];
-    if (item) this.activate(item.row);
+    if (item) this.activate(item.row, held);
   }
 
   /**
@@ -397,15 +399,15 @@ export class PaletteModel {
    * has it remember the pick for what was typed and close; one that narrows
    * it to a scope leaves it open.
    */
-  activate(row: PaletteRow) {
+  activate(row: PaletteRow, held: HeldKeys = this.held) {
     if (this.#shownSequence !== this.#sequence) return;
     const typed = this.query;
-    if (!this.#run(row) || !row.kind.activation.closesPalette) return;
+    if (!this.#run(row, held) || !row.kind.activation.closesPalette) return;
     send(this.host.core, RecordPaletteChoice({ windowId: this.host.windowId, text: typed, row, spaceId: null }));
     this.host.dismiss();
   }
 
-  #run(row: PaletteRow): boolean {
+  #run(row: PaletteRow, held: HeldKeys): boolean {
     const { core, windowId, workspaceId, spaceId } = this.host;
     switch (row.kind.activation.name) {
       case "switchesToTab":
@@ -414,7 +416,7 @@ export class PaletteModel {
         return true;
       case "opensAddress":
       case "searches":
-        return row.address ? this.#open(row.address, this.openingFor(row)) : false;
+        return row.address ? this.#open(row.address, this.openingFor(row, held)) : false;
       case "runsCommand": {
         const command = row.command;
         if (!command) return false;

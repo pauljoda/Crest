@@ -29,12 +29,19 @@
       return false;
     }
   };
-  // A new Space or Sub-Space opens its page, as the Mac's does.
+  // A new Space or Sub-Space opens its page, as the Mac's does. One adds at a time, so each opens the Space it made.
+  let adding = false;
   const add = async (fromSpaceId: string | null) => {
-    const before = new Set(draft?.spaces.map((space) => space.spaceId));
-    if (!(await run(AddSetupSpace({ fromSpaceId })))) return;
-    const added = session.core.state.setupDraft?.spaces.find((space) => !before.has(space.spaceId));
-    if (added) onOpenSpace(added.spaceId);
+    if (adding) return;
+    adding = true;
+    try {
+      const before = new Set(draft?.spaces.map((space) => space.spaceId));
+      if (!(await run(AddSetupSpace({ fromSpaceId })))) return;
+      const added = session.core.state.setupDraft?.spaces.find((space) => !before.has(space.spaceId));
+      if (added) onOpenSpace(added.spaceId);
+    } finally {
+      adding = false;
+    }
   };
   const menu = (event: MouseEvent, space: SetupDraftSpace) => {
     event.preventDefault();

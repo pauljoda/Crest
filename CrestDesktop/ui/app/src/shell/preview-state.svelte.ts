@@ -82,6 +82,13 @@ export class PreviewState {
     this.#scheduleLeave();
   }
 
+  /** Lets go of a card a search held, which then goes as it would have, once the pointer is off it. */
+  release() {
+    if (!this.held) return;
+    this.held = false;
+    this.#scheduleLeave();
+  }
+
   /** Puts the card away until the pointer enters a row again. */
   dismiss() {
     if (!this.#shown && !this.#resting) return;

@@ -20,9 +20,11 @@
     return needle ? tabs.filter(tab => fold(tab.displayTitle).includes(needle)
       || (tab.url && fold(addressPresentation(tab.url).domain).includes(needle))) : tabs;
   });
+  // A search holds the card while it has a query.
   $effect(() => {
-    tabPreview.held = query !== "";
-    return () => { tabPreview.held = false; };
+    if (query === "") return;
+    tabPreview.held = true;
+    return () => tabPreview.release();
   });
   function focus() {
     if (search && !recentlyTyped()) search.focus({ preventScroll: true });

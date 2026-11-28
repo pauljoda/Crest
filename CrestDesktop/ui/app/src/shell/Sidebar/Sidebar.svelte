@@ -132,7 +132,7 @@
   import LiftPreview from "./LiftPreview.svelte";
   import PinnedGrid from "./PinnedGrid.svelte";
   import PinnedTileFace from "./PinnedTileFace.svelte";
-  import { folderTabIds, useRowMotion } from "./sidebar-parts.svelte";
+  import { folderTabCounts, useRowMotion } from "./sidebar-parts.svelte";
   import TabRow from "./TabRow.svelte";
 
   /**
@@ -231,8 +231,12 @@
   // The window's selection, which the Mac's sidebar keeps beside the shown
   // tab and the core never sees. It belongs to the Space it was made in.
   let selection = $state.raw<SidebarSelection>(noSelection);
+  // Each change but the outline's own keeping, so a batch action that ends
+  // later leaves a selection the person made meanwhile alone.
+  let selectionChanges = 0;
   const select = (next: SidebarSelection) => {
     selection = next;
+    selectionChanges++;
   };
   $effect(() => {
     void space.id;
@@ -245,7 +249,7 @@
     void space.folders;
     untrack(() => {
       const next = reconciled(selection, unitsShown(aside));
-      if (next !== selection) select(next);
+      if (next !== selection) selection = next;
     });
   });
   // Pinned tabs a lift let go of shake, as the Mac's do.
@@ -303,6 +307,9 @@
     selectAll: () => select(allSelected(unitsShown(aside))),
     reselect: (how, picks, copies) => select(how === "cleared" ? noSelection
       : allSelected(how === "copies" ? [...copies.values()].map((id) => [tabItem(id)]) : rootItems(picks, copies))),
+    get selectionChanges() {
+      return selectionChanges;
+    },
   };
   const menu = (event: MouseEvent, entries: Promise<MenuEntry[]> | MenuEntry[]) => {
     event.preventDefault();
@@ -340,8 +347,8 @@
     select(clicked(current, tabItem(tabId), units, { command: false, shift: false }, activeItem));
     show(tabId);
   };
-  /** Whether a click activates its row: not one the selection took, nor a drop's release. */
-  const activates = (event: MouseEvent) => !event.ctrlKey && !event.shiftKey && !droppedJustNow();
+  /** Whether a click or key activates its row: not one the selection took, nor a drop's release. */
+  const activates = (event: MouseEvent | KeyboardEvent) => !event.ctrlKey && !event.shiftKey && !droppedJustNow();
 
   // A lift hides what it carries and marks where it would land. A lift of
   // the selection carries every pick, and the selection follows it there.
@@ -404,8 +411,11 @@
   // Ctrl+D and Ctrl+Backspace copy, duplicate and delete it, the arrows,
   // Home and End move it (Shift extends it), and Enter opens what it rests on.
   const act = async (picked: readonly SelectionItem[], action: "copy" | "duplicate" | "delete" | "close") => {
-    const picks = await preview(session, space.id, picked);
-    const intents = batchIntents(session, space.id, picks.selection);
+    // The picks belong to the Space they were made in; one the window left meanwhile lets them go.
+    const spaceId = space.id;
+    const picks = await preview(session, spaceId, picked);
+    if (space.id !== spaceId) return;
+    const intents = batchIntents(session, spaceId, picks.selection);
     if (action === "copy") await copySelectedLinks(context, picks);
     else if (action === "duplicate") await performBatch(context, picks, intents.copying, "copies");
     else if (action === "delete") await performBatch(context, picks, intents.deleting, "cleared");
@@ -453,11 +463,15 @@
       let next = clicked(current, target, units, { command: key.control && !edge, shift: key.shift }, activeItem);
       if (!key.shift) next = { ...clicked(next, target, units, { command: false, shift: false }, activeItem), engaged: true };
       select(next);
-      [...(aside?.querySelectorAll<HTMLElement>("[data-unit]") ?? [])]
-        .filter((element) => element.offsetParent !== null && !inOtherSpace(element))[index]
-        ?.scrollIntoView({ block: "nearest" });
+      // The keys' focus moves with the selection, so Enter opens the row the arrows reached.
+      const reached = [...(aside?.querySelectorAll<HTMLElement>("[data-unit]") ?? [])]
+        .filter((element) => element.offsetParent !== null && !inOtherSpace(element))[index];
+      (reached?.tabIndex === 0 ? reached : reached?.querySelector<HTMLElement>(".tab-row"))?.focus({ preventScroll: true });
+      reached?.scrollIntoView({ block: "nearest" });
       return true;
     }
+    // A row that has the keys opens itself on Enter or Space.
+    if (onRow && key.code === keys.enter) return false;
     if (key.code === keys.enter && current.focused) {
       const { kind, id } = itemParts(current.focused);
       const folder = kind === "folder" ? folders.get(id) : undefined;
@@ -593,6 +607,7 @@
       isLifted: pageIsLifted,
       gapAt: isLive ? gapAt : () => false,
       savedTabsExpanded,
+      folderTabCounts: folderTabCounts(pageSpace),
       pinnedTabs: pinned.flatMap((list) => list.rows).flatMap((row) => pageTabs.get(row.id) ?? []),
       pinnedCount: pinned.reduce((count, list) => count + list.rows.filter((row) => pageTabs.has(row.id) && !pageIsLifted(row.id)).length, 0),
       showsPins: pinned.some((list) => list.rows.length > 0) || !!pageLift,
@@ -672,7 +687,7 @@
             {@const inside = folderList(view, folder)}
             <FolderRow
               {folder}
-              tabCount={folderTabIds(pageSpace, folder.id).length}
+              tabCount={view.folderTabCounts.get(folder.id) ?? 0}
               depth={row.depth}
               renaming={renamesFolder}
               marked={view.marked(folderItem(folder.id))}
@@ -736,7 +751,7 @@
           {#if row.kind.groupsTabs}
             {@const splitMarked = row.members.some((id) => view.marked(tabItem(id)))}
             <div class={`split-card${splitMarked ? " unit-selected" : ""}${insertsBefore ? " drop-before" : ""}`}
-              data-row={row.id} data-before-tab={row.members[0]} data-unit={row.members.map(tabItem).join(",")}>
+              data-row={row.id} data-before-tab={row.members[0]} data-unit={row.members.map(tabItem).join(" ")}>
               {#if groupId}
                 <!-- Where the window's selection holds a member, the menu is its tabs'. -->
                 <SplitGroupHeader {session} space={pageSpace} {groupId} {group} members={memberTabs}

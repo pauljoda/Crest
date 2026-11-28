@@ -98,7 +98,9 @@
 <div class="crest-emblem">
   <MenuRow title="Source" value={source.name} choices={CrestChargeKind.all.map((kind) => ({ value: kind.name, label: kind.title }))}
     onChange={(name) => choose(CrestChargeKind.named(name) ?? CrestChargeKind.none)}
-    onReset={chargeKey(charge) !== chargeKey(defaultCharge) ? () => writeCrest({ ...crest, charge: defaults.crest.charge }) : null} />
+    onReset={chargeKey(charge) !== chargeKey(defaultCharge)
+      ? () => writeCrest({ ...crest, symbol: defaults.crest.symbol, charge: defaults.crest.charge })
+      : null} />
   {#if source.name === CrestChargeKind.heraldic.name}
     <div class="crest-emblem-body">
       <label class="crest-emblem-search-title" for={searchId}>Find an emblem</label>

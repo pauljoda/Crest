@@ -36,7 +36,10 @@
     {#if shown.kind === "deleteFolder"}
       <DeleteFolder {session} spaceId={shown.spaceId} folder={shown.folder} {onDone} />
     {:else if shown.kind === "renameTab"}
-      <RenamePinnedTab {session} spaceId={shown.spaceId} tab={shown.tab} {onDone} />
+      <!-- Another tab's rename starts from its own title. -->
+      {#key shown.tab.id}
+        <RenamePinnedTab {session} spaceId={shown.spaceId} tab={shown.tab} {onDone} />
+      {/key}
     {:else}
       <ClearSpaceHistory {session} spaceId={shown.spaceId} {onDone} />
     {/if}

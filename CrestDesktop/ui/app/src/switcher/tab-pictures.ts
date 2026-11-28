@@ -36,8 +36,10 @@ export class TabPictures {
     if ([...this.#asked.values()].some((asked) => asked.tabId === page.tabId)) return;
     const captureId = crypto.randomUUID();
     this.#asked.set(captureId, { tabId: page.tabId, address: page.address });
+    // An engine that won't take the picture sends none, so the tab may be asked again.
+    const forget = () => this.#asked.delete(captureId);
     void core.request(CapturePage({ pageId: page.pageId, captureId, area: null, width: 320 }))
-      .catch(() => this.#asked.delete(captureId));
+      .then((started) => started || forget(), forget);
   }
 
   /** Keeps the picture an engine took for a capture this window asked for. */

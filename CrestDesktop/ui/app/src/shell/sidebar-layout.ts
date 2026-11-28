@@ -99,12 +99,14 @@ export function initialSidebarIsPresented(id: string): boolean {
 export function captureSidebar(id: string, change: { readonly width?: number; readonly isPresented?: boolean }) {
   const layouts = readLayouts();
   const previous = layouts.find((layout) => layout.id === id) ?? { id };
+  // A width that is no width changes neither the window's nor new windows'.
+  const width = change.width !== undefined && Number.isFinite(change.width) && change.width > 0 ? change.width : undefined;
   const next: WindowLayout = {
     ...previous,
-    ...(change.width !== undefined && Number.isFinite(change.width) && change.width > 0 ? { sidebarWidth: change.width } : {}),
+    ...(width !== undefined ? { sidebarWidth: width } : {}),
     ...(change.isPresented !== undefined ? { sidebarIsPresented: change.isPresented } : {}),
   };
-  if (change.width !== undefined) write(widthKey, String(change.width));
+  if (width !== undefined) write(widthKey, String(width));
   if (next.sidebarWidth === previous.sidebarWidth && next.sidebarIsPresented === previous.sidebarIsPresented) return;
   const kept = [...layouts.filter((layout) => layout.id !== id), next].slice(-maximumCount);
   write(layoutsKey, JSON.stringify(kept));

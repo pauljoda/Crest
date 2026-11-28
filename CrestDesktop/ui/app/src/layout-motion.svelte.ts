@@ -64,8 +64,10 @@ export function layoutMotion(options: LayoutMotionOptions): void {
       running = null;
       if (!element || !from || !timing || reducesMotion()) return;
       const to = element.getBoundingClientRect();
-      const dx = from.left + from.width / 2 - (to.left + to.width / 2);
-      const dy = from.top + from.height / 2 - (to.top + to.height / 2);
+      // A move that also scales goes center to center; one that keeps its new size moves its top-left corner, as
+      // Motion's `layout="position"` lays the old box out at the new size from where it began.
+      const dx = options.positionOnly ? from.left - to.left : from.left + from.width / 2 - (to.left + to.width / 2);
+      const dy = options.positionOnly ? from.top - to.top : from.top + from.height / 2 - (to.top + to.height / 2);
       const sx = options.positionOnly || !to.width ? 1 : from.width / to.width;
       const sy = options.positionOnly || !to.height ? 1 : from.height / to.height;
       if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && Math.abs(sx - 1) < 0.005 && Math.abs(sy - 1) < 0.005) return;

@@ -92,12 +92,14 @@ export function windowShortcuts(bindings: readonly ShortcutBinding[], unavailabl
 
 /**
  * The command a key press runs among `names`, by the keys the core binds
- * them to on this device, for a window that hears those keys itself.
+ * them to on this device, for a window that hears those keys itself. Keys
+ * holding Control, the Windows key, are the system's, as `windowShortcuts` leaves them.
  */
 export function commandForKey(event: KeyboardEvent, bindings: readonly ShortcutBinding[], names: readonly string[]): string | null {
   for (const binding of bindings) {
     const keys = binding.keys;
-    if (!keys || !names.includes(binding.command.name) || keyCode(keys) !== event.keyCode) continue;
+    if (!keys || keys.modifiers & ShortcutModifiers.Control) continue;
+    if (!names.includes(binding.command.name) || keyCode(keys) !== event.keyCode) continue;
     if (!!(keys.modifiers & ShortcutModifiers.Command) !== event.ctrlKey) continue;
     if (!!(keys.modifiers & ShortcutModifiers.Shift) !== event.shiftKey) continue;
     if (!!(keys.modifiers & ShortcutModifiers.Option) !== event.altKey || event.metaKey) continue;
@@ -135,7 +137,8 @@ export class WindowShortcuts {
     const onKey = (event: KeyboardEvent) => {
       const bound = this.#table.find((shortcut) => shortcut.key === event.keyCode && shortcut.control === event.ctrlKey &&
         shortcut.shift === event.shiftKey && shortcut.alt === event.altKey && !event.metaKey);
-      if (!bound) return;
+      // As the shell does, keys that yield to text editing are the field's while one has the keyboard.
+      if (!bound || (bound.yieldsToText && editsText(document.activeElement))) return;
       event.preventDefault();
       this.#run(bound.command);
     };
@@ -179,6 +182,15 @@ export class WindowShortcuts {
 }
 
 const pressAgainKey = "press-again";
+
+/** The input types that take no typing. */
+const untypedInputs = new Set(["button", "checkbox", "color", "file", "image", "radio", "range", "reset", "submit"]);
+
+/** Whether `element` takes typing: a text field, a text area or editable content. */
+function editsText(element: Element | null): boolean {
+  if (element instanceof HTMLInputElement) return !untypedInputs.has(element.type);
+  return element instanceof HTMLTextAreaElement || (element instanceof HTMLElement && element.isContentEditable);
+}
 
 /**
  * Whether one of the interface's own fields is recording keys, such as a

@@ -10,8 +10,8 @@
   import { usePaletteVersion } from "./palette-view";
   import ProviderIcon from "./ProviderIcon.svelte";
 
-  let { model, item, section, bindings, tabs }: {
-    model: PaletteModel; item: PaletteItem; section: string; bindings: readonly ShortcutBinding[]; tabs: readonly TabState[];
+  let { model, item, section, bindings, tabs, id }: {
+    model: PaletteModel; item: PaletteItem; section: string; bindings: readonly ShortcutBinding[]; tabs: readonly TabState[]; id: string;
   } = $props();
 
   const row = $derived(item.row);
@@ -36,6 +36,7 @@
 <div
   class={["palette-row", selected && "selected"]}
   data-index={item.index}
+  {id}
   role="option"
   aria-selected={selected}
   aria-label={row.title}

@@ -153,9 +153,8 @@
             </div>
             <h2>{lesson.title}</h2>
             <p>{lesson.detail}</p>
-            {#key lesson.kind}
-              <Fits wide={lessonRow} narrow={lessonStack} />
-            {/key}
+            <!-- Fits measures each lesson's row again as it changes, so Next keeps its element and its focus. -->
+            <Fits wide={lessonRow} narrow={lessonStack} />
           </div>
         </div>
       {/if}

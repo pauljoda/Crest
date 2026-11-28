@@ -7,6 +7,9 @@ inputs:
   build_number:
     description: Development feed build number
     required: true
+  marketing_version:
+    description: The release's version; by default the version git gives the checked-out commit
+    default: ""
   certificate:
     description: Optional Authenticode certificate (base64 PFX)
     default: ""
@@ -103,6 +106,7 @@ runs:
         RELEASE_ASSET_BASE: ${{ inputs.asset_base }}
         RELEASE_BUILD_NUMBER: ${{ inputs.build_number }}
         RELEASE_CHANNEL: development
+        RELEASE_VERSION: ${{ inputs.marketing_version }}
       run: |
         set -euo pipefail
         root="$(cygpath -u "$RUNNER_TEMP")/crest-windows"
@@ -116,6 +120,9 @@ runs:
           --output "$root/out"
           --name "$name"
         )
+        if [[ -n "$RELEASE_VERSION" ]]; then
+          arguments+=(--version "$RELEASE_VERSION")
+        fi
         if [[ -n "${CREST_SIGNING_THUMBPRINT:-}" ]]; then
           signtool="$(find "/c/Program Files (x86)/Windows Kits/10/bin" -path '*x64/signtool.exe' | sort | tail -1)"
           test -n "$signtool"

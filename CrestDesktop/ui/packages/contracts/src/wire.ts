@@ -252,4 +252,5 @@ export class WireWriter {
 }
 
 const utf8Encoder = new TextEncoder();
-const utf8Decoder = new TextDecoder("utf-8", { fatal: true });
+// A leading U+FEFF is part of the string the core wrote, not a byte order mark.
+const utf8Decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });

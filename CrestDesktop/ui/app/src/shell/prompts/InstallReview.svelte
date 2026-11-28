@@ -68,6 +68,13 @@
     if (!completed && promptId && canAccept && !installing && !failure) extensions.accept(session, promptId, withholds);
   };
   const title = $derived(completed ? "Extension Installed" : shown?.name ?? "Install Extension");
+  // The review takes the keyboard as it comes, and as it comes back from the
+  // chooser, so Escape reaches it; it never starts on Add Extension.
+  let dialog = $state<HTMLDivElement>();
+  $effect(() => {
+    const element = dialog;
+    untrack(() => (element?.querySelector<HTMLElement>("[data-autofocus]") ?? element)?.focus());
+  });
   const copies = $derived(review.copySpaceIds);
 </script>
 
@@ -92,8 +99,7 @@
     </Sheet>
   {/key}
 {:else}
-  <!-- svelte-ignore a11y_interactive_supports_focus -->
-  <div class="sheet extension-review" role="dialog" aria-modal="true" aria-label={title}
+  <div bind:this={dialog} class="sheet extension-review" role="dialog" aria-modal="true" aria-label={title} tabindex="-1"
     in:motionDefaults|global={{ pose: { opacity: 0, scale: 1.04 } }}
     out:motionDefaults|global={{ pose: { opacity: 0, scale: 0.98 }, going: true, instant: choosingSpaces }}
     onkeydown={(event) => {

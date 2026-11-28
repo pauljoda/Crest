@@ -25,11 +25,11 @@ import shutil
 import subprocess
 import sys
 
+import crest_version
 from windows_update_feed import RELEASE_PUBLIC_KEY
 
 REPOSITORY = pathlib.Path(__file__).resolve().parents[1]
 INSTALLER_SCRIPT = REPOSITORY / "CrestDesktop/installer/Crest.iss"
-VERSION_FILE = REPOSITORY / "Config/Version.xcconfig"
 
 RELEASE_FEED_BASE = "https://updates.crestbrowser.com/"
 CHANNELS = ("stable", "nightly", "development")
@@ -74,10 +74,11 @@ class PackagingError(Exception):
 
 
 def marketing_version() -> str:
-    match = re.search(r"^MARKETING_VERSION\s*=\s*(\S+)\s*$", VERSION_FILE.read_text(encoding="utf-8"), re.MULTILINE)
-    if not match:
-        raise PackagingError(f"{VERSION_FILE} names no MARKETING_VERSION")
-    return match[1]
+    """The version git gives the checked-out commit, as every published build takes it."""
+    try:
+        return str(crest_version.place(REPOSITORY).version)
+    except crest_version.VersionError as error:
+        raise PackagingError(f"No version for this checkout: {error}") from error
 
 
 def feed_name(channel: str) -> str:
@@ -221,7 +222,7 @@ def main() -> int:
     parser.add_argument("--interface", type=pathlib.Path, required=True, help="The interface's built files")
     parser.add_argument("--build", type=int, required=True, help="The build number updates compare")
     parser.add_argument("--channel", choices=CHANNELS, default="development")
-    parser.add_argument("--version", default=None, help="The marketing version (default: Config/Version.xcconfig)")
+    parser.add_argument("--version", default=None, help="The marketing version (default: the one git gives the commit)")
     parser.add_argument("--feed-base", default=RELEASE_FEED_BASE, help="Where the update feeds are")
     parser.add_argument("--public-key", default=RELEASE_PUBLIC_KEY,
                         help="The Ed25519 key updates are signed with, base64")

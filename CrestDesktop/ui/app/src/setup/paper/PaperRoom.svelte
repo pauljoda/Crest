@@ -34,18 +34,16 @@
     const stops = steps.map((at) => `${css(fillColorAt(mixed, at))} ${Math.round(at * 100)}%`);
     return stops.length === 1 ? css(mixed.colors[0]) : `linear-gradient(${mixed.degrees + 90}deg, ${stops.join(", ")})`;
   });
-  // Each look takes a layer above the one it replaces, which stays until the new one has come in.
-  const layers = new Map<string, number>();
-  const layer = (shown: string) => {
-    if (!layers.has(shown)) layers.set(shown, layers.size + 1);
-    return layers.get(shown);
-  };
+  // Each look takes a layer above the one it replaces, which stays until the new one has come in;
+  // a look that comes back takes a new layer above too.
+  let stacked = 0;
+  const current = $derived({ background, layer: (void background, ++stacked) });
   const transition = $derived(reducesMotion ? { duration: 0 } : tokens.onboardingBackdropChange);
 </script>
 
 <span class="setup-room" aria-hidden="true">
-  {#each [background] as shown (shown)}
-    <span class="setup-room-layer" style:background={shown} style:z-index={layer(shown)}
+  {#each [current] as shown (shown.layer)}
+    <span class="setup-room-layer" style:background={shown.background} style:z-index={shown.layer}
       in:presence={{ pose: { opacity: 0 }, timing: transition }}
       out:presence={{ pose: { opacity: 1 }, timing: transition }}
     ></span>

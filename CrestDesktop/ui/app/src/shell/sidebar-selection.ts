@@ -1,6 +1,7 @@
 import { type SelectedTabs, SelectionPreview } from "@crest/contracts";
 
 import type { Session } from "../boot";
+import { isMenuOpen } from "../menus";
 
 /** What a person selects in the sidebar: a tab or a folder, by kind and id. */
 export type SelectionItem = `tab:${string}` | `folder:${string}`;
@@ -44,13 +45,14 @@ export function holds(selection: SidebarSelection, item: SelectionItem): boolean
  * The units the sidebar shows, in the order it shows them: pinned tiles, the
  * saved tabs while open, then the open tabs, a folder's inside after its row
  * and the rows a collapsed folder keeps on screen, as the Mac's itemUnits
- * walks the core's outline. Each row carries its unit in `data-unit`. A
+ * walks the core's outline. Each row carries its unit in `data-unit`, its
+ * items apart by spaces, as `[data-unit~=…]` finds a split's member. A
  * window's own sidebar and the Getting Started practice's each keep theirs.
  */
 export function unitsShown(sidebar: HTMLElement | null): SelectionUnit[] {
   return [...(sidebar ?? document).querySelectorAll<HTMLElement>(sidebar ? "[data-unit]" : ".sidebar [data-unit]")]
     .filter((element) => element.offsetParent !== null && !inOtherSpace(element))
-    .map((element) => element.dataset.unit!.split(",") as SelectionItem[]);
+    .map((element) => element.dataset.unit!.split(" ") as SelectionItem[]);
 }
 
 /**
@@ -200,7 +202,7 @@ export function registerSelectionTaker(take: SelectionTaker): () => void {
  * text field nor an open menu has them, as the Mac's `hasKeyboard` decides.
  */
 export function selectionHasKeyboard(selection: SidebarSelection): boolean {
-  if (!selection.engaged) return false;
+  if (!selection.engaged || isMenuOpen()) return false;
   const active = document.activeElement;
   if (active instanceof HTMLEmbedElement) return false;
   if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return false;

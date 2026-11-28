@@ -14,6 +14,23 @@ export interface Choice<T> {
 }
 
 /**
+ * A radio group's keys, as Windows moves through one: Tab reaches the chosen
+ * option alone (`tabindex` 0 on it, or on the first while none is chosen),
+ * and the arrow keys choose and focus the next or previous one, wrapping.
+ */
+export function radioKeys<T>(choices: readonly { readonly value: T }[], index: number, choose: (value: T) => void) {
+  return (event: KeyboardEvent & { currentTarget: HTMLElement }) => {
+    const by = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1
+      : event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 0;
+    if (by === 0 || choices.length === 0) return;
+    event.preventDefault();
+    const next = (index + by + choices.length) % choices.length;
+    choose(choices[next].value);
+    event.currentTarget.parentElement?.querySelectorAll<HTMLElement>('[role="radio"]')[next]?.focus();
+  };
+}
+
+/**
  * A page's scroller, which starts where the page was left and remembers where it goes:
  * `<div class="settings-scroll" {...keptScroll(scrolls, key)}>`.
  */

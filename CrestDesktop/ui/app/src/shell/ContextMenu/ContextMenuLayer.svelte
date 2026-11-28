@@ -24,6 +24,8 @@
 
   /** One open panel: the root, or a submenu opened from a row of the panel before it. */
   interface Level {
+    /** Which panel this is, so a submenu opened from another row is placed anew. */
+    readonly key: number;
     readonly entries: readonly ShownEntry[];
     /** The row it opened from in the panel before it, or nothing for the root. */
     readonly from: number | null;
@@ -41,13 +43,14 @@
   let panels: HTMLDivElement[] = [];
   let hoverTimer: ReturnType<typeof setTimeout> | undefined;
   let restoreFocus: HTMLElement | null = null;
+  let opened = 0;
 
   $effect(() => presentMenusWith((next) => {
     untrack(() => {
       if (request) finish(null);
       restoreFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       request = next;
-      levels = [{ entries: next.entries, from: null, highlighted: -1 }];
+      levels = [{ key: ++opened, entries: next.entries, from: null, highlighted: -1 }];
     });
   }));
 
@@ -83,36 +86,51 @@
     return entry.keys.modifiers & ShortcutModifiers.Control ? null : shortcutText(entry.keys);
   }
 
-  /** Places panel `depth` inside the window: the root where it was asked for, a submenu beside its row. */
+  /**
+   * Places panel `depth` inside the window: the root where it was asked for,
+   * a submenu beside its row. The panel takes the focus, as it takes the keys.
+   * Both wait for the frame after the one that mounts it, before it paints:
+   * by then the layer has moved into the window, a move that would take the
+   * focus back, and the panel has its size.
+   */
   function place(depth: number): Attachment<HTMLDivElement> {
     return (panel) => untrack(() => {
       panels[depth] = panel;
-      const width = panel.offsetWidth;
-      const room = innerHeight - margin * 2;
-      const height = Math.min(panel.scrollHeight, room);
-      if (panel.scrollHeight > room) panel.style.maxHeight = `${room}px`;
-      let left: number;
-      let top: number;
       const origin = request!;
-      if (depth === 0) {
-        left = origin.x + width <= innerWidth - margin ? origin.x : origin.x - width;
-        top = origin.y + height <= innerHeight - margin ? origin.y : origin.y - height;
-      } else {
-        const parent = panels[depth - 1].getBoundingClientRect();
-        const row = document.getElementById(rowId(depth - 1, levels[depth].from!))!.getBoundingClientRect();
-        left = parent.right + width - 3 <= innerWidth - margin ? parent.right - 3 : parent.left - width + 3;
-        top = row.top - 5;
-      }
-      left = Math.max(margin, Math.min(left, innerWidth - width - margin));
-      top = Math.max(margin, Math.min(top, innerHeight - height - margin));
-      panel.style.left = `${left}px`;
-      panel.style.top = `${top}px`;
-      if (depth === 0) panel.style.transformOrigin = `${origin.x - left}px ${origin.y - top}px`;
-      if (depth === 0) panel.focus({ preventScroll: true });
+      const from = levels[depth]?.from ?? null;
+      const frame = requestAnimationFrame(() => {
+        if (panels[depth] === panel && panel.isConnected) arrange(panel, depth, origin, from);
+      });
       return () => {
+        cancelAnimationFrame(frame);
         if (panels[depth] === panel) panels = panels.slice(0, depth);
       };
     });
+  }
+
+  /** Sets panel `depth` where it fits in the window and gives it the focus. */
+  function arrange(panel: HTMLDivElement, depth: number, origin: MenuRequest, from: number | null) {
+    const width = panel.offsetWidth;
+    const room = innerHeight - margin * 2;
+    const height = Math.min(panel.scrollHeight, room);
+    if (panel.scrollHeight > room) panel.style.maxHeight = `${room}px`;
+    let left: number;
+    let top: number;
+    if (depth === 0 || from === null) {
+      left = origin.x + width <= innerWidth - margin ? origin.x : origin.x - width;
+      top = origin.y + height <= innerHeight - margin ? origin.y : origin.y - height;
+    } else {
+      const parent = panels[depth - 1].getBoundingClientRect();
+      const row = document.getElementById(rowId(depth - 1, from))!.getBoundingClientRect();
+      left = parent.right + width - 3 <= innerWidth - margin ? parent.right - 3 : parent.left - width + 3;
+      top = row.top - 5;
+    }
+    left = Math.max(margin, Math.min(left, innerWidth - width - margin));
+    top = Math.max(margin, Math.min(top, innerHeight - height - margin));
+    panel.style.left = `${left}px`;
+    panel.style.top = `${top}px`;
+    if (depth === 0) panel.style.transformOrigin = `${origin.x - left}px ${origin.y - top}px`;
+    panel.focus({ preventScroll: true });
   }
 
   /** Highlights row `index` of panel `depth`, closing any submenu opened deeper than it from another row. */
@@ -129,13 +147,16 @@
       return;
     }
     levels = [...levels.slice(0, depth + 1), {
-      entries: entry.submenu, from: index,
+      key: ++opened, entries: entry.submenu, from: index,
       highlighted: highlightFirst ? firstChoosable(entry.submenu, 1) : -1,
     }];
   }
 
+  /** Closes the submenus deeper than panel `depth`, which takes the focus back with its row still highlighted. */
   function closeDeeper(depth: number) {
-    if (levels.length > depth + 1) levels = levels.slice(0, depth + 1);
+    if (levels.length <= depth + 1) return;
+    levels = levels.slice(0, depth + 1);
+    panels[depth]?.focus({ preventScroll: true });
   }
 
   function firstChoosable(entries: readonly ShownEntry[], step: 1 | -1, from = step > 0 ? -1 : entries.length): number {
@@ -168,6 +189,8 @@
     if (!request) return;
     event.preventDefault();
     event.stopPropagation();
+    // The keys take over from the pointer: a submenu waiting on its rest neither opens nor closes.
+    clearTimeout(hoverTimer);
     const depth = levels.length - 1;
     const level = levels[depth];
     switch (event.key) {
@@ -217,7 +240,7 @@
     {@attach portal(() => document.querySelector(".setup-window") ?? document.querySelector(".browser-window") ?? document.body)}
     onpointerdown={(event) => { if (event.target === event.currentTarget) finish(null); }}
     oncontextmenu={(event) => event.preventDefault()}>
-    {#each levels as level, depth (depth)}
+    {#each levels as level, depth (level.key)}
       {@const checks = level.entries.some((entry) => isRow(entry) && "checked" in entry && entry.checked !== undefined)}
       <div class={["context-menu", checks && "checks"]} role="menu" tabindex="-1"
         aria-activedescendant={level.highlighted >= 0 ? rowId(depth, level.highlighted) : undefined}

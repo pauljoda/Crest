@@ -63,6 +63,24 @@ export function folderTabIds(space: SpaceState, folderId: string): string[] {
   return ids;
 }
 
+/** How many tabs each folder of the Space holds, nested folders and splits included, counted in one walk of the outline. */
+export function folderTabCounts(space: SpaceState): ReadonlyMap<string, number> {
+  const lists = new Map(space.sidebar.lists.map(list => [list.folderId, list.rows]));
+  const counts = new Map<string, number>();
+  function count(id: string): number {
+    const known = counts.get(id);
+    if (known !== undefined) return known;
+    // A folder met again inside itself adds nothing.
+    counts.set(id, 0);
+    let total = 0;
+    for (const row of lists.get(id) ?? []) total += row.kind.opensList ? count(row.id) : row.members.length;
+    counts.set(id, total);
+    return total;
+  }
+  for (const folder of space.folders) count(folder.id);
+  return counts;
+}
+
 /** Where a row stands inside the folders and splits that hold it (`rowPlacement`), as its style attribute. */
 export function rowStyle(depth: number, inSplit: boolean): string {
   return Object.entries(rowPlacement(depth, inSplit)).map(([name, value]) => `${name}: ${value}`).join("; ");

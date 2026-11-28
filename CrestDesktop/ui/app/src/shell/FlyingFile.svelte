@@ -55,6 +55,6 @@
   const opacity = $derived(appearance.current * (1 - Math.min(Math.max((progress.current - 0.9) / 0.1, 0), 1)));
 </script>
 
-<div class="flying-file" style:transform="translateX({x}px) translateY({y}px) scale({scale})" style:opacity={opacity}>
+<div class="flying-file" aria-hidden="true" style:transform="translateX({x}px) translateY({y}px) scale({scale})" style:opacity={opacity}>
   <SymbolIcon name="doc.fill" size={28} />
 </div>

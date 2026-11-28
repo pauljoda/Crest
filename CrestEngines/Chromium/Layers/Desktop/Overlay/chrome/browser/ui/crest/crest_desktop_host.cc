@@ -333,6 +333,7 @@ void DesktopHost::AddBridge(DesktopBridge* bridge) {
 void DesktopHost::RemoveBridge(DesktopBridge* bridge) {
   bridges_.erase(bridge);
   open_receivers_.erase(bridge);
+  ReleaseDownloadPrompts(bridge);
 }
 
 CoreReply DesktopHost::Create(const std::vector<uint8_t>& fingerprint, const std::vector<uint8_t>& configuration) {

@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { untrack } from "svelte";
-
   import { Sheet } from "../shell/prompts/PromptSheet";
   import type { SpaceDeletionPlan } from "../spaces/space-deletion";
 
@@ -14,7 +12,10 @@
     onDelete: (successor: string | null) => void;
   } = $props();
 
-  let successor = $state(untrack(() => plan.successors[0]?.id ?? null));
+  // The chosen Sub-Space while the group still has it, else its first, as the group changes under the sheet.
+  let chosen = $state<string | null>(null);
+  const successor = $derived(plan.successors.some((candidate) => candidate.id === chosen)
+    ? chosen : plan.successors[0]?.id ?? null);
 </script>
 
 <Sheet title={plan.title} primary={plan.confirmation} secondary="Cancel" warning destructive
@@ -22,7 +23,7 @@
   <p class="sheet-message">{plan.message}</p>
   {#if plan.successors.length > 0}
     <select class="sheet-field sheet-choice" aria-label="New primary" data-testid="space-deletion-successor"
-      value={successor ?? ""} onchange={(event) => (successor = event.currentTarget.value)} data-autofocus>
+      value={successor ?? ""} onchange={(event) => (chosen = event.currentTarget.value)} data-autofocus>
       {#each plan.successors as candidate (candidate.id)}
         <option value={candidate.id}>{candidate.settings.name}</option>
       {/each}

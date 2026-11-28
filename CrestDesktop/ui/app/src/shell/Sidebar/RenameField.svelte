@@ -32,6 +32,8 @@
   onfocusin={(event) => event.currentTarget.select()}
   onclick={(event) => event.stopPropagation()}
   onkeydown={(event) => {
+    // A key that finishes composing a character belongs to the input method.
+    if (event.isComposing) return;
     if (event.key === "Enter") end(draft);
     else if (event.key === "Escape") end(null);
   }}

@@ -11,6 +11,12 @@ import type { CrestCore, ShellTransport } from "@crest/core-client";
 
 /** How often the updater asks the core what is due while Crest runs. */
 const interval = 60 * 60 * 1000;
+/**
+ * How long one list's download may take before it counts as failed, so a
+ * stalled one can't hold back the lists due after it. The Mac's request gives
+ * up after a minute without data; the engine's fetch sets no bound of its own.
+ */
+const downloadTimeout = 5 * 60 * 1000;
 
 /**
  * The Mac's BrowserFilterListUpdater: downloads the filter lists the core
@@ -87,7 +93,7 @@ export class FilterListUpdater {
   /** What the download of `fetch` brought, as the intent that tells the core. */
   async #outcome(fetch: FilterDownload): Promise<Intent> {
     try {
-      const fetched = await this.#shell.fetchText(fetch.url, "filterList", fetch.entityTag, fetch.lastModified);
+      const fetched = await within(downloadTimeout, this.#shell.fetchText(fetch.url, "filterList", fetch.entityTag, fetch.lastModified));
       if (fetched.tooLarge) return FilterDownloadTooLarge({ id: fetch.id });
       if (fetched.status === 304) return FilterDownloadNotModified({ id: fetch.id });
       if (fetched.status !== 200 || fetched.text === null) return FilterDownloadFailed({ id: fetch.id });
@@ -96,6 +102,15 @@ export class FilterListUpdater {
       return FilterDownloadFailed({ id: fetch.id });
     }
   }
+}
+
+/** `promise`, or a failure once `milliseconds` pass without it settling. */
+function within<T>(milliseconds: number, promise: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expired = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`No answer within ${milliseconds} ms`)), milliseconds);
+  });
+  return Promise.race([promise, expired]).finally(() => clearTimeout(timer));
 }
 
 /** This window's updater, once its session has started one. */

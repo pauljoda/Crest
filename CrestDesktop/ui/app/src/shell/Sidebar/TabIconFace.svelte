@@ -9,7 +9,8 @@
    */
   let { icon, symbol, guide = false, size }: { icon: string | null; symbol: string; guide?: boolean; size: number } = $props();
 
-  let failed = $state(false);
+  // The address that failed to load, so a new one is tried.
+  let failed = $state<string | null>(null);
   // An emoji the person chose stands in for the site's icon.
   const emoji = $derived(emojiOf(symbol));
 </script>
@@ -19,8 +20,8 @@
     aria-hidden="true">{emoji}</span>
 {:else if guide}
   <img class="tab-icon" src={crestIcon} width={size} height={size} alt="" />
-{:else if icon && !failed}
-  <img class="tab-icon" src={icon} width={size} height={size} alt="" onerror={() => (failed = true)} />
+{:else if icon && icon !== failed}
+  <img class="tab-icon" src={icon} width={size} height={size} alt="" onerror={() => (failed = icon)} />
 {:else}
   <SymbolIcon name={symbol} {size} class={`tab-icon${symbol === "globe" ? " default-favicon" : ""}`} />
 {/if}

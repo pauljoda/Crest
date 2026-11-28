@@ -40,6 +40,7 @@
 
   import { CopiedLink } from "../../copied-link";
   import { extensions } from "../../extensions";
+  import { isMenuOpen } from "../../menus";
   import { presence } from "../../motion";
   import { notices, urlCopiedNotice } from "../../notices";
   import SymbolIcon from "../../SymbolIcon.svelte";
@@ -83,12 +84,14 @@
   const origin = $derived(siteOriginOf(address));
   const host = $derived(hostOf(address));
   // The panel goes when the person presses anywhere else or presses Escape.
+  // A press while one of its menus shows, such as a permission's choices,
+  // is the menu's, as a menu opened from the Mac's popover takes the click.
   $effect(() => {
     const close = onClose;
-    untrack(() => {
+    return untrack(() => {
       const away = (event: PointerEvent) => {
         const target = event.target as Element | null;
-        if (target?.closest(".site-control-panel, .site-control-trigger")) return;
+        if (isMenuOpen() || target?.closest(".site-control-panel, .site-control-trigger")) return;
         close();
       };
       const escape = (event: KeyboardEvent) => event.key === "Escape" && close();
@@ -147,7 +150,7 @@
   <div class="site-security">
     <span class="site-security-origin">{originName(origin)}</span>
     {#if canReview}
-      <button type="button" class="site-security-review" title="Review Certificate" aria-label="Review Certificate"
+      <button type="button" class="site-security-review" title="Review Certificate" aria-label="{title}, Review Certificate"
         onclick={onReview}>
         {@render label()}
         <span class="site-security-certificate">Certificate</span>
@@ -200,7 +203,7 @@
         </div>
       {/if}
       <div class="site-control-actions">
-        {@render quickAction("Copy Link", "square.and.arrow.up", perform(() => void copyLink()))}
+        {#if session.shell}{@render quickAction("Copy Link", "square.and.arrow.up", perform(() => void copyLink()))}{/if}
         {@render quickAction("Reload", "arrow.clockwise", perform(() => void browsing.reload(page.id)))}
         {@render quickAction("Inspect", "scope",
           perform(() => void session.core.request(OpenInspector({ pageId: page.id, panel: InspectorPanel.Elements }))
@@ -211,9 +214,13 @@
       {#if session.shell && !isPrivate}
         <SiteExtensionsSection {session} {space} pageId={page.id} pageKey="{page.live.url ?? ''}|{page.live.title}"
           onRun={(run) => perform(run)()} onManage={perform(() => extensions.openSettings())} />
-        {#if webStoreExtensionId(address)}
+        {@const listed = webStoreExtensionId(address)}
+        {#if listed}
           <button type="button" class="site-control-action labelled"
-            onclick={perform(() => void extensions.install(session, webStoreExtensionId(address)!, space.id, [], page.id))}>
+            onclick={() => {
+              const [extensionId, spaceId, pageId] = [listed, space.id, page.id];
+              perform(() => void extensions.install(session, extensionId, spaceId, [], pageId))();
+            }}>
             <SymbolIcon name="plus" size={12} />
             <span>Install Extension…</span>
           </button>
@@ -232,8 +239,12 @@
         <div class="site-control-actions">
           {#each BrowsingDataCategory.all.filter((category) => category.clearsBySite) as category (category.name)}
             <button type="button" class="site-control-action labelled"
-              onclick={perform(() => void clearSiteData(session, page, space, category, isPrivate,
-                () => void browsing.reload(page.id, true)))}>
+              onclick={() => {
+                // What is cleared is the site the panel showed when pressed, not whatever shows once it has gone.
+                const [shown, shownSpace, shownPrivate] = [page, space, isPrivate];
+                perform(() => void clearSiteData(session, shown, shownSpace, category, shownPrivate,
+                  () => void browsing.reload(shown.id, true)))();
+              }}>
               <SymbolIcon name={category.symbol ?? "trash"} size={12} />
               <span>{category.clearSiteTitle ?? category.title}</span>
             </button>

@@ -102,7 +102,8 @@ export class RowMotion {
     if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && Math.abs(sx - 1) < 0.005 && Math.abs(sy - 1) < 0.005) return null;
     return element.animate(
       [{ transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` }, { transform: "translate(0px, 0px) scale(1, 1)" }],
-      { duration, delay, easing: css, composite: "add" },
+      // It stands where it was through its delay, and keeps nothing once done.
+      { duration, delay, easing: css, composite: "add", fill: "backwards" },
     );
   }
 }
@@ -116,7 +117,7 @@ export function liftOut(node: Element, options: PresenceOptions): TransitionConf
   const element = node as HTMLElement;
   const box = boxes.get(element);
   if (box && element.isConnected && getComputedStyle(element).position !== "absolute") {
-    Object.assign(element.style, {
+    const lifted = {
       position: "absolute",
       left: `${box.left}px`,
       top: `${box.top}px`,
@@ -124,7 +125,18 @@ export function liftOut(node: Element, options: PresenceOptions): TransitionConf
       height: `${box.height}px`,
       margin: "0",
       pointerEvents: "none",
+    };
+    const { style } = element;
+    const standing = Object.fromEntries(Object.keys(lifted).map((name) => [name, style[name as keyof typeof lifted]]));
+    Object.assign(style, lifted);
+    // A part that comes back before it has gone, which Svelte makes no longer
+    // inert as it gives it back, stands in the row again.
+    const returns = new MutationObserver(() => {
+      if (element.inert) return;
+      returns.disconnect();
+      Object.assign(style, standing);
     });
+    returns.observe(element, { attributes: true, attributeFilter: ["inert"] });
   }
   return presence(element, { ...options, pop: !box });
 }

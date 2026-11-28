@@ -37,7 +37,10 @@
     untrack(() => {
       if (askedForPermissions) return;
       askedForPermissions = true;
-      void send(session, AdoptSitePermissions({ records: null }));
+      // A refused request is asked again the next time the page opens.
+      void send(session, AdoptSitePermissions({ records: null })).then((sent) => {
+        if (!sent) askedForPermissions = false;
+      });
     });
   });
   const group = $derived(groupOf(space, spaces));

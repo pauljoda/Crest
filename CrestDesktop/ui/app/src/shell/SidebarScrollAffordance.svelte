@@ -43,12 +43,13 @@
     const element = list();
     if (!element) return;
     return untrack(() => {
-      let last = { content: element.scrollHeight, viewport: element.clientHeight };
+      const sized = () => ({ offset: element.scrollTop, content: element.scrollHeight, viewport: element.clientHeight });
+      let last = sized();
       let idle = 0;
       const onScroll = () => {
         // A list that only grew or shrank moved without anyone scrolling it.
         const moved = element.scrollHeight === last.content && element.clientHeight === last.viewport;
-        last = { content: element.scrollHeight, viewport: element.clientHeight };
+        last = sized();
         if (moved) {
           scrolling = true;
           clearTimeout(idle);
@@ -58,12 +59,19 @@
         }
         measure();
       };
+      // A list that grew or shrank where it stands is the size the next scroll
+      // starts from; one the change moved keeps the size before, so that move
+      // is not taken for a scroll.
+      const laidOut = () => {
+        if (element.scrollTop === last.offset) last = sized();
+        measure();
+      };
       element.addEventListener("scroll", onScroll, { passive: true });
-      const observer = new ResizeObserver(measure);
+      const observer = new ResizeObserver(laidOut);
       observer.observe(element);
       // Rows come and go with every change the sidebar draws, and a lift
       // hides and shows them: the list is measured as each change lands.
-      const rows = new MutationObserver(measure);
+      const rows = new MutationObserver(laidOut);
       rows.observe(element, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
       measure();
       return () => {

@@ -100,6 +100,10 @@
   const closeChoosing = () => {
     choosing = null;
   };
+  const toggle = () => {
+    onToggling?.();
+    send(CollapseSplit({ workspaceId: session.workspaceId, spaceId: space.id, groupId, isCollapsed: !collapsed }));
+  };
 
   // The icon's column shows one of three: the chevron, the split's emoji, or its members' deck.
   const icon = $derived(collapsed ? "chevron" : group?.displayEmojiIcon ? "emoji" : "deck");
@@ -113,14 +117,17 @@
   const front = $derived(Math.max(deck.length - 1, 0));
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div bind:this={row} class="sidebar-row folder-row split-header" style={rowStyle(depth, true)}
   role="button" tabindex="0" aria-expanded={!collapsed} aria-label={title}
   {...{ "aria-description": collapsed ? "Expands this Split View" : "Collapses this Split View" }}
   onclick={(event) => {
     if (renaming || event.detail > 1) return;
-    onToggling?.();
-    send(CollapseSplit({ workspaceId: session.workspaceId, spaceId: space.id, groupId, isCollapsed: !collapsed }));
+    toggle();
+  }}
+  onkeydown={(event) => {
+    if (renaming || event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
+    event.preventDefault();
+    toggle();
   }}
   ondblclick={() => (renaming = true)}
   onauxclick={(event) => {

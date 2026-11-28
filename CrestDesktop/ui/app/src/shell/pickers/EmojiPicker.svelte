@@ -5,11 +5,14 @@
     "🛒", "✈️", "🍔", "☕", "💡", "🧪", "🛠️", "📈", "🎨", "📷", "🌱", "🐶",
   ];
 
-  /** The first emoji in `text`, or null where it holds none. */
+  /**
+   * The first emoji in `text`, or null where it holds none: a pictograph, a
+   * flag's pair of regional letters, or a keycap, though not a bare digit.
+   */
   function firstEmoji(text: string): string | null {
     const segments = new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text.trim());
     for (const { segment } of segments) {
-      if (/\p{Extended_Pictographic}/u.test(segment)) return segment;
+      if (/\p{Extended_Pictographic}|^\p{Regional_Indicator}{2}$|^[0-9#*]\uFE0F?\u20E3$/u.test(segment)) return segment;
     }
     return null;
   }

@@ -130,7 +130,7 @@
     void showContextMenu(event, finishedEntries(download, downloads));
   }}>
   <button class="download-label" disabled={!finished} title={finished ? `Open ${download.filename}` : undefined}
-    aria-label={finished ? "Open" : download.filename} {...{ "aria-description": presentation.spoken }}
+    aria-label={finished ? `Open ${download.filename}` : download.filename} {...{ "aria-description": presentation.spoken }}
     onclick={() => downloads.open(download)}>
     {@render downloadIcon()}
     <span class="download-text">

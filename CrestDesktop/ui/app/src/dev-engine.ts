@@ -1,5 +1,6 @@
 import {
   type EngineCommand,
+  type EngineEvent,
   NavigationCommitted,
   NavigationFinished,
   NavigationStarted,
@@ -27,6 +28,8 @@ export interface DevPage {
 export class DevEngine implements EngineBindingHandler {
   pages = new Map<string, DevPage>();
   #listeners = new Set<() => void>();
+  /** Each page's latest load, so an older load stops reporting once a newer one starts. */
+  #loads = new Map<string, number>();
   version = 0;
 
   run(command: EngineCommand, engine: RegisteredEngine): void {
@@ -35,12 +38,16 @@ export class DevEngine implements EngineBindingHandler {
         this.#set({ id: command.pageId, url: null });
         void engine.report(PageCreated({ pageId: command.pageId }));
         break;
-      case "LoadPage":
+      case "LoadPage": {
+        const load = (this.#loads.get(command.pageId) ?? 0) + 1;
+        this.#loads.set(command.pageId, load);
         this.#set({ id: command.pageId, url: command.url });
-        void this.#reportLoad(engine, command.pageId, command.url);
+        void this.#reportLoad(engine, command.pageId, command.url, load);
         break;
+      }
       case "ClosePage":
         this.pages.delete(command.pageId);
+        this.#loads.delete(command.pageId);
         this.#changed();
         void engine.report(PageClosed({ pageId: command.pageId, restoreState: null }));
         break;
@@ -54,7 +61,7 @@ export class DevEngine implements EngineBindingHandler {
     return () => this.#listeners.delete(listener);
   }
 
-  async #reportLoad(engine: RegisteredEngine, pageId: string, url: string) {
+  async #reportLoad(engine: RegisteredEngine, pageId: string, url: string, load: number) {
     const secure = url.startsWith("https:");
     const title = (() => {
       try {
@@ -63,9 +70,13 @@ export class DevEngine implements EngineBindingHandler {
         return url;
       }
     })();
-    await engine.report(NavigationStarted({ pageId, url, sameDocument: false }));
-    await engine.report(NavigationCommitted({ pageId, url, sameDocument: false }));
-    await engine.report(
+    // A newer load of the page, or its closing, supersedes this one: it reports nothing further.
+    const report = async (event: EngineEvent) => {
+      if (this.#loads.get(pageId) === load) await engine.report(event);
+    };
+    await report(NavigationStarted({ pageId, url, sameDocument: false }));
+    await report(NavigationCommitted({ pageId, url, sameDocument: false }));
+    await report(
       PageStateChanged({
         pageId,
         snapshot: {
@@ -86,7 +97,7 @@ export class DevEngine implements EngineBindingHandler {
         },
       }),
     );
-    await engine.report(NavigationFinished({ pageId, url, title }));
+    await report(NavigationFinished({ pageId, url, title }));
   }
 
   #set(page: DevPage) {

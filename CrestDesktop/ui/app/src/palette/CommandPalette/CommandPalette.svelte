@@ -17,6 +17,7 @@
    * keeps its own pace.
    */
   let { model, bindings, tabs }: PaletteProps = $props();
+  const listId = $props.id();
 
   const chips = $derived.by(() => (usePaletteVersion(model), model.providerChips));
 
@@ -114,12 +115,12 @@
         <div bind:this={glass} class="palette-glass" aria-hidden="true"></div>
         <div bind:this={reveal} class="palette-reveal">
           <div bind:this={contents} class="palette-contents">
-            <SearchField {model} embedded={false} inline={!!drop} />
+            <SearchField {model} embedded={false} inline={!!drop} {listId} />
             {#if chips.length > 0}
               <ProviderChips {model} />
             {/if}
             <div class="palette-divider"></div>
-            <ResultList {model} {bindings} {tabs} size={drop ? { maxHeight: Math.max(0, drop.results - (chips.length > 0 ? 44 : 0)) } : { height: resultsHeight - (chips.length > 0 ? 44 : 0) }} />
+            <ResultList {model} {bindings} {tabs} {listId} size={drop ? { maxHeight: Math.max(0, drop.results - (chips.length > 0 ? 44 : 0)) } : { height: resultsHeight - (chips.length > 0 ? 44 : 0) }} />
           </div>
         </div>
       </div>

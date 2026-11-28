@@ -19,7 +19,12 @@
 
   const catalog = $derived((useCoreVersion(session), session.core.state.search));
   const palette = $derived(appPreferences(session).palette);
-  const setPalette = (change: Partial<typeof palette>) => setAppPreferences(session, { palette: { ...palette, ...change } });
+  // Each change reads the palette it changes, which holds an earlier change the core hasn't answered yet.
+  type Palette = typeof palette;
+  const setPalette = (change: Partial<Palette> | ((current: Palette) => Partial<Palette>)) =>
+    setAppPreferences(session, (current) => ({
+      palette: { ...current.palette, ...(typeof change === "function" ? change(current.palette) : change) },
+    }));
   let confirmingClear = $state(false);
   const providers = $derived(catalog?.providers ?? []);
   const providerChoice = $derived(providers.map((provider) => ({ value: provider.name, label: provider.title })));
@@ -28,14 +33,21 @@
   const extras = $derived(palette.sources.filter((choice) => !choice.source.isSection
     && ["settingsPages", "scopes", "calculator"].includes(choice.source.name)));
   const setSource = (name: string, change: { isEnabled?: boolean; limit?: number | null }) =>
-    setPalette({ sources: palette.sources.map((choice) => (choice.source.name === name ? { ...choice, ...change } : choice)) });
+    setPalette((current) => ({
+      sources: current.sources.map((choice) => (choice.source.name === name ? { ...choice, ...change } : choice)),
+    }));
   const move = (index: number, by: number) => {
-    const order = [...palette.sources];
-    const from = order.indexOf(sources[index]);
-    const to = order.indexOf(sources[index + by]);
-    if (from < 0 || to < 0) return;
-    [order[from], order[to]] = [order[to], order[from]];
-    setPalette({ sources: order });
+    const moving = sources[index]?.source.name;
+    const other = sources[index + by]?.source.name;
+    if (!moving || !other) return;
+    setPalette((current) => {
+      const order = [...current.sources];
+      const from = order.findIndex((choice) => choice.source.name === moving);
+      const to = order.findIndex((choice) => choice.source.name === other);
+      if (from < 0 || to < 0) return {};
+      [order[from], order[to]] = [order[to], order[from]];
+      return { sources: order };
+    });
   };
   const defaultOrder = defaults.palette.sources.map((choice) => choice.source.name).join();
   const limits = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20];

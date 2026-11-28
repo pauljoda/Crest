@@ -74,6 +74,8 @@
       }
       const keys = pressedKeys(event);
       if (!keys) return;
+      // Keys holding the Windows key are the system's, which a window never binds.
+      if (keys.modifiers & ShortcutModifiers.Control) return onInvalid();
       const function_ = keys.isSpecialKey && /^f\d+$/.test(keys.key);
       const held = keys.modifiers & (ShortcutModifiers.Command | ShortcutModifiers.Option | ShortcutModifiers.Shift | ShortcutModifiers.Control);
       if (!function_ && !held) return onInvalid();

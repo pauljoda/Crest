@@ -42,3 +42,8 @@ export function brandColor(color: BrandColor): string {
   const channel = (value: number) => Math.round(Math.min(Math.max(value, 0), 1) * 255);
   return `rgb(${channel(color.red)} ${channel(color.green)} ${channel(color.blue)})`;
 }
+
+/** The id of the result at `index` in the list `listId` names, which the field names as the one the keyboard selected. */
+export function paletteOptionId(listId: string, index: number): string {
+  return `${listId}-option-${index}`;
+}

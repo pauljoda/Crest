@@ -1037,10 +1037,14 @@ export class SpaceSwipe {
     spacePager.track(dx);
   }
 
-  /** Without phases, a swipe ends when its input goes quiet. */
+  /**
+   * Without phases, a swipe ends when its input goes quiet. The quiet is how
+   * the end is known, not when the fingers lifted, so the swipe releases at
+   * its last input with the speed the samples before it had.
+   */
   #endWhenQuiet() {
     clearTimeout(this.#timer);
-    this.#timer = window.setTimeout(() => this.#release(this.#lastTime + SpaceSwipe.#quiet, false), SpaceSwipe.#quiet * 1000);
+    this.#timer = window.setTimeout(() => this.#release(this.#samples.at(-1)?.time ?? this.#lastTime, false), SpaceSwipe.#quiet * 1000);
   }
 
   #finishTracking() {

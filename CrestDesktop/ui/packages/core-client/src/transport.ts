@@ -54,7 +54,8 @@ export class DevSocketTransport implements CoreTransport {
   #socket: WebSocket;
   #opened: Promise<void>;
   #nextId = 1;
-  #pending = new Map<number, (reply: CoreReply) => void>();
+  #pending = new Map<number, { resolve: (reply: CoreReply) => void; reject: (error: Error) => void }>();
+  #lost?: Error;
 
   constructor(url: string) {
     this.#socket = new WebSocket(url);
@@ -64,6 +65,10 @@ export class DevSocketTransport implements CoreTransport {
       this.#socket.addEventListener("error", () => reject(new Error(`Cannot reach the core bridge at ${url}`)), { once: true });
     });
     this.#socket.addEventListener("message", (event) => this.#receive(new Uint8Array(event.data as ArrayBuffer)));
+    // A lost bridge answers nothing more, so what is outstanding fails rather
+    // than waiting forever. Nothing is replayed: the core may already have
+    // applied a dispatch it had no chance to answer.
+    this.#socket.addEventListener("close", () => this.#lose(new Error(`Lost the core bridge at ${url}`)), { once: true });
   }
 
   /** Let the local launcher know the comparison window finished opening. */
@@ -109,6 +114,7 @@ export class DevSocketTransport implements CoreTransport {
 
   async #request(op: Op, ...parts: Uint8Array[]): Promise<CoreReply> {
     await this.#opened;
+    if (this.#lost) throw this.#lost;
     const id = this.#nextId++;
     const length = parts.reduce((total, part) => total + part.byteLength, 5);
     const frame = new Uint8Array(length);
@@ -119,10 +125,17 @@ export class DevSocketTransport implements CoreTransport {
       frame.set(part, offset);
       offset += part.byteLength;
     }
-    return new Promise((resolve) => {
-      this.#pending.set(id, resolve);
+    return new Promise((resolve, reject) => {
+      this.#pending.set(id, { resolve, reject });
       this.#socket.send(frame);
     });
+  }
+
+  #lose(error: Error) {
+    this.#lost = error;
+    const pending = [...this.#pending.values()];
+    this.#pending.clear();
+    for (const request of pending) request.reject(error);
   }
 
   #receive(frame: Uint8Array) {
@@ -133,9 +146,9 @@ export class DevSocketTransport implements CoreTransport {
       this.onCommand?.(view.getBigUint64(1, true), frame.subarray(9));
     } else {
       const id = view.getUint32(1, true);
-      const resolve = this.#pending.get(id);
+      const request = this.#pending.get(id);
       this.#pending.delete(id);
-      resolve?.({ status: view.getInt32(5, true), bytes: frame.subarray(9) });
+      request?.resolve({ status: view.getInt32(5, true), bytes: frame.subarray(9) });
     }
   }
 }

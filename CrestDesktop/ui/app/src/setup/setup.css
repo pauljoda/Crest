@@ -32,7 +32,9 @@
   overflow: hidden;
   color: var(--setup-ink);
   font: 13px var(--crest-font-system);
-  -webkit-app-region: drag;
+  /* A layer over the window keeps out of its drag area, so the browser beneath takes the pointer as Setup hands over;
+     its title bar moves the window. */
+  -webkit-app-region: initial;
 }
 
 /* Setup holds the keyboard over the window it covers, without a ring of its own. */

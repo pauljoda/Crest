@@ -26,7 +26,7 @@ def main():
     if not (source / "chrome/app/crest_exe_main_mac.cc").is_file():
         parser.error("Expected a Chromium src tree prepared with the Crest Mac overlay")
     apply(source, FIXTURE / "comparison.patch")
-    apply(source, ROOT / "CrestEngines/Chromium/Patches/desktop-host.patch", [
+    apply(source, ROOT / "CrestEngines/Chromium/Layers/Desktop/Patches/desktop-host.patch", [
         "components/surface_embed/renderer/surface_embed_web_plugin.cc",
         "components/performance_manager/performance_manager_tab_helper.cc",
     ])

@@ -17,8 +17,10 @@
   let saveError = $state<string | null>(null);
   const save = () => {
     if (draft === null) return;
-    session.core.send(SetCustomFilters({ text: draft })).then(() => {
-      draft = null;
+    const text = draft;
+    session.core.send(SetCustomFilters({ text })).then(() => {
+      // Typing while the save was on its way stays a draft of its own.
+      if (draft === text) draft = null;
       saveError = null;
     }, () => {
       saveError = "These filters are too long to keep.";

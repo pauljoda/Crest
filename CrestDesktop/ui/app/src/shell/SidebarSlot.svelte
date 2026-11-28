@@ -243,7 +243,8 @@
     if (!hoverAllowed || reveal !== undefined || !isActive()) return;
     reveal = setTimeout(() => {
       reveal = undefined;
-      if (strip?.matches(":hover") || outside) revealByPointer();
+      // A window put aside meanwhile keeps its sidebar away.
+      if ((strip?.matches(":hover") || outside) && isActive()) revealByPointer();
     }, sidebarRevealDelay.current);
   };
 
@@ -388,8 +389,9 @@
       if (morphRevision !== revision) return;
       holdTransitions(false);
       // A card put away while the pointer was on it goes once the pointer has
-      // left, sliding away now that its transitions are back.
-      if (presentation === "floating" && !keepsCard()) onPresentation("collapsed");
+      // left, sliding away now that its transitions are back, and at once in
+      // a window that stopped being the active one meanwhile, unless something holds it.
+      if (presentation === "floating" && (!keepsCard() || (!isActive() && !held()))) onPresentation("collapsed");
     });
   };
   // The initial pose presents before the spring starts. Layout work setting up

@@ -12,7 +12,9 @@
 
   const bridge = new URLSearchParams(location.search).get("bridge") ?? "ws://127.0.0.1:8787/core";
 
-  let session = $state<Session | null>(null);
+  // Raw: the session's cells (`closing`, `setup`) are shared with boot code that writes them directly, so a deep proxy
+  // would hand the window copies that never see those writes.
+  let session = $state.raw<Session | null>(null);
   let failure = $state<string | null>(null);
   // Setup over the window: a launch held for first-run Setup shows it until it finishes, then the window opens beneath it
   // and Setup fades into it; Settings opens it over the window that is already open.

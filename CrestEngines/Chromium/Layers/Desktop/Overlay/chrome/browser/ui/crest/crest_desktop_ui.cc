@@ -355,6 +355,8 @@ void DesktopBridge::OnJavascriptAllowed() {
 
 void DesktopBridge::OnJavascriptDisallowed() {
   ObserveWidget(nullptr);
+  // An interface that loads again can't hear an answer it asked for before.
+  DesktopHost::Get().ReleaseDownloadPrompts(this);
 }
 
 void DesktopBridge::ObserveWidget(content::RenderWidgetHost* host) {
@@ -616,7 +618,7 @@ void DesktopBridge::ResolveDownloadDestination(base::Value id,
                                                const std::string& prompt,
                                                const std::string& suggested,
                                                bool asks) {
-  if (!DesktopHost::Get().ClaimDownloadPrompt(prompt)) {
+  if (!DesktopHost::Get().ClaimDownloadPrompt(prompt, this)) {
     Reply(id, Text("{\"taken\":true}"));
     return;
   }
