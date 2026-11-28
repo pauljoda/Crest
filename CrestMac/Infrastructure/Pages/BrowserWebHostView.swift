@@ -429,10 +429,11 @@ final class BrowserWebHostView: NSView {
     /// keeps its place and its Space's preview draws it as the person swipes.
     private(set) var presentation = BrowserPagePresentation.presented
     private var focusRestorationAttemptGeneration = 0
-    /// Whether the next focus attempt may give the page a keyboard nothing in
-    /// the window holds: the page came on screen here or became the window's
-    /// page, Crest's chrome let go of the keyboard, or whatever held it in
-    /// the window let go. Other updates never hand it the keyboard.
+    /// Whether the page waits to take a keyboard nothing in the window holds:
+    /// it came on screen here or became the window's page, Crest's chrome let
+    /// go of the keyboard, or whatever held it in the window let go. It waits
+    /// until it has the keyboard, so a window that was not key, or had a
+    /// sheet, hands it over once it becomes key or the sheet ends.
     private var takesUnheldKeyboard = false
     /// Watches the window's keyboard, which the page takes when it is let go.
     private var firstResponderObservation: NSKeyValueObservation?
@@ -804,15 +805,32 @@ final class BrowserWebHostView: NSView {
             // A Space the person swipes through takes the keyboard once it
             // settles.
             guard self.takesUnheldKeyboard, self.presentation == .presented else { return }
-            self.takesUnheldKeyboard = false
-            focusRestoration.takeUnheldKeyboard(in: self, gate: self.focusRestorationGate)
+            if focusRestoration.takeUnheldKeyboard(in: self, gate: self.focusRestorationGate)
+                || self.pageHoldsKeyboard
+            {
+                self.takesUnheldKeyboard = false
+            }
         }
     }
 
+    /// Whether the window's keyboard is in this host's page.
+    private var pageHoldsKeyboard: Bool {
+        guard let hostedWebView, let responder = window?.firstResponder as? NSView else { return false }
+        return responder === hostedWebView || responder.isDescendant(of: hostedWebView)
+    }
+
     /// Hands the page the keyboard whenever whatever held it in the window
-    /// lets go, as the palette's field does as the palette closes.
-    private func watchFirstResponder() {
-        firstResponderObservation = window?.observe(\.firstResponder) { [weak self] window, _ in
+    /// lets go, as the palette's field does as the palette closes, and once
+    /// the window becomes key or its sheet ends while the page waits for it.
+    private func watchWindow() {
+        let center = NotificationCenter.default
+        center.removeObserver(self, name: NSWindow.didBecomeKeyNotification, object: nil)
+        center.removeObserver(self, name: NSWindow.didEndSheetNotification, object: nil)
+        guard let window else {
+            firstResponderObservation = nil
+            return
+        }
+        firstResponderObservation = window.observe(\.firstResponder) { [weak self] window, _ in
             MainActor.assumeIsolated {
                 guard let self, self.isPageActive,
                     window.firstResponder == nil || window.firstResponder === window
@@ -820,6 +838,17 @@ final class BrowserWebHostView: NSView {
                 self.scheduleFocusRestoration(takingUnheldKeyboard: true)
             }
         }
+        center.addObserver(
+            self, selector: #selector(windowMayHandOverKeyboard), name: NSWindow.didBecomeKeyNotification,
+            object: window)
+        center.addObserver(
+            self, selector: #selector(windowMayHandOverKeyboard), name: NSWindow.didEndSheetNotification,
+            object: window)
+    }
+
+    @objc private func windowMayHandOverKeyboard(_ notification: Notification) {
+        guard isPageActive, takesUnheldKeyboard else { return }
+        scheduleFocusRestoration()
     }
 
     // MARK: - Actions - Keyboard
@@ -893,6 +922,8 @@ final class BrowserWebHostView: NSView {
             titleBarTracker.release()
             releaseReplacedWebView()
             firstResponderObservation = nil
+            NotificationCenter.default.removeObserver(self, name: NSWindow.didBecomeKeyNotification, object: nil)
+            NotificationCenter.default.removeObserver(self, name: NSWindow.didEndSheetNotification, object: nil)
         }
         super.viewWillMove(toWindow: newWindow)
     }
@@ -902,7 +933,7 @@ final class BrowserWebHostView: NSView {
         if let window { lastWindow = window }
         if window != nil, awaitsWindow { showAwaitedWebView() }
         trackTitleBarPointer()
-        watchFirstResponder()
+        watchWindow()
         guard isPageActive else { return }
         scheduleFocusRestoration(takingUnheldKeyboard: true)
     }
