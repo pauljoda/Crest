@@ -3023,15 +3023,16 @@ button {
 }
 
 /* A button that deletes or clears, as the Mac's alert draws one (I06): its
-   red on a tint of it, never the blue default. */
+   red on a tint of it, never the blue default. The red keeps its hue but
+   reads at 4.5:1 against its tint, in each appearance. */
 .sheet-button.primary.destructive {
   background: rgb(99 51 52);
-  color: rgb(240 30 20);
+  color: rgb(248 143 138);
 }
 
 .browser-window.reads-dark .sheet-button.primary.destructive {
   background: rgb(244 194 195);
-  color: rgb(255 56 60);
+  color: rgb(181 0 4);
 }
 
 /* The default button, which Return presses, wears no ring, as the Mac's. */
