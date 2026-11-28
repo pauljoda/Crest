@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "unload-loads-no-other-tab",
+      "category": "fixed",
+      "message": "Unloading the pinned or saved tab you're looking at no longer loads another tab in its place. The window goes back to the tab you showed before only while that tab is still loaded."
+    }
+  ]
+}
