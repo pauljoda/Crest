@@ -42,6 +42,14 @@ The 1Password Chrome Web Store extension runs on Chromium pages in Crest for Mac
 
 Touch ID unlock comes from the 1Password app, so the extension offers it only after you authorize Crest there. Until then, the extension unlocks with your account password.
 
+If the extension shows "Connection problem" while 1Password is unlocked and authorized, Crest may not find 1Password's helper. 1Password registers it for the browsers it finds on your Mac, and Crest looks where 1Password registers it for Google Chrome in any channel or for Chromium. On a Mac where none of those has ever been installed, there may be no registration for Crest to find.
+
+If 1Password registered its helper only for another browser on your Mac, give Crest its own copy of that registration:
+
+1. In Finder, choose **Go › Go to Folder**, enter `~/Library/Application Support`, and find `com.1password.1password.json` in that browser's `NativeMessagingHosts` folder.
+2. Copy the file to `~/Library/Application Support/Crest/Chromium/NativeMessagingHosts`, creating the `NativeMessagingHosts` folder if it doesn't exist. Crest always checks this folder.
+3. Quit and reopen Crest.
+
 Reinstalling the extension does not change the signature 1Password checks. Confirm that you added the Crest app in `/Applications`, then see [Native companions](./native-companion-limits.md) and [Troubleshoot an extension](./troubleshoot-partial-compatibility.md).
 
 ## Official references

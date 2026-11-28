@@ -45,7 +45,7 @@
   },
   "chrome/browser/extensions/api/messaging/launch_context_posix.cc": {
     "before": "fe8d9092dce6206d7eae5a3ce3abc010b841586b4d37de5eb6d3ad31ee36085e",
-    "after": "5175a09da24535fb6aae84dfc86f5de5d54e50cac6682404ea6404015465e6cb"
+    "after": "825a055992b4917fb7ffd3b7e66981251b22776e1d6197e0e1f8560b52298dcc"
   },
   "chrome/browser/ui/unload_controller.cc": {
     "before": "9f8ea7b12055cfd39eb1e3ffb7a450cf824aa9d42344f00b7092190292d757ac",
@@ -65,7 +65,7 @@
   },
   "chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_cocoa.mm": {
     "before": "903582053e2ac7de59513ee8f5c4dc06b7e5359bc4873f11b3efaf6634124000",
-    "after": "b85a7d33d8802e819ff6043c404469970be396cf0f3b5c61fca97e57389f4884"
+    "after": "b1ba8f55d99354365453189be843cd8f56192ede29512e9c44ce9dfef86f90aa"
   },
   "chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.h": {
     "before": "3a2ca97d02c1e182d2b38dad867bda37fe9e43000f0104484342fcb7fc578d9f",
@@ -305,7 +305,7 @@
   },
   "chrome/browser/chrome_browser_field_trials.cc": {
     "before": "70c47d2d0ef60ff2f778341b625e334ca2b4a184e389ab2dfd2d0904802a2813",
-    "after": "552d68449ecf5563866fee8dc613b0029afc241a92705720920019e3e0c22650"
+    "after": "4f45155ae071e98466deb7d32817b26c502b109d364740917c9ac45afe8bd63a"
   },
   "chrome/browser/media/webrtc/display_media_access_handler.cc": {
     "before": "270e82e3b59e57c7303d1c083d664720f52de222894cc7f1600faa325a5df87e",
@@ -341,7 +341,7 @@
   },
   "content/browser/webid/request_handler.cc": {
     "before": "3177b01bdb40e2c8f46de73f6809d94355a9f52ca4a1c1d0d3f0a31ba2df56dd",
-    "after": "0cd8c8bd27bca56fb6d292488e4967b535821c8df969d1062cd910c78490264e"
+    "after": "86e591c0a2380f4b4a098b585d335bfaa459625803f2a4551fc5cf58d1fe59cc"
   },
   "chrome/browser/mac/code_sign_clone_manager.mm": {
     "before": "8804a902d8fb7bada733411500857b3dd835a3be5b55850a13ff060398f31d39",
@@ -542,5 +542,9 @@
   "content/browser/renderer_host/browser_compositor_view_mac.mm": {
     "before": "1579b8073ab9c8682f11edd12227324048bbf7c5ae6b3d6b924cb285d0eca665",
     "after": "710968c986105f73a0a01c95331c8049d007e1c9cffda35a21667118c3ecbdfd"
+  },
+  "chrome/browser/webid/federated_identity_api_permission_context.cc": {
+    "before": "66f01f7beb77e116332208a03e3ff9cc64da443f4dc5d73412a1934bbcd8fe28",
+    "after": "7ae16ab281cc46fb3cfd071e24c9b28bdedb6839c8f60d3cf844ae88440a12c4"
   }
 }

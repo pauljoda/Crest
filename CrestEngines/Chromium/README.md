@@ -406,10 +406,10 @@ the same thing from the toolbar. Both have the Space's engine profile download
 the CRX3 package from Google's update service with the request Chromium's own
 Web Store installer makes, so one download can install into every Space the
 person picks; Crest sets no size or format limits of its own, and closing the
-review stops the download. The request carries no cookies. When the service
-refuses it, as it does for a private or trusted-tester item, it is made once
-more with the Space's cookies, so an account in the Space that can see the item
-receives it.
+review stops the download. The request carries no cookies. The service sends a
+private or trusted-tester item on to chrome.google.com, and when it refuses the
+request there, it is made once more with the Space's cookies, so an account in
+the Space that can see the item receives it.
 Chromium verifies the publisher proof and
 expected ID before Crest shows the original install review layout.
 The review displays Chromium's permission warnings and offers website-access
@@ -465,10 +465,13 @@ A private window's groups are kept in memory only. Folder membership grants
 an extension nothing.
 
 Companion apps such as Apple's Passwords helper and 1Password register their
-native-messaging hosts for Google Chrome and do not know Crest's directories. In
-Crest mode only, when the regular Chromium lookup finds no manifest, the host
-checks Chrome's per-user `NativeMessagingHosts` directory and then its global
-one. Chromium still validates the manifest and the extension IDs it allows, so a
+native-messaging hosts for Google Chrome or Chromium and do not know Crest's
+directories. In Crest mode only, when the regular Chromium lookup finds no
+manifest, the host checks a fixed list of per-user `NativeMessagingHosts`
+directories, Chrome's for each channel (stable, Beta, Dev, Canary) and then
+Chromium's, and then Chrome's global one. The per-user directories are skipped
+when policy turns off user-level hosts. Chromium still validates the manifest
+and the extension IDs it allows, so a
 host answers only the extensions its app registered, and Apple's helper still
 controls authentication and access to the password vault. Crest does not
 copy Chrome's profile, change Apple's helper, or read passwords itself.

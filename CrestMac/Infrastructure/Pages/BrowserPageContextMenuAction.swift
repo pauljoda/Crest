@@ -20,8 +20,8 @@ struct BrowserPageContextMenuAction {
     }
 
     /// Where a row sits around the engine's rows: ahead of them, in the group
-    /// of Space destinations, or after them, acting on the page rather than
-    /// on a link or selection.
+    /// of Space destinations that stands where the first of them does, or
+    /// after them, acting on the page rather than on a link or selection.
     enum Placement: Equatable {
         case leading
         case spaces
@@ -142,11 +142,12 @@ struct BrowserPageContextMenuAction {
     }
 }
 
-/// Crest's rows in an engine's context menu for one page: the engine's own row
-/// that opens a link in a new tab, then the other Spaces the link opens in
-/// grouped under one row, a separator between their groups, then the page's
-/// own rows, ahead of the engine's rows. A row runs only while the page's view
-/// is still in the window the menu opened in.
+/// Crest's rows in an engine's context menu for one page, ahead of the
+/// engine's rows: the engine's own row that opens a link in a new tab, then
+/// the page's rows in their order, the other Spaces the link opens in grouped
+/// under one row where the first of them stands, with a separator between
+/// their groups. A row runs only while the page's view is still in the window
+/// the menu opened in.
 @MainActor
 struct BrowserPageContextMenu {
     // MARK: - Types
@@ -197,25 +198,34 @@ struct BrowserPageContextMenu {
         var items: [NSMenuItem] = []
         if let newTab, host.opensLinksInCurrentSpace, menu.index(of: newTab) >= 0 {
             menu.removeItem(newTab)
+            // An engine's row may come without an icon of its own.
+            if newTab.image == nil {
+                newTab.image = NSImage(systemSymbolName: "plus.square.on.square", accessibilityDescription: nil)
+            }
             items.append(newTab)
         }
-        let spaceActions = actions.filter { $0.placement == .spaces }
-        if !spaceActions.isEmpty {
-            let group = NSMenuItem(title: String(localized: "Open Link in"), action: nil, keyEquivalent: "")
-            group.image = NSImage(systemSymbolName: "square.stack.3d.up", accessibilityDescription: nil)
-            let submenu = NSMenu()
-            for (index, action) in spaceActions.enumerated() {
-                // The Spaces of one group browse with one profile; a separator
-                // stands where the next group begins.
-                if index > 0, action.space?.profileID != spaceActions[index - 1].space?.profileID {
-                    submenu.addItem(.separator())
-                }
-                submenu.addItem(item(for: action))
+        var spaces: NSMenu?
+        var previousSpace: BrowserPageContextMenuAction?
+        for action in actions where action.placement != .trailing {
+            guard action.placement == .spaces else {
+                items.append(item(for: action))
+                continue
             }
-            group.submenu = submenu
-            items.append(group)
+            if spaces == nil {
+                let group = NSMenuItem(title: String(localized: "Open Link in"), action: nil, keyEquivalent: "")
+                group.image = NSImage(systemSymbolName: "square.stack.3d.up", accessibilityDescription: nil)
+                group.submenu = NSMenu()
+                spaces = group.submenu
+                items.append(group)
+            }
+            // The Spaces of one group browse with one profile; a separator
+            // stands where the next group begins.
+            if let previousSpace, action.space?.profileID != previousSpace.space?.profileID {
+                spaces?.addItem(.separator())
+            }
+            spaces?.addItem(item(for: action))
+            previousSpace = action
         }
-        items.append(contentsOf: actions.filter { $0.placement == .leading }.map(item(for:)))
         for (index, item) in items.enumerated() { menu.insertItem(item, at: index) }
         if !items.isEmpty, menu.items.count > items.count { menu.insertItem(.separator(), at: items.count) }
         let trailing = actions.filter { $0.placement == .trailing }.map(item(for:))
@@ -267,12 +277,12 @@ extension BrowserPage {
         if let linkURL, ExternalWebLink.accepts(linkURL),
             linkDestinationHost.canOpenLink(from: source)
         {
-            for space in linkDestinationHost.otherSpaces(from: source) {
-                actions.append(.space(space, opening: linkURL))
-            }
             actions.append(.peek(linkURL))
             if splitLinkHost.canOpenLink(context.tabID, context.assignment) {
                 actions.append(.split(linkURL))
+            }
+            for space in linkDestinationHost.otherSpaces(from: source) {
+                actions.append(.space(space, opening: linkURL))
             }
         }
         if let selectionText,

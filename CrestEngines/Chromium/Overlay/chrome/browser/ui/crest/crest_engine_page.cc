@@ -1386,6 +1386,18 @@ bool EnginePage::Answer(const engine::StopLoading&) {
   return true;
 }
 
+// A pinch scales the page's visual viewport, apart from its zoom. Setting the
+// scale back is the same one-time change a pinch makes, so the next pinch
+// starts from there.
+bool EnginePage::Answer(const engine::ResetPageScale&) {
+  if (!web_contents() || web_contents()->GetPrimaryPage().IsPageScaleFactorOne() ||
+      !web_contents()->GetPrimaryMainFrame()->IsRenderFrameLive()) {
+    return false;
+  }
+  web_contents()->SetPageScale(1);
+  return true;
+}
+
 bool EnginePage::Answer(const engine::ZoomPage& request) {
   if (!std::isfinite(request.factor) || request.factor < kMinimumZoom || request.factor > kMaximumZoom) {
     return false;

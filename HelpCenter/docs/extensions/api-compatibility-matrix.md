@@ -43,7 +43,7 @@ Crest installs extensions from the Chrome Web Store, and unpacked ones in develo
 | Private windows | Private windows use separate profiles and do not run installed extensions. |
 | Tab sharing and debugging bars | Chromium's confirmation bars, such as the one `chrome.debugger` shows, appear inside the page. |
 | Updates | Chromium updates Chrome Web Store extensions and checks their signatures and permissions. |
-| Native companion apps | Supported through `nativeMessaging`. When Chromium's own lookup finds no helper, Crest also looks in `~/Library/Application Support/Google/Chrome/NativeMessagingHosts` and `/Library/Google/Chrome/NativeMessagingHosts`, where most companion apps register. A helper still answers only the extensions it lists. See [Native companions](./native-companion-limits.md). |
+| Native companion apps | Supported through `nativeMessaging`. When Chromium's own lookup finds no helper, Crest also looks in the per-user folders where most companion apps register for Google Chrome, in any channel, or Chromium, then in `/Library/Google/Chrome/NativeMessagingHosts`. A helper still answers only the extensions it lists. See [Native companions](./native-companion-limits.md). |
 
 ## Known limits
 

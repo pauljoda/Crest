@@ -160,6 +160,8 @@ class EnginePage final : public content::WebContentsObserver,
   bool Answer(const engine::ReloadPage& request);
   bool Answer(const engine::StopLoading& request);
   bool Answer(const engine::ZoomPage& request);
+  // Undoes a pinch zoom; false when the page was not pinched.
+  bool Answer(const engine::ResetPageScale& request);
   bool Answer(const engine::FindInPage& request);
   bool Answer(const engine::CapturePage& request);
   bool Answer(const engine::ExportPage& request);

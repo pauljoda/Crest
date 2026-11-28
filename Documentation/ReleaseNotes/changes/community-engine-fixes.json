@@ -1,0 +1,44 @@
+{
+  "entries": [
+    {
+      "id": "actual-size-undoes-pinch",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "Actual Size (Command-0) also undoes a trackpad pinch. Thanks to Avelino (@avelino)."
+    },
+    {
+      "id": "link-menu-spaces-after-peek",
+      "category": "improved",
+      "platforms": [
+        "mac"
+      ],
+      "message": "A link's menu now lists your other Spaces after Peek and Split View, and pages in Chromium no longer offer to open a link as another profile. Thanks to Gustavo Lima (@athousanddetails)."
+    },
+    {
+      "id": "chromium-sign-in-fraud-checks",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "Pages in Chromium see federated sign-in again, so sites' fraud checks no longer count it missing as a sign of a tampered browser. Thanks to Josue A. Mendives (@JosueM1109)."
+    },
+    {
+      "id": "chromium-private-web-store-redirect",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "A private or trusted-tester Chrome Web Store extension installs in Chromium for a Space signed in to an account that can see it, instead of failing with “Couldn’t download this extension.” Thanks to rajuGT (@rajuGT)."
+    },
+    {
+      "id": "companion-apps-without-chrome",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "Extensions with a companion Mac app, such as 1Password, reach it in Chromium on Macs without Google Chrome when the app registered for another Chrome channel or for Chromium."
+    }
+  ]
+}
