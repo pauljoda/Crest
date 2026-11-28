@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "window-buttons-stay-on-right-sidebar",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "With the sidebar on the right, the close, minimize and zoom buttons stay in the sidebar when a page changes the window's title or the window is resized, and slide across with the sidebar when it changes sides."
+    },
+    {
+      "id": "mobile-tab-list-scroll-origin",
+      "category": "internal",
+      "platforms": [
+        "ios"
+      ],
+      "message": "The iPhone and iPad tab list keeps its scroll position for drag and drop outside view state, which takes about a third less main-thread time per scroll frame."
+    }
+  ]
+}

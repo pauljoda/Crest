@@ -81,9 +81,11 @@ struct BrowserRootShell: View, BrowserChromeAnimating {
             // style while AppKit is carrying it into fullscreen.
             // With the address bar on top the buttons stay at the window's top
             // left in every sidebar state, over the window's address bar or the
-            // leading card's when the sidebar does not hold them.
+            // leading card's when the sidebar does not hold them. They cross
+            // the window on the sidebar's own curve when it changes sides.
             if stylesWindow {
                 BrowserNativeWindowControlsHost(model: model, sidebarOnRight: sidebarOnRight)
+                    .animation(chromeAnimation(CrestMotion.collection), value: sidebarOnRight)
             }
 
             // A held Most Recent Tab shortcut shows the recent tabs over the
