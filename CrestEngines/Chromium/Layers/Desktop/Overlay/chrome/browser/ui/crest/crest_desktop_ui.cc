@@ -229,7 +229,7 @@ class SaveDialog : public ui::SelectFileDialog::Listener {
 }  // namespace
 
 // A menu the interface asks for, run as Windows' own context menus are, as
-// Chrome's are: the interface describes its items, each {id, title, enabled,
+// Chromium's are: the interface describes its items, each {id, title, enabled,
 // checked, shortcut {key, control, shift, alt}, submenu} or {separator}, and
 // hears which one the person chose, or none.
 class InterfaceMenu : public ui::SimpleMenuModel::Delegate {
@@ -699,7 +699,7 @@ CoreReply DesktopBridge::RunExtension(const std::string& extension_id,
   auto* runner = extensions::ExtensionActionRunner::GetForWebContents(contents);
   if (!browser || !runner) return answer(false);
   // Only the person's click on the extension's own button runs it, granting
-  // the page to the extension for this visit, as Chrome's toolbar button does.
+  // the page to the extension for this visit, as Chromium's toolbar button does.
   const auto result = runner->RunAction(extension, /*grant_tab_permissions=*/true);
   if (result == extensions::ExtensionAction::ShowAction::kToggleSidePanel) {
     binding.RequestSidePanel(page->key(), extension_id, engine::SidePanelRequest::kToggle);

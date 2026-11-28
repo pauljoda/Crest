@@ -16,7 +16,7 @@
 #   Chromium's until a Windows installer registers them.
 # - Its external extensions: the extensions other software registers for the
 #   browser in the registry are read from Software\Crest\Extensions, not
-#   Google Chrome's key, which every Chromium build otherwise reads. The Mac's
+#   the key under Software\Google, which every Chromium build otherwise reads. The Mac's
 #   engine likewise reads only its own External Extensions folders.
 
 --- a/chrome/app/chrome_exe.rc
@@ -118,8 +118,8 @@
  // The Registry subkey that contains information about external extensions.
 -const wchar_t kRegistryExtensions[] = L"Software\\Google\\Chrome\\Extensions";
 +// Crest reads its own install mode's key, as its Mac engine reads only its
-+// own External Extensions folders, never what other software registers for
-+// Google Chrome.
++// own External Extensions folders, never what other software registers
++// under Software\Google.
 +const wchar_t kRegistryExtensions[] = L"Software\\Crest\\Extensions";
  
  // Registry value of the key that defines the installation parameter.

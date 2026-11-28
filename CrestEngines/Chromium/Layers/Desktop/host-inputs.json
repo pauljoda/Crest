@@ -8,7 +8,7 @@
     "before": "923e6a3bbfabfe8e47f305770b6aad5c630014a81d48cf5f0c5219bd8a09feb5"
   },
   "chrome/browser/chrome_browser_field_trials.cc": {
-    "after": "393dce3b2b57e96ff49e54eadb8975e61787d8442a24d06dca2e15e17008db7b",
+    "after": "c3683e39c910160d5c7ab08e0513eddd9b5ee40b89c6216c39acd4c255a6ad1c",
     "before": "4f45155ae071e98466deb7d32817b26c502b109d364740917c9ac45afe8bd63a"
   },
   "chrome/browser/chrome_content_browser_client.cc": {

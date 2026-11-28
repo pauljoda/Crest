@@ -107,7 +107,7 @@ Type: filesandordirs; Name: "{app}\locales"
 Source: "{#CrestSource}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-; The icon is named outright, as Chrome's installer names it: Start draws a
+; The icon is named outright: Start draws a
 ; shortcut that carries an app user model ID from its own icon, and shows a
 ; generic one when the shortcut leaves the icon to its target.
 Name: "{userprograms}\Crest"; Filename: "{app}\{#CrestExe}"; WorkingDir: "{app}"; IconFilename: "{app}\{#CrestExe}"; IconIndex: 0; AppUserModelID: "Crest"
@@ -203,7 +203,7 @@ begin
 end;
 
 // Crest's processes: every chrome.exe started from the installed folder.
-// Google Chrome's, and every other Chromium's, run from elsewhere.
+// Every other Chromium build's runs from elsewhere.
 function CrestProcesses: Variant;
 var
   Locator, Service: Variant;

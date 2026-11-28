@@ -88,7 +88,7 @@ class CrestDesktopUI : public content::WebUIController {
 // phases are blink::WebMouseWheelEvent's flags, the deltas follow the DOM's
 // wheel event, and the place and deltas are in CSS pixels. An extension's
 // button runs its action for a page, opening the extension's popup beside the
-// button as Chrome opens it from its toolbar (the op "runExtension"). A
+// button as Chromium opens it from its toolbar (the op "runExtension"). A
 // locked Space asks Windows Hello whether the device's owner is there, over
 // the window that asks (the op "verifyOwner"), as the Mac asks
 // LocalAuthentication.
@@ -206,7 +206,7 @@ class DesktopBridge : public content::WebUIMessageHandler,
   void FetchDownloaded(int fetch, base::FilePath file);
   void AnswerFetch(int fetch, std::optional<std::string> text);
   // Runs the action of the extension `extension_id` for the page `page_id`,
-  // as a click on its button in Chrome's toolbar does, and opens its popup
+  // as a click on its button in Chromium's toolbar does, and opens its popup
   // beside `anchor`, the button's place in the interface in CSS pixels.
   // Answers {"ran", "popup", "panel"}: whether the action ran, and whether it
   // opened its popup or asked for its side panel.

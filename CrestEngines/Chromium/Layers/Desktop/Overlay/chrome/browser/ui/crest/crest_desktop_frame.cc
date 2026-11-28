@@ -55,7 +55,7 @@ constexpr int kTopResizeThickness = 5;
 constexpr int kTopResizeCornerWidth = 16;
 // How long a window asked to close waits for its interface to tell the core.
 constexpr base::TimeDelta kCloseTimeout = base::Seconds(2);
-// An interface whose renderer died loads again at once, as Chrome's WebUI
+// An interface whose renderer died loads again at once, as Chromium's WebUI
 // toolbar recovers its own, but one that died kRestoresAtOnce times in a row,
 // each within kRestoreSettle of the last, waits kRestoreRetry first, so an
 // interface that cannot start never reloads in a loop.
@@ -86,7 +86,7 @@ GURL InterfaceURL(const std::string& window) {
 #if BUILDFLAG(IS_WIN)
 // Keeps the system's frame, which gives the window its border, shadow,
 // rounded corners, snapping and side and bottom resizing, without its title
-// bar, as Chrome's own window does
+// bar, as Chromium's own browser window does
 // (BrowserDesktopWindowTreeHostWin::GetClientAreaInsets).
 class DesktopTreeHost : public views::DesktopWindowTreeHostWin {
  public:

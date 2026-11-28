@@ -12,7 +12,7 @@
     "before": "2ad48370adfcc2a4406132ca559773ec75cbc04a84e66111b5b0133cd9e1dca0"
   },
   "chrome/browser/extensions/external_registry_loader_win.cc": {
-    "after": "71fa08f60860aa3607d72baaf3f68789f4a70c9bf3fc06e086b0b916722f4982",
+    "after": "6a998aafcf3adc611054f90c6450aef3cfa758afadf7ba4579d33cd6fdef20b8",
     "before": "a3668695e76ccd62a8a2ace1808b7e48c3d09e77e784e248d2f74d3c2fee7024"
   },
   "chrome/install_static/chromium_install_modes.h": {

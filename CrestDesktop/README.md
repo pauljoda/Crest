@@ -1,8 +1,7 @@
 # Crest for Windows and Linux
 
 Crest's Windows and Linux app draws its interface inside Crest's own
-Chromium, as Chrome, Edge and Vivaldi do, so pages and chrome share one
-compositor: page cards clip to their corners, Peek and notices sit over pages,
+Chromium, so pages and chrome share one compositor: page cards clip to their corners, Peek and notices sit over pages,
 and nothing waits on another toolkit's window. The interface is TypeScript and
 Svelte 5, its motion Svelte's transitions on the design tokens' springs
 (`app/src/motion.ts`), which the compositor runs; the core is the same
@@ -74,8 +73,8 @@ address bar on top, each card in Split View has its own navigation and address
 field. Editing the address focuses that card before opening the palette.
 
 This uses the Mac development tools in `CONTRIBUTING.md`, Node 24 with npm, and
-Google Chrome in Applications. Pass `--browser "/path/to/Chromium.app"` to use
-another Chromium browser. Use `--no-build` for a repeat run after changing only
+a Chromium browser in Applications; pass `--browser "/path/to/Chromium.app"` to
+choose which. Use `--no-build` for a repeat run after changing only
 UI source. For animation measurements, run `Scripts/compare-desktop.py --optimized`.
 This pairs an isolated Xcode Release build with a compiled Svelte bundle.
 The default native target uses WebKit. To compare the native Chromium composition,
@@ -546,10 +545,11 @@ once the frame settles. A Start Page's own palette also drops its blur while
 the overlay is up: it only blurs the Space's smooth banner, mostly under the
 overlay's card.
 
-The sidebar's menus are Windows' own context menus, which the shell runs from
-the interface's description (`menu`) as Chrome's run, so they reach past the
-window and keep the system's keyboard and accessibility behavior. Their items
-and wording are the Mac's (`app/src/shell/sidebar-menus.ts`). A folder's or
+The window's menus are drawn by the interface (`app/src/shell/ContextMenu/`) on
+Crest's flyout, inside the window: each row has its icon, as the Mac's menus
+do, a submenu opens beside its row, and the menu takes the keyboard (arrows,
+a row's first letter, Enter and Escape) with menu semantics for screen
+readers. Their items and wording are the Mac's (`app/src/shell/sidebar-menus.ts`). A folder's or
 Split View's icon and color open the Mac's pickers in a popover
 (`app/src/shell/pickers/`). Tabs and folders rename in place, and a pinned tab, which has no room
 for a field, in a dialog. Rows lift and drop as on the Mac
@@ -689,7 +689,7 @@ extensions sit above its tabs, and Site Controls lists every extension the
 page offers, to run, pin or manage (`app/src/shell/ExtensionActions/`,
 `PinnedExtensions`, `PageExtensions`). A button runs its extension's action
 for the shown page through the shell (`runExtension`), which opens the
-extension's popup as Chrome's toolbar does, beside the button. Each Space's
+extension's popup beside the button. Each Space's
 Settings page lists its extensions, to turn on or off, remove, or copy to other
 Spaces (`ListExtensions`, `ChangeExtension`). Side panels wait for that
 feature here.

@@ -303,7 +303,7 @@ export class ShellTransport implements CoreTransport {
 
   /**
    * Runs the action of the extension `extensionId` for the page `pageId`, as
-   * a click on its button in Chrome's toolbar does, opening its popup beside
+   * a click on its button does, opening its popup beside
    * `anchor`, the button's place in the interface.
    */
   async runExtension(extensionId: string, pageId: string, anchor: { x: number; y: number; width: number; height: number }):

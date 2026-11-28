@@ -207,8 +207,8 @@ void CrestLocationBar::FocusSearch() {}
 void CrestLocationBar::AnnounceAlert(const std::u16string& announcement) {}
 void CrestLocationBar::UpdateFocusBehavior(bool toolbar_visible) {}
 void CrestLocationBar::UpdateContentSettingsIcons() {
-  // Chromium asks the Browser's location bar, which in Chrome speaks for the
-  // active tab. Every page a Crest window shows lives in its Browser, and the
+  // Chromium asks the Browser's location bar, which in its own window speaks
+  // for the active tab. Every page a Crest window shows lives in its Browser, and the
   // one Crest shows need not be the tab Chromium calls active, so each page
   // checks its own site state; a page whose state did not change reports
   // nothing.

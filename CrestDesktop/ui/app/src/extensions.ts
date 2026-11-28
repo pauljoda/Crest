@@ -43,7 +43,7 @@ export interface ExtensionRemoval {
 
 /**
  * The window's extension installs and removals, as the Mac's
- * ChromiumExtensionStore keeps them: one review at a time, begun by a Chrome
+ * ChromiumExtensionStore keeps them: one review at a time, begun by a
  * Web Store listing or by Settings, answered in the window that began it.
  */
 class Extensions {

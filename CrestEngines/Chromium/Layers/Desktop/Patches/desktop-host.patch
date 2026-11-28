@@ -9,7 +9,7 @@
 # startup, downloads, discards and freezing, link routing and page close,
 # hovered links, permission prompts, script dialogs, extension side panels,
 # toasts, partial translation, tab sharing, and the features that need
-# Chrome's Views frame. Gates whose hooks need interface Windows does not draw
+# Chromium's Views frame. Gates whose hooks need interface Windows does not draw
 # yet (docked DevTools, extension popups and install prompts) and the Mac's
 # own (iCloud passkeys, the app bundle, the system screen picker) stay on the
 # Mac.
@@ -688,10 +688,10 @@
 -  // command line can still turn the picker off.
 -  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
 +    // Crest shares a page's screen through the system's own picker, which
-+    // asks the person what to share and needs no Screen Recording access. As
-+    // in Chrome, a page may ask without a click of its own, since sites built
-+    // for Chrome ask from a timer or from a click in another of their
-+    // windows. A command line can still turn the picker off.
++    // asks the person what to share and needs no Screen Recording access. A
++    // page may ask without a click of its own, since many sites ask from a
++    // timer or from a click in another of their windows. A command line can
++    // still turn the picker off.
      feature_overrides.EnableFeature(media::kUseSCContentSharingPicker);
 +#endif
 +#if BUILDFLAG(IS_WIN)

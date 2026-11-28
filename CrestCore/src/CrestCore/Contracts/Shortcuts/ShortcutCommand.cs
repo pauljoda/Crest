@@ -343,7 +343,7 @@ public sealed class ShortcutCommand {
             new(DevicePlatform.Windows, Special(ShortcutSpecialKey.F3, Shift), YieldsToOverrides: false)
         ],
         availableWhen: ShowingWebPage);
-    // Windows captures a page on Ctrl+Shift+S, as Edge does.
+    // Windows captures a page on Ctrl+Shift+S, the key Windows uses for it.
     public static readonly ShortcutCommand CapturePage = new(Kinds.CapturePage, name: "capturePage", ShortcutSection.Page,
         title: "Capture Page", symbol: "camera", searchTerms: "screenshot snapshot region selection image clipboard",
         shortcuts: [
