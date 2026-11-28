@@ -137,7 +137,7 @@ struct BrowserMacCommand {
         .printPage, actsOnPage: true, isAvailable: { $0.commandPageSupports(.print) },
         run: { $0.commandPage?.printPage() })
     static let capturePage = BrowserMacCommand(
-        .capturePage, actsOnPage: true, isAvailable: { $0.commandPageSupports(.viewportCapture) },
+        .capturePage, actsOnPage: true, isAvailable: { $0.commandPage?.canCapture == true },
         isOn: { $0.commandPage?.isRegionCapturePresented == true },
         run: { $0.commandPage?.toggleRegionCapture() })
     static let clearSiteCookies = BrowserMacCommand(

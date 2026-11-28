@@ -23,7 +23,7 @@ struct BrowserDeveloperCaptureControls: View {
                 isActive: page.isRegionCapturePresented,
                 action: page.beginRegionCapture
             )
-            .disabled(!page.pageEngine.registration.supports(.viewportCapture))
+            .disabled(!page.canCapture)
         }
     }
 }
