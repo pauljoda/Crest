@@ -54,14 +54,16 @@ requires a tag push. Experimental builds test a branch before it reaches `main`.
 
 **Publish macOS release** also runs on pushes to `main`, and publishes
 Development when the pushed commit is the merge commit of a PR merged into
-`main`, including PRs from forks. The preflight looks the PR up from the
+`main`, including PRs from forks. Its first job looks the PR up from the
 commit, or from the `(#N)` GitHub adds to a merge's subject when that lookup
-lags, and requires the PR's merge commit to be the pushed commit. It never
-checks out the PR's own code: it builds the merge commit with `main`'s own
-workflow, the existing `production` environment and the serialized publication
-queue. A direct push to `main`, a commit pushed from a clone rather than made by
-GitHub, publishes nothing and stays out of the queue. The release never uses
-`pull_request_target`, which GitHub blocks in public repositories.
+lags, and requires the PR's merge commit to be the pushed commit. Only then
+does the run join the serialized publication queue and call
+`release-publish.yml`, which builds that merge commit with `main`'s own
+workflow and the existing `production` environment; it never checks out the
+PR's own code. A direct push to `main`, including a commit made in GitHub's web
+editor, publishes nothing and never joins the queue, so it cannot replace a
+publication waiting there. The release never uses `pull_request_target`, which
+GitHub blocks in public repositories.
 
 A build's marketing version is its commit's version, which
 `Scripts/crest_version.py` computes from git: the anchor version in

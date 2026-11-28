@@ -15,11 +15,12 @@ import unittest
 
 
 REPOSITORY_ROOT = pathlib.Path(__file__).resolve().parents[2]
-WORKFLOW = REPOSITORY_ROOT / ".github/workflows/release.yml"
+TRIGGERS = REPOSITORY_ROOT / ".github/workflows/release.yml"
+WORKFLOW = REPOSITORY_ROOT / ".github/workflows/release-publish.yml"
 
 
-def workflow_script(step_name: str) -> str:
-    step = WORKFLOW.read_text().split(f"      - name: {step_name}\n", 1)[1]
+def workflow_script(step_name: str, workflow: pathlib.Path = WORKFLOW) -> str:
+    step = workflow.read_text().split(f"      - name: {step_name}\n", 1)[1]
     match = re.search(r"(?m)^        run: \|\n((?: {10}.*\n|\n)+)", step)
     if match is None:
         raise AssertionError(f"No shell script in {step_name}")
@@ -133,10 +134,13 @@ class ReleasePreflightTests(unittest.TestCase):
         self.git("checkout", "main")
 
     def preflight(self, **environment: str) -> tuple[subprocess.CompletedProcess[str], dict[str, str]]:
+        return self.run_script(workflow_script("Resolve release identity and previous publication"), **environment)
+
+    def run_script(self, script: str, **environment: str) -> tuple[subprocess.CompletedProcess[str], dict[str, str]]:
         output_path = self.root / "output"
         output_path.unlink(missing_ok=True)
         result = subprocess.run(
-            ["bash", "-c", workflow_script("Resolve release identity and previous publication")],
+            ["bash", "-c", script],
             cwd=self.repository, env=self.environment | environment,
             capture_output=True, text=True, timeout=20,
         )
@@ -157,30 +161,39 @@ class ReleasePreflightTests(unittest.TestCase):
     def test_the_release_never_runs_for_a_pull_request_event(self) -> None:
         # The release holds the signing secrets, so it runs only for pushes to
         # main and its tags, the schedule, and dispatch, and checks out only
-        # the commit its event names.
-        workflow = WORKFLOW.read_text()
-        triggers = re.search(r"(?ms)^on:\n(.*?)^\S", workflow).group(1)
-        self.assertEqual(set(re.findall(r"(?m)^  ([a-z_]+):", triggers)), {"push", "schedule", "workflow_dispatch"})
-        push = triggers.split("  push:\n", 1)[1].split("\n  schedule:", 1)[0]
+        # the commit its event names. Only a run that publishes joins the
+        # queue, so a push that publishes nothing cannot replace one waiting.
+        triggers = TRIGGERS.read_text()
+        events = re.search(r"(?ms)^on:\n(.*?)^\S", triggers).group(1)
+        self.assertEqual(set(re.findall(r"(?m)^  ([a-z_]+):", events)), {"push", "schedule", "workflow_dispatch"})
+        push = events.split("  push:\n", 1)[1].split("\n  schedule:", 1)[0]
         self.assertIn("    branches: [main]", push)
         self.assertIn('      - "v*.*.*"', push)
-        self.assertNotIn("allow-unsafe-pr-checkout", workflow)
+        publish = WORKFLOW.read_text()
+        self.assertEqual(re.search(r"(?ms)^on:\n(.*?)^\S", publish).group(1).splitlines()[0], "  workflow_call:")
+        for workflow in (triggers, publish):
+            self.assertNotIn("allow-unsafe-pr-checkout", workflow)
+            self.assertNotRegex(workflow, r"(?m)^concurrency:")
+        queued = triggers.split("\n  publish:\n", 1)[1]
+        self.assertIn("needs.merge.outputs.pull_request != ''", queued.split("    concurrency:\n", 1)[0])
+        self.assertIn("      group: crest-macos-release\n", queued)
 
-    def test_a_push_to_main_publishes_development_only_as_a_pull_requests_merge_commit(self) -> None:
+    def test_a_push_to_main_publishes_only_a_pull_requests_merge_commit(self) -> None:
         def merged(number: int, merge_commit: str, base: str = "main") -> dict[str, object]:
             return {"number": number, "merged_at": "2026-11-27T22:48:12Z", "base": {"ref": base},
                     "merge_commit_sha": merge_commit}
 
-        def push(responses: dict[str, object]) -> tuple[subprocess.CompletedProcess[str], dict[str, str]]:
-            return self.preflight(GITHUB_EVENT_NAME="push", TEST_GITHUB_RESPONSES=json.dumps(responses))
+        def find(message: str, responses: dict[str, object]) -> str:
+            result, outputs = self.run_script(
+                workflow_script("Find the pull request this push merged", TRIGGERS),
+                GITHUB_EVENT_NAME="push", HEAD_COMMIT_MESSAGE=message,
+                TEST_GITHUB_RESPONSES=json.dumps(responses),
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            return outputs["pull_request"]
 
         listed = f"repos/crest-browser/Crest/commits/{self.current_commit}/pulls"
-        result, outputs = push({listed: [merged(1415, self.current_commit)]})
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(
-            (outputs["channel"], outputs["should_publish"], outputs["source_sha"], outputs["marketing_version"]),
-            ("development", "true", self.current_commit, "0.5.26"),
-        )
+        self.assertEqual(find("Current build", {listed: [merged(1415, self.current_commit)]}), "1415")
         self.assertIn("the merge commit of #1415", (self.root / "summary").read_text())
 
         # A direct push, a pull request merged with another commit or into
@@ -192,27 +205,25 @@ class ReleasePreflightTests(unittest.TestCase):
             [merged(1415, self.current_commit) | {"merged_at": None}],
         ):
             with self.subTest(pull_requests=pull_requests):
-                result, outputs = push({listed: pull_requests})
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertIn("publishes nothing", result.stdout)
-                self.assertEqual(outputs, {"should_publish": "false"})
+                self.assertEqual(find("Current build", {listed: pull_requests}), "")
 
         # When GitHub's list lags behind the push, the subject GitHub gives a
         # squash or a merge names the pull request, which must still be merged
         # as this commit.
-        for subject in ("Walk background tabs (#1415)", "Merge pull request #1415 from crest-browser/close-tab"):
-            with self.subTest(subject=subject):
-                self.git("commit", "--allow-empty", "-m", subject)
-                commit = self.git("rev-parse", "HEAD")
-                lagging = {f"repos/crest-browser/Crest/commits/{commit}/pulls": []}
-                named = "repos/crest-browser/Crest/pulls/1415"
-                named_merge, named_outputs = push(lagging | {named: merged(1415, commit)})
-                other_merge, other_outputs = push(lagging | {named: merged(1415, self.current_commit)})
-                self.git("reset", "--hard", self.current_commit)
-                self.assertEqual(named_merge.returncode, 0, named_merge.stderr)
-                self.assertEqual((named_outputs["channel"], named_outputs["source_sha"]), ("development", commit))
-                self.assertEqual(other_merge.returncode, 0, other_merge.stderr)
-                self.assertEqual(other_outputs, {"should_publish": "false"})
+        named = "repos/crest-browser/Crest/pulls/1415"
+        for message in ("Walk background tabs (#1415)\n\nKeep the tab beside it (#99)",
+                        "Merge pull request #1415 from crest-browser/close-tab\n\nWalk background tabs"):
+            with self.subTest(message=message):
+                self.assertEqual(find(message, {listed: [], named: merged(1415, self.current_commit)}), "1415")
+                self.assertEqual(find(message, {listed: [], named: merged(1415, self.previous_commit)}), "")
+
+        # The publication it starts is Development, from the pushed commit.
+        result, outputs = self.preflight(GITHUB_EVENT_NAME="push")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            (outputs["channel"], outputs["should_publish"], outputs["source_sha"], outputs["marketing_version"]),
+            ("development", "true", self.current_commit, "0.5.26"),
+        )
 
     def test_stable_tag_must_name_the_version_git_gives_its_commit_on_main(self) -> None:
         stable = {"GITHUB_EVENT_NAME": "push", "GITHUB_REF_TYPE": "tag"}
