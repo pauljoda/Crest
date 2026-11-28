@@ -42,13 +42,17 @@ extension BrowserSettingsDestination {
 extension BrowserSettingsDestination {
     /// Every settings page as the command palette offers it: by its name,
     /// with its title and the words a person might type to find it, which are
-    /// those of the sections this platform draws on it.
-    static var palettePages: [PaletteSettingsPage] {
+    /// those of the sections this platform draws on it while `state`'s engines
+    /// provide them, as Settings search finds them.
+    @MainActor
+    static func palettePages(in state: CoreState) -> [PaletteSettingsPage] {
         all.map { destination in
             PaletteSettingsPage(
                 name: destination.name, title: String(localized: destination.title),
                 terms: ([String(localized: destination.subtitle)]
-                    + destination.sections.map { $0.searchIndex(locale: .current) })
+                    + destination.sections
+                    .filter { $0.isProvided(in: state) }
+                    .map { $0.searchIndex(locale: .current) })
                     .joined(separator: " "))
         }
     }

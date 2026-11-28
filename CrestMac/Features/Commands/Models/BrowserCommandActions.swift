@@ -55,7 +55,7 @@ struct BrowserCommandActions: BrowserNumberedSelectionPerformer {
     ) -> BrowserCommandPaletteCommandRegistry {
         BrowserCommandPaletteCommandRegistry(
             commands: Self.paletteCommands.filter(isListedInPalette),
-            settingsPages: BrowserSettingsDestination.palettePages,
+            settingsPages: BrowserSettingsDestination.palettePages(in: browser.core.state),
             shortcut: { shortcuts?.shortcut(for: $0) },
             perform: performFromPalette,
             openSettings: openSettings,
