@@ -3,9 +3,10 @@ import SwiftUI
 // MARK: - Types
 
 extension EnvironmentValues {
-    /// The color a tab's surface shows under its content, which an icon on it
-    /// has to stand out from; nil outside a tab's surface.
-    @Entry var browserTabSurfaceGround: Color? = nil
+    /// The color a tab's selection lays under its content, which an icon on
+    /// it has to stand out from; nil at rest, where the selection lies on the
+    /// bare material, and outside a tab's surface.
+    @Entry var browserTabSelectionGround: Color? = nil
 }
 
 /// Appearance only; selection, promotion and drag owners remain on the row.
@@ -48,7 +49,7 @@ struct BrowserTabAppearanceSurface: ViewModifier {
         let hover = isHovering ? BrowserTabAppearance.intensity(appearance.hoverFill) : 0
         let style = isSelected ? appearance.selectedTabStyle : .standard
         content
-            .environment(\.browserTabSurfaceGround, ground(style: style, fill: fill))
+            .environment(\.browserTabSelectionGround, selectionGround(style: style, fill: fill))
             .modifier(
                 CrestInteractiveSurfaceModifier(
                     isSelected: isSelected, selectionEmphasis: selectionEmphasis,
@@ -110,24 +111,28 @@ struct BrowserTabAppearanceSurface: ViewModifier {
         return strength > 0 ? strength : nil
     }
 
-    /// The color the surface shows under its content, laid as the layers
-    /// above draw it: the resting surface with its pin fill, and, selected,
-    /// the sheet of paper over the pin's color or the material, with the
-    /// accent washed over it, each laid over the one below as layers
-    /// composite. The device's material takes its color from what lies
-    /// behind it, so it counts as Crest's surface in the scheme the material
-    /// draws in.
-    private func ground(style: BrowserSelectedTabStyle, fill: Double) -> Color {
+    /// The color a selection lays under the surface's content, laid as the
+    /// layers above draw it: the sheet of paper over the pin's color or the
+    /// pin as it rests, with the accent washed over it, each laid over the
+    /// one below as layers composite. Nil where the selection lays nothing of
+    /// its own: at rest, and on the bare material, where an icon shows as it
+    /// does on every other tab. The device's material takes its color from
+    /// what lies behind it, so it counts as Crest's surface in the scheme the
+    /// material draws in.
+    private func selectionGround(style: BrowserSelectedTabStyle, fill: Double) -> Color? {
+        guard isSelected else { return nil }
+        let paper = paper(style: style)
+        let tint = selectedPinTint(style: style, fill: fill)
+        guard paper != nil || tint != nil else { return nil }
         let material = Self.surface(in: materialScheme)
-        let resting =
-            isPinned && fill > 0 && !reduceTransparency
-            ? material.mix(with: accent, by: fill * 0.2, in: .device) : material
-        guard isSelected else { return resting }
         var selected = material
-        if let paper = paper(style: style) {
+        if let paper {
+            let resting =
+                isPinned && fill > 0 && !reduceTransparency
+                ? material.mix(with: accent, by: fill * 0.2, in: .device) : material
             selected = (paper.ground ?? resting).mix(with: Self.surface(in: .light), by: paper.opacity, in: .device)
         }
-        guard let tint = selectedPinTint(style: style, fill: fill) else { return selected }
+        guard let tint else { return selected }
         return selected.mix(with: accent, by: tint, in: .device)
     }
 
