@@ -72,23 +72,63 @@ jobs:
           # GitHub lists the pull request that brought a commit to main. When
           # that list lags behind the push, the subject GitHub gives a merge,
           # "Title (#N)" or "Merge pull request #N from ...", names it. Either
-          # way, the pull request must be merged into main as this commit.
-          merge_of_source='[.[] | select(.merged_at != null and .base.ref == "main" and .merge_commit_sha == $sha)][0].number // empty'
+          # way, the pull request must be merged into main as this commit. A
+          # fresh merge may not be listed yet, so a lookup that finds nothing
+          # tries again for a while.
+          merge_of_source='[.[] | select(.merged_at != null and .base.ref == "main" and .merge_commit_sha == $sha)][0] // empty | "\(.number) \(.merged_at)"'
           pull_requests="$RUNNER_TEMP/crest-source-pull-requests.json"
-          retry_github fetch_pull_requests "commits/${GITHUB_SHA}/pulls" "$pull_requests"
-          pull_request="$(jq -r --arg sha "$GITHUB_SHA" "$merge_of_source" "$pull_requests")"
           subject="${HEAD_COMMIT_MESSAGE%%$'\n'*}"
           squash_subject='\(#([0-9]+)\)$'
           merge_subject='^Merge pull request #([0-9]+) from '
-          if [[ -z "$pull_request" ]] \
-              && [[ "$subject" =~ $squash_subject || "$subject" =~ $merge_subject ]]; then
+          named_pull_request=""
+          if [[ "$subject" =~ $squash_subject || "$subject" =~ $merge_subject ]]; then
             named_pull_request="${BASH_REMATCH[1]}"
-            if retry_github fetch_pull_requests "pulls/${named_pull_request}" "$pull_requests"; then
-              pull_request="$(jq -rs --arg sha "$GITHUB_SHA" "$merge_of_source" "$pull_requests")"
+          fi
+          merge=""
+          answered=false
+          delay=2
+          for attempt in 1 2 3 4 5; do
+            if fetch_pull_requests "commits/${GITHUB_SHA}/pulls" "$pull_requests"; then
+              answered=true
+              merge="$(jq -r --arg sha "$GITHUB_SHA" "$merge_of_source" "$pull_requests")"
             fi
+            if [[ -z "$merge" && -n "$named_pull_request" ]] \
+                && fetch_pull_requests "pulls/${named_pull_request}" "$pull_requests"; then
+              answered=true
+              merge="$(jq -rs --arg sha "$GITHUB_SHA" "$merge_of_source" "$pull_requests")"
+            fi
+            if [[ -n "$merge" || "$attempt" == 5 ]]; then
+              break
+            fi
+            sleep "$delay"
+            delay=$((delay * 2))
+          done
+          if [[ "$answered" != true ]]; then
+            printf 'GitHub could not say which pull request %s merged.\n' "${GITHUB_SHA:0:7}" >&2
+            exit 1
           fi
 
-          if [[ -n "$pull_request" ]]; then
+          # Runs join the queue as their lookups finish, not in merge order. A
+          # pull request merged into main after this one has its own run, which
+          # publishes both, so this run stands aside instead of replacing it.
+          pull_request=""
+          newer=""
+          if [[ -n "$merge" ]]; then
+            read -r pull_request merged_at <<< "$merge"
+            recent="$RUNNER_TEMP/crest-recent-pull-requests.json"
+            retry_github fetch_pull_requests \
+              "pulls?state=closed&base=main&sort=updated&direction=desc&per_page=100" "$recent"
+            newer="$(
+              jq -r --arg merged_at "$merged_at" \
+                '[.[] | select(.merged_at != null and .merged_at > $merged_at)] | sort_by(.merged_at) | last | .number // empty' \
+                "$recent"
+            )"
+          fi
+
+          if [[ -n "$newer" ]]; then
+            message="#${newer} merged into main after #${pull_request}, so its run publishes both."
+            pull_request=""
+          elif [[ -n "$pull_request" ]]; then
             message="Development publishes ${GITHUB_SHA:0:7}, the merge commit of #${pull_request}."
           else
             message="${GITHUB_SHA:0:7} is not the merge commit of a pull request merged into main, so it publishes nothing."

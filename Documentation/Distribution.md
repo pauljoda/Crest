@@ -56,14 +56,19 @@ requires a tag push. Experimental builds test a branch before it reaches `main`.
 Development when the pushed commit is the merge commit of a PR merged into
 `main`, including PRs from forks. Its first job looks the PR up from the
 commit, or from the `(#N)` GitHub adds to a merge's subject when that lookup
-lags, and requires the PR's merge commit to be the pushed commit. Only then
-does the run join the serialized publication queue and call
-`release-publish.yml`, which builds that merge commit with `main`'s own
-workflow and the existing `production` environment; it never checks out the
-PR's own code. A direct push to `main`, including a commit made in GitHub's web
-editor, publishes nothing and never joins the queue, so it cannot replace a
-publication waiting there. The release never uses `pull_request_target`, which
-GitHub blocks in public repositories.
+lags, tries again for a while when GitHub doesn't list a fresh merge yet, and
+requires the PR's merge commit to be the pushed commit. Only then does the run
+join the serialized publication queue and call `release-publish.yml`, which
+builds that merge commit with `main`'s own workflow and the existing
+`production` environment; it never checks out the PR's own code. When another
+PR has merged into `main` since, the run stands aside, because the newer
+merge's run publishes both. A direct push to `main`, including a commit made in
+GitHub's web editor, publishes nothing and never joins the queue, so it cannot
+replace a publication waiting there. GitHub runs no push workflow for a commit
+whose message asks it to skip CI, such as `[skip ci]`, so a merge with such a
+message needs a manual Development dispatch. The release never uses
+`pull_request_target`, which GitHub's default Actions policy blocks in public
+repositories from 2 December 2026.
 
 A build's marketing version is its commit's version, which
 `Scripts/crest_version.py` computes from git: the anchor version in

@@ -75,7 +75,14 @@ class ReleasePreflightTests(unittest.TestCase):
             "    log.write(json.dumps(arguments) + '\\n')\n"
             "responses = json.loads(os.environ.get('TEST_GITHUB_RESPONSES', '{}'))\n"
             "if arguments[0] == 'api' and arguments[-1] in responses:\n"
-            "    print(json.dumps(responses[arguments[-1]]))\n"
+            "    response = responses[arguments[-1]]\n"
+            "    if isinstance(response, dict) and 'calls' in response:\n"
+            "        with open(os.environ['TEST_GITHUB_LOG']) as log:\n"
+            "            calls = sum(json.loads(line) == arguments for line in log)\n"
+            "        response = response['calls'][min(calls, len(response['calls'])) - 1]\n"
+            "    if response is None:\n"
+            "        sys.exit('GitHub is unreachable')\n"
+            "    print(json.dumps(response))\n"
             "    sys.exit(0)\n"
             "if arguments[0] == 'api' and 'releases?per_page=100' in arguments[-1]:\n"
             "    prereleases = [{'tag_name': 'nightly-old', 'draft': False, 'prerelease': True}] * 100\n"
@@ -85,6 +92,9 @@ class ReleasePreflightTests(unittest.TestCase):
             "sys.exit('Unexpected GitHub request: ' + repr(arguments))\n"
         )
         github.chmod(0o755)
+        # Retries wait for nothing here.
+        (bin_directory / "sleep").write_text("#!/bin/sh\n")
+        (bin_directory / "sleep").chmod(0o755)
         self.environment = os.environ | {
             "PATH": f"{bin_directory}{os.pathsep}{os.environ['PATH']}",
             "GH_TOKEN": "",
@@ -139,6 +149,7 @@ class ReleasePreflightTests(unittest.TestCase):
     def run_script(self, script: str, **environment: str) -> tuple[subprocess.CompletedProcess[str], dict[str, str]]:
         output_path = self.root / "output"
         output_path.unlink(missing_ok=True)
+        self.github_log.unlink(missing_ok=True)
         result = subprocess.run(
             ["bash", "-c", script],
             cwd=self.repository, env=self.environment | environment,
@@ -179,21 +190,31 @@ class ReleasePreflightTests(unittest.TestCase):
         self.assertIn("      group: crest-macos-release\n", queued)
 
     def test_a_push_to_main_publishes_only_a_pull_requests_merge_commit(self) -> None:
-        def merged(number: int, merge_commit: str, base: str = "main") -> dict[str, object]:
-            return {"number": number, "merged_at": "2026-11-27T22:48:12Z", "base": {"ref": base},
-                    "merge_commit_sha": merge_commit}
+        def merged(number: int, merge_commit: str, base: str = "main",
+                   merged_at: str = "2026-11-27T22:48:12Z") -> dict[str, object]:
+            return {"number": number, "merged_at": merged_at, "base": {"ref": base}, "merge_commit_sha": merge_commit}
 
-        def find(message: str, responses: dict[str, object]) -> str:
+        listed = f"repos/crest-browser/Crest/commits/{self.current_commit}/pulls"
+        named = "repos/crest-browser/Crest/pulls/1415"
+        recent = "repos/crest-browser/Crest/pulls?state=closed&base=main&sort=updated&direction=desc&per_page=100"
+        merge = merged(1415, self.current_commit)
+
+        def find(message: str, responses: dict[str, object]) -> tuple[subprocess.CompletedProcess[str], str | None]:
             result, outputs = self.run_script(
                 workflow_script("Find the pull request this push merged", TRIGGERS),
                 GITHUB_EVENT_NAME="push", HEAD_COMMIT_MESSAGE=message,
-                TEST_GITHUB_RESPONSES=json.dumps(responses),
+                TEST_GITHUB_RESPONSES=json.dumps({recent: [merge, merged(1414, self.previous_commit,
+                                                                       merged_at="2026-11-27T22:33:45Z")]}
+                                                 | responses),
             )
-            self.assertEqual(result.returncode, 0, result.stderr)
-            return outputs["pull_request"]
+            return result, outputs.get("pull_request")
 
-        listed = f"repos/crest-browser/Crest/commits/{self.current_commit}/pulls"
-        self.assertEqual(find("Current build", {listed: [merged(1415, self.current_commit)]}), "1415")
+        def assert_found(message: str, responses: dict[str, object], expected: str) -> None:
+            result, pull_request = find(message, responses)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(pull_request, expected)
+
+        assert_found("Current build", {listed: [merge]}, "1415")
         self.assertIn("the merge commit of #1415", (self.root / "summary").read_text())
 
         # A direct push, a pull request merged with another commit or into
@@ -202,20 +223,35 @@ class ReleasePreflightTests(unittest.TestCase):
             [],
             [merged(1404, self.previous_commit)],
             [merged(1415, self.current_commit, base="release")],
-            [merged(1415, self.current_commit) | {"merged_at": None}],
+            [merge | {"merged_at": None}],
         ):
             with self.subTest(pull_requests=pull_requests):
-                self.assertEqual(find("Current build", {listed: pull_requests}), "")
+                assert_found("Current build", {listed: pull_requests}, "")
 
         # When GitHub's list lags behind the push, the subject GitHub gives a
         # squash or a merge names the pull request, which must still be merged
-        # as this commit.
-        named = "repos/crest-browser/Crest/pulls/1415"
+        # as this commit. A subject that names none waits for the list.
         for message in ("Walk background tabs (#1415)\n\nKeep the tab beside it (#99)",
                         "Merge pull request #1415 from crest-browser/close-tab\n\nWalk background tabs"):
             with self.subTest(message=message):
-                self.assertEqual(find(message, {listed: [], named: merged(1415, self.current_commit)}), "1415")
-                self.assertEqual(find(message, {listed: [], named: merged(1415, self.previous_commit)}), "")
+                assert_found(message, {listed: [], named: merge}, "1415")
+                assert_found(message, {listed: [], named: merged(1415, self.previous_commit)}, "")
+                assert_found(message, {listed: None, named: merge}, "1415")
+        assert_found("Walk background tabs", {listed: {"calls": [[], [], [merge]]}}, "1415")
+        self.assertEqual(self.github_log.read_text().count("/pulls\""), 3)
+
+        # A pull request merged into main after this one has a run that
+        # publishes both, so this run stands aside.
+        newer = merged(1416, "0" * 40, merged_at="2026-11-27T22:49:02Z")
+        assert_found("Current build", {listed: [merge], recent: [newer, merge]}, "")
+        self.assertIn("#1416 merged into main after #1415", (self.root / "summary").read_text())
+
+        # When GitHub answers nothing at all, the run fails instead of passing
+        # for a direct push.
+        result, pull_request = find("Walk background tabs (#1415)", {listed: None, named: None})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("could not say which pull request", result.stderr)
+        self.assertIsNone(pull_request)
 
         # The publication it starts is Development, from the pushed commit.
         result, outputs = self.preflight(GITHUB_EVENT_NAME="push")
