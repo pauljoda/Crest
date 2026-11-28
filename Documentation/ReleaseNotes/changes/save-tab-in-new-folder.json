@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "id": "save-tab-in-new-folder",
+      "category": "improved",
+      "message": "Save in Folder in a tab's menu now starts with New Folder, so you can save a tab in a folder that doesn't exist yet without making the folder first. The new folder opens in the saved section with its name ready to type. Thanks to Sunny Tamang (@SunnyTamang)."
+    }
+  ]
+}
