@@ -31,6 +31,17 @@ final class BrowserDesktopWebView: WKWebView {
         }
     }
 
+    /// WebKit's print view has the web view show what it has pending before
+    /// it turns the window's display off. Once a job leaves the print panel,
+    /// AppKit runs it on a thread of its own, where that pass would walk
+    /// Crest's main-actor views and stop the app. There the view skips it, as
+    /// WebKit does when the window's display is already off; WebKit displays
+    /// the view again on the main thread when the job ends.
+    nonisolated override func displayIfNeeded() {
+        guard Thread.isMainThread else { return }
+        MainActor.assumeIsolated { super.displayIfNeeded() }
+    }
+
     override func becomeFirstResponder() -> Bool {
         guard focusRestoration?.allowsNativeFocusAcquisition != false else {
             return false
