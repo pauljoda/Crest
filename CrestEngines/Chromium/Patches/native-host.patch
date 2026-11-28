@@ -1262,6 +1262,105 @@
      // We distinguish single/double click with some modifiers.
      // See the comment of `EventHandler.delayed_navigation_task_handle_`.
      auto task_handle = PostDelayedCancellableTask(
+--- a/third_party/blink/renderer/core/svg/svg_a_element.cc
++++ b/third_party/blink/renderer/core/svg/svg_a_element.cc
+@@ -22,6 +22,8 @@
+ 
+ #include "third_party/blink/renderer/core/svg/svg_a_element.h"
+ 
++#include "base/command_line.h"
++#include "build/build_config.h"
+ #include "third_party/blink/public/mojom/input/focus_type.mojom-blink.h"
+ #include "third_party/blink/renderer/bindings/core/v8/v8_union_string_trustedscripturl.h"
+ #include "third_party/blink/renderer/core/dom/attr.h"
+@@ -206,6 +208,21 @@
+           event.isTrusted()
+               ? mojom::blink::TriggeringEventInfo::kFromTrustedEvent
+               : mojom::blink::TriggeringEventInfo::kFromUntrustedEvent);
++#if BUILDFLAG(IS_MAC)
++      // Crest carries the trusted click's keys and button, as an HTML link
++      // does, so the browser decides a modified click on an SVG link the same
++      // way.
++      const auto* mouse_event = DynamicTo<MouseEvent>(event);
++      if (mouse_event && event.isTrusted() &&
++          resolved_url.ProtocolIsInHttpFamily() &&
++          base::CommandLine::ForCurrentProcess()->HasSwitch(
++              "crest-control-plane")) {
++        frame_request.SetCrestLinkModifiers(
++            (mouse_event->metaKey() ? 1 : 0) | (mouse_event->altKey() ? 2 : 0) |
++            (mouse_event->shiftKey() ? 4 : 0) |
++            (mouse_event->button() == 1 ? 8 : 0));
++      }
++#endif
+ 
+       Frame* target_frame =
+           frame->Tree()
+--- a/third_party/blink/renderer/core/frame/local_dom_window.cc
++++ b/third_party/blink/renderer/core/frame/local_dom_window.cc
+@@ -41,6 +41,7 @@
+ #include "net/storage_access_api/status.h"
+ #include "third_party/blink/public/common/dom/dom_node_id.h"
+ #include "third_party/blink/public/common/features.h"
++#include "third_party/blink/public/common/input/web_mouse_event.h"
+ #include "third_party/blink/public/common/switches.h"
+ #include "third_party/blink/public/mojom/devtools/inspector_issue.mojom-blink.h"
+ #include "third_party/blink/public/mojom/frame/frame.mojom-blink.h"
+@@ -80,6 +81,7 @@
+ #include "third_party/blink/renderer/core/editing/ime/input_method_controller.h"
+ #include "third_party/blink/renderer/core/editing/spellcheck/spell_checker.h"
+ #include "third_party/blink/renderer/core/editing/suggestion/text_suggestion_controller.h"
++#include "third_party/blink/renderer/core/events/current_input_event.h"
+ #include "third_party/blink/renderer/core/events/hash_change_event.h"
+ #include "third_party/blink/renderer/core/events/message_event.h"
+ #include "third_party/blink/renderer/core/events/page_transition_event.h"
+@@ -122,6 +124,7 @@
+ #include "third_party/blink/renderer/core/layout/layout_view.h"
+ #include "third_party/blink/renderer/core/loader/document_loader.h"
+ #include "third_party/blink/renderer/core/loader/frame_load_request.h"
++#include "third_party/blink/renderer/core/loader/navigation_policy.h"
+ #include "third_party/blink/renderer/core/navigation_api/navigation_api.h"
+ #include "third_party/blink/renderer/core/origin_trials/origin_trial_context.h"
+ #include "third_party/blink/renderer/core/page/chrome_client.h"
+@@ -2566,6 +2569,39 @@
+     has_user_gesture = true;
+   }
+   frame_request.GetResourceRequest().SetHasUserGesture(has_user_gesture);
++
++#if BUILDFLAG(IS_MAC)
++  // A noopener window that a person's modified click opens, as a page that
++  // turns a Command-click into window.open does, goes to the browser as a
++  // modified link does: the current frame hands it over with the click's keys
++  // and button, so Crest decides where it opens.
++  if (window_features.noopener && !window_features.is_popup &&
++      has_user_gesture && completed_url.ProtocolIsInHttpFamily() &&
++      (target.empty() || EqualIgnoringAsciiCase(target, "_blank")) &&
++      base::CommandLine::ForCurrentProcess()->HasSwitch(
++          "crest-control-plane")) {
++    const WebInputEvent* input = CurrentInputEvent::Get();
++    if (input && input->GetType() == WebInputEvent::Type::kMouseUp) {
++      const int keys = input->GetModifiers();
++      const int crest_link_modifiers =
++          ((keys & WebInputEvent::kMetaKey) ? 1 : 0) |
++          ((keys & WebInputEvent::kAltKey) ? 2 : 0) |
++          ((keys & WebInputEvent::kShiftKey) ? 4 : 0) |
++          (static_cast<const WebMouseEvent*>(input)->button ==
++                   WebMouseEvent::Button::kMiddle
++               ? 8
++               : 0);
++      const NavigationPolicy policy =
++          NavigationPolicyForCreateWindow(window_features);
++      if (crest_link_modifiers && policy != kNavigationPolicyNewPopup) {
++        frame_request.SetNavigationPolicy(policy);
++        frame_request.SetTriggeringEventInfo(
++            mojom::blink::TriggeringEventInfo::kFromTrustedEvent);
++        frame_request.SetCrestLinkModifiers(crest_link_modifiers);
++      }
++    }
++  }
++#endif
+ 
+   FrameTree::FindResult result =
+       GetFrame()->Tree().FindOrCreateFrameForNavigation(
 --- a/third_party/blink/renderer/core/loader/empty_clients.cc
 +++ b/third_party/blink/renderer/core/loader/empty_clients.cc
 @@ -131,7 +131,8 @@

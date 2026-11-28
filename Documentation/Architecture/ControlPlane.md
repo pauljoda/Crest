@@ -990,7 +990,11 @@ merely visiting engine Settings does not.
   modified-link tab selection. A plain click on a link that opens a window of
   its own (`target="_blank"`) asks for the page it was followed in, as WebKit
   does; when the core answers Peek, the engine's new window closes before the
-  core is offered it. A new tab a modified click asked for stays a tab. A link
+  core is offered it. A new tab a modified click asked for stays a tab. Blink
+  carries a trusted click's keys and button on an HTML or SVG link, and on a
+  noopener window a modified click opens, which the page's own frame hands to
+  the browser as it does a modified link, so the core decides all three the
+  same way. A link
   bound for a new tab or a Peek stays
   staged inside the engine with its verified referrer, initiator, headers and
   source SiteInstance. The platform asks the core `StageLink` to hand it to
