@@ -537,6 +537,49 @@ final class BrowserDialogPresenter {
         }
     }
 
+    /// Which saved login Crest may fill for the agent on a site, or none.
+    /// Several logins are offered in a menu, the first chosen. Not filling is
+    /// the default, and Crest comes forward, since the person is likely in the
+    /// agent's terminal when it asks.
+    func approveSignIn(_ signIn: BrowserAgentSignIn, dismissal: BrowserPromptDismissal? = nil) async -> UUID? {
+        await withCheckedContinuation { continuation in
+            let alert = NSAlert()
+            let agent = Self.shown(signIn.agentName)
+            alert.messageText = String(localized: "Let “\(agent)” sign in to \(Self.shown(signIn.site))?")
+            let usernames = signIn.logins.map {
+                $0.username.isEmpty ? String(localized: "No username") : Self.shown($0.username)
+            }
+            if usernames.count == 1, let username = usernames.first {
+                alert.informativeText = String(
+                    localized: "Crest fills your saved password for \(username) without giving it to the agent.")
+            } else {
+                alert.informativeText = String(
+                    localized: "Crest fills the saved password you choose without giving it to the agent.")
+                let logins = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 260, height: 26), pullsDown: false)
+                // Items are added one by one, since adding them by title
+                // would merge two logins with the same username.
+                for (login, username) in zip(signIn.logins, usernames) {
+                    let item = NSMenuItem(title: username, action: nil, keyEquivalent: "")
+                    item.image = NSImage(systemSymbolName: "person.crop.circle", accessibilityDescription: nil)
+                    item.representedObject = login.id
+                    logins.menu?.addItem(item)
+                }
+                logins.selectItem(at: 0)
+                alert.accessoryView = logins
+            }
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: String(localized: "Don’t Allow"))
+            alert.addButton(withTitle: String(localized: "Fill Password"))
+            if !NSApp.isActive { NSApp.requestUserAttention(.criticalRequest) }
+            let only = signIn.logins.count == 1 ? signIn.logins.first?.id : nil
+            present(alert, comesForward: true, dismissal: dismissal) { [weak alert] response in
+                guard response == .alertSecondButtonReturn else { return continuation.resume(returning: nil) }
+                let chosen = (alert?.accessoryView as? NSPopUpButton)?.selectedItem?.representedObject as? UUID
+                continuation.resume(returning: chosen ?? only)
+            }
+        }
+    }
+
     /// `name` as a question may show it: without control or formatting
     /// characters, such as the ones that reverse text, and at most 64
     /// characters.

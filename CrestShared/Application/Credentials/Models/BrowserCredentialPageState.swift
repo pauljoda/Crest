@@ -262,6 +262,12 @@ final class BrowserCredentialPageState<FillTarget> {
         dismissFillRequest()
     }
 
+    /// Forgets the login chosen on a username step, so the password step
+    /// after it is offered again rather than filled by itself.
+    func forgetChosenAccount() {
+        chosenAccount = nil
+    }
+
     /// Whether a login chosen on a username step waits for `origin`'s
     /// password step.
     func awaitsPasswordStep(at origin: CredentialOrigin, now: Date) -> Bool {

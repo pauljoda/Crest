@@ -1,10 +1,11 @@
 import Foundation
 
-/// The person's answers to agents asking to use Crest, or to delete history:
-/// one question on screen at a time, an agent that asks to connect again while
-/// it is asked about waits for the same answer, and at most `maximumWaiting`
-/// questions wait to be asked. A question closes unanswered once every
-/// connection waiting on it is gone, and turning agents off closes them all.
+/// The person's answers to agents asking to use Crest, to delete history,
+/// to open a window or to sign in with a saved password: one question on
+/// screen at a time, an agent that asks to connect again while it is asked
+/// about waits for the same answer, and at most `maximumWaiting` questions
+/// wait to be asked. A question closes unanswered once every connection
+/// waiting on it is gone, and turning agents off closes them all.
 @MainActor
 final class BrowserAgentApprovals {
     // MARK: - Types
@@ -16,7 +17,8 @@ final class BrowserAgentApprovals {
         let identity: AgentIdentity?
         let dismissal: BrowserPromptDismissal
         var waiters: Set<ObjectIdentifier>
-        var answer: Task<BrowserAgentAnswer, Never>?
+        /// Whether the person allowed what it asks, once they answer.
+        var allows: Task<Bool, Never>?
 
         init(identity: AgentIdentity?, dismissal: BrowserPromptDismissal, waiter: ObjectIdentifier) {
             self.identity = identity
@@ -50,9 +52,9 @@ final class BrowserAgentApprovals {
     func approve(_ agent: BrowserAgentPeer.Program, client: AgentClientInfo?, for waiter: ObjectIdentifier)
         async throws(BrowserAgentFailure)
     {
-        if let open = asking.first(where: { $0.identity == agent.identity }), let answer = open.answer {
+        if let open = asking.first(where: { $0.identity == agent.identity }), let allows = open.allows {
             open.waiters.insert(waiter)
-            guard await answer.value.allows else { throw .declined }
+            guard await allows.value else { throw .declined }
             return
         }
         let answer = try await ask(about: agent.identity, for: waiter) { [dialogs] dismissal in
@@ -86,23 +88,47 @@ final class BrowserAgentApprovals {
         return answer
     }
 
+    /// Returns the login the person let the connection `waiter` have Crest
+    /// fill for `signIn`. Throws `signInDeclined` when they did not, and
+    /// `busy` when too many questions already wait.
+    func approve(_ signIn: BrowserAgentSignIn, for waiter: ObjectIdentifier)
+        async throws(BrowserAgentFailure) -> UUID
+    {
+        let chosen = try await ask(
+            about: nil, for: waiter, unanswered: UUID?.none, allows: { $0 != nil },
+            { [dialogs] dismissal in await dialogs.approveSignIn(signIn, dismissal: dismissal) })
+        guard let chosen else { throw .signInDeclined }
+        return chosen
+    }
+
     /// Asks `question` once the questions before it are answered, and answers
     /// declined when it closes unanswered.
     private func ask(
         about identity: AgentIdentity?, for waiter: ObjectIdentifier,
         _ question: @escaping @MainActor (BrowserPromptDismissal) async -> BrowserAgentAnswer
     ) async throws(BrowserAgentFailure) -> BrowserAgentAnswer {
+        try await ask(about: identity, for: waiter, unanswered: .declined, allows: \.allows, question)
+    }
+
+    /// Asks `question` once the questions before it are answered, and answers
+    /// `unanswered` when it closes unanswered; `allows` says whether an
+    /// answer allows what it asks.
+    private func ask<Answer: Sendable>(
+        about identity: AgentIdentity?, for waiter: ObjectIdentifier, unanswered: Answer,
+        allows: @escaping @MainActor (Answer) -> Bool,
+        _ question: @escaping @MainActor (BrowserPromptDismissal) async -> Answer
+    ) async throws(BrowserAgentFailure) -> Answer {
         guard asking.count < Self.maximumWaiting else { throw .busy }
         let dismissal = BrowserPromptDismissal()
         let open = Asking(identity: identity, dismissal: dismissal, waiter: waiter)
         let earlier = last
         let answer = Task {
             await earlier?.value
-            guard !dismissal.isDismissed else { return BrowserAgentAnswer.declined }
+            guard !dismissal.isDismissed else { return unanswered }
             let answer = await question(dismissal)
-            return dismissal.isDismissed ? .declined : answer
+            return dismissal.isDismissed ? unanswered : answer
         }
-        open.answer = answer
+        open.allows = Task { allows(await answer.value) }
         asking.append(open)
         last = Task { _ = await answer.value }
         let answered = await answer.value

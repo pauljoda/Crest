@@ -45,17 +45,19 @@ public sealed record ApprovedAgent(AgentIdentity Identity, string Name);
 #endregion
 
 /// Whether agents, such as coding agents and scripts the person runs, may use
-/// Crest on this Mac; whether they may run scripts in a page's own world; the
-/// Spaces of the person's own session they may reach; and the agents the
-/// person allowed. The device store keeps them and never syncs them. Each
-/// edit answers the revised preferences, or throws the rule that refuses it.
-public sealed record AgentPreferences(bool IsOn, bool RunsScripts, IReadOnlyList<Guid> SpaceIds,
+/// Crest on this Mac; whether they may run scripts in a page's own world;
+/// whether they may ask Crest to fill a saved password, which they never
+/// read; the Spaces of the person's own session they may reach; and the
+/// agents the person allowed. The device store keeps them and never syncs
+/// them. Each edit answers the revised preferences, or throws the rule that
+/// refuses it.
+public sealed record AgentPreferences(bool IsOn, bool RunsScripts, bool FillsPasswords, IReadOnlyList<Guid> SpaceIds,
     IReadOnlyList<ApprovedAgent> Agents) {
     #region Static Variables
 
     /// The preferences of a device that never chose any: off, reaching no
     /// Space and trusting no agent.
-    internal static AgentPreferences Off { get; } = new(IsOn: false, RunsScripts: false, [], []);
+    internal static AgentPreferences Off { get; } = new(IsOn: false, RunsScripts: false, FillsPasswords: false, [], []);
 
     public const int MaximumAgents = 32;
     public const int MaximumName = 64;
@@ -146,9 +148,9 @@ public sealed record AgentPreferences(bool IsOn, bool RunsScripts, IReadOnlyList
     #region Actions - Equality
 
     public bool Equals(AgentPreferences? other) => other is not null && IsOn == other.IsOn && RunsScripts == other.RunsScripts
-        && SpaceIds.SequenceEqual(other.SpaceIds) && Agents.SequenceEqual(other.Agents);
+        && FillsPasswords == other.FillsPasswords && SpaceIds.SequenceEqual(other.SpaceIds) && Agents.SequenceEqual(other.Agents);
 
-    public override int GetHashCode() => HashCode.Combine(IsOn, RunsScripts, SpaceIds.Count, Agents.Count);
+    public override int GetHashCode() => HashCode.Combine(IsOn, RunsScripts, FillsPasswords, SpaceIds.Count, Agents.Count);
 
     #endregion
 }

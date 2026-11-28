@@ -36,6 +36,7 @@ When the program is a general interpreter, such as node or python, allowing it c
 - **Settings > Agents** lists the agents connected now, with what each did lately, such as the tabs it opened and closed. Choose **Disconnect** to end one's connection.
 - Choose **Stop All Agents** in the Crest menu, or in **Settings > Agents**, to disconnect every agent and keep agents out of the tabs they used until Crest quits.
 - Before an agent deletes history, Crest asks you, naming the agent, the address and the Space.
+- Before Crest fills a saved password for an agent, Crest asks you, naming the agent, the site and the login. When several logins match, you choose which one.
 - Turning agents off disconnects every agent.
 
 ## What agents can reach
@@ -44,8 +45,9 @@ When the program is a general interpreter, such as node or python, allowing it c
 - Never into a private window, even one an agent opened for you, and never Crest's own pages, such as Settings, a browser or extension page, or a file. An agent opens an address in a private window only when it opens a new one.
 - History only in the Spaces you turned on, never private history.
 - Only `http` and `https` pages, and blank ones.
-- Not your saved passwords. A password field's value is left out of what agents read, cookies and sign-in headers are hidden in the requests they read, and request and response bodies are never shown.
-- Scripts in a page's own world only when you turn on **Let agents run scripts in pages**. A script runs with the page's own access, so it can read anything the page holds, including a password filled in on it.
+- Not your saved passwords. A password field's value is left out of the outlines and page text agents read, even after the page shows it as text, cookies and sign-in headers are hidden in the requests they read, and request and response bodies are never shown.
+- Signing in with a saved password only when you turn on **Let agents sign in with saved passwords**. An agent then asks Crest to fill the login saved in the Space's Crest Passwords for the page it is on, and Crest fills it once you agree, without giving the password to the agent. It works only on the page's own HTTPS sign-in form, in a Space whose Crest Passwords is on.
+- Scripts in a page's own world only when you turn on **Let agents run scripts in pages**. A script runs with the page's own access, so it can read anything the page holds, including a password filled in on it. While this is on, agents can't sign in with saved passwords.
 
 Any program that runs as you on your Mac can run an agent you allowed. Crest's question tells agents apart so you can see and control them; it is not a defense against harmful software already on your Mac. Allow only agents you trust, and turn agents off when you don't need them.
 
@@ -57,9 +59,11 @@ Crest includes a Model Context Protocol server as a helper inside the app, which
 /Applications/Crest.app/Contents/Helpers/crest-browser mcp
 ```
 
-It speaks protocol version 2026-07-28 and the earlier versions that open with `initialize`. Call `identify` first with your name and brand colour as `#RRGGBB`, so the person sees which tabs you use. Then use `list_spaces` and `list_tabs`, and read pages with `take_snapshot`, whose element `uid`s `click`, `hover`, `fill` and `scroll` take. The other tools are `open_tab`, `navigate`, `show_tab`, `close_tab`, `screenshot`, `type_text`, `press_key`, `wait_for`, `list_console_messages`, `list_network_requests`, `get_network_request`, `evaluate_script`, `read_page_text`, `handle_dialog`, `search_history`, `delete_history`, `list_search_providers`, `open_window`, `open_blank_window`, `open_quick_window` and `open_private_window`.
+It speaks protocol version 2026-07-28 and the earlier versions that open with `initialize`. Call `identify` first with your name and brand colour as `#RRGGBB`, so the person sees which tabs you use. Then use `list_spaces` and `list_tabs`, and read pages with `take_snapshot`, whose element `uid`s `click`, `hover`, `fill` and `scroll` take. The other tools are `open_tab`, `navigate`, `show_tab`, `close_tab`, `screenshot`, `type_text`, `press_key`, `wait_for`, `list_console_messages`, `list_network_requests`, `get_network_request`, `evaluate_script`, `read_page_text`, `handle_dialog`, `search_history`, `delete_history`, `list_search_providers`, `open_window`, `open_blank_window`, `open_quick_window`, `open_private_window` and `fill_credential`.
 
 `read_page_text` answers a page's readable text as Markdown, without any form field's value. `handle_dialog` answers a page's alert, confirm or prompt, but never a question about leaving the page. `wait_for` also takes `url`, to wait until the tab's address contains it. Tools that open a window wait while Crest asks the person.
+
+`fill_credential` takes the `uid` of a sign-in form's username or password field from `take_snapshot`, and has Crest fill the login the person saved for the page, once they agree. It answers only whether the login was filled, never with the password; the agent submits the form itself. It refuses while the person hasn't turned on **Let agents sign in with saved passwords**, while agents may run scripts in pages, and for a form in a frame from another site.
 
 When a page runs on WebKit, input reaches it as script events, which some pages ignore, and its network requests show their address, type and timing without their method, status or headers.
 

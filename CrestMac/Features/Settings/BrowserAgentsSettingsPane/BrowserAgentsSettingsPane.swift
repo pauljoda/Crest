@@ -3,8 +3,8 @@ import SwiftUI
 
 /// Whether agents the person runs on this Mac, such as coding agents, may use
 /// Crest; how to connect one; which of the person's Spaces agents reach;
-/// whether agents may run scripts in pages; and the agents connected now and
-/// allowed before.
+/// whether agents may run scripts in pages and sign in with saved passwords;
+/// and the agents connected now and allowed before.
 struct BrowserAgentsSettingsPane: View {
     // MARK: - Types
 
@@ -89,6 +89,15 @@ struct BrowserAgentsSettingsPane: View {
                 Toggle("Let agents run scripts in pages", isOn: runsScripts)
             } footer: {
                 CrestFormFootnote("Scripts run with the page’s own access to the site.")
+            }
+            .disabled(!preferences.isOn)
+            Section {
+                Toggle("Let agents sign in with saved passwords", isOn: fillsPasswords)
+                    .disabled(preferences.runsScripts)
+            } footer: {
+                CrestFormFootnote(
+                    "Crest asks you each time and fills the password itself, without giving it to agents. Not available while agents can run scripts in pages."
+                )
             }
             .disabled(!preferences.isOn)
             if !core.state.agentSessions.isEmpty {
@@ -178,6 +187,14 @@ struct BrowserAgentsSettingsPane: View {
             preferences.runsScripts
         } set: {
             send(SetAgentScripts(runsScripts: $0))
+        }
+    }
+
+    private var fillsPasswords: Binding<Bool> {
+        Binding {
+            preferences.fillsPasswords
+        } set: {
+            send(SetAgentPasswordFill(fillsPasswords: $0))
         }
     }
 

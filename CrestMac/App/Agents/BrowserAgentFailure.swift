@@ -24,6 +24,27 @@ struct BrowserAgentFailure: Error, Sendable {
         "The tab shows a browser or extension page, or a file, which agents can’t use. Open a web page instead.")
     static let tooLarge = Self(
         "The answer was too large to send. Ask for less, such as one element or the viewport, not the whole page.")
+    static let signInOff = Self(
+        "The person hasn’t allowed agents to sign in with saved passwords. They can allow it in Crest’s Settings › Agents."
+    )
+    static let signInWithScripts = Self(
+        "Crest doesn’t sign agents in while they may run scripts in pages, which could read a filled password. The person can turn off scripts in pages in Crest’s Settings › Agents."
+    )
+    static let passwordsOff = Self("Crest Passwords is off in this tab’s Space. Ask the person to sign in.")
+    static let passwordsElsewhere = Self(
+        "An extension handles passwords in this tab’s Space, so Crest doesn’t fill them. Ask the person to sign in.")
+    static let insecurePage = Self("Crest fills saved passwords only on pages served over HTTPS.")
+    static let notSignInField = Self(
+        "That element isn’t a field of a sign-in form Crest can fill. Use the uid of the form’s username or password field."
+    )
+    static let otherSiteField = Self(
+        "The sign-in form isn’t the tab’s own page’s, such as one in a frame from another site. Crest fills only the page’s own sign-in forms."
+    )
+    static let noSavedLogin = Self(
+        "This Space’s Crest Passwords has no saved login for this site. Ask the person to sign in.")
+    static let signInDeclined = Self("The person didn’t let Crest fill a saved password.")
+    static let signInChanged = Self(
+        "The sign-in form changed before Crest could fill it. Take a new snapshot and try again.")
 
     // MARK: - Variables
 

@@ -20,6 +20,16 @@ struct BrowserAgentWindowOpening: Equatable, Sendable {
     let address: String?
 }
 
+/// An agent asking Crest to fill a login saved for `site` into its sign-in
+/// form, as the person is asked: by the name they allowed the agent under,
+/// with the logins that may fill, which the person chooses among. The agent
+/// never learns which.
+struct BrowserAgentSignIn: Equatable, Sendable {
+    let agentName: String
+    let site: String
+    let logins: [CredentialDescriptor]
+}
+
 /// How the person answered an agent's question: no, yes this once, or yes
 /// for as long as that connection lasts.
 struct BrowserAgentAnswer: Equatable, Sendable {
@@ -42,6 +52,9 @@ protocol BrowserAgentAsking: AnyObject {
         -> Bool
     func approveWindow(_ opening: BrowserAgentWindowOpening, dismissal: BrowserPromptDismissal?) async
         -> BrowserAgentAnswer
+    /// The id of the login the person let Crest fill, or nil when they
+    /// didn't.
+    func approveSignIn(_ signIn: BrowserAgentSignIn, dismissal: BrowserPromptDismissal?) async -> UUID?
 }
 
 extension BrowserDialogPresenter: BrowserAgentAsking {}

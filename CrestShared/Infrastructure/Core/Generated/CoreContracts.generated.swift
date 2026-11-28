@@ -2358,6 +2358,7 @@ struct AgentPreferences: Equatable, Sendable {
 
     let isOn: Bool
     let runsScripts: Bool
+    let fillsPasswords: Bool
     let spaceIDs: [UUID]
     let agents: [ApprovedAgent]
 }
@@ -7991,6 +7992,10 @@ struct SessionUnrecognized: Equatable, Sendable {
     }
 }
 
+struct SetAgentPasswordFill: Intent, AgentIntent, Equatable, Sendable {
+    let fillsPasswords: Bool
+}
+
 struct SetAgentScripts: Intent, AgentIntent, Equatable, Sendable {
     let runsScripts: Bool
 }
@@ -10503,6 +10508,12 @@ struct AgentActivityKind: Hashable, Sendable {
         title: LocalizedStringResource("Ran a script"),
         symbol: "curlybraces"
     )
+    static let filledPassword = AgentActivityKind(
+        tag: 7,
+        name: "filledPassword",
+        title: LocalizedStringResource("Filled a saved password"),
+        symbol: "key"
+    )
 
     static let all: [AgentActivityKind] = [
         openedTab,
@@ -10511,7 +10522,8 @@ struct AgentActivityKind: Hashable, Sendable {
         openedWindow,
         openedPrivateWindow,
         deletedHistory,
-        ranScript
+        ranScript,
+        filledPassword
     ]
 
     static func named(_ name: String?) -> AgentActivityKind? {
