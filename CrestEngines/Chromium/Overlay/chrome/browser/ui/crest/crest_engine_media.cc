@@ -456,8 +456,7 @@ bool PageMedia::ReturnsFromPictureInPicture() const {
 // The browser's Media Session chooses the active video player and asks its
 // renderer to enter Picture in Picture; no page gesture is synthesized.
 bool PageMedia::EnterPictureInPicture() {
-  if ((!played_before_hidden_ && playing_videos_.empty() && !last_playing_ &&
-       contents_->GetCurrentlyPlayingVideoCount() == 0) ||
+  if ((!played_before_hidden_ && playing_videos_.empty() && contents_->GetCurrentlyPlayingVideoCount() == 0) ||
       contents_->HasPictureInPictureVideo() || contents_->HasPictureInPictureDocument()) {
     return false;
   }
@@ -631,6 +630,8 @@ void PageMedia::Publish() {
   if (engine_active) {
     seen_active_ = true;
     last_playing_ = info_->playback_state == media_session::mojom::MediaPlaybackState::kPlaying;
+  } else if (!contents_->IsAudioMuted()) {
+    last_playing_ = false;
   }
   const bool active = engine_active || (info_ && seen_active_ && contents_->IsAudioMuted());
   // A page declares a preview playing too.

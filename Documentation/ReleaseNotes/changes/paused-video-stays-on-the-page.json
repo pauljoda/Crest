@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "id": "paused-video-stays-on-the-page",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "A paused video stays on the page when you switch tabs, apps, or desktops. Thanks to Matt Van Horn (@mvanhorn)."
+    }
+  ]
+}
