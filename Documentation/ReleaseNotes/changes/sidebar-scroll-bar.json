@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "id": "sidebar-scroll-bar-follows-system",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "The sidebar's scroll bar can be dragged and its track clicked, and it follows Show scroll bars in System Settings, so with Always it stays on screen."
+    }
+  ]
+}

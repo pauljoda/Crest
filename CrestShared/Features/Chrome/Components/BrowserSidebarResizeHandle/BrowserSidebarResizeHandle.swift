@@ -6,6 +6,10 @@ struct BrowserSidebarResizeHandle: View {
     @Binding var width: CGFloat
     var onResizeEnded: (CGFloat) -> Void = { _ in }
     var edge: HorizontalEdge = .leading
+    /// Whether presses on the sidebar's side of its edge reach the handle as
+    /// well as presses on the page's side. Where the list's scroll bar runs
+    /// down that edge they reach the bar instead.
+    var reachesIntoSidebar = true
 
     @Environment(\.layoutDirection) private var layoutDirection
     @State private var dragStartWidth: CGFloat?
@@ -19,7 +23,13 @@ struct BrowserSidebarResizeHandle: View {
     var body: some View {
         Color.clear
             .frame(width: BrowserSidebarResizeHandleMetrics.hitWidth)
-            .contentShape(.rect)
+            .overlay(alignment: edge == .leading ? .trailing : .leading) {
+                Color.clear
+                    .frame(
+                        width: BrowserSidebarResizeHandleMetrics.hitWidth / (reachesIntoSidebar ? 1 : 2)
+                    )
+                    .contentShape(.rect)
+            }
             .modifier(BrowserPlatformColumnResizePointerModifier())
             .overlay {
                 Capsule()

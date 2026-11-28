@@ -55,12 +55,15 @@ struct BrowserRootShellControls: View {
     }
 
     /// The handle that resizes the sidebar, at its edge beside the page past
-    /// `cardInset`, on whichever side the sidebar is.
+    /// `cardInset`, on whichever side the sidebar is. AppKit runs the tab
+    /// list's scroll bar down the list's right edge, so beside a sidebar on
+    /// the left the handle takes only the page's side and leaves the bar whole.
     private func resizeHandle(cardInset: CGFloat) -> some View {
         BrowserSidebarResizeHandle(
             width: model.sidebarWidthBinding,
             onResizeEnded: commitSidebarWidth,
-            edge: sidebarEdge
+            edge: sidebarEdge,
+            reachesIntoSidebar: (sidebarEdge == .leading) != (layoutDirection == .leftToRight)
         )
         .offset(
             x: layoutDirection.leadingOffset(

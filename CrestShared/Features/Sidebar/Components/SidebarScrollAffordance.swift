@@ -26,12 +26,24 @@ private struct SidebarScrollContentExtent: ViewModifier {
 /// The same vertical-scroll affordance in windowed and touch sidebars. Its
 /// geometry updates are observed only by the indicator, never the tab rows.
 ///
+/// On the Mac the list shows AppKit's own scroll bar, so its thumb can be
+/// dragged and its track clicked, and it follows Show scroll bars in System
+/// Settings: an overlay bar while the list moves, or one that always shows.
+/// A touch list draws a quiet bar of its own while it moves.
+///
 /// A shell may also ask it to reveal a row. It moves the list only as far as
 /// the row needs, never while the person scrolls the list or is busy with it,
 /// and drops a reveal it cannot make rather than making it later.
 struct SidebarScrollAffordance: ViewModifier {
     /// How long the scroll a press of the indicator asks for takes.
     private static let pageScrollDuration: TimeInterval = 0.22
+    #if os(macOS)
+        private static let systemIndicators = ScrollIndicatorVisibility.automatic
+        private static let drawsIndicator = false
+    #else
+        private static let systemIndicators = ScrollIndicatorVisibility.never
+        private static let drawsIndicator = true
+    #endif
     /// How many times a reveal looks for its row, and how long it lets the
     /// list lay out, or finish moving, in between.
     private static let revealSteps = 6
@@ -53,7 +65,7 @@ struct SidebarScrollAffordance: ViewModifier {
     func body(content: Content) -> some View {
         content
             .environment(\.sidebarScrollActivity, activity)
-            .scrollIndicators(.never)
+            .scrollIndicators(Self.systemIndicators)
             .scrollPosition($position)
             .onScrollGeometryChange(for: SidebarScrollMetrics.self) { geometry in
                 SidebarScrollMetrics(
@@ -69,7 +81,7 @@ struct SidebarScrollAffordance: ViewModifier {
                 activity.setScrolling(phase != .idle, byPerson: phase != .idle && phase != .animating)
             }
             .overlay {
-                SidebarScrollIndicator(activity: activity, isDragging: isDragging) {
+                SidebarScrollIndicator(activity: activity, drawsBar: Self.drawsIndicator, isDragging: isDragging) {
                     activity.willMoveItself()
                     withAnimation(reduceMotion ? nil : .easeInOut(duration: Self.pageScrollDuration)) {
                         position.scrollTo(
@@ -288,6 +300,8 @@ private struct SidebarScrollIndicator: View {
     private static let fadeDuration: TimeInterval = 0.2
 
     let activity: SidebarScrollActivity
+    /// Whether the indicator draws the bar, where the list shows no system one.
+    let drawsBar: Bool
     let isDragging: Bool
     let scrollDown: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -303,15 +317,17 @@ private struct SidebarScrollIndicator: View {
             let height = min(track, max(24, track * metrics.viewportHeight / max(1, metrics.contentHeight)))
             let fraction = min(1, max(0, metrics.offset / max(1, metrics.maximumOffset)))
             ZStack(alignment: .bottom) {
-                Capsule()
-                    .fill(.primary.opacity(Self.barOpacity))
-                    .frame(width: 3, height: height)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                    .padding(.trailing, 3)
-                    .offset(y: 4 + (track - height) * fraction)
-                    .opacity(activity.showsIndicator && metrics.maximumOffset > 1 ? 1 : 0)
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
+                if drawsBar {
+                    Capsule()
+                        .fill(.primary.opacity(Self.barOpacity))
+                        .frame(width: 3, height: height)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                        .padding(.trailing, 3)
+                        .offset(y: 4 + (track - height) * fraction)
+                        .opacity(activity.showsIndicator && metrics.maximumOffset > 1 ? 1 : 0)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
 
                 // The bubble stands on the device's material, as the pins do,
                 // and takes presses a full hit target around it, so a touch
