@@ -33,16 +33,19 @@ struct BrowserSettingsSpacePage: View {
 
             if spaceAccess.isLocked(space) {
                 BrowserSettingsPane(.spaces) {
-                    BrowserSettingsPrivateSpaceAccessSection(
-                        space: space,
-                        accessController: spaceAccess,
-                        detail: "Unlock this Space to see its settings."
-                    )
+                    BrowserSettingsPaneNote {
+                        BrowserSettingsPrivateSpaceAccessSection(
+                            space: space,
+                            accessController: spaceAccess,
+                            detail: "Unlock this Space to see its settings."
+                        )
+                    }
                 }
             } else {
                 tabPicker
                 tabContent
                     .environment(\.browserSettingsScrollKey, "space-\(space.id)-\(tab.name)")
+                    .environment(\.browserSettingsSectionOwner, tab.sections)
                     .id(tab)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -181,11 +184,17 @@ struct BrowserSettingsSpacePage: View {
     /// settings read fresh whenever the Space changes.
     private var browsingPane: some View {
         BrowserSettingsPane(.spaces) {
-            BrowserSpaceBrowsingSection(browser: browser, space: space)
-            autofillRow
-            BrowserSpaceGroupPinnedTabsSection(browser: browser, space: space)
-            BrowserSpaceDownloadsSection(settings: downloads.settings(for: space))
-            BrowserSpaceDeletionSection(browser: browser, spaceID: space.id, dataDeleter: dataDeleter)
+            BrowserSettingsSectionSlot(.spaceBrowsing) { BrowserSpaceBrowsingSection(browser: browser, space: space) }
+            BrowserSettingsSectionSlot(.spaceAutofill) { autofillRow }
+            BrowserSettingsSectionSlot(.spaceSeparatePinnedTabs) {
+                BrowserSpaceGroupPinnedTabsSection(browser: browser, space: space)
+            }
+            BrowserSettingsSectionSlot(.spaceDownloads) {
+                BrowserSpaceDownloadsSection(settings: downloads.settings(for: space))
+            }
+            BrowserSettingsSectionSlot(.spaceDeletion) {
+                BrowserSpaceDeletionSection(browser: browser, spaceID: space.id, dataDeleter: dataDeleter)
+            }
         }
         .task(id: space.id) { downloads.refresh(for: space.id) }
     }

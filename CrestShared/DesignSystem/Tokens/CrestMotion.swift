@@ -51,6 +51,9 @@ enum CrestMotion {
     static let sidebarRetreatTransition: TimeInterval = 0.22
     /// How long a hidden sidebar stays out after a shortcut changes Space.
     static let spaceShortcutSidebarHold: Duration = .seconds(1.2)
+    /// How long a page a search result pushed waits for its rows before it
+    /// scrolls to the section.
+    static let searchMatchSettle: Duration = .milliseconds(350)
     /// Keeps phased sidebar work aligned with the visible geometry handoff.
     static let sidebarMorphCompletionDelay: Duration = .seconds(
         sidebarMorphTransition

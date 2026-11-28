@@ -18,12 +18,20 @@ struct BrowserSearchSettingsPane: View {
 
     var body: some View {
         BrowserSettingsPane(.search) {
-            BrowserDefaultSearchSettingsSection(
-                preferences: appPreferences, catalog: catalog, profileID: browser.shownSpace?.profileID)
-            BrowserPaletteResultsSettingsSection(preferences: appPreferences)
-            BrowserPaletteTypingSettingsSection(preferences: appPreferences, browser: browser)
-            BrowserSearchProvidersSettingsSection(
-                catalog: catalog, profileID: browser.shownSpace?.profileID, editing: $editing)
+            BrowserSettingsSectionSlot(.defaultSearch) {
+                BrowserDefaultSearchSettingsSection(
+                    preferences: appPreferences, catalog: catalog, profileID: browser.shownSpace?.profileID)
+            }
+            BrowserSettingsSectionSlot(.paletteResults) {
+                BrowserPaletteResultsSettingsSection(preferences: appPreferences)
+            }
+            BrowserSettingsSectionSlot(.paletteTyping) {
+                BrowserPaletteTypingSettingsSection(preferences: appPreferences, browser: browser)
+            }
+            BrowserSettingsSectionSlot(.searchProviders) {
+                BrowserSearchProvidersSettingsSection(
+                    catalog: catalog, profileID: browser.shownSpace?.profileID, editing: $editing)
+            }
         }
         .sheet(item: $editing) { draft in
             BrowserSearchProviderEditor(draft: draft, catalog: catalog, profileID: browser.shownSpace?.profileID)

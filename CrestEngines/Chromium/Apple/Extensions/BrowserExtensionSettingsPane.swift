@@ -14,20 +14,28 @@ struct BrowserExtensionSettingsPane: View {
     var body: some View {
         BrowserSettingsPane(.extensions) {
             if fixedSpaceID == nil {
-                Section {
-                    CrestSpaceMenuPicker(
-                        "Space", selection: $selectedSpaceID,
-                        spaces: CrestSpaceIdentity.list(browser.spaceModels))
+                BrowserSettingsSectionSlot(.extensionsSpace) {
+                    Section {
+                        CrestSpaceMenuPicker(
+                            "Space", selection: $selectedSpaceID,
+                            spaces: CrestSpaceIdentity.list(browser.spaceModels))
+                    }
                 }
             }
             if let space, !spaceAccess.isLocked(space) {
-                BrowserExtensionsView(space: space, store: store).id(space.profileID)
+                BrowserSettingsSectionSlot(.installedExtensions) {
+                    BrowserExtensionsView(space: space, store: store).id(space.profileID)
+                }
             } else if let space {
-                BrowserSettingsPrivateSpaceAccessSection(
-                    space: space, accessController: spaceAccess,
-                    detail: "Unlock this Space to see its extensions.")
+                BrowserSettingsPaneNote {
+                    BrowserSettingsPrivateSpaceAccessSection(
+                        space: space, accessController: spaceAccess,
+                        detail: "Unlock this Space to see its extensions.")
+                }
             }
-            BrowserSpaceGroupSharingNote(browser: browser, spaceID: space?.id)
+            BrowserSettingsPaneNote {
+                BrowserSpaceGroupSharingNote(browser: browser, spaceID: space?.id)
+            }
         }
         .onAppear { if selectedSpaceID == nil { selectedSpaceID = browser.selectedSpaceID } }
         .onChange(of: browser.spaceModels.map(\.id)) {

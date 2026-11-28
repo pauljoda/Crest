@@ -10,6 +10,8 @@ struct MobileBrowserCompactSettingsLayout: View {
     let dismiss: (() -> Void)?
 
     @Environment(\.locale) private var locale
+    /// The section a section row pushes its page open at.
+    @State private var requestedSection: BrowserSettingsSection?
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -23,6 +25,18 @@ struct MobileBrowserCompactSettingsLayout: View {
                             MobileSettingsDestinationRow(destination: destination)
                         }
                         .accessibilityIdentifier(BrowserMobileAccessibilityID.settingsDestination(destination))
+                        ForEach(listedSections(of: destination)) { section in
+                            Button {
+                                requestedSection = section
+                                path.append(destination)
+                            } label: {
+                                MobileSettingsSectionResultRow(section: section)
+                            }
+                            // A list tints a button's label with the accent;
+                            // a section row reads as secondary text instead.
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("settings-result-\(destination.name)-\(section.name)")
+                        }
                     }
                 }
             }
@@ -41,8 +55,20 @@ struct MobileBrowserCompactSettingsLayout: View {
                 .navigationTitle(Text(destination.title))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { MobileBrowserSettingsToolbar(dismiss: dismiss) }
+                .environment(\.browserSettingsSectionRequest, $requestedSection)
             }
         }
+    }
+
+    private var query: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// The sections of `destination` a search lists under its row, once the
+    /// search is long enough to mean something.
+    private func listedSections(of destination: BrowserSettingsDestination) -> [BrowserSettingsSection] {
+        guard query.count >= 2 else { return [] }
+        return destination.sections(matching: query, locale: locale, in: browser.core.state)
     }
 
     private var filteredDestinations: [BrowserSettingsDestination] {

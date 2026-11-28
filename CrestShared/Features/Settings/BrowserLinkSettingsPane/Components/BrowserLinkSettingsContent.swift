@@ -10,52 +10,62 @@ struct BrowserLinkSettingsContent: View {
 
     @Bindable private var appearance = BrowserDeviceAppearanceStore.shared
 
-    var body: some View {
-        BrowserExternalLinkDestinationSection(
-            destination: externalDestinationBinding,
-            spaceID: externalSpaceBinding,
-            spaces: availableSpaces
-        )
-
-        BrowserQuickWindowSettingsSection(
-            archivePolicy: archivePolicyBinding,
-            remembersSpaceBySite: rememberSpaceBinding
-        )
-
-        BrowserPeekSettingsSection(
-            automaticallyOpensPeek: automaticPeekBinding,
-            clickModifier: peekClickModifierBinding,
-            dragsLinksToPeek: dragsLinksToPeekBinding,
-            dimsPageBehindPeek: dimsPageBehindPeekBinding,
-            peekSize: peekSizeSetting,
-            peekSpeed: CrestSettingValue($appearance.peekOpenDuration, default: BrowserPeekPace.defaultValue),
-            testPeek: testPeek
-        )
-
-        if lockedRouteDestinationSpaces.isEmpty {
-            BrowserLinkRoutingSection(
-                routes: links.preferences.routes,
-                spaces: availableSpaces,
-                selectedSpaceID: resolvedSelectedSpaceID,
-                updateRoute: updateRoute,
-                remove: links.removeRoute,
-                move: links.moveRoute,
-                add: links.addRoute
-            )
-        } else {
-            Section {
-                ForEach(lockedRouteDestinationSpaces) { space in
-                    BrowserSettingsPrivateSpaceAccessRow(
-                        space: space,
-                        accessController: spaceAccess
-                    )
-                }
-            } header: {
-                Text("Routing")
-            } footer: {
-                CrestFormFootnote("Unlock these Spaces to see the routes that open in them.")
+    var body: BrowserSettingsSectionList<some View> {
+        BrowserSettingsSectionList {
+            BrowserSettingsSectionSlot(.externalLinks) {
+                BrowserExternalLinkDestinationSection(
+                    destination: externalDestinationBinding,
+                    spaceID: externalSpaceBinding,
+                    spaces: availableSpaces
+                )
             }
-            .accessibilityIdentifier("settings-private-link-routes")
+
+            BrowserSettingsSectionSlot(.quickWindow) {
+                BrowserQuickWindowSettingsSection(
+                    archivePolicy: archivePolicyBinding,
+                    remembersSpaceBySite: rememberSpaceBinding
+                )
+            }
+
+            BrowserSettingsSectionSlot(.peek) {
+                BrowserPeekSettingsSection(
+                    automaticallyOpensPeek: automaticPeekBinding,
+                    clickModifier: peekClickModifierBinding,
+                    dragsLinksToPeek: dragsLinksToPeekBinding,
+                    dimsPageBehindPeek: dimsPageBehindPeekBinding,
+                    peekSize: peekSizeSetting,
+                    peekSpeed: CrestSettingValue($appearance.peekOpenDuration, default: BrowserPeekPace.defaultValue),
+                    testPeek: testPeek
+                )
+            }
+
+            BrowserSettingsSectionSlot(.linkRouting) {
+                if lockedRouteDestinationSpaces.isEmpty {
+                    BrowserLinkRoutingSection(
+                        routes: links.preferences.routes,
+                        spaces: availableSpaces,
+                        selectedSpaceID: resolvedSelectedSpaceID,
+                        updateRoute: updateRoute,
+                        remove: links.removeRoute,
+                        move: links.moveRoute,
+                        add: links.addRoute
+                    )
+                } else {
+                    Section {
+                        ForEach(lockedRouteDestinationSpaces) { space in
+                            BrowserSettingsPrivateSpaceAccessRow(
+                                space: space,
+                                accessController: spaceAccess
+                            )
+                        }
+                    } header: {
+                        Text("Routing")
+                    } footer: {
+                        CrestFormFootnote("Unlock these Spaces to see the routes that open in them.")
+                    }
+                    .accessibilityIdentifier("settings-private-link-routes")
+                }
+            }
         }
     }
 

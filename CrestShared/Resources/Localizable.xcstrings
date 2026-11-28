@@ -1860,6 +1860,15 @@
     "^[%lld Space](inflect: true) · ^[%lld tab](inflect: true)" : {
 
     },
+    "addresses autofill add address" : {
+
+    },
+    "address field two lines one line site only accent outline editing animate command palette copy URL button Super Copy" : {
+
+    },
+    "address bar toolbar position layout" : {
+
+    },
     "⇧⌘← / → moves the focused card." : {
 
     },
@@ -2256,7 +2265,7 @@
     "Ads and Trackers Options" : {
 
     },
-    "ads trackers content blocking filter lists subscribe EasyList uBlock AdGuard my filters custom rules block element cookie notices strict balanced" : {
+    "ads trackers content blocking level strict balanced off customized" : {
 
     },
     "ads trackers privacy protection" : {
@@ -2268,6 +2277,9 @@
           }
         }
       }
+    },
+    "agent Spaces allowed" : {
+
     },
     "Advanced" : {
       "localizations" : {
@@ -2319,7 +2331,13 @@
     "Agents" : {
 
     },
-    "agents AI MCP model context protocol coding agents scripts automation Claude Codex Cursor command line terminal" : {
+    "app icon Dock alternate icon" : {
+
+    },
+    "allowed agents remove" : {
+
+    },
+    "allow agents to use Crest AI MCP model context protocol coding agents automation Claude Codex Cursor" : {
 
     },
     "Agents are turned off in Crest’s settings." : {
@@ -2666,6 +2684,9 @@
 
     },
     "archived tabs" : {
+
+    },
+    "ask before quitting quit confirm" : {
 
     },
     "Archived Tabs" : {
@@ -3392,9 +3413,6 @@
         }
       }
     },
-    "browser startup default Space typing spelling spell check text editing Picture in Picture video developer toolbar localhost local pages translation system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair new tab floating sidebar" : {
-
-    },
     "Browser window preview" : {
 
     },
@@ -3430,9 +3448,6 @@
 
     },
     "Camera & Microphone" : {
-
-    },
-    "camera microphone site access history cookies data website cache clear browsing" : {
 
     },
     "Cancel" : {
@@ -3531,6 +3546,9 @@
 
     },
     "changed %@" : {
+
+    },
+    "choose Space" : {
 
     },
     "Changed Only" : {
@@ -3835,7 +3853,7 @@
     "Chromium" : {
       "comment" : "The name of a browser engine. Keep the product name as it is."
     },
-    "Chromium WebKit hybrid default browser engine websites rules protected video DRM compatibility" : {
+    "Chromium WebKit hybrid default browser engine recommended" : {
 
     },
     "Chromium without Google’s data collection. Smooth browsing and extensions." : {
@@ -3857,6 +3875,9 @@
 
     },
     "clean tidy archive unpinned open tabs every current" : {
+
+    },
+    "clear browsing data history cache time range" : {
 
     },
     "Clear" : {
@@ -4289,6 +4310,25 @@
         }
       }
     },
+    "connected agents sessions activity" : {
+
+    },
+    "connect an agent command line terminal" : {
+
+    },
+    "conflict use this device use iCloud" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التعارض iCloud"
+          }
+        }
+      }
+    },
+    "command palette address bar layout top hit prefer open tabs match reasons results order sections blended also show reset order" : {
+
+    },
     "Command (⌘)" : {
 
     },
@@ -4435,6 +4475,9 @@
           }
         }
       }
+    },
+    "cookies website data cache storage remove signed out" : {
+
     },
     "Control your browsing data" : {
 
@@ -5133,7 +5176,7 @@
         }
       }
     },
-    "crest studio name icon emblem colors theme banner background sidebar pattern gradient accent" : {
+    "Crest Studio name icon emblem colors theme banner background sidebar pattern gradient accent profile identity intensity text color light dark automatic preview" : {
 
     },
     "Crest Studio step" : {
@@ -5175,6 +5218,12 @@
       }
     },
     "crestbrowser.com" : {
+
+    },
+    "default page zoom percentage scale" : {
+
+    },
+    "default browser make Crest the default check again" : {
 
     },
     "Crimson" : {
@@ -5366,6 +5415,12 @@
           }
         }
       }
+    },
+    "developer toolbar localhost local pages" : {
+
+    },
+    "delete Space remove" : {
+
     },
     "Delete" : {
       "localizations" : {
@@ -5597,6 +5652,9 @@
     "Delete Selected Passwords?" : {
 
     },
+    "Delete Space" : {
+
+    },
     "Delete Space and Data" : {
       "localizations" : {
         "ar" : {
@@ -5749,6 +5807,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "أدوات المطور فحص العنصر webkit safari"
+          }
+        }
+      }
+    },
+    "diagnostics monitor pending records" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التشخيص المراقبة السجلات المعلقة"
           }
         }
       }
@@ -6002,6 +6070,12 @@
       }
     },
     "download records" : {
+
+    },
+    "each Space history site permissions privacy" : {
+
+    },
+    "downloads folder save location ask where to save choose folder" : {
 
     },
     "Download Records" : {
@@ -6626,13 +6700,10 @@
         }
       }
     },
-    "extensions add-ons Chrome Web Store install remove" : {
+    "extensions add-ons Chrome Web Store install remove installed Chromium extension manager shortcuts permissions copies" : {
 
     },
     "Extensions can’t be changed in a private window." : {
-
-    },
-    "extensions permissions Chromium Chrome Web Store install copies Spaces" : {
 
     },
     "extensions popup menu cycle pinned toolbar" : {
@@ -6642,11 +6713,22 @@
 
     },
     "external apps Quick Window Peek pinned saved routing open" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "التطبيقات الخارجية النافذة السريعة Peek المثبتة المحفوظة التوجيه فتح"
+          }
+        }
+      }
+    },
+    "external apps open in Space default links" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التطبيقات الخارجية فتح"
           }
         }
       }
@@ -6674,6 +6756,18 @@
           }
         }
       }
+    },
+    "floating sidebar allow" : {
+
+    },
+    "filter lists EasyList uBlock AdGuard cookie notices update now" : {
+
+    },
+    "feedback Reddit GitHub issues report roadmap support community" : {
+
+    },
+    "feature flags experimental" : {
+
     },
     "FAVORITES" : {
       "comment" : "A section heading in a browser import review. Keep it uppercase."
@@ -6767,6 +6861,9 @@
       }
     },
     "Filter list address" : {
+
+    },
+    "Filter lists" : {
 
     },
     "Filter lists, your rules and sites" : {
@@ -6924,7 +7021,7 @@
         }
       }
     },
-    "focus switch new tabs follow move between Spaces Command-click middle-click Shift pinned saved close resume restore root URL favicon Split View focus follows mouse pointer sidebar widgets Now Playing media cards" : {
+    "folders icon only tint folder title highlights tab counts color borders" : {
 
     },
     "Focus this card" : {
@@ -7068,6 +7165,12 @@
         }
       }
     },
+    "groups tint group name highlights tab counts color borders" : {
+
+    },
+    "group crests Sub-Space" : {
+
+    },
     "Four" : {
       "extractionState" : "manual"
     },
@@ -7205,6 +7308,9 @@
           }
         }
       }
+    },
+    "Group" : {
+
     },
     "Gules" : {
 
@@ -7388,6 +7494,9 @@
     "history entries" : {
 
     },
+    "history retention keep records archive downloads delete older records" : {
+
+    },
     "History in other Spaces is not affected." : {
       "localizations" : {
         "ar" : {
@@ -7410,6 +7519,9 @@
           }
         }
       }
+    },
+    "hover preview tabs folders cards" : {
+
     },
     "Home" : {
       "localizations" : {
@@ -7468,6 +7580,9 @@
         }
       }
     },
+    "Hover previews" : {
+
+    },
     "Hover tint" : {
 
     },
@@ -7524,11 +7639,22 @@
       }
     },
     "iCloud CloudKit account upload download conflict status monitor diagnostics pending records" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "iCloud CloudKit الحساب الرفع التنزيل التعارض الحالة المراقبة التشخيص السجلات المعلقة"
+          }
+        }
+      }
+    },
+    "iCloud CloudKit sync now pull from iCloud status account upload download errors" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud CloudKit الحالة الحساب الرفع التنزيل"
           }
         }
       }
@@ -7644,6 +7770,17 @@
       }
     },
     "import export backup portability data records" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الاستيراد التصدير النسخ الاحتياطي قابلية النقل البيانات السجلات"
+          }
+        }
+      }
+    },
+    "import export backup portability data records another browser" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -7980,6 +8117,9 @@
         }
       }
     },
+    "Keyboard shortcuts" : {
+
+    },
     "keyboard keys commands rebind remap hotkeys navigation tabs Spaces page" : {
       "localizations" : {
         "ar" : {
@@ -8158,6 +8298,9 @@
         }
       }
     },
+    "let agents run scripts in pages" : {
+
+    },
     "Let “%@” delete history?" : {
 
     },
@@ -8264,6 +8407,9 @@
         }
       }
     },
+    "lock Touch ID Face ID password private protect locks again background" : {
+
+    },
     "Loaded" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -8340,7 +8486,7 @@
     "Long press to choose a skin tone variation." : {
 
     },
-    "look and feel theme accent color transparency page zoom percentage sidebar left right borderless window fullscreen layout interface animation motion page cards folder groups highlights counts borders preview density spacing padding scale icons space size fit automatic" : {
+    "look and feel theme light dark accent color transparency sidebar left right borderless window full screen fullscreen show sidebar on hover switching Spaces interface" : {
 
     },
     "Look for Other Browsers" : {
@@ -8373,6 +8519,15 @@
 
     },
     "macOS will quarantine the completed file. Open it only if you trust its source." : {
+
+    },
+    "name crest colors background appearance" : {
+
+    },
+    "my filters custom rules block element" : {
+
+    },
+    "more customization animation motion fine tuning" : {
 
     },
     "Maestro" : {
@@ -10001,6 +10156,12 @@
         }
       }
     },
+    "passwords autofill" : {
+
+    },
+    "passkeys system access" : {
+
+    },
     "Page Zoom" : {
       "localizations" : {
         "ar" : {
@@ -10118,7 +10279,10 @@
     "passwords credentials autofill iCloud Keychain import export" : {
 
     },
-    "passwords credentials autofill iCloud Keychain passkeys synchronization one-time codes authenticator two-factor addresses payment cards credit" : {
+    "payment cards credit card add card" : {
+
+    },
+    "passwords credentials autofill iCloud Keychain synchronization use Crest Passwords manage" : {
 
     },
     "Passwords for sites without HTTPS come in, but Crest won’t fill them in." : {
@@ -10288,6 +10452,16 @@
     "Peek Unavailable" : {
 
     },
+    "Peek cross-site links pinned saved open with modifier drag links dim page size speed test" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Peek المثبتة المحفوظة فتح"
+          }
+        }
+      }
+    },
     "Pending uploads" : {
       "localizations" : {
         "ar" : {
@@ -10343,6 +10517,9 @@
           }
         }
       }
+    },
+    "pinned saved close resume restore root URL favicon unload unloading return" : {
+
     },
     "Permissions" : {
       "localizations" : {
@@ -10544,6 +10721,9 @@
 
     },
     "Pinned or saved" : {
+
+    },
+    "Pinned tabs" : {
 
     },
     "Pinned tabs after closing" : {
@@ -10828,9 +11008,6 @@
         }
       }
     },
-    "privacy lock Touch ID password private history retention archive downloads records content blocking ads trackers site permissions camera microphone location notifications" : {
-
-    },
     "Private" : {
       "localizations" : {
         "ar" : {
@@ -10879,9 +11056,6 @@
           }
         }
       }
-    },
-    "profile name identity icon color appearance theme search cleanup isolation reorder browsing archive independence folder intensity text color light dark automatic preview" : {
-
     },
     "Profiles and appearance" : {
       "localizations" : {
@@ -10996,6 +11170,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "النافذة السريعة وPeek"
+          }
+        }
+      }
+    },
+    "Quick Window auto-archive remember the chosen Space for each site" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "النافذة السريعة"
           }
         }
       }
@@ -11133,6 +11317,12 @@
           }
         }
       }
+    },
+    "reset appearance defaults" : {
+
+    },
+    "recent tabs switcher switching Control-Tab" : {
+
     },
     "Reading browser data…" : {
       "localizations" : {
@@ -12033,6 +12223,19 @@
         }
       }
     },
+    "saved passwords search sort import export select add password never saved sites one-time codes authenticator two-factor" : {
+
+    },
+    "routes routing rules sites open in Space new route" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التوجيه فتح"
+          }
+        }
+      }
+    },
     "Ring" : {
       "extractionState" : "manual"
     },
@@ -12491,7 +12694,13 @@
     "Screen Sharing" : {
 
     },
+    "Scripts" : {
+
+    },
     "screenshot snapshot region selection image clipboard" : {
+
+    },
+    "search engine Google default private windows suggestions Tab Space search providers" : {
 
     },
     "Scripts run with the page’s own access to the site." : {
@@ -12564,13 +12773,16 @@
     "Search Engine" : {
 
     },
-    "search engine Google suggestions command palette address bar results order top hit blended sections complete addresses inline autocomplete learn choices clear site searches shortcuts Tab YouTube Wikipedia scopes calculator paste and go reasons" : {
+    "search engine suggestions archive tabs cleanup archive now search with isolation independence" : {
 
     },
     "Search engine names must be 64 characters or fewer." : {
 
     },
-    "search engine suggestions archive tabs cleanup downloads folder save location delete Space" : {
+    "setup onboarding again" : {
+
+    },
+    "separate pinned tabs group" : {
 
     },
     "Search engine templates may only use the standard HTTPS port." : {
@@ -13099,6 +13311,9 @@
         }
       }
     },
+    "sidebar widgets Now Playing media cards" : {
+
+    },
     "Shortcut Actions" : {
 
     },
@@ -13425,6 +13640,18 @@
     "site data storage local session indexeddb service workers sign out delete remove" : {
 
     },
+    "sites before search complete addresses inline autocomplete learn from my choices clear learned choices calculator paste and go" : {
+
+    },
+    "sites allowlist exceptions turn on blocking" : {
+
+    },
+    "site searches providers shortcuts keywords YouTube Wikipedia scopes add provider restore defaults" : {
+
+    },
+    "site permissions camera microphone location notifications reset all" : {
+
+    },
     "Site only" : {
 
     },
@@ -13589,6 +13816,9 @@
         }
       }
     },
+    "spelling spell check check spelling typing text editing" : {
+
+    },
     "Space" : {
       "localizations" : {
         "ar" : {
@@ -13664,6 +13894,9 @@
     "Space icons" : {
 
     },
+    "Space icons fit size sidebar automatic" : {
+
+    },
     "Space Locked" : {
 
     },
@@ -13698,6 +13931,12 @@
           }
         }
       }
+    },
+    "Spaces tabs history Crest Passwords cookies website data" : {
+
+    },
+    "Spaces order reorder add Sub-Space" : {
+
     },
     "Spaces, Essentials, pinned tabs, folders, open tabs, and colors" : {
       "comment" : "What importing from another browser brings. Keep product names as they are."
@@ -13759,6 +13998,9 @@
     "Split View actions" : {
 
     },
+    "Split View focus follows pointer mouse" : {
+
+    },
     "split view break up unsplit separate cards" : {
       "localizations" : {
         "ar" : {
@@ -13801,6 +14043,12 @@
           }
         }
       }
+    },
+    "subscribe custom filter lists address URL add list" : {
+
+    },
+    "startup when Crest opens launch restore start on new tab default Space" : {
+
     },
     "Split View Color" : {
 
@@ -14279,6 +14527,12 @@
         }
       }
     },
+    "system permissions access camera microphone location notifications passkeys files folders downloads allow blocked repair" : {
+
+    },
+    "switch focus tabs opened from links Shift follow tabs moved to another Space move between Spaces open new tabs at position current folder Command-click middle-click" : {
+
+    },
     "Switch Space" : {
       "localizations" : {
         "ar" : {
@@ -14466,6 +14720,12 @@
           }
         }
       }
+    },
+    "tabs pins corner radius spacing padding density pin layout balanced rows stretch color borders accent outline selected tint" : {
+
+    },
+    "tab status badge replace icon audio visualizer" : {
+
     },
     "Tab" : {
 
@@ -15384,6 +15644,9 @@
     "Tidy Open Tabs" : {
 
     },
+    "Tidy organize sort open tabs into groups by topic Apple Intelligence" : {
+
+    },
     "Tight" : {
 
     },
@@ -15445,6 +15708,9 @@
       }
     },
     "toggle recent switch tabs oldest back" : {
+
+    },
+    "translate pages automatically languages download offer translation" : {
 
     },
     "Toggle Sidebar" : {
@@ -16040,6 +16306,9 @@
         }
       }
     },
+    "updates update channel check for updates automatically download install" : {
+
+    },
     "Up to %lld" : {
 
     },
@@ -16295,6 +16564,9 @@
     "used %@" : {
 
     },
+    "version build bundle identifier" : {
+
+    },
     "Used by %@" : {
       "comment" : "A tab's mark while an agent uses it."
     },
@@ -16326,7 +16598,7 @@
     "Version %@ (%@)" : {
 
     },
-    "version build updates changelog what's new feedback Reddit GitHub issues roadmap support community" : {
+    "video floating border corners switching tabs apps leaving desktop return video" : {
 
     },
     "Version, updates, and support" : {
@@ -16426,6 +16698,12 @@
         }
       }
     },
+    "what's new changelog release notes" : {
+
+    },
+    "websites rules site engine protected video DRM compatibility add website rule" : {
+
+    },
     "Wait for setup to finish reading or importing." : {
 
     },
@@ -16507,9 +16785,6 @@
           }
         }
       }
-    },
-    "WebKit Chromium experimental preview testable developer stable runtime flags features" : {
-
     },
     "Webpages" : {
 

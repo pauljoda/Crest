@@ -8,12 +8,15 @@ struct MobileBrowserRegularSettingsLayout: View {
     @Binding var selection: BrowserSettingsDestination
     @Binding var searchText: String
     let dismiss: (() -> Void)?
+    /// The section a section row opens its page at.
+    @State private var requestedSection: BrowserSettingsSection?
 
     var body: some View {
         NavigationSplitView {
             MobileBrowserSettingsDestinationList(
                 selection: $selection,
                 searchText: $searchText,
+                requestedSection: $requestedSection,
                 state: browser.core.state
             )
             .navigationTitle("Settings")
@@ -28,6 +31,7 @@ struct MobileBrowserRegularSettingsLayout: View {
             .navigationTitle(Text(selection.title))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { MobileBrowserSettingsToolbar(dismiss: dismiss) }
+            .environment(\.browserSettingsSectionRequest, $requestedSection)
         }
         .navigationSplitViewStyle(.balanced)
     }

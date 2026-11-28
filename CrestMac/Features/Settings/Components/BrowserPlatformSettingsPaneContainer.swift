@@ -12,7 +12,10 @@ struct BrowserPlatformSettingsPaneContainer<Content: View>: View {
     @Environment(\.browserSettingsTabState) private var tabState
     @Environment(\.browserSettingsScrollKey) private var scrollKey
     @Environment(\.browserSettingsColumnWidth) private var columnWidth
+    @Environment(\.browserSettingsSectionOwner) private var sections
     @State private var standaloneScroll = BrowserNativeScrollState()
+    @State private var scrollTarget: BrowserSettingsSection?
+    @State private var madeSections = BrowserSettingsMadeSections()
     let destination: BrowserSettingsDestination
     @ViewBuilder let content: Content
 
@@ -43,15 +46,60 @@ struct BrowserPlatformSettingsPaneContainer<Content: View>: View {
     }
 
     private var form: some View {
-        Form {
-            content
+        ScrollViewReader { proxy in
+            Form {
+                content
+            }
+            .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
+            .browserNativeScrollState(
+                tabState?.scroll(forKey: scrollKey ?? destination.name) ?? standaloneScroll,
+                target: scrollTarget?.name, isMade: madeSections.contains(named:)
+            )
+            .environment(\.browserSettingsMadeSections, madeSections)
+            .task(id: tabState?.requestedSection) {
+                await reveal(tabState?.requestedSection, with: proxy)
+            }
         }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
-        .browserNativeScrollState(tabState?.scroll(forKey: scrollKey ?? destination.name) ?? standaloneScroll)
     }
 
     private var shownColumnWidth: CGFloat {
         columnWidth ?? BrowserSettingsLayout.formColumnWidth
+    }
+
+    // MARK: - Actions - Search results
+
+    /// Scrolls to the section a search result or a route asked this page
+    /// for. The Mac's grouped form draws no row backgrounds, so the section
+    /// isn't marked; it arrives at the top of the page instead.
+    private func reveal(_ section: BrowserSettingsSection?, with proxy: ScrollViewProxy) async {
+        guard let tabState, let section, sections?.contains(section) ?? false else {
+            // No section to open at on this page: the page stays where it is.
+            scrollTarget = nil
+            return
+        }
+        scrollTarget = section
+        // The page steps toward the section until the form has made its
+        // rows; the form's own reader then finds it by its `id`.
+        try? await Task.sleep(for: CrestMotion.searchMatchSettle)
+        await madeSections.arrival(of: section)
+        guard !Task.isCancelled else { return abandon(section, in: tabState) }
+        withAnimation(.easeInOut(duration: CrestMotion.scrollAlignmentTransition)) {
+            proxy.scrollTo(section.name, anchor: .top)
+        }
+        // Let the scroll finish before clearing the request, which restarts
+        // this task, then let the page keep its place as it would anywhere.
+        try? await Task.sleep(for: .seconds(CrestMotion.scrollAlignmentTransition))
+        guard !Task.isCancelled else { return abandon(section, in: tabState) }
+        scrollTarget = nil
+        tabState.requestedSection = nil
+    }
+
+    /// Lets go of a reveal cut short. A request that still names `section`
+    /// was cut short by the page going away, so it's cleared and can't scroll
+    /// the page the next time it opens; a newer request is left to run.
+    private func abandon(_ section: BrowserSettingsSection, in tabState: BrowserSettingsTabState) {
+        if scrollTarget == section { scrollTarget = nil }
+        if tabState.requestedSection == section { tabState.requestedSection = nil }
     }
 }

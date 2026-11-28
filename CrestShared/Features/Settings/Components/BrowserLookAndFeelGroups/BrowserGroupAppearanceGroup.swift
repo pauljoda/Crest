@@ -7,14 +7,13 @@ struct BrowserGroupAppearanceGroup: View {
     @Environment(\.browserAppearanceSettingFilter) private var filter
 
     var body: some View {
-        let settings = filter.settings(rows)
-        if !settings.isEmpty {
-            group(settings: settings)
-        }
+        // Drawn even with nothing to show, as an empty section, so a search
+        // result can still scroll to it and to the groups after it.
+        group(settings: filter.settings(rows))
     }
 
     private func group(settings: [CrestResettableSetting]) -> some View {
-        CrestSettingsGroup("Groups", settings: settings) {
+        CrestSettingsGroup("Groups", settings: settings, isShown: !settings.isEmpty) {
             CrestSettingRow("Tint Group Name", setting: titles.resettable("Tint Group Name")) {
                 Toggle("Tint Group Name", isOn: titles.binding)
                     .labelsHidden()

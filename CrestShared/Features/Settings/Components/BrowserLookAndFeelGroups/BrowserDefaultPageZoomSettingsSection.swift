@@ -15,16 +15,22 @@ struct BrowserDefaultPageZoomSettingsSection: View {
 
     @Environment(\.browserAppearanceSettingFilter) private var filter
 
+    /// Whether the group has rows for `filter`'s part of the page.
+    static func hasRows(in filter: BrowserAppearanceSettingFilter) -> Bool {
+        filter.shows(.defaultPageZoom)
+    }
+
     var body: some View {
-        if filter.shows(.defaultPageZoom) {
-            group
-        }
+        // Drawn even with nothing to show, as an empty section, so a search
+        // result can still scroll to it and to the groups after it.
+        group
     }
 
     private var group: some View {
         CrestSettingsGroup(
             "Page",
-            settings: [zoom.resettable("Default page zoom")]
+            settings: [zoom.resettable("Default page zoom")],
+            isShown: Self.hasRows(in: filter)
         ) {
             if showsPreview {
                 BrowserLookAndFeelPreview(space: space, focus: .page)
@@ -40,6 +46,7 @@ struct BrowserDefaultPageZoomSettingsSection: View {
                 .fixedSize()
                 .accessibilityIdentifier(Self.controlIdentifier)
             }
+            .browserAppearanceSetting(.defaultPageZoom)
         }
     }
 

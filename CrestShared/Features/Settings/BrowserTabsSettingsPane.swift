@@ -10,15 +10,21 @@ struct BrowserTabsSettingsPane: View {
 
     var body: some View {
         BrowserSettingsPane(.tabs) {
-            BrowserNewTabSettingsSection(preferences: browser.linkPreferences, appPreferences: appPreferences)
-            BrowserDurableTabSettingsSection(preferences: appPreferences)
+            BrowserSettingsSectionSlot(.newTabs) {
+                BrowserNewTabSettingsSection(preferences: browser.linkPreferences, appPreferences: appPreferences)
+            }
+            BrowserSettingsSectionSlot(.durableTabs) {
+                BrowserDurableTabSettingsSection(preferences: appPreferences)
+            }
             #if os(macOS)
-                BrowserSplitFocusSettingsSection()
-                BrowserRecentTabsSettingsSection()
+                BrowserSettingsSectionSlot(.splitFocus) { BrowserSplitFocusSettingsSection() }
+                BrowserSettingsSectionSlot(.recentTabs) { BrowserRecentTabsSettingsSection() }
             #endif
-            BrowserTidySettingsSection()
+            BrowserSettingsSectionSlot(.tidy) { BrowserTidySettingsSection() }
             if let sidebarWidgets {
-                BrowserSidebarWidgetSettingsSection(runtime: sidebarWidgets)
+                BrowserSettingsSectionSlot(.sidebarWidgets) {
+                    BrowserSidebarWidgetSettingsSection(runtime: sidebarWidgets)
+                }
             }
         }
     }

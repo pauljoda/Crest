@@ -16,40 +16,44 @@ struct BrowserCardSettingsPane<Header: View>: View {
 
     var body: some View {
         BrowserSettingsPane(.passwords) {
-            header
-            Section("Payment cards") {
-                if !cards.isEmpty {
-                    CrestSearchField("Search payment cards", text: $searchText)
-                        .accessibilityIdentifier("card-search")
-                }
-                if !searchText.isEmpty, shownCards.isEmpty {
-                    Text("No matches").foregroundStyle(.secondary)
-                }
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 180), spacing: CrestSpacing.medium)],
-                    spacing: CrestSpacing.medium
-                ) {
-                    ForEach(Array(shownCards.enumerated()), id: \.element.id) { index, card in
-                        Button {
-                            Task { await open(card) }
-                        } label: {
-                            BrowserCardTile(card: card, tint: Self.tint(index))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("card-tile-\(card.id)")
+            BrowserSettingsPaneNote { header }
+            BrowserSettingsSectionSlot(.paymentCards) {
+                Section("Payment cards") {
+                    if !cards.isEmpty {
+                        CrestSearchField("Search payment cards", text: $searchText)
+                            .accessibilityIdentifier("card-search")
                     }
+                    if !searchText.isEmpty, shownCards.isEmpty {
+                        Text("No matches").foregroundStyle(.secondary)
+                    }
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 180), spacing: CrestSpacing.medium)],
+                        spacing: CrestSpacing.medium
+                    ) {
+                        ForEach(Array(shownCards.enumerated()), id: \.element.id) { index, card in
+                            Button {
+                                Task { await open(card) }
+                            } label: {
+                                BrowserCardTile(card: card, tint: Self.tint(index))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("card-tile-\(card.id)")
+                        }
+                    }
+                    .padding(.vertical, CrestSpacing.extraSmall)
+                    Button("Add Card", systemImage: "plus") {
+                        editing = CardRecord(
+                            id: UUID(), nickname: "", cardholder: "", number: "", expiryMonth: 1,
+                            expiryYear: Calendar.current.component(.year, from: .now) + 2, securityCode: nil,
+                            billingAddressID: nil)
+                    }
+                    .accessibilityIdentifier("add-card")
                 }
-                .padding(.vertical, CrestSpacing.extraSmall)
-                Button("Add Card", systemImage: "plus") {
-                    editing = CardRecord(
-                        id: UUID(), nickname: "", cardholder: "", number: "", expiryMonth: 1,
-                        expiryYear: Calendar.current.component(.year, from: .now) + 2, securityCode: nil,
-                        billingAddressID: nil)
-                }
-                .accessibilityIdentifier("add-card")
             }
-            if let errorMessage {
-                BrowserCredentialErrorSection(message: errorMessage)
+            BrowserSettingsPaneNote {
+                if let errorMessage {
+                    BrowserCredentialErrorSection(message: errorMessage)
+                }
             }
         }
         .task { await load() }

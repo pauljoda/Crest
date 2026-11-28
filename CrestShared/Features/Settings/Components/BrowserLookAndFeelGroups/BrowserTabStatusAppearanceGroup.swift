@@ -7,14 +7,13 @@ struct BrowserTabStatusAppearanceGroup: View {
     @Environment(\.browserAppearanceSettingFilter) private var filter
 
     var body: some View {
-        let settings = filter.settings(rows)
-        if !settings.isEmpty {
-            group(settings: settings)
-        }
+        // Drawn even with nothing to show, as an empty section, so a search
+        // result can still scroll to it and to the groups after it.
+        group(settings: filter.settings(rows))
     }
 
     private func group(settings: [CrestResettableSetting]) -> some View {
-        CrestSettingsGroup("Tab status", settings: settings) {
+        CrestSettingsGroup("Tab status", settings: settings, isShown: !settings.isEmpty) {
             CrestSettingRow("Status", setting: style.resettable("Status")) {
                 Picker("Status", selection: style.binding) {
                     Text("Badge").tag(BrowserTabAppearance.StatusStyle.badge)

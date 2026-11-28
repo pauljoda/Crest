@@ -14,50 +14,54 @@ struct BrowserAddressSettingsPane<Header: View>: View {
 
     var body: some View {
         BrowserSettingsPane(.passwords) {
-            header
-            Section("Addresses") {
-                if !addresses.isEmpty {
-                    CrestSearchField("Search addresses", text: $searchText)
-                        .accessibilityIdentifier("address-search")
-                }
-                if !searchText.isEmpty, shownAddresses.isEmpty {
-                    Text("No matches").foregroundStyle(.secondary)
-                }
-                ForEach(shownAddresses) { address in
-                    Button {
-                        editing = address
-                    } label: {
-                        HStack(spacing: CrestSpacing.medium) {
-                            Image(systemName: "house.fill")
-                                .foregroundStyle(CrestBrandTheme.accent)
-                                .frame(width: 22)
-                            VStack(alignment: .leading, spacing: CrestFormRowMetrics.titleSpacing) {
-                                Text(verbatim: address.label.nilIfEmpty ?? address.oneLine)
-                                    .font(CrestTypography.controlTitle)
-                                Text(verbatim: address.oneLine)
-                                    .font(CrestTypography.metadata)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                            Spacer()
-                            CrestFormDisclosureChevron()
-                        }
-                        .contentShape(.rect)
+            BrowserSettingsPaneNote { header }
+            BrowserSettingsSectionSlot(.addresses) {
+                Section("Addresses") {
+                    if !addresses.isEmpty {
+                        CrestSearchField("Search addresses", text: $searchText)
+                            .accessibilityIdentifier("address-search")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("address-row-\(address.id)")
+                    if !searchText.isEmpty, shownAddresses.isEmpty {
+                        Text("No matches").foregroundStyle(.secondary)
+                    }
+                    ForEach(shownAddresses) { address in
+                        Button {
+                            editing = address
+                        } label: {
+                            HStack(spacing: CrestSpacing.medium) {
+                                Image(systemName: "house.fill")
+                                    .foregroundStyle(CrestBrandTheme.accent)
+                                    .frame(width: 22)
+                                VStack(alignment: .leading, spacing: CrestFormRowMetrics.titleSpacing) {
+                                    Text(verbatim: address.label.nilIfEmpty ?? address.oneLine)
+                                        .font(CrestTypography.controlTitle)
+                                    Text(verbatim: address.oneLine)
+                                        .font(CrestTypography.metadata)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                                Spacer()
+                                CrestFormDisclosureChevron()
+                            }
+                            .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("address-row-\(address.id)")
+                    }
+                    Button("Add Address", systemImage: "plus") {
+                        editing = AddressRecord(
+                            id: UUID(), label: "", givenName: "", additionalName: "", familyName: "", organization: "",
+                            streetLines: [], city: "", region: "", postalCode: "",
+                            country: Locale.current.region?.identifier ?? "",
+                            phone: "", email: "")
+                    }
+                    .accessibilityIdentifier("add-address")
                 }
-                Button("Add Address", systemImage: "plus") {
-                    editing = AddressRecord(
-                        id: UUID(), label: "", givenName: "", additionalName: "", familyName: "", organization: "",
-                        streetLines: [], city: "", region: "", postalCode: "",
-                        country: Locale.current.region?.identifier ?? "",
-                        phone: "", email: "")
-                }
-                .accessibilityIdentifier("add-address")
             }
-            if let errorMessage {
-                BrowserCredentialErrorSection(message: errorMessage)
+            BrowserSettingsPaneNote {
+                if let errorMessage {
+                    BrowserCredentialErrorSection(message: errorMessage)
+                }
             }
         }
         .task { await load() }

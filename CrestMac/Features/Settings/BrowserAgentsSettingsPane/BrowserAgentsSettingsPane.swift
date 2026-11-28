@@ -62,71 +62,86 @@ struct BrowserAgentsSettingsPane: View {
 
     var body: some View {
         BrowserSettingsPane(.agents) {
-            Section {
-                Toggle("Allow agents to use Crest", isOn: isOn)
-                    .accessibilityIdentifier("agents-enabled")
-            } footer: {
-                CrestFormFootnote(
-                    "Coding agents on this Mac can read and act on tabs and history in the Spaces you choose, and open windows. Crest asks before each new agent connects."
-                )
-            }
-            if preferences.isOn { connection }
-            Section {
-                ForEach(spaces) { space in
-                    Toggle(isOn: allows(space)) {
-                        BrowserSpaceIdentityLabel(space: space)
-                    }
-                }
-            } header: {
-                Text("Spaces")
-            } footer: {
-                CrestFormFootnote(
-                    "Agents can open a private window but never reach into one, and see only the name of a locked Space."
-                )
-            }
-            .disabled(!preferences.isOn)
-            Section {
-                Toggle("Let agents run scripts in pages", isOn: runsScripts)
-            } footer: {
-                CrestFormFootnote("Scripts run with the page’s own access to the site.")
-            }
-            .disabled(!preferences.isOn)
-            if !core.state.agentSessions.isEmpty {
+            BrowserSettingsSectionSlot(.agentAccess) {
                 Section {
-                    ForEach(core.state.agentSessions, id: \.sessionID) { session in
-                        BrowserAgentRow(name: session.name, detail: nil, color: session.color ?? .agentDefault) {
-                            Button("Disconnect") { send(EndAgentSession(sessionID: session.sessionID)) }
-                        }
-                        ForEach(
-                            Array(session.activity.suffix(Self.shownActivity).reversed().enumerated()), id: \.offset
-                        ) {
-                            _, activity in
-                            BrowserAgentActivityRow(activity: activity)
-                        }
-                    }
-                    Button("Stop All Agents") { send(StopAllAgents()) }
-                } header: {
-                    Text("Connected")
+                    Toggle("Allow agents to use Crest", isOn: isOn)
+                        .accessibilityIdentifier("agents-enabled")
                 } footer: {
                     CrestFormFootnote(
-                        "Stopping every agent disconnects it and keeps it out of the tabs it used until Crest quits.")
+                        "Coding agents on this Mac can read and act on tabs and history in the Spaces you choose, and open windows. Crest asks before each new agent connects."
+                    )
                 }
             }
-            Section {
-                if preferences.agents.isEmpty {
-                    Text("No agents yet").foregroundStyle(.secondary)
+            BrowserSettingsSectionSlot(.agentConnection) {
+                if preferences.isOn { connection }
+            }
+            BrowserSettingsSectionSlot(.agentSpaces) {
+                Section {
+                    ForEach(spaces) { space in
+                        Toggle(isOn: allows(space)) {
+                            BrowserSpaceIdentityLabel(space: space)
+                        }
+                    }
+                } header: {
+                    Text("Spaces")
+                } footer: {
+                    CrestFormFootnote(
+                        "Agents can open a private window but never reach into one, and see only the name of a locked Space."
+                    )
                 }
-                ForEach(Array(preferences.agents.enumerated()), id: \.offset) { _, agent in
-                    BrowserAgentRow(name: agent.name, detail: Self.detail(of: agent.identity), color: nil) {
-                        Button("Forget") { send(ForgetAgent(identity: agent.identity)) }
+                .disabled(!preferences.isOn)
+            }
+            BrowserSettingsSectionSlot(.agentScripts) {
+                Section {
+                    Toggle("Let agents run scripts in pages", isOn: runsScripts)
+                } footer: {
+                    CrestFormFootnote("Scripts run with the page’s own access to the site.")
+                }
+                .disabled(!preferences.isOn)
+            }
+            BrowserSettingsSectionSlot(.agentSessions) {
+                if !core.state.agentSessions.isEmpty {
+                    Section {
+                        ForEach(core.state.agentSessions, id: \.sessionID) { session in
+                            BrowserAgentRow(name: session.name, detail: nil, color: session.color ?? .agentDefault) {
+                                Button("Disconnect") { send(EndAgentSession(sessionID: session.sessionID)) }
+                            }
+                            ForEach(
+                                Array(session.activity.suffix(Self.shownActivity).reversed().enumerated()), id: \.offset
+                            ) {
+                                _, activity in
+                                BrowserAgentActivityRow(activity: activity)
+                            }
+                        }
+                        Button("Stop All Agents") { send(StopAllAgents()) }
+                    } header: {
+                        Text("Connected")
+                    } footer: {
+                        CrestFormFootnote(
+                            "Stopping every agent disconnects it and keeps it out of the tabs it used until Crest quits."
+                        )
                     }
                 }
-            } header: {
-                Text("Allowed agents")
-            } footer: {
-                CrestFormFootnote("Forgetting an agent disconnects it. Crest asks again the next time it connects.")
             }
-            if let failure { Text(failure).foregroundStyle(CrestColor.danger) }
+            BrowserSettingsSectionSlot(.allowedAgents) {
+                Section {
+                    if preferences.agents.isEmpty {
+                        Text("No agents yet").foregroundStyle(.secondary)
+                    }
+                    ForEach(Array(preferences.agents.enumerated()), id: \.offset) { _, agent in
+                        BrowserAgentRow(name: agent.name, detail: Self.detail(of: agent.identity), color: nil) {
+                            Button("Forget") { send(ForgetAgent(identity: agent.identity)) }
+                        }
+                    }
+                } header: {
+                    Text("Allowed agents")
+                } footer: {
+                    CrestFormFootnote("Forgetting an agent disconnects it. Crest asks again the next time it connects.")
+                }
+            }
+            BrowserSettingsPaneNote {
+                if let failure { Text(failure).foregroundStyle(CrestColor.danger) }
+            }
         }
     }
 

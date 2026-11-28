@@ -24,64 +24,71 @@ struct BrowserEngineSettingsPane: View {
 
     var body: some View {
         BrowserSettingsPane(.engines) {
-            Section {
-                ForEach(BrowserEngineOption.all) { option in
-                    BrowserEngineOptionCard(
-                        option: option, isSelected: defaultEngine == option.engine,
-                        isRecommended: BrowserEngineRegistration.current.kind == option.engine,
-                        isAvailable: availableEngines.contains(option.engine)
-                    ) { selectDefault(option.engine) }
+            BrowserSettingsSectionSlot(.defaultEngine) {
+                Section {
+                    ForEach(BrowserEngineOption.all) { option in
+                        BrowserEngineOptionCard(
+                            option: option, isSelected: defaultEngine == option.engine,
+                            isRecommended: BrowserEngineRegistration.current.kind == option.engine,
+                            isAvailable: availableEngines.contains(option.engine)
+                        ) { selectDefault(option.engine) }
+                    }
+                    if preferences.defaultEngine != nil {
+                        HStack {
+                            Spacer()
+                            Button("Use Recommended") { selectDefault(nil) }
+                        }
+                    }
+                } header: {
+                    Text("Default engine")
+                } footer: {
+                    CrestFormFootnote("Open pages keep their engine.")
                 }
-                if preferences.defaultEngine != nil {
+            }
+            BrowserSettingsSectionSlot(.engineRules) {
+                Section {
+                    if preferences.rules.isEmpty {
+                        Text("No website rules")
+                            .foregroundStyle(.secondary)
+                    }
+                    CrestFormRows(rules, id: \.origin) { rule in
+                        HStack {
+                            Button {
+                                editing = BrowserEngineRuleDraft(rule: rule)
+                            } label: {
+                                HStack {
+                                    Text(rule.origin.displayName)
+                                    Spacer()
+                                    Text(rule.engine.title).foregroundStyle(.secondary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(.rect)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(
+                                "Edit \(rule.origin.displayName), \(String(localized: rule.engine.title))")
+                            Button("Remove Rule", systemImage: "minus.circle") { remove(rule) }
+                                .labelStyle(.iconOnly)
+                                .buttonStyle(.borderless)
+                                .help("Return this website to the default engine")
+                        }
+                    }
                     HStack {
                         Spacer()
-                        Button("Use Recommended") { selectDefault(nil) }
-                    }
-                }
-            } header: {
-                Text("Default engine")
-            } footer: {
-                CrestFormFootnote("Open pages keep their engine.")
-            }
-            Section {
-                if preferences.rules.isEmpty {
-                    Text("No website rules")
-                        .foregroundStyle(.secondary)
-                }
-                CrestFormRows(rules, id: \.origin) { rule in
-                    HStack {
-                        Button {
-                            editing = BrowserEngineRuleDraft(rule: rule)
-                        } label: {
-                            HStack {
-                                Text(rule.origin.displayName)
-                                Spacer()
-                                Text(rule.engine.title).foregroundStyle(.secondary)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(.rect)
+                        Button("Add Website Rule…") {
+                            editing = BrowserEngineRuleDraft(engine: defaultEngine)
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Edit \(rule.origin.displayName), \(String(localized: rule.engine.title))")
-                        Button("Remove Rule", systemImage: "minus.circle") { remove(rule) }
-                            .labelStyle(.iconOnly)
-                            .buttonStyle(.borderless)
-                            .help("Return this website to the default engine")
+                        .accessibilityIdentifier("add-engine-rule")
                     }
+                } header: {
+                    Text("Website rules")
+                } footer: {
+                    CrestFormFootnote("A rule for a site doesn’t include its subdomains.")
                 }
-                HStack {
-                    Spacer()
-                    Button("Add Website Rule…") {
-                        editing = BrowserEngineRuleDraft(engine: defaultEngine)
-                    }
-                    .accessibilityIdentifier("add-engine-rule")
-                }
-            } header: {
-                Text("Website rules")
-            } footer: {
-                CrestFormFootnote("A rule for a site doesn’t include its subdomains.")
             }
-            if let failure { Text(failure).foregroundStyle(CrestColor.danger) }
+            BrowserSettingsPaneNote {
+                if let failure { Text(failure).foregroundStyle(CrestColor.danger) }
+            }
         }
         .sheet(item: $editing) { draft in
             BrowserEngineRuleEditor(core: core, draft: draft, availableEngines: availableEngines)

@@ -21,6 +21,13 @@ struct BrowserSettingsNavigationState: Equatable {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Whether the sidebar lists the sections a search matches under their
+    /// pages: once the search is two characters or more, so a single letter
+    /// doesn't list every section of every page.
+    var listsSections: Bool {
+        query.count >= 2
+    }
+
     /// The destinations the sidebar lists: those `state`'s engines provide,
     /// matching the search. A match inside a page that lives under another
     /// lists the page it lives under.

@@ -19,75 +19,66 @@ struct BrowserGeneralSettingsPane: View {
     }
 
     var body: some View {
-        #if os(macOS)
-            ScrollViewReader { proxy in
-                form
-                    .task(id: tabState?.consumedRouteRevision) {
-                        guard let tabState, let section = tabState.requestedSection else { return }
-                        // The settings form restores its previous offset when it mounts.
-                        await Task.yield()
-                        guard !Task.isCancelled, tabState.requestedSection == section else { return }
-                        proxy.scrollTo(section, anchor: .top)
-                        tabState.requestedSection = nil
-                    }
-            }
-        #else
-            form
-        #endif
-    }
-
-    private var form: some View {
         BrowserSettingsPane(.general) {
-            BrowserDefaultBrowserSection()
+            BrowserSettingsSectionSlot(.defaultBrowser) { BrowserDefaultBrowserSection() }
 
-            Section("Startup") {
-                #if os(macOS)
-                    Picker("When Crest opens", selection: $appPreferences.startupBehavior) {
-                        ForEach(StartupBehavior.settingsOrder, id: \.self) { behavior in
-                            Text(behavior.title).tag(behavior)
+            BrowserSettingsSectionSlot(.startup) {
+                Section("Startup") {
+                    #if os(macOS)
+                        Picker("When Crest opens", selection: $appPreferences.startupBehavior) {
+                            ForEach(StartupBehavior.settingsOrder, id: \.self) { behavior in
+                                Text(behavior.title).tag(behavior)
+                            }
                         }
-                    }
-                #else
-                    Toggle("Start on new tab", isOn: startsOnNewTab)
-                        .accessibilityIdentifier("start-on-new-tab")
-                #endif
+                    #else
+                        Toggle("Start on new tab", isOn: startsOnNewTab)
+                            .accessibilityIdentifier("start-on-new-tab")
+                    #endif
 
-                CrestSpaceMenuPicker(
-                    "Default Space",
-                    selection: browser.defaultSpaceBinding(),
-                    spaces: CrestSpaceIdentity.list(browser.spaceModels),
-                    accessibilityIdentifier: "default-space-picker"
-                )
+                    CrestSpaceMenuPicker(
+                        "Default Space",
+                        selection: browser.defaultSpaceBinding(),
+                        spaces: CrestSpaceIdentity.list(browser.spaceModels),
+                        accessibilityIdentifier: "default-space-picker"
+                    )
+                }
             }
 
             #if os(iOS)
-                Section("Sidebar") {
-                    Toggle("Allow floating sidebar", isOn: $appearance.allowsFloatingSidebar)
-                        .accessibilityIdentifier("allow-floating-sidebar")
+                BrowserSettingsSectionSlot(.floatingSidebar) {
+                    Section("Sidebar") {
+                        Toggle("Allow floating sidebar", isOn: $appearance.allowsFloatingSidebar)
+                            .accessibilityIdentifier("allow-floating-sidebar")
+                    }
                 }
             #endif
 
             // Whole-page translation preferences, which reach only the pages of
             // an engine with page translation.
             if browser.core.state.offers(.translation) {
-                BrowserTranslationSettingsSection()
+                BrowserSettingsSectionSlot(.translation) { BrowserTranslationSettingsSection() }
             }
 
             #if os(macOS)
-                Section {
-                    BrowserSpellCheckingToggle()
-                } header: {
-                    Text("Webpages")
-                } footer: {
-                    CrestFormFootnote("Spelling changes apply after Crest restarts.")
+                BrowserSettingsSectionSlot(.webpages) {
+                    Section {
+                        BrowserSpellCheckingToggle()
+                    } header: {
+                        Text("Webpages")
+                    } footer: {
+                        CrestFormFootnote("Spelling changes apply after Crest restarts.")
+                    }
                 }
-                BrowserPictureInPictureSettingsSection(previewSpace: pictureInPicturePreviewSpace)
-                    .id(BrowserSettingsDestinationRequest.Section.pictureInPicture)
-                BrowserDeveloperToolbarSettingsSection()
+                BrowserSettingsSectionSlot(.pictureInPicture) {
+                    BrowserPictureInPictureSettingsSection(previewSpace: pictureInPicturePreviewSpace)
+                }
+                BrowserSettingsSectionSlot(.developerToolbar) { BrowserDeveloperToolbarSettingsSection() }
 
-                Section("Quitting") {
-                    Toggle("Ask before quitting", isOn: $appPreferences.confirmsQuit)
-                        .accessibilityIdentifier("ask-before-quitting")
+                BrowserSettingsSectionSlot(.quitting) {
+                    Section("Quitting") {
+                        Toggle("Ask before quitting", isOn: $appPreferences.confirmsQuit)
+                            .accessibilityIdentifier("ask-before-quitting")
+                    }
                 }
             #endif
         }

@@ -14,24 +14,32 @@ struct BrowserAdvancedSettingsPane: View {
 
     var body: some View {
         BrowserSettingsPane(.advanced) {
-            BrowserAdvancedSetupSection(setupActions: setupActions)
+            BrowserSettingsSectionSlot(.setup) {
+                BrowserAdvancedSetupSection(setupActions: setupActions)
+            }
+            // Only a shell that offers Feature Flags here draws the row, and
+            // only that shell lists it in Advanced's search.
             if let openFeatureFlags {
-                Section {
-                    Button(action: openFeatureFlags) {
-                        LabeledContent(String(localized: BrowserSettingsDestination.featureFlags.title)) {
-                            Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+                BrowserSettingsSectionSlot(.featureFlagsLink) {
+                    Section {
+                        Button(action: openFeatureFlags) {
+                            LabeledContent(String(localized: BrowserSettingsDestination.featureFlags.title)) {
+                                Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+                            }
+                            .contentShape(.rect)
                         }
-                        .contentShape(.rect)
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("settings-featureFlags")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("settings-featureFlags")
                 }
             }
-            BrowserDataPortabilitySection(
-                browser: browser,
-                spaceAccess: spaceAccess,
-                showsMacOSImportRequirement: showsMacOSImportRequirement
-            )
+            BrowserSettingsSectionSlot(.dataPortability) {
+                BrowserDataPortabilitySection(
+                    browser: browser,
+                    spaceAccess: spaceAccess,
+                    showsMacOSImportRequirement: showsMacOSImportRequirement
+                )
+            }
         }
     }
 }

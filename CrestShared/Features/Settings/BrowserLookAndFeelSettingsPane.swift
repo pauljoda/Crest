@@ -46,41 +46,78 @@ struct BrowserLookAndFeelSettingsPane: View {
 
     private func form(showsInlinePreviews: Bool) -> some View {
         BrowserSettingsPane(.lookAndFeel) {
-            BrowserPlatformAddressBarSettingsSection()
-            Group {
-                BrowserSpaceIconsAppearanceGroup()
-                groups(showsInlinePreviews: showsInlinePreviews)
-            }
-            .environment(\.browserAppearanceSettingFilter, .page)
-            BrowserPlatformAppIconSettingsSection()
-            BrowserMoreCustomizationHeader(isExpanded: $showsMore)
+            BrowserSettingsSectionSlot(.addressBar) { BrowserPlatformAddressBarSettingsSection() }
+            groups(.page, showsInlinePreviews: showsInlinePreviews)
+            BrowserSettingsSectionSlot(.appIcon) { BrowserPlatformAppIconSettingsSection() }
+            BrowserSettingsSectionSlot(.moreCustomization) { BrowserMoreCustomizationHeader(isExpanded: $showsMore) }
             if showsMore {
-                Group {
-                    BrowserSpaceIconsAppearanceGroup()
-                    groups(showsInlinePreviews: showsInlinePreviews)
-                }
-                .environment(\.browserAppearanceSettingFilter, .more)
+                groups(.more, showsInlinePreviews: showsInlinePreviews)
             }
-            BrowserPlatformLookAndFeelResetSection()
+            BrowserSettingsSectionSlot(.resetAppearance) { BrowserPlatformLookAndFeelResetSection() }
         }
     }
 
     /// Every group whose rows may wait in More Customization, each showing
-    /// the rows its part of the page keeps.
-    @ViewBuilder private func groups(showsInlinePreviews: Bool) -> some View {
-        BrowserPlatformAppearanceSettingsSection(space: space, showsPreview: showsInlinePreviews)
-        if !usesLiveSidebar {
-            BrowserDefaultPageZoomSettingsSection(
-                preferences: .shared, space: space, showsPreview: showsInlinePreviews)
-        }
-        BrowserTabAppearanceGroup(space: space, showsPreview: showsInlinePreviews)
-        BrowserTabStatusAppearanceGroup()
-        BrowserAddressAppearanceGroup(space: space, showsPreview: showsInlinePreviews, links: browser.linkPreferences)
-        BrowserFolderAppearanceGroup(space: space, showsPreview: showsInlinePreviews)
-        BrowserGroupAppearanceGroup()
-        BrowserHoverPreviewAppearanceGroup()
-        if usesLiveSidebar {
-            BrowserDefaultPageZoomSettingsSection(preferences: .shared, space: space, showsPreview: false)
+    /// the rows `filter`'s part of the page keeps. A search result scrolls to
+    /// the group on the page, not to its rows in More Customization.
+    private func groups(
+        _ filter: BrowserAppearanceSettingFilter, showsInlinePreviews: Bool
+    ) -> BrowserSettingsSectionList<some View> {
+        let anchors = !filter.isMore
+        return BrowserSettingsSectionList {
+            // A group with no rows for this part of the page stays out of the
+            // form here, as an empty section would add a gap. On the page
+            // itself, where search results scroll to them, both always show.
+            if BrowserSpaceIconsAppearanceGroup.hasRows(in: filter) {
+                BrowserSettingsSectionSlot(.spaceIcons, anchors: anchors) {
+                    BrowserSpaceIconsAppearanceGroup()
+                        .environment(\.browserAppearanceSettingFilter, filter)
+                }
+            }
+            BrowserSettingsSectionSlot(.windowAppearance, anchors: anchors) {
+                BrowserPlatformAppearanceSettingsSection(space: space, showsPreview: showsInlinePreviews)
+                    .environment(\.browserAppearanceSettingFilter, filter)
+            }
+            if !usesLiveSidebar, BrowserDefaultPageZoomSettingsSection.hasRows(in: filter) {
+                BrowserSettingsSectionSlot(.pageZoom, anchors: anchors) {
+                    BrowserDefaultPageZoomSettingsSection(
+                        preferences: .shared, space: space, showsPreview: showsInlinePreviews
+                    )
+                    .environment(\.browserAppearanceSettingFilter, filter)
+                }
+            }
+            BrowserSettingsSectionSlot(.tabAppearance, anchors: anchors) {
+                BrowserTabAppearanceGroup(space: space, showsPreview: showsInlinePreviews)
+                    .environment(\.browserAppearanceSettingFilter, filter)
+            }
+            BrowserSettingsSectionSlot(.tabStatus, anchors: anchors) {
+                BrowserTabStatusAppearanceGroup()
+                    .environment(\.browserAppearanceSettingFilter, filter)
+            }
+            BrowserSettingsSectionSlot(.addressAppearance, anchors: anchors) {
+                BrowserAddressAppearanceGroup(
+                    space: space, showsPreview: showsInlinePreviews, links: browser.linkPreferences
+                )
+                .environment(\.browserAppearanceSettingFilter, filter)
+            }
+            BrowserSettingsSectionSlot(.folderAppearance, anchors: anchors) {
+                BrowserFolderAppearanceGroup(space: space, showsPreview: showsInlinePreviews)
+                    .environment(\.browserAppearanceSettingFilter, filter)
+            }
+            BrowserSettingsSectionSlot(.groupAppearance, anchors: anchors) {
+                BrowserGroupAppearanceGroup()
+                    .environment(\.browserAppearanceSettingFilter, filter)
+            }
+            BrowserSettingsSectionSlot(.hoverPreviews, anchors: anchors) {
+                BrowserHoverPreviewAppearanceGroup()
+                    .environment(\.browserAppearanceSettingFilter, filter)
+            }
+            if usesLiveSidebar, BrowserDefaultPageZoomSettingsSection.hasRows(in: filter) {
+                BrowserSettingsSectionSlot(.pageZoom, anchors: anchors) {
+                    BrowserDefaultPageZoomSettingsSection(preferences: .shared, space: space, showsPreview: false)
+                        .environment(\.browserAppearanceSettingFilter, filter)
+                }
+            }
         }
     }
 }

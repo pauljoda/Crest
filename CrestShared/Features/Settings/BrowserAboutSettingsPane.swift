@@ -14,53 +14,61 @@ struct BrowserAboutSettingsPane: View {
 
     var body: some View {
         BrowserSettingsPane(.about) {
-            Section {
-                appIdentity
-            }
-
-            #if os(macOS)
-                BrowserSoftwareUpdateSettingsSection()
-            #endif
-
-            if let openWebsite, let releasePage {
+            BrowserSettingsSectionSlot(.version) {
                 Section {
-                    // This build's release page on the site lists what changed in it.
-                    Button {
-                        openWebsite(releasePage.url)
-                    } label: {
-                        BrowserAboutLinkLabel(
-                            title: "What's New in Crest \(buildInformation.version)",
-                            icon: Image(systemName: "sparkles")
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("about-whats-new-link")
+                    appIdentity
                 }
             }
 
-            Section {
-                BrowserAboutLink(
-                    title: "Share Feedback on r/CrestBrowser",
-                    imageName: "AboutReddit",
-                    destination: BrowserAboutLinks.feedback,
-                    identifier: "about-feedback-link"
-                )
-                BrowserAboutLink(
-                    title: "Report an Issue",
-                    imageName: "AboutGitHub",
-                    destination: BrowserAboutLinks.issues,
-                    identifier: "about-issues-link"
-                )
-                BrowserAboutLink(
-                    title: "View the Roadmap",
-                    imageName: "AboutGitHub",
-                    destination: BrowserAboutLinks.roadmap,
-                    identifier: "about-roadmap-link"
-                )
-            } header: {
-                Text("Community and support")
-            } footer: {
-                CrestFormFootnote("Reddit is public. Leave out private details.")
+            #if os(macOS)
+                BrowserSettingsSectionSlot(.softwareUpdates) {
+                    BrowserSoftwareUpdateSettingsSection()
+                }
+            #endif
+
+            BrowserSettingsSectionSlot(.whatsNew) {
+                if let openWebsite, let releasePage {
+                    Section {
+                        // This build's release page on the site lists what changed in it.
+                        Button {
+                            openWebsite(releasePage.url)
+                        } label: {
+                            BrowserAboutLinkLabel(
+                                title: "What's New in Crest \(buildInformation.version)",
+                                icon: Image(systemName: "sparkles")
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("about-whats-new-link")
+                    }
+                }
+            }
+
+            BrowserSettingsSectionSlot(.community) {
+                Section {
+                    BrowserAboutLink(
+                        title: "Share Feedback on r/CrestBrowser",
+                        imageName: "AboutReddit",
+                        destination: BrowserAboutLinks.feedback,
+                        identifier: "about-feedback-link"
+                    )
+                    BrowserAboutLink(
+                        title: "Report an Issue",
+                        imageName: "AboutGitHub",
+                        destination: BrowserAboutLinks.issues,
+                        identifier: "about-issues-link"
+                    )
+                    BrowserAboutLink(
+                        title: "View the Roadmap",
+                        imageName: "AboutGitHub",
+                        destination: BrowserAboutLinks.roadmap,
+                        identifier: "about-roadmap-link"
+                    )
+                } header: {
+                    Text("Community and support")
+                } footer: {
+                    CrestFormFootnote("Reddit is public. Leave out private details.")
+                }
             }
         }
         .task { releasePage = await BrowserReleasePage.current() }
