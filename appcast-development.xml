@@ -6,30 +6,28 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Crest</title>
         <item>
-            <title>0.11.90</title>
-            <pubDate>Sat, 28 Nov 2026 04:15:02 +0000</pubDate>
+            <title>0.11.91</title>
+            <pubDate>Sat, 28 Nov 2026 05:09:20 +0000</pubDate>
             <link>https://crestbrowser.com/</link>
             <sparkle:channel>development</sparkle:channel>
-            <sparkle:version>1775</sparkle:version>
-            <sparkle:shortVersionString>0.11.90</sparkle:shortVersionString>
+            <sparkle:version>1776</sparkle:version>
+            <sparkle:shortVersionString>0.11.91</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <description sparkle:format="markdown"><![CDATA[## Highlights
 
 ### Fixed
 
-- Printing a page, or saving it as a PDF from the print window, no longer quits Crest in a WebKit Space.
-- The sidebar's scroll bar can be dragged and its track clicked, and it follows Show scroll bars in System Settings, so with Always it stays on screen.
-- With the sidebar on the right, the close, minimize and zoom buttons stay in the sidebar when a page changes the window's title or the window is resized, and slide across with the sidebar when it changes sides.
+- Unloading the pinned or saved tab you're looking at no longer loads another tab in its place. The window goes back to the tab you showed before only while that tab is still loaded.
 
 ---
 
 Development builds contain the newest changes and may be less reliable than stable releases.
 
-[Release notes](https://crestbrowser.com/releases/mac/development/0.11.90/) · [View all changes](https://github.com/crest-browser/Crest/compare/e33d1184a98809bb7e3e5c9fbaa0595a49190f77...fdc796560fcfce4ceb2751a55b93e61359c07de5) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.11.90-2026-11-28-1775-r775.1/Installer-Crest-0.11.90-development-2026-11-28-fdc7965.dmg)
+[Release notes](https://crestbrowser.com/releases/mac/development/0.11.91/) · [View all changes](https://github.com/crest-browser/Crest/compare/fdc796560fcfce4ceb2751a55b93e61359c07de5...dad359e07798a82618990cd6138d8118110abcc1) · [Download the installer](https://github.com/crest-browser/Crest/releases/download/development-0.11.91-2026-11-28-1776-r776.1/Installer-Crest-0.11.91-development-2026-11-28-dad359e.dmg)
 
 [Browse Development releases](https://github.com/crest-browser/Crest/releases?q=prerelease%3Atrue+%22Development+builds%22)
 ]]></description>
-            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.11.90-2026-11-28-1775-r775.1/Installer-Crest-0.11.90-development-2026-11-28-fdc7965.dmg" length="415242229" type="application/octet-stream" sparkle:edSignature="Rgu47nf+RvF5JQ/X4Msa5Zx3hfV1mJzUGJ7bwIkEpgOyNlSay6NqGJsKGIPfCNGEuFO9zrdcTNjbQ0W2oauNAg=="/>
+            <enclosure url="https://github.com/crest-browser/Crest/releases/download/development-0.11.91-2026-11-28-1776-r776.1/Installer-Crest-0.11.91-development-2026-11-28-dad359e.dmg" length="415291893" type="application/octet-stream" sparkle:edSignature="30Kf9lbTz8rVifHHup2gAiGLxFpmufG6yr3IUUGUkLULVBITdAwnKewP9bF7ZD281NLJg3OJ8OsVi9yUeSg7AQ=="/>
         </item>
         <item>
             <title>0.10.138</title>
@@ -91,6 +89,6 @@ Development builds contain the newest changes and may be less reliable than stab
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: fGHtll7jo3Jm/jMntsfxJ7M2/Ry+wo7UUHr9oCAsOh+EsL7/rOHGFECldBTBNAV6JPuIQXAl4QMZ+adTJS0XBQ==
-length: 7193
+edSignature: VTeNopL9/yp6d89Ee7cakqyztyLvgVPyOgVJsKmlOs4mnRJZXY2CgqV8RSzyXcYopYP2zc+70Q2Fki3QhnnyCw==
+length: 6907
 -->

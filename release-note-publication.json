@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channels": {
     "stable": "crest-0-11-new-look",
-    "development": "mobile-tab-list-scroll-origin",
+    "development": "unload-loads-no-other-tab",
     "nightly": "picture-in-picture-settings-window-fallback"
   }
 }
