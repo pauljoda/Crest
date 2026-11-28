@@ -36,6 +36,24 @@ struct BrowserWebFocusRestorationGate: Equatable {
             && !accessibilityOwnsFocus
             && currentOwner != .other
     }
+
+    /// Whether the page may take a keyboard nothing in its window holds, as
+    /// a page in a browser takes it once the address field or the palette
+    /// lets go, or as it comes on screen. Nothing is taken from anyone, so
+    /// unlike a restoration it does not give way to assistive technologies;
+    /// Crest's own chrome, another window, a sheet or a menu still keeps it.
+    func allowsTakingUnheldKeyboard(
+        windowIsKey: Bool,
+        applicationIsActive: Bool,
+        windowHasAttachedSheet: Bool,
+        menuIsTracking: Bool
+    ) -> Bool {
+        allowsWebPageFocus
+            && windowIsKey
+            && applicationIsActive
+            && !windowHasAttachedSheet
+            && !menuIsTracking
+    }
 }
 
 enum BrowserWebFocusRestorationCurrentOwner: Equatable {
@@ -245,6 +263,30 @@ final class BrowserWebFocusRestorationController {
         return true
     }
 
+    /// Gives the page the keyboard when nothing in its window holds it: the
+    /// responder it last held, or its own view, from which its engine focuses
+    /// what the page itself focused, such as a field it focused as it loaded.
+    /// A pending restoration goes first.
+    @discardableResult
+    func takeUnheldKeyboard(
+        in host: NSView,
+        gate: BrowserWebFocusRestorationGate,
+        applicationIsActive: Bool = NSApp.isActive,
+        menuIsTracking: Bool = BrowserMenuTrackingMonitor.shared.isTracking,
+        windowIsKey: Bool? = nil
+    ) -> Bool {
+        guard !hasPendingRestoration, let webView, let window = host.window, webView.window === window,
+            currentOwner(window.firstResponder, candidate: nil, host: host) == .neutral,
+            gate.allowsTakingUnheldKeyboard(
+                windowIsKey: windowIsKey ?? window.isKeyWindow,
+                applicationIsActive: applicationIsActive,
+                windowHasAttachedSheet: window.attachedSheet != nil,
+                menuIsTracking: menuIsTracking
+            )
+        else { return false }
+        return window.makeFirstResponder(validCandidate() ?? webView)
+    }
+
     private func validCandidate() -> NSView? {
         guard let webView, let candidate,
             Self.isView(candidate, containedIn: webView)
@@ -387,6 +429,15 @@ final class BrowserWebHostView: NSView {
     /// keeps its place and its Space's preview draws it as the person swipes.
     private(set) var presentation = BrowserPagePresentation.presented
     private var focusRestorationAttemptGeneration = 0
+    /// Whether the page waits to take a keyboard nothing in the window holds:
+    /// it came on screen here or became the window's page, Crest's chrome let
+    /// go of the keyboard, or whatever held it in the window let go. It waits
+    /// until it has the keyboard, so a window that was not key, or had a
+    /// sheet or a menu open, hands it over once it becomes key or the sheet
+    /// or menu ends.
+    private var takesUnheldKeyboard = false
+    /// Watches the window's keyboard, which the page takes when it is let go.
+    private var firstResponderObservation: NSKeyValueObservation?
     /// When this host claimed `hostedWebView`: the newest claim is the largest.
     private var claim = 0
     /// Whether this host claimed `hostedWebView` while the view was in a
@@ -500,6 +551,7 @@ final class BrowserWebHostView: NSView {
         self.hostedWebView = nil
         self.focusRestoration = nil
         isPageActive = false
+        takesUnheldKeyboard = false
         focusRestorationAttemptGeneration &+= 1
         guard showsHostedWebView else { return }
         (hostedWebView as? any BrowserNativePageSurfaceLifecycle)?.willDetach(from: self)
@@ -595,6 +647,7 @@ final class BrowserWebHostView: NSView {
         hostedWebView = nil
         focusRestoration = nil
         isPageActive = false
+        takesUnheldKeyboard = false
         focusRestorationAttemptGeneration &+= 1
     }
 
@@ -675,6 +728,9 @@ final class BrowserWebHostView: NSView {
             "Add Page View Subview",
             addInterval
         )
+        // A page coming on screen takes a keyboard nothing holds once it is
+        // the window's page.
+        takesUnheldKeyboard = true
         (webView as? any BrowserNativePageSurfaceLifecycle)?.didAttach(to: self)
     }
 
@@ -694,6 +750,7 @@ final class BrowserWebHostView: NSView {
         self.presentation = presentation
         guard let hostedWebView, hostedWebView.superview === self else { return }
         (hostedWebView as? any BrowserNativePageSurfaceLifecycle)?.presentationDidChange(in: self)
+        if presentation == .presented, isPageActive, takesUnheldKeyboard { scheduleFocusRestoration() }
     }
 
     // MARK: - Actions - Focus
@@ -702,12 +759,18 @@ final class BrowserWebHostView: NSView {
         isPageActive: Bool,
         gate: BrowserWebFocusRestorationGate
     ) {
+        // Becoming the window's page, or Crest's chrome letting go of the
+        // keyboard, hands the page a keyboard nothing else holds.
+        let opensToPage =
+            isPageActive
+            && (!self.isPageActive || (gate.allowsWebPageFocus && !focusRestorationGate.allowsWebPageFocus))
         self.isPageActive = isPageActive
         focusRestorationGate = gate
         focusRestorationAttemptGeneration &+= 1
+        if !isPageActive { takesUnheldKeyboard = false }
 
         if isPageActive {
-            scheduleFocusRestoration()
+            scheduleFocusRestoration(takingUnheldKeyboard: opensToPage)
         }
         if !isPageActive || !gate.allowsWebPageFocus,
             let focusRestoration
@@ -722,20 +785,81 @@ final class BrowserWebHostView: NSView {
         }
     }
 
-    private func scheduleFocusRestoration() {
+    /// Restores the page's focus on the next turn, once SwiftUI settled what
+    /// owns the keyboard, or, when `takingUnheldKeyboard` or an earlier
+    /// attempt asks, gives the page a keyboard nothing holds.
+    private func scheduleFocusRestoration(takingUnheldKeyboard: Bool = false) {
+        if takingUnheldKeyboard { takesUnheldKeyboard = true }
         focusRestorationAttemptGeneration &+= 1
         let generation = focusRestorationAttemptGeneration
         DispatchQueue.main.async { [weak self] in
             guard let self,
                 self.focusRestorationAttemptGeneration == generation,
                 self.isPageActive,
-                self.hostedWebView?.superview === self
+                self.hostedWebView?.superview === self,
+                let focusRestoration = self.focusRestoration
             else { return }
-            self.focusRestoration?.restoreIfNeeded(
-                in: self,
-                gate: self.focusRestorationGate
-            )
+            if focusRestoration.restoreIfNeeded(in: self, gate: self.focusRestorationGate) {
+                self.takesUnheldKeyboard = false
+                return
+            }
+            // A Space the person swipes through takes the keyboard once it
+            // settles.
+            guard self.takesUnheldKeyboard, self.presentation == .presented else { return }
+            if focusRestoration.takeUnheldKeyboard(in: self, gate: self.focusRestorationGate)
+                || self.pageHoldsKeyboard
+            {
+                self.takesUnheldKeyboard = false
+            }
         }
+    }
+
+    /// Whether the window's keyboard is in this host's page.
+    private var pageHoldsKeyboard: Bool {
+        guard let hostedWebView, let responder = window?.firstResponder as? NSView else { return false }
+        return responder === hostedWebView || responder.isDescendant(of: hostedWebView)
+    }
+
+    /// Hands the page the keyboard whenever whatever held it in the window
+    /// lets go, as the palette's field does as the palette closes, and once
+    /// the window becomes key, or its sheet or a menu ends, while the page
+    /// waits for it.
+    private func watchWindow() {
+        stopWatchingWindow()
+        guard let window else {
+            firstResponderObservation = nil
+            return
+        }
+        firstResponderObservation = window.observe(\.firstResponder) { [weak self] window, _ in
+            MainActor.assumeIsolated {
+                guard let self, self.isPageActive,
+                    window.firstResponder == nil || window.firstResponder === window
+                else { return }
+                self.scheduleFocusRestoration(takingUnheldKeyboard: true)
+            }
+        }
+        let center = NotificationCenter.default
+        center.addObserver(
+            self, selector: #selector(windowMayHandOverKeyboard), name: NSWindow.didBecomeKeyNotification,
+            object: window)
+        center.addObserver(
+            self, selector: #selector(windowMayHandOverKeyboard), name: NSWindow.didEndSheetNotification,
+            object: window)
+        center.addObserver(
+            self, selector: #selector(windowMayHandOverKeyboard), name: NSMenu.didEndTrackingNotification,
+            object: nil)
+    }
+
+    private func stopWatchingWindow() {
+        let center = NotificationCenter.default
+        center.removeObserver(self, name: NSWindow.didBecomeKeyNotification, object: nil)
+        center.removeObserver(self, name: NSWindow.didEndSheetNotification, object: nil)
+        center.removeObserver(self, name: NSMenu.didEndTrackingNotification, object: nil)
+    }
+
+    @objc private func windowMayHandOverKeyboard(_ notification: Notification) {
+        guard isPageActive, takesUnheldKeyboard else { return }
+        scheduleFocusRestoration()
     }
 
     // MARK: - Actions - Keyboard
@@ -808,6 +932,8 @@ final class BrowserWebHostView: NSView {
         if newWindow !== window {
             titleBarTracker.release()
             releaseReplacedWebView()
+            firstResponderObservation = nil
+            stopWatchingWindow()
         }
         super.viewWillMove(toWindow: newWindow)
     }
@@ -817,8 +943,9 @@ final class BrowserWebHostView: NSView {
         if let window { lastWindow = window }
         if window != nil, awaitsWindow { showAwaitedWebView() }
         trackTitleBarPointer()
+        watchWindow()
         guard isPageActive else { return }
-        scheduleFocusRestoration()
+        scheduleFocusRestoration(takingUnheldKeyboard: true)
     }
 
     /// Shows the view this host claimed before it was in a window, now that
