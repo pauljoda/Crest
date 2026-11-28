@@ -67,7 +67,7 @@ enum BrowserPictureInPictureScript {
               && bounds.top < innerHeight && bounds.left < innerWidth;
             const eligible = bounds.width >= 160 && bounds.height >= 90 && inViewport
               && video.webkitSupportsPresentationMode?.('picture-in-picture') === true
-              && !isDecorative(video) && hasPlayerControls(video, interacted.has(video));
+              && !isDecorative(video) && hasPlayerControls(video, interacted.has(video), video.autoplay || video.muted);
             return { videoID, eligible,
               score: bounds.width * bounds.height + (interacted.has(video) ? 100000000 : 0) };
           };

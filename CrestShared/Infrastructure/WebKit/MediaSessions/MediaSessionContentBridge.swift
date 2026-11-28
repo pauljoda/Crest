@@ -547,7 +547,7 @@ enum BrowserMediaPlayerPolicyScript {
             }
             return false;
           };
-          const hasPlayerControls = (video, wasInteracted = false) => {
+          const hasPlayerControls = (video, wasInteracted = false, acceptsPreview = false) => {
             if (video.controls) return true;
             const videoArea = video.getBoundingClientRect().width * video.getBoundingClientRect().height;
             let container = parentOf(video);
@@ -567,14 +567,19 @@ enum BrowserMediaPlayerPolicyScript {
               const buttons = Array.from(container.querySelectorAll('button, [role="button"]')).filter(exposed);
               const timeline = Array.from(container.querySelectorAll('input[type="range"], [role="slider"], progress')).some(exposed);
               if (buttons.length >= 2 && timeline) return true;
-              // Players without a seek bar (live streams) can qualify after a real
-              // click/key interaction and with multiple actual playback controls.
-              if (wasInteracted && buttons.length >= 2) {
-                const controls = Array.from(buttons).filter(button =>
-                  /play|pause|mute|volume|fullscreen/i.test(
-                    [button.getAttribute('aria-label'), button.title, button.textContent].join(' ')
-                  ));
-                if (controls.length >= 2) return true;
+              if ((wasInteracted || acceptsPreview) && buttons.length >= 2) {
+                const labels = buttons.map(button =>
+                  [button.getAttribute('aria-label'), button.title, button.textContent].join(' '));
+                if (wasInteracted && labels.filter(text => /play|pause|mute|volume|fullscreen/i.test(text)).length >= 2)
+                  return true;
+                // An autoplay trailer can have transport and audio controls but no seek bar.
+                // A lone button for pausing background motion isn't enough.
+                if (acceptsPreview) {
+                  if (video.id && buttons.filter(button =>
+                      button.getAttribute('aria-controls')?.split(/\s+/).includes(video.id)).length >= 2) return true;
+                  if (labels.some((label, index) => /\bpause\b/i.test(label) && labels.some((other, j) =>
+                      j !== index && /\b(mute|unmute|volume)\b/i.test(other)))) return true;
+                }
               }
             }
             return false;

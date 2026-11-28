@@ -163,8 +163,11 @@ Automatic entry requires all of the following:
 - An interactive video and ancestor chain: hidden, inert, transparent,
   presentation-only, or pointer-disabled content is excluded.
 - Native video controls, or a nearby custom control surface with multiple
-  buttons and a timeline/slider. A player without a timeline can qualify after
-  trusted interaction with multiple identifiable playback controls.
+  buttons and a timeline/slider. A muted or autoplaying preview can qualify
+  without a timeline when two controls explicitly target the video through
+  `aria-controls`, or separate controls identify pause and audio actions.
+  Other players without a timeline can qualify after trusted
+  interaction with multiple identifiable playback controls.
 
 Muted playback and looping alone do not disqualify a real player. A lone
 "pause background animation" button does not qualify decoration. Auto-hidden

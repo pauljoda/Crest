@@ -5,6 +5,12 @@
       "category": "improved",
       "message": "Skip back or forward ten seconds or drag the timeline in Picture in Picture when the video supports seeking. Thanks to Jayant Guru Shrivastava (@Jayant-Guru-Shrivastava).",
       "platforms": ["mac"]
+    },
+    {
+      "id": "picture-in-picture-autoplay-preview-controls",
+      "category": "improved",
+      "message": "WebKit can float an autoplaying preview with separate pause and audio controls, even when its player has no timeline. Thanks to Jayant Guru Shrivastava (@Jayant-Guru-Shrivastava).",
+      "platforms": ["mac"]
     }
   ]
 }
