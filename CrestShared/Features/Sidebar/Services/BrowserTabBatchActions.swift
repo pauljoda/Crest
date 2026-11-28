@@ -45,6 +45,23 @@ struct BrowserTabBatchActions {
         }
     }
 
+    /// Files the selection into the new folder `batch` makes and answers that
+    /// folder, so a caller can open its name for editing. The saved section
+    /// opens once the folder exists, so the name never edits out of sight, and
+    /// an action the core refuses leaves the section as the person had it.
+    /// Answers nil when the core refused the action, or when the Space can no
+    /// longer be read to tell the folder it made from the ones already there.
+    func folderMade(
+        by batch: BrowserTabBatch, in placement: TabPlacement, for request: BrowserCapturedSelection
+    ) -> UUID? {
+        let before = Set(browser.spaceModel(request.spaceID)?.folders.models.map(\.id) ?? [])
+        guard perform(batch, for: request), let space = browser.spaceModel(request.spaceID),
+            let made = space.folders.models.first(where: { !before.contains($0.id) })
+        else { return nil }
+        if placement == .saved { browser.setSavedTabsExpanded(true, matching: request.assignment) }
+        return made.id
+    }
+
     /// Copies the selected pages' addresses, when every selected tab is a
     /// page the core would keep loaded.
     func copyLinks(_ request: BrowserCapturedSelection) {

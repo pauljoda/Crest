@@ -174,12 +174,10 @@ struct BrowserTabBatchMenu: View {
     ) -> some View {
         let batch = browser.filingInNewFolder(request, in: placement, isGroup: isGroup)
         return Button(title, systemImage: systemImage) {
-            let before = Set(browser.spaceModel(request.spaceID)?.folders.models.map(\.id) ?? [])
-            guard actions.perform(batch, for: request), let space = browser.spaceModel(request.spaceID),
-                let made = space.folders.models.first(where: { !before.contains($0.id) })
+            guard let made = actions.folderMade(by: batch, in: placement, for: request),
+                let space = browser.spaceModel(request.spaceID)
             else { return }
-            if placement == .saved { browser.setSavedTabsExpanded(true, matching: request.assignment) }
-            sidebarInteraction.beginRenaming(folder: made.id, in: space)
+            sidebarInteraction.beginRenaming(folder: made, in: space)
         }
         .disabled(!actions.isAvailable(batch))
     }

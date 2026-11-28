@@ -192,6 +192,10 @@ struct BrowserTabOrganizationMenuContent: View {
 
         Menu("Save in Folder", systemImage: "folder") {
             Group {
+                Button("New Folder", systemImage: "folder.badge.plus") {
+                    performIfCurrent { saveInNewFolder() }
+                }
+
                 Button("Saved Tabs", systemImage: "bookmark") {
                     performIfCurrent {
                         browser.moveTab(
@@ -443,6 +447,18 @@ struct BrowserTabOrganizationMenuContent: View {
         browser.fileTabs(
             [tab.id], matching: sourceAssignment, into: nil, location: .current, before: place.beforeTab,
             beforeFolderID: place.beforeFolder)
+    }
+
+    /// Saves the tab in a new folder in the Space's saved section, whose name
+    /// then starts editing, as Add to Current Tabs Folder's New Folder does.
+    /// The core makes and names the folder, so a save it refuses leaves the
+    /// saved section as the person had it.
+    private func saveInNewFolder() {
+        guard let request = BrowserSidebarSelection.capture([.tab(tab.id)], in: browser) else { return }
+        let actions = BrowserTabBatchActions(browser: browser, spaceAccess: spaceAccess)
+        let batch = browser.filingInNewFolder(request, in: .saved)
+        guard let made = actions.folderMade(by: batch, in: .saved, for: request) else { return }
+        sidebarInteraction?.beginRenaming(folder: made, in: context.space)
     }
 
     private func performIfCurrent(_ action: () -> Void) {
