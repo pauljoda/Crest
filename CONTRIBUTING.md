@@ -38,6 +38,12 @@ r/CrestBrowser and Discord.
    `xcrun`.
 6. Run `Scripts/bootstrap.sh` from the repository root.
 
+The desktop shell for Windows and Linux lives in `CrestDesktop/`: its
+interface is TypeScript and Svelte, drawn inside Crest's Chromium. Working on
+the interface needs only Node.js 24 and the .NET SDK, on any system, through
+the development bridge; building its Chromium engine needs a Windows machine.
+[`CrestDesktop/README.md`](CrestDesktop/README.md) covers both.
+
 Building the `Crest` scheme produces the WebKit composition of the Mac app. The
 published Mac app also packages a prebuilt Chromium engine; see
 [`CrestEngines/Chromium/README.md`](CrestEngines/Chromium/README.md) before
@@ -48,6 +54,9 @@ changing engine inputs.
 ## Validation
 
 Run `Scripts/validate-identity.sh` after product metadata or persistent identifier changes. Run `Scripts/validate-cache-hygiene.sh` after building or testing, and run `Scripts/validate.sh` for the macOS and iOS unit gates. The validation script reuses one temporary Derived Data directory and removes it on success, failure, or interruption.
+
+For desktop interface changes, run `npm run typecheck` and `npm run build` in
+`CrestDesktop/ui`, and `dotnet test` for the core it links.
 
 For repository-only changes, run `Scripts/check-architecture.py` and
 `Scripts/check-swift-format.sh`; use `--base main` to include committed branch
@@ -60,8 +69,9 @@ for the enforced contracts and current exact exemptions.
 
 **Build Crest** runs on pull requests and pushes to `main`, and can also be
 dispatched manually. It checks source, core tests and analyzers, architecture,
-scripts, Swift formatting, native contracts, macOS and iOS builds, and the Help
-Center. The macOS and iOS builds run once per change: a draft pull request
+scripts, Swift formatting, native contracts, macOS and iOS builds, the desktop
+interface and the core on Windows, and the Help Center. Each change builds
+only the apps its files can affect. The macOS and iOS builds run once per change: a draft pull request
 waits until it is marked ready for review, and the push to `main` that merges
 a pull request runs only the checks, since the branch was already built. A
 direct push to `main` builds everything. Release publication calls the same
@@ -148,8 +158,11 @@ request with several fixes lists one entry for each. Each entry has a unique
 lowercase kebab-case `id`, a `category` and a `message`. Choose `new`,
 `improved`, or `fixed` for public notes and write the message as a concise
 user-facing outcome. Use `internal` to record architecture, release, or
-tooling work that should not appear to users. Add `"platforms": ["mac"]` or
-`"platforms": ["ios"]` when a change reaches only that platform. An entry
+tooling work that should not appear to users. Add `"platforms"` listing
+`mac`, `ios`, `windows` or `linux` when a change reaches only those
+platforms; an entry without it reaches every platform, the desktop shell for
+Windows and Linux included, so a change only the Apple apps receive lists
+`["mac", "ios"]`. An entry
 never changes, moves or goes away once it is on `main`. Documentation and the
 repository's own tooling need no fragment. The **Version and release notes**
 check enforces these rules on every pull request; run it locally after

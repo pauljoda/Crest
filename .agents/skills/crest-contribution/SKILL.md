@@ -146,6 +146,39 @@ type you touch. The rules that matter most:
   (`BrowserChromeState.showNotice`). Alerts and sheets appear only when the
   person must decide something.
 
+## Desktop interface (Windows and Linux)
+
+The desktop shell draws its interface in TypeScript and Svelte 5 inside
+Crest's Chromium (`CrestDesktop/`). The Mac app is its specification: a
+desktop feature follows the Mac's behavior, and its comments name the Mac
+type it matches. Where the platform differs, as with caption buttons or
+Windows Hello, it follows the platform.
+
+- **The core through the contract only.** The interface encodes intents and
+  queries with the generated codec (`@crest/contracts`, which
+  `CrestCore.Generator` writes; never edit it by hand) and applies the
+  changes the core publishes to its read model (`core-client/src/core-state.ts`).
+  Its appliers are typed over every change, so a change the core gains does
+  not compile until it says what it does there.
+- **Platform services through the shell.** Windows, files, menus of the
+  system and page surfaces come from `ShellTransport`; the interface assumes
+  no operating system. The shell is C++ in the Chromium overlay and is an
+  engine input; the interface bundle is not.
+- **Reuse the interface's design system.** Colours, radii and springs come
+  from `@crest/design`, the tokens `CrestShared/DesignSystem` names; flyouts
+  wear the `--prompt-*` surface tokens; motion goes through `presence` and
+  `animatePose` in `motion.ts`, and something that grows in place starts at
+  `entranceScale`. Icons are SF Symbol names mapped in `symbols.ts`: add a
+  mapping, never import an icon into a view.
+- **Menus and popovers.** Every menu goes through `showContextMenu`, each
+  entry with its `icon` (a symbol, a folder's tinted symbol, or a Space's
+  identity), drawn in the window. Popovers use `shell/pickers/Popover.svelte`.
+- **Drag regions.** A layer laid over the window takes
+  `-webkit-app-region: initial` and marks only what can be pressed
+  `no-drag`, as "The window" in `CrestDesktop/README.md` explains.
+- **Validate** with `npm run typecheck` and `npm run build` in
+  `CrestDesktop/ui`.
+
 ## Tests
 
 - **Default to no new test.** Add a permanent test only for a contract that
@@ -169,8 +202,9 @@ type you touch. The rules that matter most:
 - **Release note, never a version.** A pull request that changes app code
   adds one new fragment, `Documentation/ReleaseNotes/changes/<slug>.json`,
   with one entry per change, each with a unique lowercase kebab-case `id`,
-  and marks a change that reaches only one platform with
-  `"platforms": ["mac"]` or `["ios"]`. It never touches
+  and marks a change that reaches only some platforms with `"platforms"`
+  listing `mac`, `ios`, `windows` or `linux` (an Apple-only change lists
+  `["mac", "ios"]`, since no list means every platform). It never touches
   `Config/Version.xcconfig` or `CURRENT_PROJECT_VERSION`: each commit on
   `main` takes its version from git when it merges. After committing, pass
   `python3 Scripts/release_note_catalog.py --pull-request origin/main`.

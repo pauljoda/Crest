@@ -106,7 +106,7 @@ class ReleaseNoteCatalogTests(unittest.TestCase):
                 "a-fix", [self.entry("valid-id", "fixed", "Describe a fix", commit="abc")]
             ),
             "every platform listed": lambda: self.write_fragment(
-                "a-fix", [self.entry("valid-id", "fixed", "Describe a fix", platforms=["mac", "ios"])]
+                "a-fix", [self.entry("valid-id", "fixed", "Describe a fix", platforms=["mac", "ios", "windows", "linux"])]
             ),
             "duplicate id across files": lambda: self.write_fragment(
                 "again", [self.entry("existing-change", "fixed", "Describe it again")]

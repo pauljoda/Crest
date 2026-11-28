@@ -45,8 +45,10 @@ has the details.
   `Documentation/ReleaseNotes/changes/<slug>.json`, holding its entries as
   `{"entries": [...]}`. The entries belong to the version of the commit that
   merges the pull request; one with several fixes lists one entry for each.
-  Add `"platforms": ["mac"]` or `["ios"]` when a change reaches only that
-  platform.
+  Add `"platforms"` listing `mac`, `ios`, `windows` or `linux` when a change
+  reaches only those platforms. An entry without `platforms` reaches every
+  platform, the desktop shell for Windows and Linux included, so a change only
+  the Apple apps receive lists `["mac", "ios"]`.
 - Use a unique lowercase kebab-case ID and one of `new`, `improved`, `fixed`,
   or `internal`. Use `internal` only when the change should not appear in
   public release notes.

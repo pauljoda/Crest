@@ -26,7 +26,9 @@ A Stable release from now on adds its write-up as a version file holding only
 
 An entry's ID, category, message and platforms never change once it is on main,
 and it never moves or goes away. Write-ups may be written and edited at any
-time. Leaving out `platforms` means the change reaches every platform.
+time. Leaving out `platforms` means the change reaches every platform, the
+desktop shell for Windows and Linux included; a change only the Apple apps
+receive lists `mac`, `ios` or both.
 
     release_note_catalog.py                       check the notes in the working tree
     release_note_catalog.py --pull-request BASE   check what HEAD changes since its merge base with BASE
@@ -61,7 +63,7 @@ FRAGMENT_DIRECTORY = "changes"
 LEGACY_CATALOG_PATH = "Documentation/ReleaseNotes.json"
 SUPPORTED_CATEGORIES = ("new", "improved", "fixed", "internal")
 PUBLIC_CATEGORIES = ("new", "improved", "fixed")
-PLATFORMS = ("mac", "ios")
+PLATFORMS = ("mac", "ios", "windows", "linux")
 RELEASE_SECTIONS = ("added", "changed", "fixed", "security", "removed", "upgrading")
 PUBLICATION_CHANNELS = ("stable", "development", "nightly")
 ENTRY_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")

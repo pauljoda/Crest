@@ -116,6 +116,8 @@ jobs:
   # filter, and the C exports the Chromium binding and the desktop bridge call.
   windows-core:
     name: .NET core on Windows
+    needs: changes
+    if: needs.changes.outputs.desktop == 'true'
     runs-on: windows-2025
     timeout-minutes: 30
     env:
@@ -145,6 +147,8 @@ jobs:
   # against the hand-written client, and the window must bundle.
   desktop-ui:
     name: Desktop interface
+    needs: changes
+    if: needs.changes.outputs.desktop == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -166,7 +170,8 @@ jobs:
         run: npm run build
 
   # Pull requests and pushes to main build only the apps their files can
-  # affect; release validation and manual runs build both.
+  # affect, the Apple apps and the desktop shell alike; release validation
+  # and manual runs build every one.
   changes:
     name: Changed areas
     runs-on: ubuntu-latest
@@ -177,6 +182,7 @@ jobs:
     outputs:
       mac: ${{ steps.apple.outputs.build == 'true' && steps.areas.outputs.mac || 'false' }}
       ios: ${{ steps.apple.outputs.build == 'true' && steps.areas.outputs.ios || 'false' }}
+      desktop: ${{ steps.areas.outputs.desktop }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

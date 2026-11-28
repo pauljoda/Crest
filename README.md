@@ -127,9 +127,11 @@ The same Spaces, shaped for each screen. iPad keeps the sidebar beside your page
 | iPad · iPadOS 26.1+ | [App Store](https://apps.apple.com/us/app/crest-browser/id6797335023) |
 | iPhone & iPad beta | [TestFlight](https://testflight.apple.com/join/vV1CM49Q) |
 
-## Built as an Apple-platform app
+## Built on one portable core
 
-Crest's browser state and rules live in a portable core written in C# and compiled with NativeAOT. The apps are written in Swift and SwiftUI: shared features live in `CrestShared`, and each platform owns its windows, engine hosting, commands, and adaptive presentation. On Mac, pages render in Chromium by default or in WebKit; iPhone and iPad use WebKit.
+Crest's browser state and rules live in a portable core written in C# and compiled with NativeAOT. The Apple apps are written in Swift and SwiftUI: shared features live in `CrestShared`, and each platform owns its windows, engine hosting, commands, and adaptive presentation. On Mac, pages render in Chromium by default or in WebKit; iPhone and iPad use WebKit.
+
+Crest for Windows and Linux is in early development and not installable yet. Its interface is TypeScript and Svelte, drawn inside Crest's own Chromium on the same core; see the [desktop shell README](CrestDesktop/README.md).
 
 ```text
 CrestCore/       Portable core: session, sync, pages, and browser rules
@@ -138,6 +140,7 @@ CrestEngines/    Chromium host overlay, patches, and engine binding
 CrestShared/     Domain, application, infrastructure, features, design system
 CrestMac/        macOS app and platform-specific presentation
 CrestMobile/     iPhone and iPad app and platform-specific presentation
+CrestDesktop/    Windows and Linux interface, development bridge, and installer
 ```
 
 Read [the architecture overview](Documentation/ARCHITECTURE.md) for Space isolation, persistence, credentials, synchronization, and the engine boundary.
