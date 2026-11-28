@@ -4674,6 +4674,9 @@
     "Crest addresses" : {
 
     },
+    "Crest asks you each time and fills the password itself, without giving it to agents. Not available while agents can run scripts in pages." : {
+
+    },
     "Crest Browser" : {
 
     },
@@ -4996,6 +4999,12 @@
           }
         }
       }
+    },
+    "Crest fills the saved password you choose without giving it to the agent." : {
+
+    },
+    "Crest fills your saved password for %@ without giving it to the agent." : {
+
     },
     "Crest hit a problem applying these records." : {
 
@@ -6717,6 +6726,12 @@
     "Fill" : {
 
     },
+    "Fill Password" : {
+
+    },
+    "Filled a saved password" : {
+
+    },
     "Filling a card always asks for Touch ID or your device password." : {
 
     },
@@ -8173,7 +8188,20 @@
     "Let “%@” open a window?" : {
 
     },
+    "Let “%@” sign in to %@?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Let “%1$@” sign in to %2$@?"
+          }
+        }
+      }
+    },
     "Let agents run scripts in pages" : {
+
+    },
+    "Let agents sign in with saved passwords" : {
 
     },
     "Letter style" : {

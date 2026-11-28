@@ -10,15 +10,18 @@ final class BrowserAgentFixture {
     // MARK: - Types
 
     /// Answers for the person: allows every agent, lets it delete history
-    /// while `deletesHistory` and open windows as `windows` says, keeping
-    /// each deletion and window it was asked about.
+    /// while `deletesHistory`, open windows as `windows` says and have Crest
+    /// fill the first login it offers while `signsIn`, keeping each deletion,
+    /// window and sign-in it was asked about.
     final class Answers: BrowserAgentAsking {
         // MARK: - Variables
 
         var deletesHistory = true
         var windows = BrowserAgentAnswer.once
+        var signsIn = true
         private(set) var deletions: [BrowserAgentHistoryDeletion] = []
         private(set) var openings: [BrowserAgentWindowOpening] = []
+        private(set) var signIns: [BrowserAgentSignIn] = []
 
         // MARK: - Actions - Questions
 
@@ -40,6 +43,11 @@ final class BrowserAgentFixture {
         {
             openings.append(opening)
             return windows
+        }
+
+        func approveSignIn(_ signIn: BrowserAgentSignIn, dismissal: BrowserPromptDismissal?) async -> UUID? {
+            signIns.append(signIn)
+            return signsIn ? signIn.logins.first?.id : nil
         }
     }
 

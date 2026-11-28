@@ -46,8 +46,9 @@ public sealed partial class BrowserContractsTests {
             Assert.IsType<AgentNotApproved>(Assert.Throws<Rejected>(() =>
                 app.Send(new BeginAgentSession(Guid.NewGuid(), Claude, "claude"))).Rejection);
             session = ConnectClaude(app, space);
-            chosen = AgentPreferencesIn(app.Send(new SetAgentScripts(true)));
-            Assert.Equal(new AgentPreferences(true, true, [space], [new ApprovedAgent(Claude, "claude")]), chosen);
+            app.Send(new SetAgentScripts(true));
+            chosen = AgentPreferencesIn(app.Send(new SetAgentPasswordFill(true)));
+            Assert.Equal(new AgentPreferences(true, true, true, [space], [new ApprovedAgent(Claude, "claude")]), chosen);
             Assert.Equal([space], app.Query(new AgentReach(session)).Spaces.Select(reached => reached.SpaceId));
 
             // An identity must name a program, by its signature or its path.
@@ -71,11 +72,13 @@ public sealed partial class BrowserContractsTests {
             // Turning agents off keeps what the person chose for next time.
             Assert.Equal(chosen with { IsOn = false }, AgentPreferencesIn(relaunched.Send(new SetAgents(false))));
             Assert.Empty(AgentPreferencesIn(relaunched.Send(new ForgetAgent(Claude))).Agents);
+            // Filling passwords is kept apart from running scripts.
+            Assert.True(AgentPreferencesIn(relaunched.Send(new SetAgentPasswordFill(false))).RunsScripts);
         }
 
         var (third, _, _) = DeviceApp(directory);
         using var thirdDisposal = third;
-        Assert.Equal(chosen with { IsOn = false, Agents = [] }, third.Query(new GetAgentPreferences()));
+        Assert.Equal(chosen with { IsOn = false, FillsPasswords = false, Agents = [] }, third.Query(new GetAgentPreferences()));
     }
 
     [Fact]

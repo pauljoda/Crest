@@ -494,8 +494,7 @@ extension BrowserMacAgents {
     /// document: one that was just loaded for the agent, or is still on its
     /// way, settles first, for up to `settleTimeout`. Just after the agent's
     /// input, a load the input starts is waited for too.
-    private func settledPage(for tabID: UUID, _ call: BrowserAgentCall) async throws(BrowserAgentFailure) -> BrowserPage
-    {
+    func settledPage(for tabID: UUID, _ call: BrowserAgentCall) async throws(BrowserAgentFailure) -> BrowserPage {
         let page = try page(for: tabID, call)
         if let input = call.link.lastInput.removeValue(forKey: tabID) {
             while !page.live.isLoading, page.live.pendingURL == nil, ContinuousClock.now < input + Self.loadGrace {
@@ -536,9 +535,7 @@ extension BrowserMacAgents {
     }
 
     /// What `script` answered in the agent's world of `page`.
-    private func run(_ script: BrowserAgentPageScript, on page: BrowserPage) async throws(BrowserAgentFailure)
-        -> AgentJSON
-    {
+    func run(_ script: BrowserAgentPageScript, on page: BrowserPage) async throws(BrowserAgentFailure) -> AgentJSON {
         guard let evaluated = await page.enginePage.evaluate(script.source, in: .agent, timeout: Self.scriptTimeout)
         else {
             throw page.scriptDialog.map(BrowserAgentFailure.dialog) ?? .timedOut

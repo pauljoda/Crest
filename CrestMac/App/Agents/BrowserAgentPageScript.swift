@@ -8,23 +8,35 @@ struct BrowserAgentPageScript {
     // MARK: - Static Variables
 
     /// What every script shares: the elements the latest outline named, by
-    /// uid, which a new document starts empty.
+    /// uid, and every field seen as a password field, which still reads as one
+    /// once a page shows it as text; a new document starts with neither.
     private static let state = #"""
-        const state = (globalThis.__crestAgent ??= { document: null, uids: new Map(), elements: new WeakMap(), next: 1 });
+        const state = (globalThis.__crestAgent ??= { document: null, uids: new Map(), elements: new WeakMap(),
+          passwords: new WeakSet(), next: 1 });
         if (state.document !== document) {
           state.document = document; state.uids = new Map(); state.elements = new WeakMap(); state.next = 1;
+          state.passwords = new WeakSet();
         }
         const element = (uid) => {
           const found = state.uids.get(uid)?.deref();
           return found && found.isConnected ? found : null;
         };
+        const rememberPasswords = (root) => {
+          for (const node of root.querySelectorAll("*")) {
+            if (node.tagName === "INPUT" && node.type === "password") state.passwords.add(node);
+            if (node.shadowRoot) rememberPasswords(node.shadowRoot);
+          }
+        };
+        const isPassword = (node) => node.tagName === "INPUT" && (node.type === "password" || state.passwords.has(node));
         """#
 
     /// The page as an accessibility outline: each meaningful element's role,
     /// name and state with a uid, and the text between them, within a bound.
-    /// A password field's value is never part of it.
+    /// A password field's value is never part of it, even once the page shows
+    /// the field as text.
     static let snapshot = Self(
         source: state + #"""
+            rememberPasswords(document);
             const limit = 60000;
             const lines = [];
             let size = 0;
@@ -98,7 +110,7 @@ struct BrowserAgentPageScript {
               if (node.selected || node.getAttribute("aria-selected") === "true") parts.push("[selected]");
               if (node === document.activeElement) parts.push("[focused]");
               if (node.tagName === "A" && node.href) parts.push(`[href=${node.href.slice(0, 300)}]`);
-              if (node.tagName === "INPUT" && node.type === "password") parts.push("[password]");
+              if (isPassword(node)) parts.push("[password]");
               else if ("value" in node && ["textbox", "searchbox", "combobox", "spinbutton", "slider"].includes(role) && node.value)
                 parts.push(`[value=${JSON.stringify(String(node.value).slice(0, 200))}]`);
               return parts.join(" ");
@@ -188,6 +200,29 @@ struct BrowserAgentPageScript {
                   }
                 }
                 return { ready: true };
+                """)
+    }
+
+    /// Focuses the field `uid` names, as a person's click on it would, so
+    /// the page's credential bridge offers to fill its form, after
+    /// remembering every password field the document holds; answers where
+    /// the field is in the viewport, in CSS pixels, and whether it took the
+    /// focus, or an error. A field that has the focus already is focused
+    /// again, since focusing it raises nothing.
+    static func focusSignIn(_ uid: String) -> Self {
+        Self(
+            source: state + """
+                rememberPasswords(document);
+                const target = element(\(json(uid)));
+                if (!target) return { error: "unknown" };
+                target.scrollIntoView({ block: "center", inline: "center", behavior: "instant" });
+                const box = target.getBoundingClientRect();
+                if (target.tagName === "INPUT") {
+                  target.blur();
+                  target.focus();
+                }
+                return { x: box.left + box.width / 2, y: box.top + box.height / 2,
+                  focused: target.getRootNode().activeElement === target };
                 """)
     }
 

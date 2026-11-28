@@ -74,6 +74,14 @@ struct BrowserCredentialFillRequest: Identifiable, Equatable, Sendable {
     /// password step, which fills by itself instead of being offered.
     let chosenCredentialID: UUID?
 
+    /// Whether a saved login fills the request: one from a sign-in form's
+    /// username or current password field, never a new password, a code, an
+    /// address or a card.
+    var takesSavedLogin: Bool {
+        passwordKind == .current && codeFields == nil && autofill == nil
+            && (fields.username != nil || fields.password != nil)
+    }
+
     init(
         id: UUID,
         origin: CredentialOrigin,

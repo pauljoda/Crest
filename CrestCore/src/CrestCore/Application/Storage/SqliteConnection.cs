@@ -421,10 +421,13 @@ internal sealed class SqliteConnection : IDisposable {
     private AgentPreferences ReadAgents() {
         bool isOn = false;
         bool runsScripts = false;
+        bool fillsPasswords = false;
         Rows("SELECT is_on, runs_scripts FROM device_agents", statement => {
             isOn = Sqlite.sqlite3_column_int(statement, 0) != 0;
             runsScripts = Sqlite.sqlite3_column_int(statement, 1) != 0;
         });
+        Rows("SELECT fills_passwords FROM device_agent_password_fill",
+            statement => fillsPasswords = Sqlite.sqlite3_column_int(statement, 0) != 0);
         var spaces = new List<Guid>();
         Rows("SELECT space FROM device_agent_space ORDER BY position", statement => {
             if (Identity(statement, 0) is { } space) spaces.Add(space);
@@ -438,7 +441,7 @@ internal sealed class SqliteConnection : IDisposable {
             if (identity.IsValid && AgentPreferences.CleanName(Sqlite.ColumnText(statement, 4)) is { } name)
                 approved.Add(new ApprovedAgent(identity, name));
         });
-        return new(isOn, runsScripts, spaces, approved);
+        return new(isOn, runsScripts, fillsPasswords, spaces, approved);
     }
 
     /// The unfinished manual setup, or null when the store keeps none or it
@@ -545,15 +548,18 @@ internal sealed class SqliteConnection : IDisposable {
         }
     }
 
-    /// The agent preferences: whether they are on and run scripts in pages,
-    /// and the allowed Spaces and approved agents in order.
+    /// The agent preferences: whether they are on, run scripts in pages and
+    /// have Crest fill saved passwords, and the allowed Spaces and approved
+    /// agents in order.
     internal void WriteAgents(AgentPreferences preferences) {
-        foreach (var table in new[] { "device_agents", "device_agent_space", "device_agent" })
+        foreach (var table in new[] { "device_agents", "device_agent_password_fill", "device_agent_space", "device_agent" })
             Execute($"DELETE FROM {table}");
         Insert("INSERT INTO device_agents(id, is_on, runs_scripts) VALUES(0,?,?)", statement => {
             Checked(Sqlite.sqlite3_bind_int64(statement, 1, preferences.IsOn ? 1 : 0));
             Checked(Sqlite.sqlite3_bind_int64(statement, 2, preferences.RunsScripts ? 1 : 0));
         });
+        Insert("INSERT INTO device_agent_password_fill(id, fills_passwords) VALUES(0,?)",
+            statement => Checked(Sqlite.sqlite3_bind_int64(statement, 1, preferences.FillsPasswords ? 1 : 0)));
         InsertInOrder("INSERT INTO device_agent_space(space, position) VALUES(?,?)", preferences.SpaceIds, (statement, space, index) => {
             Bind(statement, 1, Spelling(space));
             Checked(Sqlite.sqlite3_bind_int64(statement, 2, index));

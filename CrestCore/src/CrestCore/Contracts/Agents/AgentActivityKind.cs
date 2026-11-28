@@ -17,9 +17,11 @@ public sealed class AgentActivityKind {
     public static readonly AgentActivityKind DeletedHistory = new(name: "deletedHistory", title: "Deleted history",
         symbol: "clock.arrow.trianglehead.counterclockwise.rotate.90");
     public static readonly AgentActivityKind RanScript = new(name: "ranScript", title: "Ran a script", symbol: "curlybraces");
+    public static readonly AgentActivityKind FilledPassword = new(name: "filledPassword", title: "Filled a saved password",
+        symbol: "key");
 
     public static IReadOnlyList<AgentActivityKind> All { get; } =
-        [OpenedTab, LoadedPage, ClosedTab, OpenedWindow, OpenedPrivateWindow, DeletedHistory, RanScript];
+        [OpenedTab, LoadedPage, ClosedTab, OpenedWindow, OpenedPrivateWindow, DeletedHistory, RanScript, FilledPassword];
 
     #endregion
 

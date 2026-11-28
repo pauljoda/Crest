@@ -52,14 +52,14 @@ final class CoreState {
     }
     @ObservationIgnored private var enginePreferencesStorage = EnginePreferences(defaultEngine: nil, rules: [])
     /// Whether agents may use Crest on this device, whether they may run
-    /// scripts in pages, the Spaces they may reach and the agents the person
-    /// allowed.
+    /// scripts in pages and have Crest fill saved passwords, the Spaces they
+    /// may reach and the agents the person allowed.
     var agentPreferences: AgentPreferences {
         get { observed(\.agentPreferencesStorage, as: \.agentPreferences) }
         set { publish(newValue, into: \.agentPreferencesStorage, as: \.agentPreferences) }
     }
     @ObservationIgnored private var agentPreferencesStorage = AgentPreferences(
-        isOn: false, runsScripts: false, spaceIDs: [], agents: [])
+        isOn: false, runsScripts: false, fillsPasswords: false, spaceIDs: [], agents: [])
     /// The agents connected now, with the tabs each uses.
     var agentSessions: [AgentSessionState] {
         get { observed(\.agentSessionsStorage, as: \.agentSessions) }

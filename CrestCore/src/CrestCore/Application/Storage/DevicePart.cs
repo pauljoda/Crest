@@ -112,10 +112,14 @@ internal sealed class DevicePart {
         (records, other) => Equals(records.SearchCatalog, other.SearchCatalog),
         (store, records, _) => store.WriteSearchCatalog(records.SearchCatalog));
 
+    /// Whether agents may have Crest fill saved passwords lives in a table of
+    /// its own, which a build that predates it neither reads nor clears.
     public static readonly DevicePart Agents = new(
         [
             "CREATE TABLE IF NOT EXISTS device_agents (id INTEGER PRIMARY KEY CHECK (id = 0), is_on INTEGER NOT NULL, "
                 + "runs_scripts INTEGER NOT NULL)",
+            "CREATE TABLE IF NOT EXISTS device_agent_password_fill (id INTEGER PRIMARY KEY CHECK (id = 0), "
+                + "fills_passwords INTEGER NOT NULL)",
             "CREATE TABLE IF NOT EXISTS device_agent_space (space TEXT PRIMARY KEY, position INTEGER NOT NULL)",
             "CREATE TABLE IF NOT EXISTS device_agent (position INTEGER PRIMARY KEY, team TEXT, signing TEXT, path TEXT, "
                 + "client TEXT, name TEXT NOT NULL)"
