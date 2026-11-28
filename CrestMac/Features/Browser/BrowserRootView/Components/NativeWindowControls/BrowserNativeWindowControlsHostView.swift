@@ -48,6 +48,8 @@ final class BrowserNativeWindowControlsHostView: NSView {
     /// to shown whenever the window's content changes its bar preferences.
     private var toolbarVisibilityObservation: NSKeyValueObservation?
     private var windowObservers: [NSObjectProtocol] = []
+    /// Follows the window's title, which SwiftUI sets from the page shown.
+    private var titleObservation: NSKeyValueObservation?
     private var nativeButtonOrigins: [NSWindow.ButtonType: CGFloat] = [:]
     var sidebarOnRight = false
     /// Whether the controls are crossing the window with the sidebar. AppKit
@@ -282,6 +284,35 @@ final class BrowserNativeWindowControlsHostView: NSView {
                 }
             }
         }
+        observeWindowControls(of: window)
+    }
+
+    /// AppKit lays the controls out again at its own place whenever it lays
+    /// out the title bar, which it does each time the window's title changes,
+    /// with no window update or resize after it. A move made while it lays
+    /// them out is ignored, so they go back once it is done: at once after a
+    /// new title, which SwiftUI sets in the same pass that draws it, and on
+    /// the next turn after anything else that moves them.
+    private func observeWindowControls(of window: NSWindow) {
+        titleObservation = window.observe(\.title) { [weak self] _, _ in
+            MainActor.assumeIsolated {
+                self?.positionWindowControls()
+            }
+        }
+        for type in Self.buttonTypes {
+            guard let button = window.standardWindowButton(type) else { continue }
+            windowObservers.append(
+                NotificationCenter.default.addObserver(
+                    forName: NSView.frameDidChangeNotification,
+                    object: button,
+                    queue: .main
+                ) { [weak self] _ in
+                    DispatchQueue.main.async { [weak self] in
+                        self?.positionWindowControls()
+                    }
+                }
+            )
+        }
     }
 
     private func windowChanged(_ name: Notification.Name) {
@@ -344,6 +375,8 @@ final class BrowserNativeWindowControlsHostView: NSView {
 
     private func stopObservingWindow() {
         stopObservingFullScreenTitleBar()
+        titleObservation?.invalidate()
+        titleObservation = nil
         for observer in windowObservers {
             NotificationCenter.default.removeObserver(observer)
         }

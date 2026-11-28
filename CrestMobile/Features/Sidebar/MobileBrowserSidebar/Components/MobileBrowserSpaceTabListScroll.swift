@@ -23,9 +23,10 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     @State private var scrollRegionID = UUID()
-    @State private var scrollRegionFrame = CGRect.zero
-    @State private var visibleOrigin = CGPoint.zero
-    @State private var lastScrollContentOrigin: CGPoint?
+    /// Where the list sits and how far it has scrolled. Both change on every
+    /// scroll frame and only the reorder state reads them, so they are kept by
+    /// reference and never rebuild this view while the list moves.
+    @State private var scrollOrigin = MobileSidebarScrollOrigin()
 
     var body: some View {
         GeometryReader { geometry in
@@ -54,20 +55,20 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
                 .onScrollGeometryChange(for: CGRect.self) {
                     $0.visibleRect
                 } action: { _, rect in
-                    visibleOrigin = rect.origin
-                    publishScrollContentOrigin()
+                    scrollOrigin.visibleOrigin = rect.origin
+                    scrollOrigin.publish(for: scrollRegionID, to: sidebarInteraction.sidebarReorderState)
                 }
                 .background {
                     Color.clear
                         .onGeometryChange(for: CGRect.self) { proxy in
                             proxy.frame(in: BrowserSidebarReorderSpace.globalSpace)
                         } action: { frame in
-                            scrollRegionFrame = frame
+                            scrollOrigin.regionFrame = frame
                             sidebarInteraction.sidebarReorderState.register(
                                 scrollRegionFrame: frame,
                                 for: scrollRegionID
                             )
-                            publishScrollContentOrigin()
+                            scrollOrigin.publish(for: scrollRegionID, to: sidebarInteraction.sidebarReorderState)
                         }
                         .allowsHitTesting(false)
                         .accessibilityHidden(true)
@@ -107,28 +108,6 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
         }
     }
 
-    private func publishScrollContentOrigin() {
-        guard !scrollRegionFrame.isEmpty else { return }
-        handleScrollContentOriginChange(
-            CGPoint(x: scrollRegionFrame.minX - visibleOrigin.x, y: scrollRegionFrame.minY - visibleOrigin.y)
-        )
-    }
-
-    /// Forwards live scroll-origin changes and lift-time scroll movement to
-    /// the reorder state so frozen-origin hit testing stays aligned while
-    /// scrolling during a lift.
-    private func handleScrollContentOriginChange(_ origin: CGPoint) {
-        let reorderState = sidebarInteraction.sidebarReorderState
-        reorderState.register(scrollContentOrigin: origin, for: scrollRegionID)
-        if let previous = lastScrollContentOrigin, reorderState.isDragging {
-            let visualOffset = origin.y - previous.y
-            if visualOffset != 0 {
-                reorderState.scrollableContentDidMove(in: scrollRegionID, by: visualOffset)
-            }
-        }
-        lastScrollContentOrigin = origin
-    }
-
     /// Where the page the window shows would grow out of, which reads only the
     /// Space's shown tab, not any list.
     private var selectedPromotionTarget: MobileTabPromotionTarget? {
@@ -137,5 +116,35 @@ struct MobileBrowserSpaceTabListScroll<Content: View>: View {
             let tab = context.space.shownTab(tabID)
         else { return nil }
         return MobileTabPromotionTarget(shownTab: tab)
+    }
+}
+
+/// The list's frame in the window and its live scroll offset, which the
+/// reorder state reads to hit-test rows frozen at a lift. A plain reference,
+/// so the scroll frames that change it never invalidate a view.
+@MainActor
+private final class MobileSidebarScrollOrigin {
+    // MARK: - Variables
+
+    var regionFrame = CGRect.zero
+    var visibleOrigin = CGPoint.zero
+    private var lastContentOrigin: CGPoint?
+
+    // MARK: - Actions - Publishing
+
+    /// Forwards live scroll-origin changes and lift-time scroll movement to
+    /// the reorder state so frozen-origin hit testing stays aligned while
+    /// scrolling during a lift.
+    func publish(for regionID: UUID, to reorderState: BrowserSidebarReorderState) {
+        guard !regionFrame.isEmpty else { return }
+        let origin = CGPoint(x: regionFrame.minX - visibleOrigin.x, y: regionFrame.minY - visibleOrigin.y)
+        reorderState.register(scrollContentOrigin: origin, for: regionID)
+        if let previous = lastContentOrigin, reorderState.isDragging {
+            let visualOffset = origin.y - previous.y
+            if visualOffset != 0 {
+                reorderState.scrollableContentDidMove(in: regionID, by: visualOffset)
+            }
+        }
+        lastContentOrigin = origin
     }
 }
