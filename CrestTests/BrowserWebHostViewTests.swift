@@ -174,6 +174,39 @@ final class BrowserWebHostViewTests: XCTestCase {
         )
     }
 
+    func testPageTakesOnlyAKeyboardNothingHolds() {
+        let setup = focusHostSetup()
+        let open = BrowserWebFocusRestorationGate(browserChromeOwnsFocus: false, pageChromeOwnsFocus: false)
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 120, height: 22))
+        setup.host.addSubview(field)
+        setup.window.makeFirstResponder(field)
+
+        XCTAssertFalse(takeUnheldKeyboard(setup, gate: open))
+        XCTAssertFalse(setup.window.firstResponder === setup.webView)
+
+        setup.window.makeFirstResponder(nil)
+        XCTAssertFalse(takeUnheldKeyboard(setup, gate: .suppressed))
+        XCTAssertFalse(takeUnheldKeyboard(setup, gate: open, menuIsTracking: true))
+        XCTAssertFalse(takeUnheldKeyboard(setup, gate: open, windowIsKey: false))
+        XCTAssertTrue(takeUnheldKeyboard(setup, gate: open))
+        XCTAssertTrue(setup.window.firstResponder === setup.webView)
+    }
+
+    private func takeUnheldKeyboard(
+        _ setup: FocusHostSetup,
+        gate: BrowserWebFocusRestorationGate,
+        menuIsTracking: Bool = false,
+        windowIsKey: Bool = true
+    ) -> Bool {
+        setup.controller.takeUnheldKeyboard(
+            in: setup.host,
+            gate: gate,
+            applicationIsActive: true,
+            menuIsTracking: menuIsTracking,
+            windowIsKey: windowIsKey
+        )
+    }
+
     private func restorationPolicyAllows(
         gate: BrowserWebFocusRestorationGate,
         currentOwner: BrowserWebFocusRestorationCurrentOwner = .neutral,

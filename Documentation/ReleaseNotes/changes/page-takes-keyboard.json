@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "page-takes-keyboard-after-address-and-tab-switch",
+      "category": "fixed",
+      "platforms": ["mac"],
+      "message": "A page you open from the address field or the command palette, or switch to, now takes what you type, so a search box or typing area it focuses as it loads works without a click first. This includes Peek, Split View and Quick Windows."
+    }
+  ]
+}

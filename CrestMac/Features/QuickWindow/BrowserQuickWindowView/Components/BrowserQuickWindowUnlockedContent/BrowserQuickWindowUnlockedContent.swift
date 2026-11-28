@@ -36,6 +36,13 @@ struct BrowserQuickWindowUnlockedContent: View {
         ZStack(alignment: .top) {
             BrowserQuickWindowPageSurface(model: model)
                 .padding(.top, BrowserQuickWindowLayout.toolbarHeight)
+                // The page takes the keyboard back whenever the address field
+                // and the palette let go of it.
+                .environment(
+                    \.browserWebFocusRestorationGate,
+                    BrowserWebFocusRestorationGate(
+                        browserChromeOwnsFocus: isAddressEditing || isPaletteShown, pageChromeOwnsFocus: false)
+                )
             if let downloadCenter = model.pages?.downloadCenter {
                 BrowserMacDownloadTrayLayer(tray: model.downloadTray, downloadCenter: downloadCenter)
                     .padding(.top, BrowserQuickWindowLayout.toolbarHeight)
