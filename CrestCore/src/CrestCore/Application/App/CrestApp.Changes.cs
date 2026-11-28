@@ -15,6 +15,10 @@ public sealed partial class CrestApp {
     /// A change arrived in an empty batch while a call held the lock, so the
     /// host is owed a wake once that call lets go, unless it drains first.
     private bool wakeOwed;
+    private readonly AskedQuestions asked = new();
+
+    /// The questions still waiting on the person, as the changes that asked them.
+    internal AskedQuestions AskedQuestions => asked;
 
     #endregion
 
@@ -86,6 +90,7 @@ public sealed partial class CrestApp {
     /// undrained older one, so a page that changes many times between drains
     /// arrives once, where its latest change falls.
     private void Announce(Change change) {
+        asked.Follow(change);
         bool wakes;
         lock (pendingGate) {
             wakes = pending.Count == 0;

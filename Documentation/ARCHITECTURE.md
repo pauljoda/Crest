@@ -1,6 +1,6 @@
 # Crest architecture
 
-Crest is a native SwiftUI browser for Apple silicon. It treats a **Space** as the primary privacy and organization boundary.
+Crest uses SwiftUI on Apple platforms and Svelte for the Windows alpha. It treats a **Space** as the primary privacy and organization boundary.
 
 From Crest 0.7, browser rules live in a portable .NET core and pages render through engine adapters. On Mac, one app hosts both engines: Chromium is the default, and a person or website rule can choose WebKit. Protected-video requests trigger an automatic switch to WebKit unless the person has chosen an engine for the site. The core validates the document and completes before-unload checks before moving it or remembering a website rule. Cancellation leaves both unchanged. Chromium loads the first time a page or extension needs it. Extensions run only in Chromium. iPhone and iPad use WebKit. Both engines share the same core, UI and sync records. See [Portable browser control plane](Architecture/ControlPlane.md) and [Engine abstraction](Architecture/EngineAbstractionCompletion.md).
 
@@ -17,11 +17,14 @@ CrestShared/
   Infrastructure/    Core adapters, engine ports, WebKit adapter, Keychain, and sync transport
   Resources/         Localizations, privacy manifest, and app icon
 CrestMac/             macOS app, page host, WebKit adapter, commands, and presentation
+CrestDesktop/         Svelte desktop interface, development bridge, and Windows installer
 CrestMobile/          iPhone/iPad app, adaptive chrome, and WebKit host
 CrestEngines/Chromium Chromium host overlay, patches, and Chromium adapter
 ```
 
 `project.yml` is the target and build-setting source of truth. XcodeGen produces `Crest.xcodeproj`.
+
+The desktop interface submits the same core contracts as the Mac app. See the [desktop build and macOS comparison guide](../CrestDesktop/README.md).
 
 ## Space isolation
 

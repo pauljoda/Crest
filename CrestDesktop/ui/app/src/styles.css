@@ -1,0 +1,5185 @@
+/* CrestDisplayFace.allo uses the bundled face at its roundest, with optical sizing. */
+@font-face {
+  font-family: "Crest Allo";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  font-variation-settings: "ROND" 100;
+  src: url("../../../../CrestShared/Resources/Fonts/AlloVariable.ttf") format("truetype");
+}
+
+:root[data-appearance="dark"] { color-scheme: dark; }
+:root[data-appearance="light"] { color-scheme: light; }
+
+:root {
+  color-scheme: light dark;
+  /* The page card as the Mac frames it: an 8-point frame and a 1.5-point
+     seam around the page, so the page stands 9.5 from the window's edges
+     and the seam alone from a docked sidebar. Its corner is the window's
+     corner less the frame, and the seam less again: 6.5 on the Mac. */
+  --window-inset: 9.5px;
+  --sidebar-gap: 1.5px;
+  --page-seam: 1.5px;
+  --page-corner: 6.5px;
+  --sidebar-width: 289px;
+  --ink: var(--crest-ink);
+  --paper: var(--crest-paper);
+  font-family: var(--crest-font-system);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: light-dark(var(--crest-cream), var(--crest-cinder));
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: default;
+}
+
+.window-loading,
+.boot-failure {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: light-dark(var(--crest-ink), var(--paper));
+  font-family: var(--crest-font-display);
+  font-weight: var(--crest-font-display-weight);
+  font-size: 15px;
+}
+
+/* The window: the Space's banner behind the sidebar and the page card. */
+.browser-window {
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  gap: var(--window-inset) var(--sidebar-gap);
+  padding: var(--window-inset) var(--window-inset) var(--window-inset) 0;
+}
+
+/* A maximized or full-screen window has no corner for the card to follow,
+   so the card keeps Crest's own 13, less the seam, as the Mac's does. */
+.browser-window.cornerless {
+  --page-corner: 11.5px;
+}
+
+/* The title bar is the interface's: the window's banner around the sidebar
+   and the page card moves the window, as the Mac's window background does,
+   and so does the empty stretch of the sidebar's toolbar. */
+.browser-window {
+  -webkit-app-region: drag;
+}
+
+.sidebar > *,
+.page-card {
+  -webkit-app-region: no-drag;
+}
+
+.sidebar > .sidebar-toolbar {
+  -webkit-app-region: drag;
+}
+
+.sidebar-toolbar button {
+  -webkit-app-region: no-drag;
+}
+
+/* Chromium adds each box's drag area in document order, later boxes over
+   earlier ones, and children take their parent's. A layer laid over the
+   window, which comes after the sidebar and the card, would otherwise make
+   the whole window a handle that moves it, and no press would reach a row
+   or a page. Such a layer takes no part (initial is "none", which no other
+   value gives), and only what can be pressed in it says so. */
+.page-row-overlay,
+.space-content-overlay,
+.utility-fan,
+.download-flights,
+.tab-preview-layer {
+  -webkit-app-region: initial;
+}
+
+.sheet-backdrop,
+.peek-scrim,
+.peek-stack,
+.notice,
+.tab-preview,
+.tab-preview-cover,
+.recent-tabs-layer,
+.crest-popover,
+.context-menu-layer,
+.split-divider {
+  -webkit-app-region: no-drag;
+}
+
+.space-banner,
+.space-banner-layer,
+.space-banner-window,
+.space-banner-field,
+.space-banner-fade,
+.space-banner-grain {
+  position: absolute;
+  inset: 0;
+}
+
+.space-banner {
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Each Space's banner fades on a compositor layer of its own: set from
+   script each frame of a slide, an opacity on a layer Chromium hasn't
+   promoted repaints the whole window's banner every frame, which on a large
+   window costs two or three frames each. */
+.space-banner-layer {
+  will-change: opacity;
+}
+
+/* The system's window background, under the banner's own strength. */
+.space-banner-window {
+  background: rgb(236 236 236);
+}
+
+:where(:root[data-appearance="dark"]) {
+  .space-banner-window {
+    background: rgb(50 50 50);
+  }
+}
+
+.space-banner-fade {
+  background: black;
+}
+
+.space-banner-grain {
+  mix-blend-mode: soft-light;
+}
+
+/* A Space's look: the window's, and each sidebar page's and card's own, which
+   slide in their own Space's look as the pager moves between two. */
+.browser-window.reads-light,
+.space-page.reads-light,
+.space-content-page.reads-light {
+  /* The Mac's primary colour over the Space's look: white text, or black. */
+  --primary-rgb: 255 255 255;
+  --fg: rgb(255 255 255 / 0.94);
+  --fg-secondary: rgb(255 255 255 / 0.62);
+  --surface: rgb(255 255 255 / var(--crest-opacity-hover));
+  --surface-selected: rgb(255 255 255 / 0.13);
+  --surface-border: rgb(255 255 255 / 0.12);
+  /* The Mac's surface layer, the address field's and a pinned tile's, over
+     a dark look. */
+  --field: rgb(70 70 70 / 0.32);
+  /* The Mac's regular glass over a dark look, as B15's Show more tabs. */
+  --sidebar-glass: rgb(58 58 60 / 0.5);
+  --sidebar-glass-hover: rgb(74 74 76 / 0.56);
+}
+
+.browser-window.reads-dark,
+.space-page.reads-dark,
+.space-content-page.reads-dark {
+  --primary-rgb: 0 0 0;
+  --fg: rgb(23 34 56 / 0.94);
+  --fg-secondary: rgb(23 34 56 / 0.6);
+  --surface: rgb(23 34 56 / var(--crest-opacity-hover));
+  --surface-selected: rgb(255 255 255 / 0.55);
+  --surface-border: rgb(23 34 56 / 0.12);
+  --field: rgb(226 233 224 / 0.5);
+  --sidebar-glass: rgb(255 255 255 / 0.55);
+  --sidebar-glass-hover: rgb(255 255 255 / 0.7);
+}
+
+/* The sidebar's place, as the Mac's: a column beside the page while docked;
+   a card over the page while floating, or off the window's leading edge while
+   collapsed, the page filling the window either way. */
+.sidebar-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.sidebar-slot > .sidebar {
+  flex: 1;
+  min-height: 0;
+}
+
+/* The page area, as the Mac's SpaceContentPagerView: the whole content area
+   beside the sidebar, the window's inset included, where each Space's card
+   stands in a page of its own. Pages slide a content width a Space, so the
+   cards keep the inset between them; the area clips only while they move. */
+.browser-window > .space-content {
+  position: relative;
+  grid-column: -2;
+  grid-row: -2;
+  min-width: 0;
+  min-height: 0;
+  margin: 0 calc(-1 * var(--window-inset)) calc(-1 * var(--window-inset));
+  pointer-events: none;
+}
+
+.browser-window:not(.with-title-bar) > .space-content {
+  margin-top: calc(-1 * var(--window-inset));
+}
+
+.space-content.moving {
+  overflow: hidden;
+}
+
+.space-content-page {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  padding: 0 var(--window-inset) var(--window-inset);
+}
+
+.browser-window:not(.with-title-bar) .space-content-page {
+  padding-top: var(--window-inset);
+}
+
+/* The address bar sits above the page even while the sidebar is tucked away. */
+.page-address-toolbar {
+  position: absolute;
+  inset: 0 var(--window-inset) auto;
+  height: 52px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-inline: 8px;
+  color: var(--fg);
+}
+
+.page-address-toolbar > button,
+.page-address-host {
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+}
+
+.page-address-host {
+  min-width: 0;
+  flex: 1 1 130px;
+  margin-inline-start: 4px;
+}
+
+.page-address-toolbar[inert] { filter: blur(6px); }
+
+.page-column:has(> .split-address-toolbar) {
+  grid-template-rows: 48px minmax(0, 1fr);
+  container-type: inline-size;
+}
+
+.split-address-toolbar {
+  position: relative;
+  inset: auto;
+  height: 48px;
+  min-width: 0;
+}
+
+.page-column:not(.focused) > .split-address-toolbar { opacity: 0.5; }
+@container (max-width: 310px) { .split-address-toolbar .page-bar-dock { display: none; } }
+
+/* The cards a window shows for a Space, side by side: a Split View's
+   members, or a tab alone. Between two cards lies the page frame's gap,
+   which holds the divider; each card takes its share of the rest, none
+   narrower than the Mac's minimum, and a row too narrow for them clips. */
+.page-columns {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  pointer-events: auto;
+}
+
+.page-column {
+  position: relative;
+  display: grid;
+  flex: 1 1 0px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.page-columns.split > .page-column {
+  min-width: 240px;
+}
+
+/* The column a lift from the sidebar would take: that card's own surface,
+   drawn before it lands. */
+.page-placeholder {
+  pointer-events: none;
+}
+
+.page-placeholder-card {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--page-corner);
+  background: rgb(255 255 255);
+  color: rgb(0 0 0 / 0.5);
+  font: 500 13px var(--crest-font-system);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08), 0 8px 30px rgb(0 0 0 / 0.22);
+}
+
+:where(:root[data-appearance="dark"]) {
+  .page-placeholder-card {
+    background: rgb(30 30 32);
+    color: rgb(255 255 255 / 0.55);
+  }
+}
+
+/* The focused card lies over its neighbours while they settle. */
+.page-column.focused {
+  z-index: 1;
+}
+
+.page-column > .page-card {
+  min-height: 0;
+}
+
+.split-divider {
+  position: relative;
+  flex: none;
+  /* The frame's 8 between two cards' frames, and each card's seam. */
+  width: 11px;
+  z-index: 2;
+}
+
+/* The divider's target overhangs each card by 4, with a capsule that stays visible at rest. */
+.split-divider-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: grid;
+  place-items: center;
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+}
+
+.split-divider-indicator {
+  width: 2px;
+  height: 46px;
+  border-radius: 1px;
+  background: rgb(var(--primary-rgb) / 0.18);
+}
+
+.split-divider-handle.active .split-divider-indicator {
+  background: rgb(var(--primary-rgb) / 0.28);
+}
+
+.split-divider-handle:focus-visible .split-divider-indicator {
+  box-shadow: 0 0 0 2px var(--focus-ring, Highlight);
+}
+
+/* What the window asks over its cards: its dialogs, download approvals and notices. */
+.page-row-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  border-radius: var(--page-corner);
+  pointer-events: none;
+}
+
+.page-row-overlay .sheet-backdrop {
+  pointer-events: auto;
+}
+
+/* The recent-tab switcher, as the Mac's: a glass panel centred over the
+   window, each recent item a card of its pages' pictures and titles, and one
+   highlight that slides to the card the release will show. Its sizes are
+   RecentTabSwitcherMetrics'. */
+.browser-window.reads-light .recent-tabs-layer {
+  --switcher-surface: rgb(32 32 35 / 0.86);
+  --switcher-ink: rgb(255 255 255 / 0.92);
+  --switcher-primary: 255 255 255;
+  --switcher-edge: rgb(255 255 255 / 0.14);
+  --switcher-selected: rgb(255 255 255 / 0.1);
+}
+
+.browser-window.reads-dark .recent-tabs-layer {
+  --switcher-surface: rgb(248 248 250 / 0.88);
+  --switcher-ink: rgb(0 0 0 / 0.86);
+  --switcher-primary: 0 0 0;
+  --switcher-edge: rgb(0 0 0 / 0.1);
+  --switcher-selected: rgb(255 255 255 / 0.7);
+}
+
+.recent-tabs-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.recent-tabs-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+}
+
+.recent-tabs-panel {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--crest-radius-panel);
+  background: var(--switcher-surface);
+  color: var(--switcher-ink);
+  box-shadow: inset 0 0 0 0.5px var(--switcher-edge), 0 18px 50px rgb(0 0 0 / 0.28);
+  backdrop-filter: blur(40px);
+  pointer-events: auto;
+}
+
+.recent-tabs-cards {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  transform-origin: center;
+}
+
+.recent-tabs-highlight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: var(--crest-radius-card);
+  background: var(--switcher-selected);
+  box-shadow: inset 0 0 0 2px rgb(var(--switcher-primary) / 0.1), 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+.recent-tabs-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--crest-radius-card);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+
+.recent-tabs-page {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recent-tabs-thumbnail {
+  position: relative;
+  height: 112px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--crest-radius-compact);
+  background: rgb(var(--switcher-primary) / 0.055);
+  box-shadow: inset 0 0 0 1px rgb(var(--switcher-primary) / 0.12);
+}
+
+.recent-tabs-thumbnail > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+}
+
+.recent-tabs-thumbnail::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgb(var(--switcher-primary) / 0.12);
+  pointer-events: none;
+}
+
+.recent-tabs-badge {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 1;
+  display: grid;
+  padding: 4px;
+  border-radius: var(--crest-radius-compact);
+  background: rgb(var(--switcher-primary) / 0.055);
+  box-shadow: inset 0 0 0 1px rgb(var(--switcher-primary) / 0.12);
+}
+
+.recent-tabs-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.recent-tabs-title > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-tabs-keys {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  outline: none;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The card of the tab the pointer rests on, as the Mac's floating flyout:
+   dark glass, 280 wide, the tab's icon, title and site over its picture. */
+.tab-preview-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 44;
+  pointer-events: none;
+}
+
+.tab-preview-cover {
+  position: fixed;
+  pointer-events: auto;
+}
+
+.tab-preview {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 280px;
+  box-sizing: border-box;
+  padding: 8px;
+  border-radius: 22px;
+  background: rgb(30 30 32 / 0.84);
+  color: rgb(255 255 255 / 0.95);
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.14), 0 6px 28px rgb(0 0 0 / 0.16);
+  backdrop-filter: blur(30px) saturate(1.6);
+  pointer-events: auto;
+}
+
+.tab-preview-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px;
+}
+
+.tab-preview-header .tab-icon {
+  flex: none;
+  margin-top: 1px;
+}
+
+.tab-preview-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tab-preview-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.tab-preview-site {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  color: rgb(255 255 255 / 0.6);
+}
+
+.tab-preview-picture {
+  display: block;
+  width: 264px;
+  object-fit: cover;
+  object-position: top;
+  border-radius: 14px;
+  box-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.16);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .tab-preview {
+    background: rgb(30 30 32);
+    backdrop-filter: none;
+  }
+}
+
+/* A download starting flies as a file into the lists button, or says it started. */
+.download-flights {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+}
+
+.flying-file {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 46px;
+  border-radius: 8px;
+  background: var(--prompt-surface);
+  color: var(--prompt-ink);
+  box-shadow: 0 0 0 0.5px var(--prompt-border), 0 2px 8px rgb(0 0 0 / 0.18);
+}
+
+.download-started {
+  position: absolute;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--prompt-surface);
+  color: var(--prompt-ink);
+  font-weight: 500;
+  box-shadow: 0 0 0 0.5px var(--prompt-border), 0 10px 30px rgb(0 0 0 / 0.22);
+}
+
+/* What lies over the page area wherever the Space strip stands: inside the window
+   frame, including the page seam that the native Peek covers. */
+.space-content-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  --overlay-frame: calc(var(--window-inset) - var(--page-seam));
+  padding: 0 var(--overlay-frame) var(--overlay-frame);
+  pointer-events: none;
+}
+
+.browser-window:not(.with-title-bar) .space-content-overlay {
+  padding-top: var(--overlay-frame);
+}
+
+.browser-window.top-address .space-content-page:not(:has(.page-columns.several)),
+.browser-window.top-address:has(.page-address-toolbar:not(.split-address-toolbar)) .space-content-overlay {
+  padding-top: 52px;
+}
+
+/* A Peek, as the Mac's pointer arrangement draws it: the page area dimmed,
+   and over it, 24 in, the action bar above the card. */
+.peek-layer {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.peek-layer.hidden {
+  visibility: hidden;
+}
+
+.peek-scrim {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--page-corner);
+  background: rgb(0 0 0 / 0.34);
+  pointer-events: auto;
+}
+
+.peek-stack {
+  position: absolute;
+  inset: calc(24px + (100% - 48px - 58px) * (1 - var(--peek-share, 1)) / 2)
+    calc(24px + (100% - 48px) * (1 - var(--peek-share, 1)) / 2);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.peek-bar {
+  flex: none;
+  display: flex;
+  gap: 10px;
+  width: 264px;
+  height: 48px;
+  pointer-events: auto;
+}
+
+.peek-close,
+.peek-destination {
+  border: 0;
+  color: rgb(0 0 0 / 0.85);
+  background: rgb(255 255 255 / 0.62);
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.7), 0 0 0 0.5px rgb(0 0 0 / 0.12), 0 6px 18px rgb(0 0 0 / 0.18);
+  backdrop-filter: blur(16px) saturate(1.6);
+}
+
+.peek-close {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.peek-destination {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  border-radius: 24px;
+  overflow: hidden;
+  background: linear-gradient(var(--peek-tint, transparent), var(--peek-tint, transparent)), rgb(255 255 255 / 0.62);
+}
+
+.peek-destination.reads-light {
+  color: rgb(255 255 255 / 0.95);
+}
+
+.peek-open-in {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 0 16px;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+}
+
+.peek-destination-separator {
+  flex: none;
+  width: 0.5px;
+  height: 22px;
+  background: currentColor;
+  opacity: 0.16;
+}
+
+.peek-destination-menu {
+  flex: none;
+  width: 48px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.peek-close:hover,
+.peek-open-in:hover,
+.peek-destination-menu:hover {
+  background-color: rgb(var(--primary-rgb) / 0.06);
+}
+
+.peek-card {
+  position: relative;
+  flex: 1;
+  align-self: stretch;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 15px;
+  background: rgb(246 246 246 / 0.86);
+  box-shadow: 0 14px 56px rgb(0 0 0 / 0.34);
+  backdrop-filter: blur(30px) saturate(1.4);
+  pointer-events: auto;
+}
+
+.peek-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: light-dark(rgb(246 245 243), rgb(44 41 39));
+}
+
+.peek-loading-status {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: rgb(var(--primary-rgb) / 0.61);
+  font-size: 12px;
+}
+
+.peek-spinner {
+  width: 16px;
+  height: 16px;
+  background: conic-gradient(from 20deg, transparent, currentColor);
+  mask: radial-gradient(closest-side, transparent 34%, black 47% 87%, transparent),
+    repeating-conic-gradient(from -9deg, black 0deg 18deg, transparent 18deg 45deg);
+  mask-composite: intersect;
+  animation: settings-spin 0.8s steps(8) infinite;
+}
+
+.peek-card .page-frame {
+  opacity: 0;
+}
+
+/* The card's edge lies over its page. */
+.peek-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.16);
+  pointer-events: none;
+}
+
+:where(:root[data-appearance="dark"]) {
+  .peek-close,
+  .peek-destination {
+    color: rgb(255 255 255 / 0.9);
+    background-color: rgb(47 47 45 / 0.80);
+    box-shadow: inset 0 1px 2px rgb(255 255 255 / 0.14), inset 0 0 0 0.5px rgb(255 255 255 / 0.16),
+      0 4px 14px rgb(0 0 0 / 0.14);
+  }
+
+  .peek-destination {
+    background: linear-gradient(var(--peek-tint, transparent), var(--peek-tint, transparent)), rgb(47 47 45 / 0.80);
+  }
+
+  .peek-destination:not(.reads-light) {
+    color: rgb(0 0 0 / 0.85);
+  }
+
+  .peek-card {
+    background: rgb(36 36 38 / 0.86);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .peek-scrim {
+    background: rgb(0 0 0 / 0.56);
+  }
+
+  .peek-card {
+    background: rgb(255 255 255);
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+}
+
+.space-content.moving .space-content-page {
+  will-change: transform;
+}
+
+/* A change of Space the pager shows at once dissolves the card it leaves. */
+.space-content-page.dissolving {
+  animation: space-dissolve 280ms cubic-bezier(0.27, 1, 0.18, 1) forwards;
+}
+
+@keyframes space-dissolve {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.browser-window.sidebar-floating,
+.browser-window.sidebar-collapsed {
+  grid-template-columns: 0 1fr;
+  column-gap: 0;
+  padding-left: var(--window-inset);
+}
+
+.sidebar-slot.floating,
+.sidebar-slot.collapsed {
+  position: absolute;
+  z-index: 4;
+  top: var(--title-bar-height, 7px);
+  bottom: 7px;
+  left: 7px;
+  width: var(--sidebar-width);
+  padding-top: var(--crest-space-small);
+  border-radius: 18px;
+  overflow: hidden;
+  isolation: isolate;
+  /* Out over the page on the Mac's spring for it, and back on its retreat's
+     (D02). */
+  transition: transform calc(var(--crest-sidebar-reveal-duration) * var(--sidebar-motion-factor, 1)) var(--crest-sidebar-reveal-easing) var(--sidebar-hover-pickup);
+}
+
+.sidebar-slot.collapsed {
+  transform: translateX(calc(-100% - 21px));
+  transition: transform calc(var(--crest-sidebar-retreat-duration) * var(--sidebar-motion-factor, 1)) var(--crest-sidebar-retreat-easing) var(--sidebar-hover-pickup);
+}
+
+/* The floating card's shadow, beside the card rather than on it, since the
+   card clips what it holds: on a layer of its own it slides with the card,
+   and fades as the card retreats, and as the sidebar leaves its seat or
+   takes it, without the card painting again. */
+.sidebar-card-shadow {
+  position: absolute;
+  z-index: 3;
+  top: var(--title-bar-height, 7px);
+  bottom: 7px;
+  left: 7px;
+  width: var(--sidebar-width);
+  border-radius: 18px;
+  box-shadow: 8px 8px 56px rgb(0 0 0 / 0.3);
+  pointer-events: none;
+  -webkit-app-region: initial;
+  will-change: transform, opacity;
+  transition: transform calc(var(--crest-sidebar-reveal-duration) * var(--sidebar-motion-factor, 1)) var(--crest-sidebar-reveal-easing) var(--sidebar-hover-pickup),
+    opacity calc(var(--crest-sidebar-reveal-duration) * var(--sidebar-motion-factor, 1)) ease-out var(--sidebar-hover-pickup);
+}
+
+.sidebar-card-shadow.collapsed {
+  transform: translateX(calc(-100% - 21px));
+  opacity: 0;
+  transition: transform calc(var(--crest-sidebar-retreat-duration) * var(--sidebar-motion-factor, 1)) var(--crest-sidebar-retreat-easing) var(--sidebar-hover-pickup),
+    opacity calc(var(--crest-sidebar-retreat-duration) * var(--sidebar-motion-factor, 1)) ease-out var(--sidebar-hover-pickup);
+}
+
+/* Leaving its seat, the sidebar becomes the card where it stands: the card's
+   shadow, backdrop, sheen and edge come in over the morph. Taking its seat,
+   they go over the last step into the column. Coming in, nothing holds the
+   last frame, which would hold the shadow over the card's own fade as it
+   retreats. */
+.sidebar-card-shadow.dressing-in,
+.sidebar-slot.dressing-in > .space-banner,
+.sidebar-slot.dressing-in > .sidebar-card-sheen,
+.sidebar-slot.dressing-in::after {
+  animation: sidebar-dressing-in calc(var(--crest-sidebar-dressing-in) * var(--sidebar-motion-factor, 1)) ease-out backwards;
+}
+
+.sidebar-card-shadow.dressing-out,
+.sidebar-slot.dressing-out > .space-banner,
+.sidebar-slot.dressing-out > .sidebar-card-sheen {
+  animation: sidebar-dressing-out calc(var(--crest-sidebar-dressing-out) * var(--sidebar-motion-factor, 1)) ease-out forwards;
+}
+
+.sidebar-slot.docked.dressing-out {
+  border-radius: 18px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Taking its seat, the card's edge goes with the rest of its dressing. */
+.sidebar-slot.docked.dressing-out::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 0.75px var(--surface-border);
+  pointer-events: none;
+  animation: sidebar-dressing-out calc(var(--crest-sidebar-dressing-out) * var(--sidebar-motion-factor, 1)) ease-out forwards;
+}
+
+/* While it morphs, the sidebar stands over the page, which moves beside it
+   or beneath it (SidebarSlot.svelte). */
+.sidebar-slot.morphing {
+  z-index: 4;
+}
+
+/* Docked, the card's dressing waits unseen on layers of its own, which the
+   compositor keeps drawn. */
+.sidebar-slot > .space-banner,
+.sidebar-slot > .sidebar-card-sheen {
+  will-change: opacity;
+}
+
+.sidebar-slot.docked > .space-banner,
+.sidebar-slot.docked > .sidebar-card-sheen,
+.sidebar-card-shadow.docked {
+  opacity: 0;
+}
+
+@keyframes sidebar-dressing-in {
+  from { opacity: 0; }
+}
+
+@keyframes sidebar-dressing-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* The card's edge, drawn over what it holds. */
+.sidebar-slot.floating::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 0.75px var(--surface-border);
+  pointer-events: none;
+}
+
+.browser-window.reads-light .sidebar-slot.floating::after,
+.browser-window.reads-light .sidebar-slot.docked.dressing-out::after {
+  box-shadow: inset 0 0 0 0.75px rgb(255 255 255 / 0.2);
+}
+
+.browser-window.reads-dark .sidebar-slot.floating::after,
+.browser-window.reads-dark .sidebar-slot.docked.dressing-out::after {
+  box-shadow: inset 0 0 0 0.75px rgb(0 0 0 / 0.2);
+}
+
+/* Light from the top leading corner and shade toward the bottom trailing one. */
+.sidebar-card-sheen {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(135deg, rgb(255 255 255 / 0.055), transparent 50%, rgb(0 0 0 / 0.09));
+}
+
+/* Beside a floating card on the page's side: the pointer may stray this far
+   before the card goes. */
+.sidebar-retreat-margin {
+  position: absolute;
+  z-index: 4;
+  top: var(--title-bar-height, 7px);
+  bottom: 7px;
+  left: calc(7px + var(--sidebar-width));
+  -webkit-app-region: no-drag;
+}
+
+.sidebar-retreat-zone {
+  left: var(--retreat-edge);
+  position: absolute;
+  z-index: 3;
+  top: var(--title-bar-height, 0px);
+  right: 0;
+  bottom: 0;
+  -webkit-app-region: no-drag;
+}
+
+/* The sidebar's edge beside the page resizes it, as the Mac's handle: a clear
+   grip that shows a thin bar while it moves. It rides above a floating card. */
+.sidebar-resize-handle {
+  left: var(--handle-edge);
+  position: absolute;
+  z-index: 3;
+  top: var(--title-bar-height, var(--window-inset));
+  bottom: var(--window-inset);
+  display: grid;
+  place-items: center;
+  cursor: col-resize;
+  outline: none;
+  -webkit-app-region: no-drag;
+}
+
+.sidebar-resize-handle.floating {
+  z-index: 5;
+  top: var(--title-bar-height, 7px);
+  bottom: 7px;
+}
+
+.sidebar-resize-indicator {
+  width: 2px;
+  height: 46px;
+  border-radius: 1px;
+  background: var(--fg);
+  opacity: 0;
+  transition: opacity 100ms ease-in-out;
+}
+
+.sidebar-resize-handle.active .sidebar-resize-indicator,
+.sidebar-resize-handle:focus-visible .sidebar-resize-indicator {
+  opacity: 0.28;
+}
+
+/* While a resize is under way, the window shows the resize cursor wherever the pointer goes. */
+.browser-window:has(.sidebar-resize-handle.active) {
+  cursor: col-resize;
+}
+
+/* Resting the pointer here, or clicking, brings a collapsed sidebar out. */
+/* The layer after the page area that holds the sidebar's edge, so its drag
+   area doesn't lie over the edge's; it draws no box of its own. */
+.sidebar-edge-host {
+  display: contents;
+}
+
+/* A floating card's region, which only says it takes the pointer: Chromium
+   lays each box's drag area over those before it, and the page area's would
+   make the card's padding a handle that moves the window. */
+.sidebar-card-region {
+  position: absolute;
+  top: var(--title-bar-height, 0px);
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  -webkit-app-region: no-drag;
+}
+
+.sidebar-edge {
+  position: absolute;
+  z-index: 5;
+  top: var(--title-bar-height, 0px);
+  bottom: 0;
+  left: 0;
+  width: 14px;
+  -webkit-app-region: no-drag;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-slot.floating,
+  .sidebar-slot.collapsed,
+  .sidebar-card-shadow,
+  .sidebar-card-shadow.collapsed {
+    transition: none;
+  }
+}
+
+/* The contents keep their reading order on either side. Only the drawer, its
+   hit regions, and the grid column it gives the page change edges. */
+.browser-window.sidebar-right {
+  grid-template-columns: minmax(0, 1fr) var(--sidebar-width);
+  padding-left: var(--window-inset);
+  padding-right: 0;
+}
+
+.browser-window.sidebar-right:is(.sidebar-floating, .sidebar-collapsed) {
+  grid-template-columns: minmax(0, 1fr) 0;
+  padding-right: var(--window-inset);
+}
+
+.sidebar-right > .sidebar-slot.docked { grid-column: 2; grid-row: -2; }
+.sidebar-right > .space-content, .sidebar-right .palette-area { grid-column: 1; }
+.sidebar-right .sidebar-slot:is(.floating, .collapsed), .sidebar-right .sidebar-card-shadow { left: auto; right: 7px; }
+.sidebar-right .sidebar-slot.collapsed, .sidebar-right .sidebar-card-shadow.collapsed { transform: translateX(calc(100% + 21px)); }
+.sidebar-right .sidebar-retreat-margin { left: auto; right: calc(7px + var(--sidebar-width)); }
+.sidebar-right .sidebar-retreat-zone { left: 0; right: var(--retreat-edge); }
+.sidebar-right .sidebar-edge, .sidebar-right .sidebar-card-region { left: auto; right: 0; }
+.sidebar-right .sidebar-resize-handle { left: auto; right: var(--handle-edge); }
+
+/* Sidebar */
+.sidebar {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--crest-space-small);
+  /* The Mac's BrowserSidebarMetrics.layerInset on both sides, and its
+     address field starting where the Mac's 48-point title bar ends. */
+  padding: var(--crest-space-small) var(--crest-space-small) 0;
+  color: var(--fg);
+}
+
+.sidebar-slot.docked:has(.sidebar-toolbar) > .sidebar {
+  padding-top: 0;
+}
+
+.sidebar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  height: 34px;
+}
+
+.window-drag {
+  flex: 1;
+  height: 100%;
+}
+
+/* Crest's own window on Windows: a title bar across the top, which moves the
+   window, holds the page's navigation over the sidebar, and ends in the
+   window's buttons, flush with the top right corner. */
+.browser-window.with-title-bar {
+  --title-bar-height: 40px;
+  grid-template-rows: var(--title-bar-height) minmax(0, 1fr);
+  row-gap: 0;
+  padding-top: 0;
+}
+
+.title-bar {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  align-items: stretch;
+  height: var(--title-bar-height);
+  margin-inline-end: calc(-1 * var(--window-inset));
+  color: var(--fg);
+  -webkit-app-region: drag;
+}
+
+/* A sidebar docked on the right takes the window's right inset away, so the
+   title bar already reaches the corner. */
+.browser-window.sidebar-right.sidebar-docked .title-bar {
+  margin-inline-end: 0;
+}
+
+.title-bar button {
+  -webkit-app-region: no-drag;
+}
+
+/* The page's navigation where the Mac's stands: at the sidebar's trailing
+   side, 12 in from its edge, following the sidebar's width. */
+.title-bar-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1px;
+  flex: none;
+  width: var(--sidebar-width);
+  padding-inline-end: var(--crest-space-medium);
+}
+
+.chrome-button.navigation-button {
+  width: 30px;
+  height: 30px;
+  color: rgb(var(--primary-rgb) / 0.85);
+}
+
+.chrome-button.navigation-button:disabled {
+  opacity: 1;
+  color: rgb(var(--primary-rgb) / 0.275);
+}
+
+.title-bar-drag {
+  flex: 1;
+}
+
+/* Windows 11's caption buttons, in the system's own glyphs. */
+.window-controls {
+  position: relative;
+  /* Windows' caption buttons stay above the command palette's scrim, as the
+     system draws them over everything else in the window. */
+  z-index: 11;
+  display: flex;
+  transition: opacity 100ms ease-in-out;
+}
+
+.window-controls.inactive {
+  opacity: 0.45;
+}
+
+.window-control {
+  width: 46px;
+  display: grid;
+  place-items: center;
+  color: var(--fg);
+  font: 10px "Segoe Fluent Icons", "Segoe MDL2 Assets";
+  transition: background 100ms ease-in-out, color 100ms ease-in-out;
+}
+
+.window-control:hover {
+  background: var(--surface);
+}
+
+.window-control:active {
+  background: var(--surface-selected);
+}
+
+.window-control.close:hover {
+  background: rgb(196 43 28);
+  color: rgb(255 255 255);
+}
+
+.window-control.close:active {
+  background: rgb(196 43 28 / 0.9);
+  color: rgb(255 255 255 / 0.7);
+}
+
+.chrome-button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--crest-radius-compact);
+  color: var(--fg-secondary);
+  transition: background 100ms ease-in-out, color 100ms ease-in-out;
+}
+
+.chrome-button:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--fg);
+}
+
+.chrome-button:disabled {
+  opacity: var(--crest-opacity-disabled, 0.5);
+}
+
+/* The shown tab's address, which opens the command palette to edit it, as
+   the Mac's sidebar address field: 36 tall on the sidebar's surface layer,
+   with no edge, the layer's radius, and its contents 9 in from either end. */
+.address-field {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  height: 36px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 13px;
+  background: var(--field);
+  color: rgb(var(--primary-rgb) / 0.85);
+  /* Back as the palette that grew out of it lands on it, as the Mac's
+     hand-off's trailing fade: the frame's travel less the fade. */
+  transition: box-shadow 100ms ease-in-out, opacity var(--palette-handoff-fade, 120ms) ease-out var(--palette-field-return, 90ms);
+}
+
+/* Handed off to the palette growing out of it, as the frame leaves it. */
+.address-field.handed-off {
+  opacity: 0;
+  transition: box-shadow 100ms ease-in-out, opacity var(--palette-handoff-fade, 120ms) ease-out var(--palette-field-leave, 0ms);
+}
+
+.address-field:has(.address-summary:focus-visible) {
+  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.4), 0 0 0 3px rgb(255 255 255 / 0.12);
+}
+
+/* The page loading: the Space's accent fills the field from its leading
+   edge, as the Mac's field does. The engine gives the interface no estimate
+   of how far a load has come, so the fill comes in quickly and then slows,
+   never reaching the end before the load does; a load ending draws it back
+   as it fades, as the Mac's does as its progress returns to nothing. The
+   field's shape clips the fill, which scales on the compositor, so the fill
+   keeps the field's corners at every width. */
+.address-progress {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.address-progress::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--field-accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 180ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.address-field.loading .address-progress {
+  opacity: 0.55;
+}
+
+.address-field.loading .address-progress::before {
+  animation: address-loading 15s cubic-bezier(0.2, 0.5, 0.35, 1) forwards;
+}
+
+@keyframes address-loading {
+  from { transform: scaleX(0.1); }
+  to { transform: scaleX(0.9); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .address-progress, .address-progress::before { transition: none; }
+  .address-field.loading .address-progress::before { animation: none; transform: scaleX(0.5); }
+}
+
+/* The site centred over the rest of its address, a point closer than their
+   lines, as the Mac's two-line address. */
+.address-summary {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  outline: none;
+}
+
+/* A part of the field that pops out as it shows another Space, the new
+   Space's popping in in its place (BrowserAddressSwap): the address, the
+   lock or glyph before it, and Site Controls after it. */
+.address-swap {
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+
+.address-summary > .address-swap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.address-domain,
+.address-route {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.address-domain {
+  font: 600 12px/15px var(--crest-font-system);
+}
+
+.address-domain.placeholder {
+  color: rgb(var(--primary-rgb) / 0.55);
+}
+
+.address-route {
+  margin-top: -1px;
+  font: 400 10px/12px var(--crest-font-system);
+  color: rgb(var(--primary-rgb) / 0.55);
+}
+
+/* The lock or search glyph a page without a live site's controls shows,
+   centred where its lock would stand, so the address keeps its place. */
+.address-glyph {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: rgb(var(--primary-rgb) / 0.55);
+}
+
+/* The lock and Site Controls: the Mac's chrome controls, 28 square, their
+   glyphs in the primary colour, a surface under the pointer. */
+.address-security,
+.site-control-trigger {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7.5px;
+  color: rgb(var(--primary-rgb) / 0.85);
+  transition: background 100ms ease-in-out;
+}
+
+/* A lock with no certificate to show is quiet, as a disabled control is. */
+.address-security:disabled {
+  opacity: 1;
+  color: rgb(var(--primary-rgb) / 0.275);
+}
+
+.address-security:not(:disabled):hover,
+.site-control-trigger:hover,
+.site-control-trigger.open {
+  background: rgb(var(--primary-rgb) / 0.07);
+}
+
+.address-security:not(:disabled):active,
+.site-control-trigger:active {
+  background: rgb(var(--primary-rgb) / 0.12);
+}
+
+/* A blocked pop-up puts a dot in the warning tone on the trigger. */
+.site-control-trigger {
+  position: relative;
+}
+
+.site-control-dot {
+  position: absolute;
+  top: 5px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgb(236 190 92);
+  box-shadow: 0 0 0 1px var(--field);
+}
+
+/* The pinned tiles, as the Mac's PinnedTabGrid: rows of up to four tiles
+   sharing the row's width, 47 tall, 8 apart, on the address field's surface;
+   the pointer and a press lift the surface, and a tile the window's
+   selection holds lifts it more. */
+.pinned-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--pin-columns, 4), minmax(0, 1fr));
+  gap: var(--pin-spacing, 8px);
+  /* The Mac's pinnedTabsBottomInset: 6 to the Space's header, not the page's 8. */
+  margin-bottom: -2px;
+}
+
+.pinned-grid.stretch { display: flex; flex-wrap: wrap; }
+.pinned-grid.stretch > :is(.pinned-tile, .pin-gap) {
+  flex: 1 1 calc((100% - (var(--pin-columns) - 1) * var(--pin-spacing, 8px)) / var(--pin-columns) - 0.1px);
+  min-width: 0;
+}
+
+.pinned-tile {
+  --pin-lift: 0;
+  position: relative;
+  height: max(32px, calc(47px * var(--tab-scale, 1)));
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background:
+    linear-gradient(rgb(var(--primary-rgb) / var(--pin-lift)), rgb(var(--primary-rgb) / var(--pin-lift))),
+    var(--field);
+  transition: --pin-lift 100ms ease-in-out;
+}
+
+@property --pin-lift {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+.pinned-tile:hover {
+  --pin-lift: 0.07;
+}
+
+.pinned-tile:active {
+  --pin-lift: 0.035;
+}
+
+/* The tile its window shows keeps its surface and wears a 2pt ring inside its
+   edge in its icon's own colour, as the Mac's pins take their site's. */
+.pin-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px var(--pin-accent, var(--default-favicon));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 100ms ease-in-out;
+}
+
+.pinned-tile.selected .pin-ring {
+  opacity: 1;
+}
+
+/* A tile whose tab holds no page is dimmed, as an unloaded row is. */
+.dim-unloaded .pinned-tile.unloaded .tab-icon {
+  opacity: 0.5;
+  filter: saturate(0.3);
+}
+
+/* The Space header, as the Mac's BrowserSpaceHeader: a row as tall as a tab
+   row, its title the crest, name and lock, its hover the hover surface. */
+.space-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  /* The Space's first row starts half a row's separation below it, as a
+     Mac row keeps half its separation on either side, not the page's gap. */
+  margin-bottom: -7px;
+  /* The Mac's 8 before the crest; its borderless menu button ends its
+     ellipsis 2 from the edge, where a 24-point control would end 4 in. */
+  padding: 0 2px 0 8px;
+  border-radius: 8px;
+  transition: background 100ms ease-in-out;
+}
+
+/* With no pinned tabs, the Mac keeps their 12-point band, where a tab
+   dropped is pinned, between the address field and the header: 4 more than
+   the page's gap. */
+.space-header.without-pins {
+  margin-top: 4px;
+}
+
+.space-header:hover {
+  background: rgb(var(--primary-rgb) / 0.08);
+}
+
+.space-header-title {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgb(var(--primary-rgb));
+  text-align: start;
+}
+
+.space-header-title::after {
+  content: "";
+  flex: 1;
+  min-width: 8px;
+}
+
+.space-header-identity {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.space-header-identity > * {
+  grid-area: 1 / 1;
+  display: grid;
+  place-items: center;
+  transition: opacity 160ms cubic-bezier(0.2, 0.9, 0.3, 1), transform 160ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+/* Collapsing turns the chevron to point at the title as it fades in over the crest. */
+.space-header-chevron {
+  color: var(--fg-secondary);
+  opacity: 0;
+  transform: rotate(90deg);
+}
+
+.space-header-identity.collapsed .space-header-crest {
+  opacity: 0;
+}
+
+.space-header-identity.collapsed .space-header-chevron {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space-header-chevron {
+    transform: none;
+  }
+}
+
+/* The Mac's callout in semibold. Its capitals centre in the header, as SF
+   sets them; Segoe's line box would set them a point low. The padding keeps
+   room for descenders and accents inside the clip. */
+.space-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-box: trim-both cap alphabetic;
+  padding-block: 4px;
+}
+
+.space-header-lock {
+  display: grid;
+  place-items: center;
+}
+
+.space-header .space-header-actions {
+  width: 24px;
+  height: 24px;
+  color: rgb(var(--primary-rgb));
+}
+
+.tab-list-scroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  scrollbar-width: none;
+}
+
+/* SidebarScrollAffordance: over the list and clipped by it, taking no
+   presses but the button's while it shows. */
+.sidebar-scroll-affordance {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* A 3-wide capsule 3 in from the trailing edge, in the primary colour at
+   45%, shown only while the list scrolls. */
+.sidebar-scroll-indicator {
+  position: absolute;
+  top: 0;
+  right: 3px;
+  width: 3px;
+  border-radius: 1.5px;
+  background: rgb(var(--primary-rgb) / 0.45);
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.sidebar-scroll-indicator.shows {
+  opacity: 1;
+}
+
+/* Show more tabs: a 22 glass circle 6 above the list's bottom edge, centred,
+   in a 28 hit circle around it. At rest out of sight it waits below the
+   edge at half size, and rises as it shows. */
+.sidebar-more-tabs {
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  width: 28px;
+  height: 28px;
+  margin-left: -14px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  opacity: 0;
+  transform: translateY(58px) scale(0.5);
+  transform-origin: 50% 100%;
+  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+  -webkit-app-region: no-drag;
+}
+
+.sidebar-more-tabs.shows {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.sidebar-more-tabs-bubble {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--sidebar-glass);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.28), inset 0 0.5px 0 rgb(255 255 255 / 0.14);
+  color: rgb(var(--primary-rgb) / 0.9);
+  transition: background 0.1s ease-in-out;
+}
+
+.sidebar-more-tabs:hover .sidebar-more-tabs-bubble {
+  background: var(--sidebar-glass-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-more-tabs {
+    transform: none;
+    transition: opacity 0s;
+  }
+}
+
+.tab-section {
+  display: flex;
+  flex-direction: column;
+  gap: calc(2px * var(--sidebar-spacing, 1));
+}
+
+/* The current tabs stand under a divider even with no saved tabs above,
+   with the Mac's room on either side of it: about 19 above, 18 below, and as
+   much again where the saved tabs would stand when there are none. */
+.tab-list > .tab-section.current-tabs {
+  margin-top: 16px;
+}
+
+.tab-list > .tab-section.current-tabs:first-child {
+  margin-top: 28px;
+}
+
+/* The line itself, as the Mac's BrowserCurrentTabsDivider on a pointer
+   shell, with Clear at its trailing end, 8 past where the line stops. The
+   section's gap and this margin keep the line 20 above the New Tab row, or
+   19 where nothing stands above it. Clear shows only while the pointer
+   rests over the Space's page, and takes no room of its own. */
+.current-tabs-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 1px;
+  margin-bottom: 18px;
+}
+
+.tab-list > .tab-section.current-tabs:first-child > .current-tabs-divider {
+  margin-bottom: 17px;
+}
+
+/* The line keeps the Mac's 12 from the sidebar's edges, 4 inside the rows (B10). */
+.current-tabs-line {
+  flex: 1;
+  height: 1px;
+  margin-left: 4px;
+  background: var(--surface-border);
+}
+
+.current-tabs-divider {
+  padding-right: 4.5px;
+}
+
+.current-tabs-clear {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fg-secondary);
+  white-space: nowrap;
+}
+
+.current-tabs-clear:hover {
+  color: var(--fg);
+}
+
+/* Shown under the pointer, and while the keyboard is in the Space's page, so Tab can reach it. */
+.space-page:hover .current-tabs-clear,
+.space-page:has(:focus-visible) .current-tabs-clear {
+  display: inline-flex;
+}
+
+/* An open folder, group or split is the Mac's container: 4 of padding over
+   its header, which is shorter than a row by the container's padding and
+   spacing (29 for a 40 row), and room under its last row before what follows,
+   as measured on the Mac: 7 after a folder or group, 5 after a split. */
+.sidebar-row.folder-row {
+  min-height: 29px;
+  margin-top: 4px;
+}
+
+.tab-section[data-list-folder]:not([data-list-folder=""]) {
+  padding-bottom: 7px;
+}
+
+/* A sidebar row, as the Mac's pointer tab row: 40px tall, its icon's 18px box
+   9px in from the surface's edge and 9px from the title, its trailing control
+   6px from its end. Inside folders and splits, --row-inset insets the surface
+   and --row-indent the content (rowPlacement in sidebar-layout.ts). The
+   corner is the Mac's layer radius at its default 10pt setting, 14pt at the
+   top level and 4pt tighter each level in, never under 10pt; the Mac draws
+   those as continuous corners, which measure as these 13px and 9px circles. */
+.sidebar-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: max(24px, calc(40px * var(--tab-scale, 1)));
+  font-size: calc(13px * var(--tab-content-scale, 1));
+  margin-inline: var(--row-inset, 0px);
+  padding-inline: calc(9px + var(--row-indent, 0px)) 6px;
+  border-radius: max(9px, calc(13px - 4px * var(--row-depth, 0)));
+  text-align: start;
+  color: var(--fg);
+  transition: background 100ms ease-in-out, box-shadow 100ms ease-in-out,
+    translate var(--crest-drag-source-duration) var(--crest-drag-source-easing);
+}
+
+.row-glyph {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 18px;
+}
+
+/* A group's header is its name alone, as a caption over its tabs: small,
+   semibold and secondary, where a folder's artwork would start. */
+.group-row .row-title {
+  font-size: calc(10px * var(--tab-content-scale, 1));
+  font-weight: 600;
+  color: var(--fg-secondary);
+}
+
+/* How many tabs a folder holds, at its end in the trailing control's place. */
+.folder-count {
+  flex: none;
+  width: 28px;
+  text-align: center;
+  font-size: calc(10px * var(--tab-content-scale, 1));
+  color: var(--fg-secondary);
+}
+
+.sidebar-row:hover {
+  background: var(--surface);
+}
+
+.sidebar-row.selected:hover {
+  background: none;
+}
+
+.row-selection {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--selected-tab-fill, var(--surface-selected));
+  box-shadow: inset 0 0 0 1px var(--custom-chrome-accent, var(--surface-border)), 0 1px 3px rgb(0 0 0 / 0.14);
+  z-index: 0;
+}
+
+/* CrestPaperSheet lets the resting surface show through the selected paper. */
+.paper-selection .tab-row.selected {
+  --fg: var(--crest-ink);
+  --fg-secondary: rgb(23 34 56 / 0.65);
+}
+.paper-selection .row-selection {
+  background: color-mix(in srgb, var(--crest-paper) calc(var(--selected-paper-opacity) * 100%), transparent);
+  box-shadow: 0 1px 2px rgb(23 34 56 / 0.16);
+}
+.paper-selection .pinned-tile.selected .pin-ring {
+  background: color-mix(in srgb, var(--crest-paper) calc(var(--selected-paper-opacity) * 100%), transparent);
+}
+.paper-selection.tint-selected-pins .pinned-tile.selected .pin-ring {
+  background: linear-gradient(color-mix(in srgb, var(--pin-accent, var(--default-favicon)) 30%, transparent) 0 0),
+    linear-gradient(color-mix(in srgb, var(--crest-paper) calc(var(--selected-paper-opacity) * 100%), transparent) 0 0),
+    var(--pin-accent, var(--default-favicon));
+}
+.pinned-tile > .tab-icon { position: relative; }
+@media (prefers-reduced-transparency: reduce) {
+  .paper-selection { --selected-paper-opacity: 1 !important; }
+}
+@media (prefers-contrast: more) {
+  .paper-selection .row-selection { outline: 1px solid var(--crest-ink); outline-offset: -1px; }
+}
+
+/* The selection shows at once, as the Mac's does (browsers switch tabs at once); only a press eases in,
+   taking the selected look on the surface's 0.1 s (CrestInteractiveSurfaceModifier). */
+.tab-row:not(.selected):active {
+  background: var(--surface-selected);
+  box-shadow: inset 0 0 0 1px var(--surface-border), 0 1px 3px rgb(0 0 0 / 0.14);
+}
+
+.sidebar-row > :not(.row-selection) {
+  position: relative;
+  z-index: 1;
+}
+
+/* A row's title sits with its capitals half a point above the row's centre,
+   where SF sets them on the Mac; Segoe's line box would set them two points
+   lower. Trimming the line to its capitals and baseline places them by the
+   padding, which also keeps room for descenders and accents inside the clip.
+   A folder's, a group's or a split's header centres them. */
+.row-title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 400;
+  text-box: trim-both cap alphabetic;
+  padding-block: 4px 5px;
+}
+
+.folder-row > .row-title {
+  padding-block: 4px;
+}
+
+/* A tab's close button shows on hover and on the selected tab: the Mac's
+   28px pointer control, its glyph 12px. */
+.row-close {
+  flex: none;
+  width: 28px;
+  height: min(28px, max(24px, calc(40px * var(--tab-scale, 1))));
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--fg-secondary);
+  opacity: 0;
+  transition: opacity 100ms ease-in-out, background 100ms ease-in-out;
+}
+
+.tab-row:hover .row-close,
+.tab-row.selected .row-close {
+  opacity: 1;
+}
+
+/* A tab whose page isn't loaded, as the Mac's residency dims it. */
+.dim-unloaded .tab-row.unloaded > .tab-icon,
+.dim-unloaded .tab-row.unloaded > .row-title {
+  opacity: 0.5;
+  filter: saturate(0.3);
+}
+
+.row-close:hover {
+  background: var(--surface);
+  color: var(--fg);
+}
+
+/* Lifting rows, as the Mac's sidebar lifts them: what the lift carries
+   collapses, a gap opens where it would land, and a folder or tab it would
+   nest in, or a Space it would move to, lights up. */
+.tab-row,
+.folder-row,
+.pinned-tile,
+.split-card {
+  user-select: none;
+}
+
+.lifted {
+  display: none !important;
+}
+
+/* What the window's selection holds for tab actions wears the row's hover,
+   as on the Mac: a tile with its edge too, and a split on its card. */
+.sidebar-row.unit-selected {
+  background: var(--surface);
+}
+
+.pinned-tile.unit-selected {
+  --pin-lift: 0.13;
+}
+
+.split-card.unit-selected {
+  background: var(--surface-selected);
+  box-shadow: inset 0 0 0 1px var(--surface-border);
+}
+
+/* A pinned tab a lift let go of shakes, as the Mac's does. */
+.pinned-tile.shaken {
+  animation: tile-shake 300ms ease-in-out;
+}
+
+@keyframes tile-shake {
+  20%, 60% { translate: -3px 0; }
+  40%, 80% { translate: 3px 0; }
+}
+
+/* Rows a lift moves aside to make room ease there on the Mac's dragSource
+   spring (sidebar-drag.svelte.ts's makeRoom sets their translate). */
+.current-tabs-divider,
+.practice-saved-caption {
+  transition: translate var(--crest-drag-source-duration) var(--crest-drag-source-easing);
+}
+
+/* Between a list's rows the room the lift makes shows where it lands, as on
+   the Mac, so no line is drawn there; the pinned grid keeps its line. */
+.sidebar-row.drop-before::before,
+.split-card.drop-before::before,
+.tab-section.drop-at-end::after {
+  content: none;
+}
+
+/* Where a lift would land among the pinned grid's tiles: an upright 2pt line
+   between them, as the Mac's insertion line, which moves no tile. In lists
+   the rows make room instead (above). */
+.drop-before,
+.drop-at-end,
+.split-card {
+  position: relative;
+}
+
+.drop-before::before,
+.drop-at-end::after {
+  content: "";
+  position: absolute;
+  inset-inline: 2px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgb(255 250 240 / 0.72);
+  pointer-events: none;
+}
+
+.drop-before::before {
+  top: -2px;
+}
+
+.drop-at-end::after {
+  bottom: -2px;
+}
+
+.pinned-tile.drop-before::before {
+  inset: 2px auto 2px -5px;
+  width: 2px;
+  height: auto;
+}
+
+.pinned-grid.drop-at-end::after {
+  inset: auto -3px 2px auto;
+  top: auto;
+  width: 2px;
+  height: 43px;
+}
+
+.folder-row.drop-into,
+.tab-row.drop-nest {
+  background: rgb(255 250 240 / 0.1);
+  box-shadow: inset 0 0 0 1.5px rgb(255 250 240 / 0.72);
+}
+
+.lift-preview {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 9px;
+  border-radius: calc(var(--crest-radius-compact) + 4px);
+  color: var(--fg);
+  font: 400 13px var(--crest-font-system);
+  transform: scale(1.04);
+  box-shadow: inset 0 0 0 0.5px var(--surface-border), 0 5px 20px rgb(0 0 0 / 0.22);
+  pointer-events: none;
+}
+
+.browser-window.reads-light .lift-preview {
+  background: rgb(44 48 56 / 0.94);
+}
+
+.browser-window.reads-dark .lift-preview {
+  background: rgb(250 250 252 / 0.94);
+}
+
+.lift-preview.tile {
+  justify-content: center;
+  padding: 0;
+  border-radius: var(--crest-radius-control);
+}
+
+/* Over the page area, the lift is the page card it would become. */
+.lift-preview.card {
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: 13px;
+  text-align: center;
+  transform: none;
+  transition: width 140ms ease, height 140ms ease, border-radius 140ms ease, left 140ms ease, top 140ms ease;
+}
+
+.lift-preview.card .row-title {
+  text-box: normal;
+  padding-block: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  font-weight: 500;
+}
+
+.lift-preview .row-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.lift-refusal {
+  position: fixed;
+  z-index: 51;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 280px;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgb(32 32 35 / 0.94);
+  color: rgb(255 255 255 / 0.92);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+/* A tab's or folder's title being renamed where it stands, as on the Mac:
+   the title itself becomes editable, its text selected, with no field. */
+.rename-field {
+  flex: 1;
+  min-width: 0;
+  margin-inline-end: 6px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--fg);
+  font: 400 13px var(--crest-font-system);
+}
+
+.group-row .rename-field {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* New Tab stays secondary, at rest and under the pointer, as the Mac's row. */
+.new-tab-row {
+  color: var(--fg-secondary);
+}
+
+.tab-icon {
+  flex: none;
+  border-radius: 4px;
+}
+
+/* A site without an icon of its own wears the engine's default globe, grey
+   in the device's appearance, as the Mac's tabs show it. */
+:root {
+  --default-favicon: rgb(95 99 104);
+}
+
+:root[data-appearance="dark"] {
+  --default-favicon: rgb(154 160 166);
+}
+
+.tab-icon.default-favicon {
+  color: var(--default-favicon);
+}
+
+/* An emoji the person chose for a tab, in its icon's square. */
+.tab-emoji {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+/* A split's card shows only while the pointer is over it, as the Mac's
+   does by default: a fill and a fine edge around its header and members. */
+.split-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 4px 5px;
+  border-radius: 13px;
+  transition: background 100ms ease-in-out, box-shadow 100ms ease-in-out,
+    translate var(--crest-drag-source-duration) var(--crest-drag-source-easing);
+}
+
+.split-card:hover {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--surface-border);
+}
+
+/* A folder drawn as two flat faces in its own colour, which swing apart as
+   it opens (FolderArtwork.svelte). */
+.folder-artwork {
+  position: relative;
+  display: inline-block;
+  flex: none;
+}
+
+.folder-face {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  overflow: visible;
+}
+
+.folder-face.front {
+  display: grid;
+  place-items: center;
+  width: 18px;
+}
+
+.folder-face.front > svg {
+  position: absolute;
+  inset: 0;
+}
+
+.folder-glyph {
+  position: relative;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+/* The split's own row, as a folder's header: its members' icons stacked in
+   the folder symbol's column, or a chevron while collapsed, its title, and
+   the trailing ellipsis that opens its menu. */
+/* The Mac draws the split's deck a little further in than a tab's icon and
+   its title closer to the deck: the deck from 12px into the card, the title
+   about 5px after it. */
+.split-header {
+  position: relative;
+  padding-inline-start: calc(12px + var(--row-indent, 0px));
+}
+
+/* Rows on a split's card sit a level in, so their corners are a level tighter;
+   its header stands at the card's own padding. */
+.split-card > .sidebar-row {
+  border-radius: 9px;
+}
+
+.split-card > .split-header {
+  margin-top: 0;
+}
+
+.split-header-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 18px;
+  margin-inline-end: -4px;
+}
+
+.split-chevron,
+.split-emoji {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.split-deck {
+  position: relative;
+  display: block;
+}
+
+.split-deck-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+}
+
+.split-deck-face {
+  display: grid;
+  place-items: center;
+  padding: 1px;
+  border-radius: 50%;
+  background: var(--surface-solid, rgb(var(--primary-rgb) / 0.06));
+  box-shadow: inset 0 0 0 1px rgb(var(--primary-rgb) / 0.12);
+}
+
+.split-deck-face .tab-icon {
+  border-radius: 50%;
+}
+
+.split-header-title {
+  flex: 1;
+}
+
+.split-header-actions {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin-inline-end: 2px;
+  border: 0;
+  border-radius: var(--crest-radius-compact);
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.split-header-actions:hover {
+  opacity: 1;
+  background: rgb(var(--primary-rgb) / 0.08);
+}
+
+/* A popover beside what it changes, such as a split's colour or icon. */
+.crest-popover {
+  position: fixed;
+  z-index: 60;
+  border-radius: var(--crest-radius-card);
+  background: var(--prompt-surface);
+  color: var(--prompt-ink);
+  box-shadow: 0 0 0 1px var(--prompt-border), 0 16px 40px rgb(0 0 0 / 0.3);
+  transform-origin: left center;
+}
+
+/* A hanging popover's arrow, pointing at what it hangs from; the popover places it. */
+.crest-popover-arrow {
+  position: absolute;
+  color: var(--prompt-surface);
+  pointer-events: none;
+}
+
+/* A menu, on the flyout Site Controls wear, in the scheme of what it opens
+   over: each row has its icon, as every menu row on the Mac does, then its
+   title and, at the trailing edge, its keys or the chevron of its submenu.
+   The layer under it takes the press that closes it. */
+.context-menu-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+
+:root[data-appearance="dark"] .context-menu {
+  --prompt-surface: rgb(43 42 41);
+  --prompt-ink: rgb(255 255 255 / 0.9);
+  --prompt-ink-secondary: rgb(255 255 255 / 0.55);
+  --prompt-border: rgb(255 255 255 / 0.12);
+  --flyout-edge: rgb(255 255 255 / 0.08);
+  --site-tile-hover: rgb(255 255 255 / 0.09);
+}
+
+:root[data-appearance="light"] .context-menu {
+  --prompt-surface: rgb(246 245 243);
+  --prompt-ink: rgb(0 0 0 / 0.85);
+  --prompt-ink-secondary: rgb(0 0 0 / 0.5);
+  --prompt-border: rgb(0 0 0 / 0.1);
+  --flyout-edge: rgb(0 0 0 / 0.1);
+  --site-tile-hover: rgb(0 0 0 / 0.06);
+}
+
+.context-menu {
+  position: fixed;
+  min-width: 220px;
+  max-width: 340px;
+  padding: 5px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  border-radius: 12px;
+  background: var(--prompt-surface);
+  color: var(--prompt-ink);
+  box-shadow: 0 0 0 0.5px var(--flyout-edge), 0 10px 30px rgb(0 0 0 / 0.28);
+  font-size: 13px;
+  outline: none;
+  user-select: none;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 28px;
+  padding: 0 9px 0 8px;
+  border-radius: 7px;
+  cursor: default;
+  transition: background-color 100ms ease-in-out;
+}
+
+.context-menu-item.highlighted {
+  background: var(--site-tile-hover);
+}
+
+.context-menu-item.highlighted:active {
+  background: color-mix(in srgb, var(--site-tile-hover), var(--prompt-ink) 6%);
+}
+
+.context-menu-item.disabled {
+  color: var(--prompt-ink-secondary);
+  opacity: 0.6;
+}
+
+.context-menu-check,
+.context-menu-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+}
+
+.context-menu-check {
+  width: 12px;
+  margin-right: -3px;
+}
+
+.context-menu-tinted {
+  display: grid;
+}
+
+.context-menu-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-menu-keys {
+  flex: none;
+  margin-left: 18px;
+  color: var(--prompt-ink-secondary);
+  font-size: 12px;
+}
+
+.context-menu-chevron {
+  display: grid;
+  flex: none;
+  margin-left: 12px;
+  color: var(--prompt-ink-secondary);
+}
+
+.context-menu-separator {
+  height: 1px;
+  margin: 5px 9px;
+  background: var(--prompt-border);
+}
+
+.color-picker,
+.emoji-picker {
+  display: grid;
+  gap: 12px;
+  width: 246px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.picker-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.picker-title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.picker-reset {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--crest-radius-compact);
+  background: transparent;
+  color: var(--prompt-ink-secondary);
+  opacity: 0.7;
+}
+
+.picker-reset:hover {
+  opacity: 1;
+  background: rgb(127 127 127 / 0.14);
+}
+
+.color-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 28px);
+  gap: 8px;
+}
+
+.color-swatch {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--crest-radius-compact);
+  background: transparent;
+}
+
+.color-swatch:hover {
+  background: rgb(127 127 127 / 0.14);
+}
+
+.color-swatch.chosen {
+  box-shadow: inset 0 0 0 2px rgb(127 127 127 / 0.55);
+}
+
+.color-swatch > span {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.12);
+}
+
+.picker-divider {
+  height: 1px;
+  background: rgb(127 127 127 / 0.24);
+}
+
+.custom-color {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.custom-color input {
+  width: 44px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.emoji-field {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgb(127 127 127 / 0.35);
+  border-radius: var(--crest-radius-compact);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+
+.emoji-choice {
+  height: 32px;
+  border: 0;
+  border-radius: var(--crest-radius-compact);
+  background: transparent;
+  font-size: 18px;
+}
+
+.emoji-choice:hover,
+.emoji-choice.chosen {
+  background: rgb(127 127 127 / 0.16);
+}
+
+/* The Space pager: the sidebar's Space pages side by side across its whole
+   width, each sliding a sidebar width a Space, as the Mac's SpacePagerViewport. */
+.space-pages {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin: 0 calc(-1 * var(--crest-space-small));
+  overflow: hidden;
+}
+
+.space-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--crest-space-small);
+  padding: 0 var(--crest-space-small);
+}
+
+.space-pages.moving .space-page {
+  will-change: transform;
+}
+
+/* A locked Space's page, as the Mac's: blurred 12, its titles redacted to
+   bars, and taking no pointer, keys or reading. */
+.space-page-locked {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--crest-space-small);
+  filter: blur(12px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.space-page-locked .row-title,
+.space-page-locked .space-name {
+  color: transparent;
+  background: rgb(var(--primary-rgb) / 0.22);
+  border-radius: 4px;
+}
+
+/* The Space switcher's strip, as the Mac's compact strip: a 50-point band
+   across the sidebar, its utilities 12 in from either edge, the picker
+   centred between them. */
+.space-strip {
+  position: relative;
+  flex: none;
+  height: 50px;
+  margin: 0 calc(-1 * var(--crest-space-small));
+}
+
+.space-strip-utilities {
+  position: absolute;
+  inset: 0;
+  /* The look the pager stands at (look-blend.ts). */
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 12px;
+}
+
+.space-strip-spacer {
+  flex: 1;
+}
+
+.space-strip-utilities .chrome-button {
+  width: 32px;
+  height: 32px;
+}
+
+.space-picker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-50%);
+}
+
+.space-picker-lane {
+  flex: none;
+  overflow: hidden;
+}
+
+/* The track: a well recessed into the sidebar, its black's strength set from
+   the picker's tone over each Space's sidebar (SpaceSwitcher.svelte). */
+.space-picker-track {
+  position: relative;
+  display: flex;
+  width: max-content;
+}
+
+.space-picker-track.dotted {
+  background: none;
+  box-shadow: none;
+}
+
+.space-segment {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.space-segment > * {
+  grid-area: 1 / 1;
+}
+
+.space-segment-icon {
+  display: grid;
+  place-items: center;
+}
+
+.space-dot-mark {
+  border-radius: 50%;
+}
+
+/* The selection follows the pager every frame. On a layer of its own, each
+   step repaints only itself, rather than the window's chrome around it. */
+.space-picker-selection,
+.space-picker-outline {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.space-picker-overflow {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: rgb(var(--primary-rgb) / 0.85);
+}
+
+.space-picker-overflow:disabled {
+  opacity: 0.3;
+}
+
+/* A Space's identity: its crest, or its symbol or emoji, and its lock. */
+.space-artwork {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.space-artwork-lock {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--window-background, rgb(236 236 236));
+  color: rgb(var(--primary-rgb));
+}
+
+.space-identity-symbol,
+.space-identity-emoji {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.space-crest {
+  display: block;
+}
+
+/* Questions a page asks: Crest's paper and ink, following the system's light
+   or dark appearance, with Crest's coral for the answer that goes ahead. */
+:root {
+  --prompt-surface: rgb(255 250 240);
+  --prompt-bar: rgb(243 234 214);
+  --prompt-ink: rgb(23 34 56);
+  --prompt-ink-secondary: rgb(23 34 56 / 0.7);
+  --prompt-border: rgb(23 34 56 / 0.13);
+  --prompt-field: rgb(255 255 255);
+  --prompt-accent: rgb(237 90 67);
+  --prompt-on-accent: rgb(23 34 56);
+}
+
+:root[data-appearance="dark"] {
+  --prompt-surface: rgb(39 54 83);
+  --prompt-bar: rgb(31 44 69);
+  --prompt-ink: rgb(255 250 240);
+  --prompt-ink-secondary: rgb(255 250 240 / 0.72);
+  --prompt-border: rgb(255 250 240 / 0.14);
+  --prompt-field: rgb(23 34 56);
+  --prompt-accent: rgb(241 117 98);
+}
+
+/* A question a page or Crest asks, as the Mac's alert sheet: the page dimmed
+   beneath it, a compact grey panel with its title and message centred, and
+   capsule buttons, Cancel before the default, which is the system's blue.
+   One button spans the panel; two that fit share it; longer ones stack, the
+   default on top. A question with a field widens and reads from the start,
+   its buttons centred at their own width. It takes the Space look's scheme,
+   as the Mac's prompts do. */
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(0 0 0 / 0.55);
+}
+
+/* The Mac's alert is a translucent material: rgb(52 51 51) at two thirds
+   over what it covers, which reads #484747 over a light page (I02) and
+   #2c2b2b over a dark one (I05, I06); nearly opaque paper in light. */
+.sheet {
+  --alert-surface: rgb(52 51 51 / 0.66);
+  --alert-ink: rgb(255 255 255 / 0.9);
+  --alert-secondary: rgb(255 255 255 / 0.82);
+  --alert-edge: rgb(255 255 255 / 0.12);
+  --alert-button: rgb(255 255 255 / 0.1);
+  --alert-field: rgb(30 30 29);
+  width: min(260px, 100%);
+  border-radius: 22px;
+  overflow: hidden;
+  background: var(--alert-surface);
+  color: var(--alert-ink);
+  box-shadow: inset 0 0 0 0.5px var(--alert-edge), 0 20px 50px rgb(0 0 0 / 0.35);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  text-align: center;
+}
+
+.sheet.wraps {
+  text-align: start;
+}
+
+.browser-window.reads-dark .sheet {
+  --alert-surface: rgb(248 248 248 / 0.83);
+  --alert-ink: rgb(0 0 0 / 0.85);
+  --alert-secondary: rgb(0 0 0 / 0.75);
+  --alert-edge: rgb(0 0 0 / 0.1);
+  --alert-button: rgb(0 0 0 / 0.07);
+  --alert-field: rgb(255 255 255);
+}
+
+.sheet:has(.sheet-field) {
+  width: min(331px, 100%);
+  text-align: start;
+}
+
+.sheet form {
+  display: contents;
+}
+
+.sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 18px 16px 0;
+}
+
+.sheet-title {
+  margin: 0;
+  font: 700 13px/16px var(--crest-font-system);
+  overflow-wrap: anywhere;
+}
+
+.sheet-message {
+  margin: 0;
+  max-height: 40vh;
+  overflow: auto;
+  font-size: 13px;
+  line-height: 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--alert-secondary);
+}
+
+.sheet-field {
+  height: 25px;
+  margin-top: 9px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  outline: none;
+  background: var(--alert-field);
+  color: var(--alert-ink);
+  font: inherit;
+  transition: box-shadow 100ms ease-in-out;
+}
+
+.sheet-field + .sheet-field {
+  margin-top: 0;
+}
+
+/* A choice in a question, as the Mac's 380-wide sheet picks the Space that
+   keeps a group: its buttons at the trailing end, each as wide as its title. */
+.sheet-choice {
+  width: 100%;
+  appearance: auto;
+  color-scheme: inherit;
+}
+
+.sheet:has(.sheet-choice) {
+  width: min(380px, 100%);
+}
+
+.sheet:has(.sheet-choice) .sheet-actions {
+  justify-content: flex-end;
+}
+
+/* Over the field sheets' fixed 110, which a choice is too. */
+.sheet:has(.sheet-choice) .sheet-actions > .sheet-button {
+  flex: 0 0 auto;
+}
+
+.sheet-field:focus {
+  box-shadow: 0 0 0 3px rgb(10 132 255 / 0.5);
+}
+
+.sheet-actions {
+  display: flex;
+  flex-wrap: wrap-reverse;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px 16px 16px;
+}
+
+.sheet-button {
+  flex: 1 0 max-content;
+  min-width: 110px;
+  height: 28px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--alert-button);
+  color: var(--alert-ink);
+  font: 400 13px var(--crest-font-system);
+  transition: filter 100ms ease-in-out;
+}
+
+.sheet:has(.sheet-field) .sheet-actions {
+  padding-top: 15px;
+}
+
+.sheet:has(.sheet-field) .sheet-button {
+  flex: 0 0 110px;
+}
+
+/* A sheet that reads rather than asks, as the Mac's Artwork Credits: 420
+   wide, its text scrolling and selectable, Done at the trailing end. */
+.sheet:has(.sheet-credits) {
+  width: min(420px, 100%);
+  text-align: start;
+}
+
+.sheet-credits {
+  max-height: 260px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+  cursor: text;
+}
+
+.sheet:has(.sheet-credits) .sheet-actions {
+  justify-content: flex-end;
+}
+
+.sheet:has(.sheet-credits) .sheet-button {
+  flex: 0 0 110px;
+}
+
+.sheet-button:hover {
+  filter: brightness(1.12);
+}
+
+.sheet-button.primary {
+  background: rgb(0 122 255);
+  color: rgb(255 255 255);
+}
+
+/* A button that deletes or clears, as the Mac's alert draws one (I06): its
+   red on a tint of it, never the blue default. The red keeps its hue but
+   reads at 4.5:1 against its tint, in each appearance. */
+.sheet-button.primary.destructive {
+  background: rgb(99 51 52);
+  color: rgb(248 143 138);
+}
+
+.browser-window.reads-dark .sheet-button.primary.destructive {
+  background: rgb(244 194 195);
+  color: rgb(181 0 4);
+}
+
+/* The default button, which Return presses, wears no ring, as the Mac's. */
+.sheet-button:not(.primary):focus-visible {
+  outline: 2px solid rgb(10 132 255 / 0.6);
+  outline-offset: 2px;
+}
+
+/* Deny and Allow, as the Mac's prompt draws them (I01): 28-tall capsules in
+   regular weight, Deny quiet and Allow in Crest blue. */
+.permission-button {
+  height: 28px;
+  border-radius: 14px;
+  background: var(--prompt-button, var(--prompt-surface));
+  box-shadow: none;
+  color: var(--prompt-ink);
+  font-size: 13px;
+  font-weight: 400;
+  transition: filter 100ms ease-in-out;
+}
+
+.permission-button:hover {
+  filter: brightness(0.96);
+}
+
+.permission-button.primary {
+  background: var(--prompt-accent);
+  box-shadow: none;
+  color: var(--prompt-on-accent);
+}
+
+.permission-button:focus-visible,
+.permission-dismiss:focus-visible {
+  outline: 2px solid var(--prompt-ink);
+  outline-offset: 2px;
+}
+
+/* A permission request, below the address field. */
+/* The window's chrome following the Space pager's look takes it frame by
+   frame, without its colors' own easing (look-blend.ts). */
+.look-following,
+.look-following * {
+  transition-property: none !important;
+}
+
+.address-area {
+  position: relative;
+  z-index: 3;
+  /* The look the pager stands at (look-blend.ts). */
+  color: var(--fg);
+}
+
+.permission-prompt {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--crest-radius-card);
+  background: var(--prompt-surface);
+  color: var(--prompt-ink);
+  box-shadow: 0 0 0 1px var(--prompt-border), 0 16px 40px rgb(0 0 0 / 0.3);
+  transform-origin: top right;
+}
+
+/* Its arrow points at the site control, the field's accessory. */
+.permission-prompt::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 18px;
+  width: 12px;
+  height: 12px;
+  background: var(--prompt-surface);
+  box-shadow: -1px -1px 0 0 var(--prompt-border);
+  transform: rotate(45deg);
+}
+
+.permission-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* Site Controls, below the address field where the permission prompt opens:
+   the Mac's popover sizes, on the prompts' paper and ink. It lines its
+   trailing edge up with the field's, as wide as the Mac's. */
+/* Site Controls, as the Mac's crestPopover: a neutral flyout in the Space
+   look's scheme, centred under its trigger with an arrow at the trigger and
+   reaching over the card, 520 tall at most. */
+.site-control-panel {
+  position: absolute;
+  top: calc(100% + 9px);
+  /* Centred on the trigger, 23 in from the field's end, unless that would
+     cross the window's edge. */
+  left: max(-4px, calc(100% - 23px - 144.5px));
+  width: 289px;
+  border-radius: 18px;
+  background: var(--prompt-surface);
+  color: var(--prompt-ink);
+  box-shadow: 0 0 0 0.5px var(--flyout-edge), 0 10px 30px rgb(0 0 0 / 0.28);
+  transform-origin: var(--arrow-x, 50%) -10px;
+  outline: none;
+}
+
+/* A page's permission request wears the same flyout as Site Controls, with
+   Allow in Crest blue (lifted over dark) as the Mac's (I01). */
+.browser-window.reads-light .permission-prompt {
+  --prompt-accent: rgb(79 142 224);
+  --prompt-on-accent: rgb(0 0 0 / 0.85);
+  --prompt-button: rgb(255 255 255 / 0.07);
+}
+
+.browser-window.reads-dark .permission-prompt {
+  --prompt-accent: rgb(43 108 196);
+  --prompt-on-accent: rgb(255 255 255);
+  --prompt-button: rgb(0 0 0 / 0.06);
+}
+
+.browser-window.reads-light .site-control-panel,
+.browser-window.reads-light .permission-prompt,
+.browser-window.reads-light .notice,
+.browser-window.reads-light .context-menu {
+  --prompt-surface: rgb(43 42 41);
+  --prompt-ink: rgb(255 255 255 / 0.9);
+  --prompt-ink-secondary: rgb(255 255 255 / 0.55);
+  --prompt-border: rgb(255 255 255 / 0.16);
+  --flyout-edge: rgb(255 255 255 / 0.08);
+  --site-tile-hover: rgb(255 255 255 / 0.075);
+  --site-tile: rgb(255 255 255 / 0.165);
+  --site-accent: rgb(var(--crest-accent-dark));
+  --site-success: rgb(134 196 142);
+  --site-warning: rgb(236 190 92);
+  --site-danger: rgb(238 106 92);
+}
+
+.browser-window.reads-dark .site-control-panel,
+.browser-window.reads-dark .permission-prompt,
+.browser-window.reads-dark .notice,
+.browser-window.reads-dark .context-menu {
+  --prompt-surface: rgb(246 245 243);
+  --prompt-ink: rgb(0 0 0 / 0.85);
+  --prompt-ink-secondary: rgb(0 0 0 / 0.5);
+  --prompt-border: rgb(0 0 0 / 0.1);
+  --flyout-edge: rgb(0 0 0 / 0.1);
+  --site-tile: rgb(0 0 0 / 0.06);
+  --site-tile-hover: rgb(0 0 0 / 0.04);
+  --site-accent: rgb(var(--crest-accent-light));
+  --site-success: rgb(47 112 66);
+  --site-warning: rgb(138 90 8);
+  --site-danger: rgb(178 50 37);
+}
+
+.site-control-scroll {
+  max-height: 520px;
+  overflow-y: auto;
+  border-radius: inherit;
+}
+
+.site-control-arrow {
+  position: absolute;
+  top: -10.5px;
+  left: calc(var(--arrow-x, 50%) - 14px);
+  color: var(--prompt-surface);
+  pointer-events: none;
+}
+
+.site-control-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crest-space-medium);
+  padding: var(--crest-space-medium);
+}
+
+.site-control-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.site-control-title,
+.site-control-host,
+.site-security-origin {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.site-control-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.site-control-host {
+  font-size: 10px;
+  color: var(--prompt-ink-secondary);
+}
+
+.site-control-actions {
+  display: flex;
+  gap: var(--crest-space-small);
+}
+
+/* The page's blocked pop-up, first in the panel, as the Mac's notice. */
+.site-popup-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--crest-space-small);
+  padding: var(--crest-space-small);
+  border-radius: var(--crest-radius-control);
+  background: color-mix(in srgb, var(--prompt-ink) 7%, transparent);
+  font-size: 11px;
+}
+
+.site-popup-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.site-popup-guidance {
+  color: var(--prompt-ink-secondary);
+}
+
+/* Allow wears the Mac's crestPrimary (H07): the Crest blue capsule with its
+   sheen, 34 tall, in the rounded bold of a button's title. */
+.site-popup-allow {
+  flex: none;
+}
+
+.site-control-action {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: var(--crest-radius-compact);
+  background: var(--site-tile);
+  color: var(--prompt-ink);
+  transition: background 100ms ease-in-out;
+}
+
+/* A tile under the pointer lifts by the Mac's step (#4e4d4d to #5b5a5a, H03). */
+.site-control-action:hover {
+  background: linear-gradient(var(--site-tile-hover), var(--site-tile-hover)), var(--site-tile);
+}
+
+.site-control-action.labelled {
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.site-control-divider {
+  flex: none;
+  height: 1px;
+  background: var(--prompt-border);
+}
+
+.site-security {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crest-space-small);
+  font-size: 11px;
+}
+
+.site-security-origin {
+  font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+}
+
+.site-security-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.site-security-label.success { color: var(--site-success); }
+.site-security-label.warning { color: var(--site-warning); }
+.site-security-label.danger { color: var(--site-danger); }
+.site-security-label.quiet { color: var(--prompt-ink-secondary); }
+
+.site-security-review {
+  display: flex;
+  align-items: center;
+  gap: var(--crest-space-small);
+  width: 100%;
+  text-align: start;
+}
+
+.site-security-review .site-security-label {
+  flex: 1;
+}
+
+.site-security-certificate,
+.site-security-detail {
+  color: var(--prompt-ink-secondary);
+}
+
+.site-permissions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--crest-space-medium);
+  font-size: 10px;
+}
+
+.site-permissions-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  color: var(--prompt-ink-secondary);
+  font-weight: 600;
+}
+
+.site-permission {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--crest-space-small);
+}
+
+/* Whether the Space blocks ads and trackers on the site. */
+.site-blocking {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--crest-space-small);
+}
+
+.site-blocking-switch {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  width: 32px;
+  height: 18px;
+  padding: 2px;
+  border: 0;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--prompt-ink) 22%, transparent);
+  transition: background-color 100ms ease-in-out;
+}
+
+.site-blocking-switch.on {
+  justify-content: flex-end;
+  background: rgb(0 103 192);
+}
+
+.site-blocking-knob {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+}
+
+/* A permission as the Mac lists it: its name in caption size, and its
+   choice a borderless menu in Crest's blue with a small chevron. */
+.site-permission-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 10px;
+}
+
+.site-permission-choice {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  color: var(--site-accent);
+  font-size: 13px;
+  line-height: 16px;
+}
+
+.site-permission-choice:active {
+  opacity: 0.6;
+}
+
+.permission-symbol {
+  flex: none;
+  margin-top: 1px;
+  color: var(--prompt-ink-secondary);
+}
+
+.permission-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.permission-origin {
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.permission-request {
+  color: var(--prompt-ink-secondary);
+}
+
+.permission-inside {
+  font-size: 11px;
+  color: var(--prompt-ink-secondary);
+}
+
+.permission-dismiss {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--prompt-ink-secondary);
+}
+
+.permission-dismiss:hover {
+  background: var(--prompt-border);
+}
+
+.permission-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.permission-remember input {
+  margin: 0;
+  accent-color: var(--prompt-accent);
+}
+
+.permission-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* The window's notices, in the top trailing corner of the page, as the Mac's
+   stand: a capsule on Crest's dark flyout surface, outlined just inside its
+   edge so it stands apart from a page as dark as it. */
+/* The Mac's notice stands 18 from the window's top and trailing edges, which
+   is 8.5 inside the page card's (G01, F06). */
+.notices {
+  position: absolute;
+  top: 8.5px;
+  inset-inline: 8.5px;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+  z-index: 30;
+}
+
+/* The Mac's capsule wears its floating flyout, as Site Controls does: the
+   same surface and edge, in callout semibold. */
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  max-width: min(520px, 100%);
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: var(--prompt-surface);
+  color: var(--prompt-ink);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 0 0 0.5px var(--flyout-edge), 0 8px 32px rgb(0 0 0 / 0.16);
+}
+
+.notice span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+/* A download in the Downloads list: what it is doing and what can be done with it. */
+.download-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-inline-end: 4px;
+  border-radius: var(--crest-radius-compact);
+  transition: background 100ms ease-in-out;
+}
+
+.download-row:hover {
+  background: var(--surface);
+}
+
+.download-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 6px 7px 8px;
+  text-align: start;
+  color: var(--fg);
+}
+
+.download-label:disabled {
+  color: var(--fg);
+}
+
+.download-icon {
+  position: relative;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-secondary);
+}
+
+.download-icon > * {
+  grid-area: 1 / 1;
+}
+
+.download-icon.tone-failed {
+  color: rgb(232 160 64);
+}
+
+.download-icon.tone-awaitingApproval,
+.download-icon.tone-blockedAutomaticDownload {
+  color: var(--prompt-accent);
+}
+
+.download-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.download-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.download-details {
+  display: flex;
+  min-width: 0;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--fg-secondary);
+}
+
+.download-details.stacked {
+  flex-direction: column;
+  gap: 2px;
+}
+
+.download-details > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.download-details .download-dot {
+  flex: none;
+  opacity: 0.6;
+}
+
+.download-danger {
+  color: var(--danger);
+}
+
+.download-action {
+  flex: none;
+  width: 26px;
+  height: 26px;
+}
+
+.download-action.destructive:hover {
+  color: rgb(232 112 96);
+}
+
+.progress-ring-track {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  opacity: 0.22;
+}
+
+.progress-ring-value {
+  fill: none;
+  stroke: var(--prompt-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  transition: stroke-dasharray 300ms ease-out;
+}
+
+/* The page card: the page's own surface, inset from the window and rounded.
+   White stands behind the page, for a page that hasn't drawn yet or lags its
+   card as it resizes, a pixel in from the card's edge: at the edge itself the
+   rounded clip blends what lies beneath into the edge's pixels, and white
+   beneath a dark page lit its corners and top with a pale line. */
+.page-card {
+  position: relative;
+  min-width: 0;
+  border-radius: var(--page-corner);
+  overflow: hidden;
+  isolation: isolate;
+  /* The Mac's frame around the page: a faint 0.5-point edge on the frame's
+     outer line, past the seam, and a light shadow beneath it. */
+  outline: 0.5px solid rgb(0 0 0 / 0.12);
+  outline-offset: calc(var(--page-seam) - 0.5px);
+  box-shadow: 0 2px 14px var(--page-seam) rgb(0 0 0 / 0.11);
+  transition: outline-color 100ms ease-in-out;
+}
+
+/* In a Split View the card the window's chrome speaks for wears a 2-point
+   ring in the Space's colour on that outer line, over the seam, as the Mac's
+   BrowserSplitCardFocusIndicator does. */
+.page-columns.several > .page-column > .page-card {
+  outline: 2px solid transparent;
+  outline-offset: -0.5px;
+}
+
+.page-columns.several > .page-column.focused > .page-card {
+  outline-color: var(--split-accent);
+}
+
+.page-card::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  z-index: -1;
+  border-radius: calc(var(--page-corner) - 1px);
+  background: rgb(255 255 255);
+}
+
+.page-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: white;
+}
+
+/* An embedded page draws its own surface over the card's white. */
+embed.page-frame {
+  background: none;
+}
+
+/* Find in page, as the Mac floats it over the page's top trailing corner: a
+   bordered panel in the window's own background, with borderless controls. */
+.find-bar {
+  --find-surface: rgb(255 255 255);
+  --find-ink: rgb(0 0 0 / 0.86);
+  --find-secondary: rgb(0 0 0 / 0.5);
+  --find-edge: rgb(0 0 0 / 0.16);
+  --find-danger: rgb(178 50 37);
+  position: absolute;
+  top: var(--crest-space-medium);
+  right: var(--crest-space-medium);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: var(--find-surface);
+  box-shadow: inset 0 0 0 0.5px var(--find-edge), 0 5px 24px rgb(0 0 0 / 0.14);
+  color: var(--find-ink);
+  font-size: 13px;
+}
+
+:where(:root[data-appearance="dark"]) {
+  /* The Mac's window background in Crest's dark, a warm near-black, and
+     its separator. */
+  .find-bar {
+    --find-surface: rgb(41 39 38);
+    --find-ink: rgb(255 255 255 / 0.9);
+    --find-secondary: rgb(255 255 255 / 0.55);
+    --find-edge: rgb(255 255 255 / 0.12);
+    --find-danger: rgb(238 106 92);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .find-bar {
+    box-shadow: inset 0 0 0 0.5px var(--find-edge);
+  }
+}
+
+.find-field {
+  width: 190px;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: none;
+  color: var(--find-ink);
+  font: inherit;
+}
+
+.find-field::placeholder {
+  color: var(--find-secondary);
+}
+
+.find-status {
+  min-width: 62px;
+  color: var(--find-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.find-status.failure {
+  color: var(--find-danger);
+}
+
+/* Nothing typed, nothing counted: the bar closes up, as the Mac's does. */
+.find-status:empty {
+  display: none;
+}
+
+/* The Mac's borderless small buttons: as wide as their glyphs, dimming as
+   they are pressed rather than showing a surface. */
+.find-control {
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 22px;
+  color: var(--find-ink);
+}
+
+.find-control:active:not(:disabled) {
+  opacity: 0.6;
+}
+
+.find-control:disabled {
+  opacity: 0.35;
+}
+
+/* Over the page while a drag of the interface's holds the pointer, so the
+   page's surface does not take the drag's events. */
+.page-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* A card with no page to draw lets the Space's backdrop through. */
+.page-card.clear::before {
+  content: none;
+}
+
+/* A page's still (page-stills.ts): in place of the page as its card slides
+   on screen, then over the woken page until it has drawn, fading as it goes.
+   It keeps its own size, one of its pixels to each of the screen's. */
+.page-still {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none;
+  pointer-events: none;
+  user-select: none;
+}
+
+.page-still.going {
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+/* The Start Page, as the Mac's desktop layout measures it: a column of the
+   icon, the title, the private notice and the palette, centered on the
+   card. */
+.start-page {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.start-page-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  width: 100%;
+  max-width: 820px;
+  padding: 40px;
+}
+
+/* The Start Page's title in Crest's display type, rounded and heavy. */
+.start-page-title {
+  margin: 0;
+  color: rgb(var(--primary-rgb) / 0.86);
+  font-family: var(--crest-font-display);
+  font-size: 30px;
+  font-weight: var(--crest-font-display-weight);
+  text-align: center;
+}
+
+.start-page-private {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 520px;
+  text-align: center;
+}
+
+.start-page-private-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.start-page-private-detail {
+  color: var(--fg-secondary);
+  font-size: 12px;
+}
+
+/* The palette in place takes the column's width, up to the card's most. */
+.palette-card.embedded {
+  width: 100%;
+  max-width: 720px;
+}
+
+@media (prefers-reduced-transparency: no-preference) {
+  .space-content-page.reads-light .palette-card.embedded {
+    --pal-surface: rgb(48 48 48 / 0.58);
+    backdrop-filter: blur(40px) saturate(1.55);
+  }
+}
+
+/* Under the overlay palette it blurs nothing but the Space's smooth banner,
+   so it drops the blur, which every frame of the overlay's morph would draw
+   again (palette-morph.ts). */
+.space-content-page .palette-card.embedded.overlaid {
+  backdrop-filter: none;
+}
+
+/* The command palette, as the Mac's overlay shows it: a scrim over the whole
+   window and a card centered over the page, in the Space's look. Its sizes are
+   BrowserCommandPaletteMetrics', in CSS pixels for the Mac's points. */
+.palette-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: inherit;
+  grid-template-rows: inherit;
+  column-gap: inherit;
+  row-gap: inherit;
+  padding: inherit;
+  -webkit-app-region: no-drag;
+}
+
+/* A light-ink Space reads dark, and a dark-ink one light, as the Mac's palette
+   takes the Space look's scheme, over the window or on a Start Page. What a
+   person selects or presses there is Crest blue, the brand's accent, lifted
+   on the dark scheme; the accent as text is a shade further from the ground. */
+.browser-window.reads-light,
+.space-content-page.reads-light {
+  --pal-accent: rgb(var(--crest-accent-dark));
+  --pal-accent-text: rgb(var(--crest-accent-text-dark));
+  --pal-surface: rgb(44 44 44 / 0.40);
+  --overlay-material: rgb(40 40 40 / 0.78);
+  --pal-ink: rgb(255 255 255 / 0.92);
+  --pal-secondary: rgb(255 255 255 / 0.55);
+  --pal-primary: 255 255 255;
+  --pal-edge: rgb(255 255 255 / 0.14);
+}
+
+.browser-window.reads-dark,
+.space-content-page.reads-dark {
+  --pal-accent: rgb(var(--crest-accent-light));
+  --pal-accent-text: rgb(var(--crest-accent-text-light));
+  --pal-surface: rgb(248 248 250 / 0.88);
+  --overlay-material: var(--pal-surface);
+  --pal-ink: rgb(0 0 0 / 0.86);
+  --pal-secondary: rgb(0 0 0 / 0.5);
+  --pal-primary: 0 0 0;
+  --pal-edge: rgb(0 0 0 / 0.1);
+}
+
+.palette-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.18);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .palette-scrim {
+    background: rgb(0 0 0 / 0.56);
+  }
+}
+
+.palette-area {
+  position: relative;
+  grid-column: -2;
+  grid-row: -2;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 0;
+  pointer-events: none;
+}
+
+.palette-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 26px;
+  background: var(--pal-surface);
+  color: var(--pal-ink);
+  box-shadow: inset 0 0 0 0.5px var(--pal-edge), 0 18px 50px rgb(0 0 0 / 0.28);
+  backdrop-filter: blur(40px);
+  pointer-events: auto;
+}
+
+/* The overlay's card holds its glass apart from its contents, so the glass
+   can grow out of the address field while the contents keep their layout
+   and show through its frame (palette-morph.ts). */
+.palette-layer .palette-card {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.palette-glass {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--overlay-material);
+  box-shadow: inset 0 0 0 0.5px var(--pal-edge), 0 18px 50px rgb(0 0 0 / 0.28);
+  backdrop-filter: blur(40px);
+  transform-origin: 0 0;
+}
+
+.palette-layer.dropping .palette-scrim {
+  background: transparent;
+}
+
+.palette-layer .palette-card.dropping {
+  position: absolute;
+  border-radius: var(--address-radius);
+}
+
+.dropping .palette-field {
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.dropping .palette-input {
+  height: 22px;
+}
+
+.dropping .palette-input :is(input, .palette-mirror, .palette-suffix) {
+  font-size: 13px;
+}
+
+.palette-reveal,
+.palette-contents {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.palette-reveal {
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.palette-contents {
+  transform-origin: 50% 0;
+}
+
+.palette-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 68px;
+  padding: 0 20px;
+}
+
+.palette-glyph {
+  flex: none;
+  color: var(--pal-secondary);
+  stroke-width: 2.25;
+}
+
+.palette-input {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  overflow: hidden;
+}
+
+.palette-input input {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--pal-ink);
+  font: inherit;
+  font-size: 17px;
+}
+
+.palette-input input::placeholder {
+  color: var(--pal-secondary);
+}
+
+/* Measures what is typed, in the field's font, to place the completion after it. */
+.palette-mirror {
+  position: absolute;
+  visibility: hidden;
+  white-space: pre;
+  font-size: 17px;
+}
+
+.palette-suffix {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  white-space: pre;
+  overflow: hidden;
+  font-size: 17px;
+  pointer-events: none;
+  color: transparent;
+  background-image: linear-gradient(90deg,
+    rgb(var(--pal-primary) / 0.36) 0%, rgb(var(--pal-primary) / 0.36) 37.5%,
+    rgb(var(--pal-primary) / 0.52) 50%,
+    rgb(var(--pal-primary) / 0.36) 62.5%, rgb(var(--pal-primary) / 0.36) 100%);
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: palette-shimmer 4s linear infinite;
+}
+
+/* One sweep every four seconds: still for 2.4s, then 1.6s across. */
+@keyframes palette-shimmer {
+  0%, 60% { background-position: 135% 0; }
+  100% { background-position: -35% 0; }
+}
+
+@media (prefers-reduced-motion: reduce), (prefers-contrast: more) {
+  .palette-suffix {
+    animation: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .palette-suffix {
+    background-image: none;
+    color: var(--pal-secondary);
+  }
+}
+
+.palette-offer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--pal-secondary);
+  font: inherit;
+}
+
+.palette-tab-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--pal-secondary);
+}
+
+.palette-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--pal-secondary);
+}
+
+.palette-close:hover {
+  background: rgb(var(--pal-primary) / 0.07);
+}
+
+.palette-chip {
+  --chip-tint: var(--pal-accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--chip-tint) 82%, transparent);
+  color: white;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.palette-chip.interactive:hover {
+  background: var(--chip-tint);
+}
+
+.palette-chip-title.shortcut {
+  font-family: var(--crest-font-mono, ui-monospace, "Cascadia Mono", Consolas, monospace);
+}
+
+.palette-chip-close {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  opacity: 0.85;
+}
+
+.palette-provider-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  background: rgb(255 250 240);
+  color: rgb(0 0 0 / 0.55);
+}
+
+/* A provider with a logo of its own shows it, as the Mac's palette does. */
+.palette-provider-logo {
+  flex: none;
+  object-fit: contain;
+}
+
+.palette-provider-chips {
+  display: flex;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.palette-divider {
+  flex: none;
+  height: 1px;
+  background: var(--pal-edge);
+}
+
+.palette-results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--pal-primary) / 0.28) transparent;
+}
+
+.palette-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.palette-group-title {
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pal-secondary);
+}
+
+.palette-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+  min-height: 54px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: rgb(var(--pal-primary) / 0.045);
+  cursor: default;
+}
+
+/* BrowserCommandPaletteRowSurface draws the selected result on opaque paper in either scheme. */
+.palette-row.selected {
+  --pal-primary: 0 0 0;
+  --pal-ink: rgb(0 0 0 / 0.86);
+  --pal-secondary: rgb(0 0 0 / 0.5);
+  --pal-accent-text: rgb(var(--crest-accent-text-light));
+  color: var(--pal-ink);
+  background: var(--crest-paper);
+  box-shadow: 0 1px 1.5px rgb(23 34 56 / 0.16);
+}
+
+@media (prefers-contrast: more) {
+  .palette-row.selected { outline: 2px solid currentColor; outline-offset: -2px; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .browser-window.reads-light, .space-content-page.reads-light { --pal-surface: rgb(44 44 44); --overlay-material: var(--pal-surface); }
+  .browser-window.reads-dark, .space-content-page.reads-dark { --pal-surface: rgb(248 248 250); }
+}
+
+.palette-row-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgb(var(--pal-primary) / 0.08);
+  color: var(--pal-secondary);
+}
+
+.palette-row-icon.intent {
+  color: var(--pal-ink);
+}
+
+.palette-row-icon svg {
+  stroke-width: 2.25;
+}
+
+.palette-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.palette-row-title {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.palette-row-detail {
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--pal-secondary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.palette-row-spacer {
+  flex: 1;
+  min-width: 12px;
+}
+
+.palette-row-kind {
+  flex: none;
+  font-size: 11px;
+  color: var(--pal-secondary);
+}
+
+.palette-row-opening {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pal-accent-text);
+}
+
+.palette-shortcut {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: rgb(var(--pal-primary) / 0.07);
+  color: var(--pal-secondary);
+  /* The system's font, as the Mac sets its key glyphs, not a typewriter's. */
+  font-family: var(--crest-font-system);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.palette-row-end {
+  flex: none;
+  color: var(--pal-secondary);
+}
+
+/* The Common Lists button, as the Mac's: the list it opens, badged while
+   downloads finished unseen. */
+.common-lists-button {
+  position: relative;
+  overflow: visible;
+}
+
+.common-lists-symbol {
+  display: grid;
+  place-items: center;
+}
+
+/* BrowserUtilityNotificationBadge: at least 16 each way, 4 in from its ends,
+   raised 4 off the top trailing corner, ringed with a live download's progress. */
+.utility-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  z-index: 1;
+}
+
+.utility-badge-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+  stroke: rgb(var(--primary-rgb) / 0.72);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* The archive, history and downloads destinations fanned out beside the
+   sidebar: 44-point glass circles, the list on show prominent in the
+   Space's colour. */
+.utility-fan {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.utility-fan-button {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  pointer-events: auto;
+  color: rgb(0 0 0 / 0.85);
+  background: rgb(255 255 255 / 0.62);
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.7), 0 0 0 0.5px rgb(0 0 0 / 0.12), 0 6px 18px rgb(0 0 0 / 0.18);
+  backdrop-filter: blur(16px) saturate(1.6);
+  -webkit-app-region: no-drag;
+}
+
+:where(:root[data-appearance="dark"]) {
+  .utility-fan-button {
+    color: rgb(255 255 255 / 0.92);
+    background: rgb(40 40 44 / 0.62);
+    box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.22), 0 0 0 0.5px rgb(0 0 0 / 0.3), 0 6px 18px rgb(0 0 0 / 0.3);
+  }
+}
+
+.utility-fan-button.selected {
+  color: white;
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.35), 0 6px 18px rgb(0 0 0 / 0.22);
+}
+
+/* A Space's utility list in place of its tabs: the search toolbar where the
+   address field stood, then the list grouped by when. */
+.utility-list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.utility-toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 4px;
+}
+
+/* The field stands in for the address field: 36 tall, the sidebar's layer
+   radius (14 at the default setting), 9 in from either end. */
+.utility-search {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 9px;
+  border-radius: 14px;
+  background: var(--field);
+  box-shadow: inset 0 0 0 1px var(--surface-border);
+  color: var(--fg);
+}
+
+.utility-search-glyph {
+  flex: none;
+  color: var(--fg-secondary);
+}
+
+.utility-search-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--fg);
+  font: 13px var(--crest-font-system);
+}
+
+.utility-search-input::placeholder {
+  color: var(--fg-secondary);
+}
+
+.utility-search-clear {
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgb(var(--primary-rgb) / 0.3);
+}
+
+.utility-filter {
+  flex: none;
+  width: 44px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--crest-radius-control);
+  background: none;
+  color: var(--fg);
+}
+
+.utility-filter:hover {
+  background: rgb(var(--primary-rgb) / 0.08);
+}
+
+.utility-sections {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  margin: 0 -8px;
+}
+
+.utility-section-title {
+  margin: 0;
+  padding: 8px 16px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fg-secondary);
+}
+
+/* BrowserUtilityListRow: 2 above and below, 8 either side, the label 4 and 8
+   inside the hover surface. */
+.utility-row,
+.utility-row-download {
+  width: calc(100% - 16px);
+  margin: 2px 8px;
+}
+
+.utility-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--fg);
+  text-align: start;
+  transition: background 100ms ease-in-out;
+}
+
+.utility-row:hover {
+  background: rgb(var(--primary-rgb) / 0.08);
+}
+
+.utility-row-icon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-secondary);
+}
+
+.utility-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.utility-row-title,
+.utility-row-subtitle {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.utility-row-title {
+  font-size: 13px;
+}
+
+.utility-row-subtitle {
+  font-size: 10px;
+  color: var(--fg-secondary);
+}
+
+.utility-row-subtitle > svg {
+  vertical-align: -1px;
+}
+
+.utility-row-trailing {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--fg-secondary);
+}
+
+.utility-row-trailing.tertiary {
+  color: rgb(var(--primary-rgb) / 0.3);
+}
+
+/* ContentUnavailableView: the symbol, the title and what to do, centred. */
+.utility-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--fg-secondary);
+  font-size: 13px;
+}
+
+.utility-empty > svg {
+  margin-bottom: 6px;
+}
+
+.utility-empty strong {
+  color: var(--fg);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* The system colours an archive reason wears, as the sidebar's scheme reads them. */
+.browser-window.reads-dark,
+.space-page.reads-dark {
+  /* Crest's status tones (CrestStatusTone): info is the brand's accent. */
+  --status-success: rgb(var(--crest-success-light));
+  --status-warning: rgb(var(--crest-warning-light));
+  --status-danger: rgb(var(--crest-danger-light));
+  --status-info: rgb(var(--crest-accent-light));
+  --system-red: rgb(255 59 48);
+  --system-orange: rgb(255 149 0);
+  --system-purple: rgb(175 82 222);
+  --system-blue: rgb(0 122 255);
+  --system-indigo: rgb(88 86 214);
+  --system-teal: rgb(48 176 199);
+  --system-pink: rgb(255 45 85);
+  --system-green: rgb(52 199 89);
+  --danger: rgb(255 59 48);
+}
+
+.browser-window.reads-light,
+.space-page.reads-light {
+  --status-success: rgb(var(--crest-success-dark));
+  --status-warning: rgb(var(--crest-warning-dark));
+  --status-danger: rgb(var(--crest-danger-dark));
+  --status-info: rgb(var(--crest-accent-dark));
+  --system-red: rgb(255 69 58);
+  --system-orange: rgb(255 159 10);
+  --system-purple: rgb(191 90 242);
+  --system-blue: rgb(10 132 255);
+  --system-indigo: rgb(94 92 230);
+  --system-teal: rgb(64 200 224);
+  --system-pink: rgb(255 55 95);
+  --system-green: rgb(48 209 88);
+  --danger: rgb(255 69 58);
+}
+
+/* Dialogs over the whole window, such as an extension's install review. The
+   layer itself takes no part in the window's drag areas; its sheets do. */
+.window-dialog-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 46;
+  pointer-events: none;
+  -webkit-app-region: initial;
+}
+
+.window-dialog-layer > .sheet-backdrop {
+  pointer-events: auto;
+  z-index: auto;
+}
+
+/* The Mac's BrowserChromeWebStoreInstallView. */
+.extension-review {
+  width: min(460px, 100%);
+  text-align: start;
+}
+
+/* The review takes focus itself when it has no button to give it, so Escape
+   reaches it; the sheet draws no ring for that. */
+.extension-review:focus {
+  outline: none;
+}
+
+.extension-review-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.extension-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--prompt-ink-secondary);
+}
+
+.extension-icon.large {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--prompt-ink) 6%, transparent);
+}
+
+.extension-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.extension-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: rgb(52 168 83);
+}
+
+.extension-progress {
+  display: grid;
+  gap: 6px;
+  color: var(--prompt-ink-secondary);
+}
+
+.extension-progress-track {
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--prompt-ink) 12%, transparent);
+}
+
+.extension-progress-track > span {
+  display: block;
+  height: 100%;
+  background: var(--prompt-accent);
+  transition: width 120ms linear;
+}
+
+.extension-preparing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.extension-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid color-mix(in srgb, var(--prompt-ink) 15%, transparent);
+  border-top-color: var(--prompt-ink-secondary);
+  border-radius: 50%;
+  animation: settings-spin 0.8s linear infinite;
+}
+
+.extension-ready {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: rgb(52 168 83);
+}
+
+.extension-question {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.extension-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.extension-facts dt {
+  color: var(--prompt-ink-secondary);
+}
+
+.extension-facts dd {
+  margin: 0;
+}
+
+.extension-caution {
+  margin: 0;
+  font-size: 12px;
+  color: var(--prompt-ink-secondary);
+}
+
+.extension-disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--prompt-ink);
+  font: 600 13px var(--crest-font-system);
+}
+
+.extension-access {
+  display: grid;
+  gap: 6px;
+  max-height: 180px;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: var(--crest-radius-compact);
+  background: color-mix(in srgb, var(--prompt-ink) 5%, transparent);
+  font-size: 13px;
+}
+
+.extension-access ul {
+  margin: 0;
+  padding-inline-start: 18px;
+  color: var(--prompt-ink-secondary);
+}
+
+.extension-withhold,
+.extension-space {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.extension-other-spaces {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.extension-other-spaces .sheet-button {
+  height: 30px;
+  padding: 0 12px;
+}
+
+.extension-spaces {
+  display: grid;
+  gap: 8px;
+}
+
+.extension-failure {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  color: rgb(214 133 34);
+}
+
+.sheet-button:disabled {
+  opacity: 0.5;
+}
+
+/* The Mac's BrowserPinnedExtensionStrip: the Space's pinned extensions above
+   its tabs, 24-point tiles on the address field's surface. */
+.extension-strip {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+  padding: 0 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-radius: var(--crest-radius-control);
+  background: var(--field);
+  box-shadow: inset 0 0 0 1px var(--surface-border);
+}
+
+.extension-tile {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  transition: background-color 100ms ease-in-out;
+}
+
+.extension-tile:hover {
+  background: var(--surface);
+}
+
+.extension-tile.unavailable,
+.site-extension-action.unavailable {
+  opacity: 0.45;
+}
+
+.extension-artwork {
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: var(--fg-secondary);
+}
+
+.extension-artwork img {
+  object-fit: contain;
+}
+
+/* BrowserExtensionBadge: a red capsule at the icon's corner. */
+.extension-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 12px;
+  height: 12px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  background: rgb(235 64 52);
+  color: white;
+  font: 700 8px/12px var(--crest-font-system);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* BrowserSiteExtensionsSection in Site Controls. */
+.site-extensions {
+  display: grid;
+  gap: 8px;
+}
+
+/* The Mac's Extensions heading: the headline over its caption-size rows. */
+.site-extensions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--prompt-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.site-extensions-manage {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--prompt-ink) 8%, transparent);
+  color: var(--prompt-ink);
+}
+
+.site-extensions-empty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--prompt-ink-secondary);
+}
+
+.site-extensions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.site-extension {
+  position: relative;
+}
+
+.site-extension-action {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 34px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--prompt-ink) 6%, transparent);
+  transition: background-color 100ms ease-in-out;
+}
+
+.site-extension-action:hover {
+  background: color-mix(in srgb, var(--prompt-ink) 11%, transparent);
+}
+
+.site-extension-pin {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--prompt-surface);
+  box-shadow: 0 0 0 1px var(--prompt-border);
+  color: var(--prompt-ink-secondary);
+  opacity: 0;
+  transition: opacity 100ms ease-in-out;
+}
+
+.site-extension:hover .site-extension-pin,
+.site-extension-pin:focus-visible {
+  opacity: 1;
+}
+
+.site-extension-pin.pinned {
+  color: var(--prompt-accent);
+}
+
+/* BrowserSpaceAccessView over a locked Space's card: the surface, faintly in
+   the Space's colour, under a centred column at most 400 wide. Unlock is the
+   prominent action, at most 280 wide; the failure line keeps its room. */
+.space-access {
+  --access-surface: rgb(246 246 246);
+  --access-ink: rgb(0 0 0 / 0.86);
+  --access-secondary: rgb(0 0 0 / 0.5);
+  --access-button: rgb(0 0 0 / 0.06);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 24px;
+  background: linear-gradient(var(--access-tint), var(--access-tint)), var(--access-surface);
+  color: var(--access-ink);
+  text-align: center;
+  -webkit-app-region: no-drag;
+}
+
+:where(:root[data-appearance="dark"]) {
+  .space-access {
+    --access-surface: rgb(32 32 32);
+    --access-ink: rgb(255 255 255 / 0.9);
+    --access-secondary: rgb(255 255 255 / 0.55);
+    --access-button: rgb(255 255 255 / 0.1);
+  }
+}
+
+.space-access-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(400px, 100%);
+}
+
+.space-access-icon {
+  position: relative;
+  display: grid;
+  margin-bottom: 4px;
+}
+
+/* The lock at the crest's corner, on the surface, as the Mac's artwork draws it. */
+.space-access-badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  border-radius: 50%;
+  background: var(--access-surface);
+}
+
+.space-access-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.space-access h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.space-access-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--access-secondary);
+}
+
+.space-access p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--access-secondary);
+}
+
+.space-access-unlock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: min(280px, 100%);
+  height: 34px;
+  margin-top: 12px;
+  border-radius: 9px;
+  background: rgb(0 122 255);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  transition: filter 100ms ease-in-out;
+}
+
+.space-access-unlock:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.space-access-unlock:disabled {
+  opacity: 0.6;
+}
+
+.space-access-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgb(255 255 255 / 0.35);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: space-access-spin 0.8s linear infinite;
+}
+
+@keyframes space-access-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.space-access p.space-access-failure {
+  font-size: 11px;
+}
+
+.space-access-failure.reserved {
+  visibility: hidden;
+}
+
+.space-access-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 7px;
+  background: var(--access-button);
+  color: var(--access-ink);
+  font-size: 13px;
+  transition: filter 100ms ease-in-out;
+}
+
+.space-access-switch:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+.folder-preview-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+  background: rgb(var(--primary-rgb) / 0.08);
+}
+.folder-preview-search input {
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+.folder-preview-list { display: flex; flex-direction: column; gap: calc(2px * var(--sidebar-spacing, 1)); max-height: 320px; overflow: auto; }
+.folder-preview-empty { display: block; padding: 8px; opacity: 0.65; }

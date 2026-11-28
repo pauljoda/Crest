@@ -63,6 +63,11 @@ extension BrowserStore {
         launchEnvironment: BrowserLaunchEnvironment,
         core: CrestCore
     ) -> BrowserStore {
+        if launchEnvironment.presentsDesktopComparison {
+            return BrowserStore(
+                credentialVault: InMemoryCredentialVault(), workspaceKind: .practice,
+                family: BrowserStoreFamily(startingAs: .practice, in: core), core: core)
+        }
         // The fixture opens as a seed, which the core repairs and never saves
         // or syncs: only the session the core keeps in its file syncs.
         return BrowserStore(

@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Select a reproducible configuration in an idle Chromium output.
 
-Each architecture the engine ships builds in its own output directory of the
-same prepared source, as source.lock.json's `architectures` names it. The
-arm64 output is the one preparation generates; another architecture's output
-is created beside it the first time it is configured.
+On the Mac, each architecture the engine ships builds in its own output
+directory of the same prepared source, as source.lock.json's `architectures`
+names it. The arm64 output is the one preparation generates; another
+architecture's output is created beside it the first time it is configured.
+Every other host, with a profile in CrestEngines/Chromium/Hosts, builds its one
+architecture in out/CrestBaseline.
 """
 
 import argparse
@@ -13,7 +15,10 @@ import json
 from pathlib import Path
 import re
 import subprocess
+import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import chromium_host  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -25,26 +30,42 @@ def main():
     parser.add_argument("--sdk", type=Path, help="Compatible macOS SDK; required for performance builds")
     parser.add_argument("--pgo-profile", type=Path,
                         help="The architecture's pinned profile; required for performance builds")
-    parser.add_argument("--cpu", default="arm64", help="The architecture to configure, as the lock names it")
+    parser.add_argument("--cpu", default="arm64", help="The Mac architecture to configure, as the lock names it")
+    parser.add_argument("--host", help="The host profile to configure for (default: this machine's)")
     args = parser.parse_args()
     source = args.source.resolve()
     if source == REPO or REPO in source.parents:
         parser.error("Chromium sources and products must be outside Crest")
-    lock = json.loads((REPO / "CrestEngines/Chromium/source.lock.json").read_text())
-    if args.cpu not in lock["architectures"]:
-        parser.error(f"The lock builds {', '.join(lock['architectures'])}, not {args.cpu}")
-    architecture = lock["architectures"][args.cpu]
-    output = source / architecture["output"]
+    host = args.host or chromium_host.detected()
+    lock = json.loads((REPO / "CrestEngines/Chromium/source.lock.json").read_text(encoding="utf-8"))
+    host_profile = chromium_host.profile(host, lock)
+    if host == chromium_host.MAC:
+        if args.cpu not in lock["architectures"]:
+            parser.error(f"The lock builds {', '.join(lock['architectures'])}, not {args.cpu}")
+        architecture = lock["architectures"][args.cpu]
+        output_name = architecture["output"]
+        # Preparation bootstraps GN and installs it where DEPS would.
+        gn = source / "buildtools/mac/gn"
+        if not gn.is_file() or not (source / "out/CrestBaseline/args.gn").is_file():
+            parser.error("Prepare the pinned source before configuring it")
+        settings = {"target_cpu": args.cpu, **lock["buildArguments"], **host_profile[f"{args.configuration}BuildArguments"]}
+    else:
+        # Every other host builds its one architecture in the output preparation made.
+        architecture = None
+        output_name = "out/CrestBaseline"
+        gn = chromium_host.gn(source, host)
+        if not (source / output_name / "args.gn").is_file() or not gn.is_file():
+            parser.error("Prepare the pinned source before configuring it")
+        settings = {**lock["buildArguments"], **host_profile[f"{args.configuration}BuildArguments"]}
+    output = source / output_name
     arguments = output / "args.gn"
-    # Preparation bootstraps GN and installs it where DEPS would.
-    gn = source / "buildtools/mac/gn"
-    if not gn.is_file() or not (source / "out/CrestBaseline/args.gn").is_file():
-        parser.error("Prepare the pinned source before configuring it")
     if not arguments.is_file():
         output.mkdir(parents=True, exist_ok=True)
-        arguments.write_text("")
-    settings = {"target_cpu": args.cpu, **lock["buildArguments"], **lock[f"{args.configuration}BuildArguments"]}
-    if args.configuration == "performance":
+        arguments.write_text("", encoding="utf-8")
+    if args.configuration == "performance" and host != chromium_host.MAC:
+        if args.sdk or args.pgo_profile:
+            parser.error("--sdk and --pgo-profile apply to the Mac host")
+    elif args.configuration == "performance":
         if args.sdk is None or args.pgo_profile is None:
             parser.error("Performance builds require --sdk and --pgo-profile")
         sdk = args.sdk.resolve()
@@ -82,9 +103,11 @@ def main():
 
     # Replace only the lock's scalar arguments, including prior duplicates.
     # Keep independent flags a contributor added for a local build.
-    owned = set(lock["buildArguments"]) | set(lock["developmentBuildArguments"]) | set(lock["performanceBuildArguments"])
-    owned.update(["target_cpu", "mac_sdk_path", "pgo_data_path"])
-    previous = arguments.read_text()
+    owned = set(lock["buildArguments"]) | set(host_profile["developmentBuildArguments"]) | set(host_profile["performanceBuildArguments"])
+    owned.update(["mac_sdk_path", "pgo_data_path"])
+    if host == chromium_host.MAC:
+        owned.add("target_cpu")
+    previous = arguments.read_text(encoding="utf-8")
     retained = []
     for line in previous.splitlines():
         assignment = re.match(r"\s*([a-zA-Z_][a-zA-Z_0-9]*)\s*=", line)
@@ -92,15 +115,16 @@ def main():
             retained.append(line)
     configured = "\n".join(retained).rstrip() + "\n\n"
     configured += "\n".join(f"{key}={json.dumps(value)}" for key, value in settings.items()) + "\n"
-    arguments.write_text(configured)
-    command = [str(gn), "gen", architecture["output"], "--fail-on-unused-args"]
+    arguments.write_text(configured, encoding="utf-8", newline="\n")
+    command = [str(gn), "gen", output_name, "--fail-on-unused-args", *chromium_host.gn_arguments(host)]
+    environment = chromium_host.build_environment(host, source)
     try:
-        subprocess.run(command, cwd=source, check=True)
+        subprocess.run(command, cwd=source, check=True, env=environment)
     except subprocess.CalledProcessError:
-        arguments.write_text(previous)
-        subprocess.run(command, cwd=source, check=True)
+        arguments.write_text(previous, encoding="utf-8", newline="\n")
+        subprocess.run(command, cwd=source, check=True, env=environment)
         raise
-    print(f"Configured {args.configuration} {args.cpu} in {architecture['output']}; rebuild chrome there.")
+    print(f"Configured {args.configuration} {args.cpu if host == chromium_host.MAC else host} in {output_name}; rebuild chrome there.")
 
 
 if __name__ == "__main__":

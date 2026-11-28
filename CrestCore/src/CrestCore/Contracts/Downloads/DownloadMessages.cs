@@ -21,19 +21,6 @@ public sealed record DownloadRiskVerdict(DownloadRiskAssessment Assessment, bool
 
 #region Changes
 
-/// Whether to keep the file of the download `DownloadId` waits on the person:
-/// the core's `Reasons` it looks dangerous, and the engine's `Warning` when the
-/// engine warned about it. `SpaceId` is the Space it belongs to and
-/// `SourceHost` the host it came from, when known.
-public sealed record DownloadApprovalAsked(Guid PromptId, Guid DownloadId, Guid? SpaceId, string Filename,
-    IReadOnlyList<DownloadRiskReason> Reasons, DownloadWarning? Warning, string? SourceHost) : Change;
-
-/// Where the file of the download `DownloadId` goes waits on the platform: the
-/// download folder of the Space `SpaceId`, or the person's choice when
-/// `ForcesPrompt` asks for one or that Space asks every time.
-public sealed record DownloadDestinationAsked(Guid PromptId, Guid DownloadId, Guid SpaceId, string SuggestedFilename,
-    bool ForcesPrompt) : Change;
-
 /// The engine download `DownloadId` began on the page `PageId`, so the window
 /// showing that page can show it leaving for the downloads list, whichever
 /// engine runs it. A download the engine restored from an earlier run, and one

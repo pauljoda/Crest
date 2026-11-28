@@ -1,0 +1,24 @@
+{
+  "name": "@crest/desktop",
+  "private": true,
+  "description": "Crest's browser window for Windows and Linux.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings && vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json"
+  },
+  "dependencies": {
+    "@crest/contracts": "*",
+    "@crest/core-client": "*",
+    "@crest/design": "*",
+    "@lucide/svelte": "0.554.0",
+    "svelte": "5.57.3"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "6.2.4",
+    "svelte-check": "4.7.8",
+    "vite": "7.3.8"
+  }
+}

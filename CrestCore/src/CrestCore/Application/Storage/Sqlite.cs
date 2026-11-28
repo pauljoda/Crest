@@ -18,8 +18,9 @@ internal static partial class Sqlite {
     /// `SQLITE_TRANSIENT`: SQLite copies bound values before the call returns.
     private static readonly nint Transient = -1;
 
-    /// Where a JIT host finds the library: macOS, then the Linux soname CI has.
-    private static readonly string[] JitLibraryNames = ["libsqlite3.dylib", "/usr/lib/libsqlite3.dylib", "libsqlite3.so.0", "libsqlite3.so"];
+    /// Where a JIT host finds the library: macOS, the Linux soname CI has, then
+    /// the copy Windows ships.
+    private static readonly string[] JitLibraryNames = ["libsqlite3.dylib", "/usr/lib/libsqlite3.dylib", "libsqlite3.so.0", "libsqlite3.so", "winsqlite3.dll"];
 
     #endregion
 

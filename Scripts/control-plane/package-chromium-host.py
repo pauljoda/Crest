@@ -218,6 +218,15 @@ def is_bundle_executable(path):
     return path.parent.parent.name == "Versions" and path.parent.parent.parent.name == f"{path.name}.framework"
 
 
+def signing_order(output):
+    """Sign loose code before the nested bundles that seal it."""
+    depth = lambda path: len(path.parts)
+    code = [path for path in output.rglob("*") if not path.is_symlink()]
+    loose = [path for path in code if path.is_file() and is_macho(path) and not is_bundle_executable(path)]
+    bundles = [path for path in code if path.is_dir() and path.suffix in BUNDLE_SUFFIXES]
+    return sorted(loose, key=depth, reverse=True) + sorted(bundles, key=depth, reverse=True)
+
+
 def sign_for_distribution(output, identity, app_entitlements):
     """Sign every piece of code for notarization, innermost first: loose
     executables and libraries, then bundles, then the app. Everything gets the
@@ -232,14 +241,8 @@ def sign_for_distribution(output, identity, app_entitlements):
                 command += ["--entitlements", str(plist)]
             subprocess.run(command + [str(path)], check=True)
 
-    depth = lambda path: len(path.parts)
-    code = [path for path in output.rglob("*") if not path.is_symlink()]
-    loose = [path for path in code if path.is_file() and is_macho(path) and not is_bundle_executable(path)]
-    bundles = [path for path in code if path.is_dir() and path.suffix in BUNDLE_SUFFIXES]
-    for path in sorted(loose, key=depth, reverse=True):
-        codesign(path)
-    for path in sorted(bundles, key=depth, reverse=True):
-        codesign(path, {JIT_ENTITLEMENT: True} if needs_jit(path) else None)
+    for path in signing_order(output):
+        codesign(path, {JIT_ENTITLEMENT: True} if path.is_dir() and needs_jit(path) else None)
     codesign(output, app_entitlements)
 
 
@@ -486,32 +489,27 @@ def main():
         identify_engine_helpers(frameworks, engine_identity, identity)
         name_engine_helpers(frameworks, info["CFBundleDisplayName"])
         name_product_in_localized_info(resources, info["CFBundleDisplayName"])
-    targets = [] if args.baseline else [frameworks / "CrestCore.Native.dylib", frameworks / ui.name,
-                                      output / "Contents/PlugIns/CrestDockTilePlugin.docktileplugin",
-                                      output / "Contents/Helpers/crest-browser"]
-    targets += sorted((p for p in frameworks.rglob("*.app") if not p.is_symlink()), key=lambda p: len(p.parts), reverse=True)
-    targets += sorted((p for p in frameworks.glob("*.framework") if p.name != ui.name), key=lambda p: len(p.parts), reverse=True)
     if cloud_entitlements:
         shutil.copy2(args.provisioning_profile, output / "Contents/embedded.provisionprofile")
     if args.distribution:
         sign_for_distribution(output, args.signing_identity, {
             **(ENGINE_APP_ENTITLEMENTS if args.product else {}),
             **(product_entitlements or {}), **(cloud_entitlements or {})})
-        targets = []
-    for target in [*targets, *([] if args.distribution else [output])]:
-        if target == output and (cloud_entitlements or product_entitlements):
-            existing = subprocess.run(["codesign", "-d", "--entitlements", ":-", str(output)],
-                                      capture_output=True, check=True).stdout
-            entitlements = plistlib.loads(existing) if existing.strip() else {}
-            entitlements.update(product_entitlements or {})
-            entitlements.update(cloud_entitlements or {})
-            with tempfile.TemporaryDirectory(prefix="crest-cloud-sign-") as temporary:
-                path = Path(temporary) / "entitlements.plist"
-                path.write_bytes(plistlib.dumps(entitlements))
-                subprocess.run(["codesign", "--force", "--sign", args.signing_identity,
-                                "--preserve-metadata=flags,runtime", "--entitlements", str(path), str(target)], check=True)
-            continue
-        subprocess.run(["codesign", "--force", "--sign", args.signing_identity, "--preserve-metadata=entitlements,flags,runtime", str(target)], check=True)
+    else:
+        for target in [*signing_order(output), output]:
+            if target == output and (cloud_entitlements or product_entitlements):
+                existing = subprocess.run(["codesign", "-d", "--entitlements", ":-", str(output)],
+                                          capture_output=True, check=True).stdout
+                entitlements = plistlib.loads(existing) if existing.strip() else {}
+                entitlements.update(product_entitlements or {})
+                entitlements.update(cloud_entitlements or {})
+                with tempfile.TemporaryDirectory(prefix="crest-cloud-sign-") as temporary:
+                    path = Path(temporary) / "entitlements.plist"
+                    path.write_bytes(plistlib.dumps(entitlements))
+                    subprocess.run(["codesign", "--force", "--sign", args.signing_identity,
+                                    "--preserve-metadata=flags,runtime", "--entitlements", str(path), str(target)], check=True)
+                continue
+            subprocess.run(["codesign", "--force", "--sign", args.signing_identity, "--preserve-metadata=entitlements,flags,runtime", str(target)], check=True)
     subprocess.run(["codesign", "--verify", "--deep", "--strict", str(output)], check=True)
     if args.distribution and not args.baseline:
         require_helper_entitlements(frameworks)

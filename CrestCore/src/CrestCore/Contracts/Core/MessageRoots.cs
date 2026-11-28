@@ -11,6 +11,14 @@ public abstract record Change {
     internal virtual IEnumerable<string> RemovedRecords(SessionState previous) => [];
 
     #endregion
+
+    #region Actions - Prompts
+
+    /// The prompt this change asks the person, which waits until a
+    /// `PromptSettled` for it; a change that asks nothing asks none.
+    internal virtual Guid? AskedPromptId => null;
+
+    #endregion
 }
 
 /// The rule that refused an intent or a query.

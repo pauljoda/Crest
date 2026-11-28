@@ -1,0 +1,2014 @@
+/* Settings, as the Mac's BrowserSettingsView draws it in its tab: a 224-wide
+   sidebar of its pages and the Spaces, a divider, then the chosen page's
+   title over one centred column of grouped settings. */
+.settings {
+  --settings-canvas: rgb(var(--crest-canvas-light));
+  --settings-card: color-mix(in srgb, var(--settings-canvas) 97%, black);
+  --settings-ink: rgb(0 0 0 / 0.86);
+  --settings-secondary: rgb(0 0 0 / 0.5);
+  --settings-primary: 0 0 0;
+  --settings-hairline: rgb(0 0 0 / 0.1);
+  --settings-accent: rgb(var(--crest-accent-light));
+  --settings-success: rgb(47 112 66);
+  --settings-warning: rgb(138 90 8);
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  background: var(--settings-canvas);
+  color: var(--settings-ink);
+  font: 13px var(--crest-font-system);
+  text-align: start;
+}
+
+:where(:root[data-appearance="dark"]) {
+  .settings {
+    --settings-canvas: rgb(var(--crest-canvas-dark));
+    --settings-card: color-mix(in srgb, var(--settings-canvas) 97%, white);
+    --settings-ink: rgb(255 255 255 / 0.9);
+    --settings-secondary: rgb(255 255 255 / 0.55);
+    --settings-primary: 255 255 255;
+    --settings-hairline: rgb(255 255 255 / 0.1);
+    --settings-accent: rgb(var(--crest-accent-dark));
+    --settings-success: rgb(134 196 142);
+    --settings-warning: rgb(236 190 92);
+  }
+}
+
+.settings-sidebar {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  width: 224px;
+  min-height: 0;
+}
+
+.settings-build {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 0;
+}
+
+.settings-build-name {
+  font-family: var(--crest-font-display);
+  font-weight: var(--crest-font-display-weight);
+  font-size: 13px;
+}
+
+.settings-build-detail {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  color: var(--settings-secondary);
+}
+
+.settings-search,
+.settings-search-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 7px;
+  background: rgb(var(--settings-primary) / 0.06);
+  color: var(--settings-secondary);
+}
+
+.settings-search {
+  margin: 12px 10px 12px;
+}
+
+.settings-search input,
+.settings-search-field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--settings-ink);
+  font: inherit;
+}
+
+.settings-search button {
+  display: grid;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.settings-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 0 12px;
+  scrollbar-width: thin;
+}
+
+.settings-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 20px);
+  min-height: 32px;
+  margin: 0 10px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--crest-radius-compact);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  transition: background-color 120ms ease-in-out;
+}
+
+.settings-nav-row:hover {
+  background: rgb(var(--settings-primary) / 0.08);
+}
+
+.settings-nav-row.selected {
+  background: light-dark(#0065d1, #007af5);
+  color: white;
+}
+
+.settings-nav-row.selected .settings-nav-symbol {
+  color: inherit;
+}
+
+@media (forced-colors: active) {
+  .settings-nav-row.selected {
+    background: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+}
+
+.settings-nav-row.sub {
+  padding-inline-start: 22px;
+}
+
+.settings-nav-symbol {
+  color: var(--nav-tint, inherit);
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 18px;
+}
+
+.settings-nav-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.settings-nav-lock {
+  flex: none;
+  color: var(--settings-secondary);
+}
+
+.settings-nav-heading {
+  margin: 12px 18px 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--settings-secondary);
+}
+
+.settings-nav-gap {
+  height: 12px;
+}
+
+.settings-divider {
+  flex: none;
+  width: 1px;
+  background: var(--settings-hairline);
+}
+
+.settings-page {
+  position: relative;
+  flex: 1;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.settings-page-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--settings-hairline);
+}
+
+.settings-page-header h2 {
+  margin: 0;
+  font-family: var(--crest-font-display);
+  font-size: 20px;
+  font-weight: var(--crest-font-display-weight);
+}
+
+.settings-page-header.space {
+  padding: 0 20px;
+}
+
+.settings-space-name {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: 600 18px var(--crest-font-system);
+}
+
+/* The Space's actions: the Mac's borderless ellipsis.circle menu button at the header's end. */
+.settings-space-menu {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  color: var(--settings-secondary);
+  transition: background 100ms ease-in-out, color 100ms ease-in-out;
+}
+
+.settings-space-menu:hover {
+  background: rgb(var(--settings-primary) / 0.07);
+  color: var(--settings-ink);
+}
+
+.settings-space-tabs {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--settings-hairline);
+}
+
+.settings-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.settings-column {
+  box-sizing: border-box;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 20px clamp(12px, 5vw, 32px) 32px;
+}
+
+.settings-group {
+  margin-bottom: 32px;
+}
+
+.settings-group-header {
+  display: flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 10px 10px;
+}
+
+/* A section's title in Crest's rounded heavy type, as the Mac's
+   CrestSettingsSectionHeading. */
+.settings-group-header h3 {
+  flex: 1;
+  margin: 0;
+  font-family: var(--crest-font-display);
+  font-size: 13px;
+  font-weight: var(--crest-font-display-weight);
+}
+
+.settings-group-reset {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--settings-accent);
+  font: inherit;
+  font-size: 12px;
+}
+
+.settings-card {
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--settings-card);
+  box-shadow: inset 0 0 0 0.5px var(--settings-hairline);
+}
+
+.settings-footer {
+  margin: 6px 10px 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--settings-secondary);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 49px;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+
+.settings-row + .settings-row {
+  box-shadow: inset 0 0.5px 0 var(--settings-hairline);
+}
+
+.settings-row-text {
+  flex: 1;
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.settings-row-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.settings-row-subtitle {
+  font-size: 11px;
+  color: var(--settings-secondary);
+}
+
+.settings-row-reset {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(var(--settings-primary) / 0.08);
+  color: var(--settings-secondary);
+}
+
+.settings-row-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.settings-link-row:hover {
+  background: rgb(var(--settings-primary) / 0.04);
+}
+
+.settings-link-row .settings-row-title {
+  flex: 1;
+}
+
+.settings-row-chevron {
+  color: var(--settings-secondary);
+}
+
+/* A row that does something, as a button in a macOS grouped form reads: its title in the accent. */
+.settings-action-row .settings-row-title {
+  color: var(--settings-accent);
+}
+
+.settings-switch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 52px;
+  height: 24px;
+  padding: 2px;
+  border: 0;
+  border-radius: 12px;
+  background: rgb(var(--settings-primary) / 0.09);
+  transition: background-color 120ms ease-in-out;
+}
+
+.settings-switch.on {
+  justify-content: flex-end;
+  background: var(--settings-accent);
+}
+
+.settings-switch:disabled {
+  opacity: 0.5;
+}
+
+.settings-switch-knob {
+  width: 32px;
+  height: 20px;
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+}
+
+.settings-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.settings-select select {
+  appearance: none;
+  min-width: 0;
+  max-width: min(260px, 38vw);
+  height: 26px;
+  padding: 0 28px 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--settings-accent);
+  font: inherit;
+  text-align: end;
+}
+
+.settings-select.compact select {
+  min-width: 0;
+}
+
+.settings-select option {
+  background: var(--settings-canvas);
+  color: var(--settings-ink);
+}
+
+.settings-select-glyph {
+  position: absolute;
+  right: 2px;
+  box-sizing: content-box;
+  padding: 3px;
+  border-radius: 50%;
+  background: rgb(var(--settings-primary) / 0.09);
+  pointer-events: none;
+  color: var(--settings-accent);
+}
+
+.settings-segmented {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 7px;
+  background: rgb(var(--settings-primary) / 0.07);
+}
+
+.settings-segmented button {
+  min-width: 68px;
+  height: 24px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.settings-segmented button.chosen {
+  color: white;
+  background: var(--settings-accent);
+  box-shadow: 0 0 0 0.5px var(--settings-hairline), 0 1px 2px rgb(0 0 0 / 0.12);
+  font-weight: 500;
+}
+
+.settings-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: rgb(var(--settings-primary) / 0.07);
+  box-shadow: inset 0 0 0 0.5px var(--settings-hairline);
+  color: var(--settings-accent);
+  font: inherit;
+}
+
+.settings-button:hover:not(:disabled) {
+  background: rgb(var(--settings-primary) / 0.12);
+}
+
+.settings-button.destructive {
+  color: var(--danger, rgb(178 50 37));
+}
+
+.settings-button:disabled {
+  opacity: 0.45;
+}
+
+.settings-order {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.settings-order button {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--settings-secondary);
+}
+
+.settings-order button:hover:not(:disabled) {
+  background: rgb(var(--settings-primary) / 0.08);
+}
+
+.settings-order button:disabled {
+  opacity: 0.35;
+}
+
+.settings-about {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 10px 22px;
+}
+
+.settings-about-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.settings-about-version {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--settings-secondary);
+  user-select: text;
+}
+
+/* The shortcuts editor: a search over every command's keys, by section. */
+.shortcuts-editor {
+  display: grid;
+  gap: 12px;
+}
+
+.shortcuts-editor .settings-group {
+  margin-bottom: 8px;
+}
+
+.shortcuts-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.shortcuts-controls .settings-search-field {
+  flex: 1;
+  min-width: 200px;
+}
+
+.shortcuts-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 11px;
+  color: var(--settings-warning);
+}
+
+.shortcuts-empty {
+  margin: 24px 0;
+  text-align: center;
+  color: var(--settings-secondary);
+}
+
+.shortcut-row {
+  min-height: 34px;
+  padding-block: 3px;
+}
+
+.shortcut-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.shortcut-custom {
+  font-size: 11px;
+  color: var(--settings-secondary);
+}
+
+/* The Mac's recorder is 116 wide for its key symbols; Windows spells its
+   keys out ("Ctrl+Shift+N", "Alt+Left Arrow"), so the recorder grows to fit. */
+.shortcut-recorder {
+  min-width: 116px;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: rgb(var(--settings-primary) / 0.07);
+  box-shadow: inset 0 0 0 0.5px var(--settings-hairline);
+  color: inherit;
+  font: 500 12px var(--crest-font-system);
+  white-space: nowrap;
+}
+
+.shortcut-recorder.recording {
+  background: var(--settings-accent);
+  color: white;
+  outline: none;
+}
+
+.shortcut-actions {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--settings-secondary);
+}
+
+.shortcut-actions:hover {
+  background: rgb(var(--settings-primary) / 0.08);
+}
+
+.native-unknown {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  background: var(--prompt-surface);
+  color: var(--prompt-ink);
+}
+
+/* Privacy: saved site permissions, website data, and the outcome of a clear. */
+.settings-secondary-text {
+  color: var(--settings-secondary);
+}
+
+.settings-truncates {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.settings-permission-symbol {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  color: var(--settings-secondary);
+}
+
+.settings-menu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.settings-menu-button:hover {
+  background: rgb(var(--settings-primary) / 0.07);
+}
+
+.settings-menu-button svg {
+  color: var(--settings-secondary);
+}
+
+.settings-actions-row {
+  justify-content: space-between;
+}
+
+.settings-actions-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--settings-secondary);
+  transition: opacity 120ms ease-in-out;
+}
+
+.settings-row-search {
+  flex: 1;
+}
+
+.settings-progress-row {
+  justify-content: center;
+}
+
+.settings-progress {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgb(var(--settings-primary) / 0.15);
+  border-top-color: var(--settings-secondary);
+  border-radius: 50%;
+  animation: settings-spin 0.8s linear infinite;
+}
+
+@keyframes settings-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* The Default browser row: what Windows says, in its status's tone, then
+   the way to Windows' own Settings and Check Again, as the Mac's row. */
+.default-browser-control {
+  align-items: center;
+}
+
+.default-browser-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--settings-secondary);
+}
+
+.default-browser-status.success {
+  color: var(--settings-success);
+}
+
+.default-browser-status.warning {
+  color: var(--settings-warning);
+}
+
+.default-browser-status .settings-progress {
+  width: 10px;
+  height: 10px;
+}
+
+/* Software updates: Check for Updates… at the trailing edge, and the
+   download's progress beside the update it brings. */
+.settings-update-actions {
+  justify-content: flex-end;
+}
+
+.settings-update-progress {
+  width: 120px;
+  height: 4px;
+  accent-color: var(--settings-accent);
+}
+
+/* Ad Blocking: the level's "Customized", the lists that wait while blocking
+   is off, the list address field, and the person's own filters. */
+.settings-customized {
+  font-size: 11px;
+  color: var(--settings-secondary);
+  transition: opacity 120ms ease-in-out;
+}
+
+.settings-waits {
+  transition: opacity 120ms ease-in-out;
+}
+
+.settings-waits.off {
+  opacity: 0.45;
+}
+
+.settings-text-field {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: rgb(var(--settings-primary) / 0.06);
+  box-shadow: inset 0 0 0 0.5px var(--settings-hairline);
+}
+
+.settings-text-field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--settings-ink);
+  font: inherit;
+}
+
+.settings-truncates-middle {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  direction: ltr;
+}
+
+.settings-icon-button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--settings-secondary);
+}
+
+.settings-icon-button:hover {
+  background: rgb(var(--settings-primary) / 0.08);
+  color: var(--settings-ink);
+}
+
+.settings-row > .settings-row-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-editor-row {
+  padding: 8px;
+}
+
+.settings-filter-editor {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 120px;
+  max-height: 360px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  resize: vertical;
+  outline: none;
+  background: rgb(var(--settings-primary) / 0.04);
+  box-shadow: inset 0 0 0 0.5px var(--settings-hairline);
+  color: var(--settings-ink);
+  font: 12px ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+.settings-filter-editor::placeholder {
+  color: rgb(var(--settings-primary) / 0.3);
+}
+
+.settings-buttons {
+  display: inline-flex;
+  gap: 8px;
+}
+
+/* A Space's Extensions: each extension's row, its disclosure and details. */
+.settings-disclosure {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--settings-secondary);
+}
+
+.settings-extension + .settings-extension {
+  box-shadow: inset 0 0.5px 0 var(--settings-hairline);
+}
+
+.settings-extension-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  color: var(--settings-secondary);
+}
+
+.settings-extension-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.settings-extension-version {
+  flex: none;
+  font-size: 11px;
+  color: rgb(var(--settings-primary) / 0.35);
+}
+
+.settings-clamps {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.settings-extension-source {
+  font-size: 10px;
+  color: rgb(var(--settings-primary) / 0.35);
+}
+
+.settings-extension-details {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 0 14px 12px 64px;
+}
+
+.settings-extension-permissions {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--settings-secondary);
+}
+
+.settings-extension-permissions strong {
+  color: var(--settings-ink);
+}
+
+.settings-link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--settings-accent);
+  font: inherit;
+  font-size: 12px;
+}
+
+.settings-link-button.destructive {
+  color: var(--danger, rgb(178 50 37));
+}
+
+.settings-buttons-row {
+  flex-wrap: wrap;
+}
+
+.settings-spacer {
+  flex: 1;
+}
+
+/* A Space's Appearance page, as the Mac's BrowserCrestForge: a 720-point
+   column; the stage over its palettes; the icon; More Customization. Cards
+   are the Mac's CrestSelectableCard in Crest's blue. */
+.settings-column.wide {
+  max-width: 720px;
+}
+
+.space-appearance {
+  --forge-tint: rgb(43 108 196);
+  --forge-line: rgb(234 223 198);
+  /* CrestBrandTheme.label: gold on cream, butter on ink. */
+  --forge-label: rgb(138 106 34);
+}
+
+:where(:root[data-appearance="dark"]) {
+  .space-appearance {
+    --forge-tint: rgb(79 142 224);
+    --forge-line: rgb(255 253 247 / 0.22);
+    --forge-label: rgb(242 193 78);
+  }
+}
+
+.space-appearance-section {
+  margin-bottom: 20px;
+}
+
+.forge-heading {
+  margin: 0;
+  padding: 0 10px 6px;
+  font-family: var(--crest-font-display);
+  font-size: 13px;
+  font-weight: var(--crest-font-display-weight);
+}
+
+/* The stage: the Space's field, shaded toward the trailing edge, reading dark. */
+.forge-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  min-height: 284px;
+  margin-bottom: 4px;
+  padding: 0 16px 0 28px;
+  overflow: hidden;
+  border-radius: 16px;
+  color: rgb(255 255 255 / 0.9);
+  isolation: isolate;
+}
+
+.forge-stage-field {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+
+.forge-stage-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgb(0 0 0 / 0.05) 0, rgb(0 0 0 / 0.28) 62%, rgb(0 0 0 / 0.34) 100%);
+}
+
+.forge-stage-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 188px;
+  height: 188px;
+}
+
+.forge-swatch-group h4 {
+  margin: 0 0 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgb(255 255 255 / 0.55);
+}
+
+.forge-swatches {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.forge-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 62px;
+  padding: 6px 0;
+  border-radius: 10px;
+  font-size: 10px;
+  line-height: 12px;
+  text-align: center;
+}
+
+.forge-swatch .fill-dot {
+  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.3));
+}
+
+.forge-tools {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+}
+
+.forge-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.16);
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.22);
+  backdrop-filter: blur(12px);
+  color: rgb(255 255 255 / 0.92);
+  font: 500 11px var(--crest-font-system);
+}
+
+.forge-tool:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.24);
+}
+
+.forge-tool:disabled {
+  opacity: 0.4;
+}
+
+/* CrestSelectableCard, compact. */
+.forge-card {
+  border: 0;
+  border-radius: 12px;
+  padding: 8px;
+  background: rgb(var(--settings-primary) / 0.055);
+  color: inherit;
+  font: inherit;
+  transition: background 100ms ease-out, box-shadow 100ms ease-out, transform 100ms ease-out;
+}
+
+.forge-card:hover {
+  background: rgb(var(--settings-primary) / 0.08);
+}
+
+.forge-card:active {
+  background: rgb(var(--settings-primary) / 0.13);
+  transform: scale(0.975);
+}
+
+.forge-card.selected {
+  background: color-mix(in srgb, var(--forge-tint) 10%, transparent);
+  box-shadow: inset 0 0 0 2px var(--forge-tint);
+}
+
+.forge-card.selected:active {
+  background: color-mix(in srgb, var(--forge-tint) 16%, transparent);
+}
+
+.space-palettes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 6px;
+  padding: 10px;
+}
+
+.space-palette {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.space-palette-swatch {
+  position: relative;
+  display: block;
+  height: 24px;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.space-palette-swatch > svg {
+  display: block;
+}
+
+.space-palette-swatch::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--forge-line);
+}
+
+.space-palette-accent {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  display: flex;
+}
+
+.space-palette-title {
+  overflow: hidden;
+  font-size: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--settings-secondary);
+}
+
+.forge-more {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 0;
+  color: var(--settings-ink);
+  font: 13px var(--crest-font-system);
+  text-align: start;
+}
+
+.forge-more-chevron {
+  color: var(--settings-secondary);
+  transition: transform 100ms ease-in-out;
+}
+
+.forge-more[aria-expanded="true"] .forge-more-chevron {
+  transform: rotate(90deg);
+}
+
+.forge-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.settings-group .forge-gallery {
+  padding: 8px 10px;
+}
+
+.forge-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.forge-choice-art {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 58px;
+}
+
+.forge-choice-title {
+  display: -webkit-box;
+  min-height: 30px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 10px;
+  line-height: 15px;
+  text-align: center;
+}
+
+.forge-pattern-art {
+  position: relative;
+  display: block;
+  width: 56px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: 8px;
+  isolation: isolate;
+}
+
+.forge-icon {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px;
+}
+
+.forge-starters {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.forge-caps {
+  margin: 0 0 8px;
+  font-family: var(--crest-font-display);
+  font-size: 12px;
+  font-weight: var(--crest-font-display-weight);
+  letter-spacing: 1.7px;
+  text-transform: uppercase;
+  color: var(--forge-label, inherit);
+}
+
+/* BrowserArtworkPickerButton. */
+.forge-artwork-button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  padding: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: rgb(var(--settings-primary) / 0.035);
+  box-shadow: inset 0 0 0 1px rgb(var(--settings-primary) / 0.09);
+  color: var(--settings-ink);
+  font: inherit;
+  text-align: start;
+  transition: background 100ms ease-in-out, box-shadow 100ms ease-in-out;
+}
+
+.forge-artwork-button:hover {
+  background: rgb(var(--settings-primary) / 0.07);
+  box-shadow: inset 0 0 0 1px rgb(var(--settings-primary) / 0.18);
+}
+
+.forge-artwork-button:active {
+  background: rgb(var(--settings-primary) / 0.1);
+}
+
+.forge-artwork {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: var(--forge-tint);
+}
+
+.forge-artwork-emoji {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.forge-artwork-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.forge-artwork-title {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.forge-artwork-detail {
+  overflow: hidden;
+  font-size: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--settings-secondary);
+}
+
+.symbol-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 480px;
+  max-height: 500px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.symbol-picker-done {
+  border: 0;
+  background: none;
+  color: rgb(79 142 224);
+  font: 600 13px var(--crest-font-system);
+}
+
+.symbol-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.symbol-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  --settings-primary: 255 255 255;
+  --forge-tint: rgb(79 142 224);
+}
+
+.symbol-choice > span {
+  display: -webkit-box;
+  height: 30px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 10px;
+  line-height: 15px;
+  text-align: center;
+}
+
+.symbol-count {
+  font-size: 11px;
+  color: var(--prompt-ink-secondary);
+}
+
+.settings-appearance-slider {
+  width: clamp(80px, 18.52vw, 160px);
+  accent-color: var(--settings-accent);
+}
+
+@media (forced-colors: none) {
+  .settings-appearance-slider {
+    appearance: none;
+    background: transparent;
+  }
+
+  .settings-appearance-slider::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(to right, var(--settings-accent) var(--filled), rgb(var(--settings-primary) / 0.12) var(--filled));
+  }
+
+  .settings-appearance-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    margin-top: -6px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 1px 3px #0004;
+  }
+}
+
+.forge-slider {
+  width: 160px;
+  accent-color: var(--forge-tint);
+}
+
+.forge-readout {
+  min-width: 76px;
+  font-size: 12px;
+  text-align: right;
+  color: var(--settings-secondary);
+}
+
+/* The stage's swatches open their colors' popovers. */
+button.forge-swatch {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  transition: background 100ms ease-in-out, box-shadow 100ms ease-in-out;
+}
+
+button.forge-swatch:hover {
+  background: rgb(255 255 255 / 0.08);
+}
+
+button.forge-swatch.selected {
+  background: rgb(255 255 255 / 0.13);
+  box-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.1), 0 1px 4px rgb(0 0 0 / 0.08);
+}
+
+/* CrestColorWell: the fill in a ring, Crest's blue round it while its popover is open. */
+.color-well {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  transition: background 100ms ease-out, box-shadow 100ms ease-out;
+}
+
+.color-well:hover {
+  background: rgb(var(--settings-primary) / 0.08);
+}
+
+.color-well.selected {
+  background: color-mix(in srgb, var(--forge-tint) 10%, transparent);
+  box-shadow: inset 0 0 0 2px var(--forge-tint);
+}
+
+.fill-dot-line {
+  stroke: var(--forge-line);
+}
+
+/* CrestColorPopover: 320 wide, dark whatever the window, over Crest's flyout surface. */
+.crest-popover.color-popover {
+  --prompt-surface: rgb(43 41 40);
+  --prompt-ink: rgb(255 255 255 / 0.9);
+  --color-quaternary: rgb(255 255 255 / 0.16);
+  --color-tertiary: rgb(255 255 255 / 0.35);
+  --color-secondary: rgb(255 255 255 / 0.55);
+  --color-line: rgb(255 253 247 / 0.22);
+  --color-accent: rgb(79 142 224);
+  width: 320px;
+  border-radius: 20px;
+  box-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.08), 0 10px 30px rgb(0 0 0 / 0.28);
+  color-scheme: dark;
+}
+
+.color-popover-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+
+.color-popover-wheel-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.color-wheel {
+  position: relative;
+  touch-action: none;
+}
+
+.color-wheel-place {
+  position: absolute;
+}
+
+/* crestColorInset: colors set into the popover, a recess round them lit from below, a dark edge where they begin. */
+.color-inset {
+  position: relative;
+  display: block;
+}
+
+.color-inset::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(to bottom, rgb(0 0 0 / 0.32) 0%, rgb(0 0 0 / 0.112) 55%, rgb(255 255 255 / 0.22) 100%);
+  pointer-events: none;
+}
+
+.color-inset.slim::before {
+  inset: -2.5px;
+}
+
+.color-inset::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border: 1px solid rgb(0 0 0 / 0.35);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.color-wheel-surface {
+  border-radius: 50%;
+}
+
+.color-wheel-surface > canvas {
+  display: block;
+  border-radius: 50%;
+}
+
+.color-wheel-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+
+.color-wheel-dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 26px;
+  height: 26px;
+  box-sizing: border-box;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 1px 8px rgb(0 0 0 / 0.35);
+  transform: translate(-50%, -50%);
+  transition: width 150ms ease-in-out, height 150ms ease-in-out, border-width 150ms ease-in-out,
+    transform 100ms ease-out, box-shadow 100ms ease-out;
+  outline: none;
+}
+
+.color-wheel-dot.chosen {
+  width: 36px;
+  height: 36px;
+  border-width: 4px;
+}
+
+.color-wheel-dot.lifted {
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.45);
+  transform: translate(-50%, -50%) scale(1.12);
+}
+
+/* The row under the wheel: minus and plus in the middle, the direction and the link at either end. */
+.color-popover-controls {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+}
+
+.color-popover-count {
+  display: flex;
+  gap: 12px;
+}
+
+.color-popover-leading,
+.color-popover-trailing {
+  position: absolute;
+  top: 0;
+}
+
+.color-popover-leading {
+  left: 0;
+}
+
+.color-popover-trailing {
+  right: 0;
+}
+
+.color-popover-button,
+.color-link {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background-color: var(--color-quaternary);
+  color: rgb(255 255 255 / 0.9);
+  transition: background-image 100ms ease-in-out;
+}
+
+.color-popover-button:hover:not(:disabled),
+.color-link:hover {
+  background-image: linear-gradient(rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.08));
+}
+
+.color-popover-button:active:not(:disabled),
+.color-link:active {
+  background-image: linear-gradient(rgb(255 255 255 / 0.13), rgb(255 255 255 / 0.13));
+}
+
+.color-popover-button:disabled {
+  color: rgb(255 255 255 / 0.4);
+}
+
+.color-link {
+  color: var(--color-secondary);
+}
+
+.color-link.on {
+  background-color: var(--color-accent);
+  color: white;
+}
+
+/* CrestAngleKnob at 32. */
+.angle-knob {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-quaternary);
+  box-shadow: inset 0 0 0 1px var(--color-line);
+  touch-action: none;
+  outline: none;
+}
+
+.angle-knob-tick {
+  position: absolute;
+  top: 14px;
+  left: 15.25px;
+  width: 1.5px;
+  height: 4px;
+  border-radius: 1px;
+  background: var(--color-tertiary);
+}
+
+.angle-knob-arrow {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--color-secondary);
+}
+
+.angle-knob-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.3);
+  transition: transform 100ms ease-out;
+  pointer-events: none;
+}
+
+.angle-knob-handle.turning {
+  transform: scale(1.3);
+}
+
+/* CrestColorSlider: a 14-point track set into the popover under a 22-point thumb. */
+.color-slider {
+  position: relative;
+  height: 28px;
+  touch-action: none;
+  outline: none;
+}
+
+.color-slider-track {
+  position: absolute;
+  top: 7px;
+  right: 0;
+  left: 0;
+  height: 14px;
+  border-radius: 7px;
+}
+
+.color-slider-grain {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.color-slider-grain > canvas {
+  -webkit-mask-image: linear-gradient(to right, transparent, black);
+  mask-image: linear-gradient(to right, transparent, black);
+}
+
+.color-slider-thumb {
+  position: absolute;
+  top: 3px;
+  width: 22px;
+  height: 22px;
+  margin-left: -11px;
+  box-sizing: border-box;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.3);
+  transition: transform 100ms ease-out, box-shadow 100ms ease-out;
+  pointer-events: none;
+}
+
+.color-slider-thumb.lifted {
+  box-shadow: 0 3px 12px rgb(0 0 0 / 0.4);
+  transform: scale(1.12);
+}
+
+/* The spectrum: twelve hues, each a 16-point swatch in its ring. */
+.color-spectrum {
+  display: flex;
+}
+
+.color-spectrum-slot {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+}
+
+.color-spectrum-swatch {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  transition: background 100ms ease-out, box-shadow 100ms ease-out;
+}
+
+.color-spectrum-swatch:hover {
+  background: rgb(255 255 255 / 0.08);
+}
+
+.color-spectrum-swatch.selected {
+  background: rgb(79 142 224 / 0.1);
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+.color-spectrum-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--color-line);
+}
+
+.color-slider:focus-visible,
+.angle-knob:focus-visible,
+.color-wheel-dot:focus-visible {
+  box-shadow: 0 0 0 3px rgb(79 142 224 / 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .color-wheel-dot,
+  .color-slider-thumb,
+  .angle-knob-handle {
+    transition: none;
+  }
+}
+
+/* The stage's swatch groups, Colors over Crest; a crest part the crest doesn't draw dims. */
+.forge-swatch-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.forge-swatch.undrawn .fill-dot {
+  opacity: 0.3;
+}
+
+.forge-swatch.undrawn .forge-swatch-title {
+  opacity: 0.6;
+}
+
+.forge-swatch.undrawn:hover .forge-swatch-title {
+  opacity: 1;
+}
+
+/* The crest studio: its heading over the step bar, then the step's gallery or the emblem. */
+.settings-group-header.forge-step-header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.forge-step-header h3 {
+  flex: none;
+}
+
+.crest-emblem-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 14px 14px;
+}
+
+.crest-emblem-search-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--settings-secondary);
+}
+
+.crest-emblem-search-glyph {
+  flex: none;
+  margin-right: 6px;
+  color: var(--settings-secondary);
+}
+
+.settings-group .forge-gallery.crest-emblem-grid {
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px 10px;
+  padding: 4px 0;
+}
+
+.crest-emblem-more {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--forge-tint);
+  font: 12px var(--crest-font-system);
+}
+
+.crest-emblem-caption {
+  margin: 0;
+  font-size: 11px;
+  color: var(--settings-secondary);
+}
+
+.crest-monogram-field {
+  flex: none;
+  width: 160px;
+}
+
+/* BrowserSystemSymbolPicker in the Emblem step, on the page's own colors. */
+.symbol-picker.inline {
+  width: auto;
+  max-height: 360px;
+  padding: 0;
+}
+
+.symbol-picker.inline .symbol-choice {
+  --settings-primary: inherit;
+  --forge-tint: inherit;
+}
+
+.symbol-picker.inline .symbol-count {
+  color: var(--settings-secondary);
+}
+
+.symbol-picker-search {
+  border: 0;
+  color: var(--settings-ink);
+  font: inherit;
+  outline: none;
+}
+
+/* A locked Space's page: the Space and Unlock, as the Mac's private Space access row. */
+.settings-locked-row {
+  gap: 10px;
+}
+
+.settings-unlock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--settings-accent);
+  color: white;
+  font-weight: 600;
+  transition: filter 100ms ease-in-out;
+}
+
+.settings-unlock:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.settings-unlock:disabled {
+  opacity: 0.5;
+}
+
+/* BrowserSpaceGroupCrestRow: the group's crests in a well, the page's Space
+   selected, and + beside it, between the header and the tabs. */
+.settings-group-crests {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px 10px;
+  border-bottom: 1px solid var(--settings-hairline);
+}
+
+.settings-group-well {
+  display: flex;
+  padding: 2px;
+  border-radius: 10px;
+  background: rgb(var(--settings-primary) / 0.06);
+}
+
+.settings-group-crest {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 30px;
+  border-radius: 8px;
+  transition: background 100ms ease-in-out;
+}
+
+.settings-group-crest:hover {
+  background: rgb(var(--settings-primary) / 0.06);
+}
+
+.settings-group-crest.selected {
+  background: rgb(var(--settings-primary) / 0.14);
+}
+
+.settings-group-add {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: var(--settings-secondary);
+  transition: background 100ms ease-in-out, color 100ms ease-in-out;
+}
+
+.settings-group-add:hover:not(:disabled) {
+  background: rgb(var(--settings-primary) / 0.07);
+  color: var(--settings-ink);
+}
+
+.settings-group-add:disabled {
+  opacity: 0.4;
+}
+
+/* The page's divider runs under the crest row, which stands between the header and the tabs. */
+.settings-page-header.space:has(+ .settings-group-crests) {
+  border-bottom: 0;
+}
+
+/* The two native layout choices show a 520-point preview fitted into a square face.
+   The switcher choices crop into its sidebar so the four marks remain legible. */
+/* The Mac's Appearance form keeps 356 points for its controls in a narrow split. */
+.settings-column:has(.settings-layout-choices) { min-width: calc(356px + 2 * clamp(12px, 5vw, 32px)); }
+
+.settings-layout-choices {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  padding: 12px;
+}
+
+.settings-layout-choices:has(.switcher-crop) { padding-block: 22px; }
+
+.settings-layout-choices button {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 6px;
+  flex: 0 1 152px;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  color: var(--settings-secondary);
+  font: inherit;
+}
+
+.settings-layout-choices button[aria-checked="true"] { color: var(--settings-ink); font-weight: 600; }
+.settings-preview-face {
+  width: 100%; aspect-ratio: 1; padding: 7px; box-sizing: border-box;
+  background: rgb(var(--settings-primary) / 0.045); border-radius: 16px;
+  outline: 1px solid var(--settings-hairline);
+}
+.settings-layout-choices button[aria-checked="true"] .settings-preview-face { outline: 3px solid var(--settings-accent); }
+.settings-layout-choices button:focus-visible { outline: 2px solid var(--settings-accent); border-radius: 12px; }
+.settings-preview-window {
+  display: block; position: relative; overflow: hidden; width: 100%; height: 100%; container-type: inline-size;
+  background: #26323b; border-radius: 8px; color: #e3e7ec; font-weight: 400; font-size: 4px; text-align: left;
+}
+.settings-preview-window > span { position: absolute; }
+.preview-caption { left: 3%; top: 2%; opacity: 0.25; font-size: 2.5cqw; }
+.preview-nav { left: 41%; top: 2%; font-size: 3cqw; }
+.preview-address { left: 4%; top: 11%; font-size: 2.2cqw; }
+.preview-address.above { left: 67%; top: 3%; font-size: 2cqw; }
+.preview-pins { left: 4%; top: 20%; font-size: 3cqw; }
+.preview-space { left: 4%; top: 30%; font-size: 3.2cqw; }
+.preview-page { inset: 1.5% 1.5% 1.5% 55%; background: #fffdf7; border-radius: 2.6cqw; }
+.preview-page.below-bar { top: 10%; }
+.preview-tab-list { top: 40%; left: 2%; width: 51%; }
+.preview-tab { display: flex; align-items: center; gap: 2cqw; height: 7.8cqw; padding: 0 2cqw; font-size: 2.7cqw; white-space: nowrap; }
+.settings-preview-window:not(.switcher-crop) .preview-tab:first-child { background: #d1d2cd; color: #26323b; border-radius: 2.5cqw; }
+.switcher-crop .preview-tab-list { top: -7%; width: 98%; }
+.switcher-crop .preview-tab { height: 15.5cqw; padding-left: 5cqw; font-size: 5cqw; }
+.preview-switcher { display: flex; align-items: center; gap: 2cqw; left: 17%; bottom: 2%; font-size: 4cqw; }
+.preview-switcher svg { box-sizing: content-box; width: 3cqw; height: 3cqw; padding: 1cqw; border-radius: 1cqw; background: #52616a; }
+.preview-switcher i { width: 3cqw; height: 3cqw; border-radius: 50%; background: #6aaed2; }
+.preview-switcher i:nth-last-child(2) { background: #d5a93d; }
+.preview-switcher i:last-child { background: #80aa91; }
+.switcher-crop .preview-switcher { bottom: 5%; left: 50%; transform: translateX(-50%) scale(1.8); }
+
+.settings-engine-page { flex: 1; min-height: 0; width: 100%; border: 0; }
+
+.settings-space-order, .settings-nav-heading:has(.settings-icon-button) { display: flex; align-items: center; }
+.settings-space-order .settings-nav-row, .settings-nav-heading > span { flex: 1; min-width: 0; }
+.settings-accent-color { width: 32px; height: 24px; padding: 1px; border: 0; background: transparent; }
+.settings-route-pattern {
+  width: min(210px, 100%); padding: 4px 8px; border-radius: 6px;
+  border: 1px solid var(--settings-hairline); color: inherit; background: var(--settings-card); font: inherit;
+}

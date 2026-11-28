@@ -13,7 +13,7 @@ lists what each engine lacks.
 
 | Layer | Owns | Never owns |
 | --- | --- | --- |
-| Platform UI (SwiftUI on macOS, iOS and iPadOS; WinUI 3 on Windows later) | Views, layout, animation, hover, scroll position, window frames, sidebar width, appearance preferences, presenting the prompts the core asks for, embedding engine views | Browser state, rules, persistence, deciding what happens next |
+| Platform UI (SwiftUI on macOS, iOS and iPadOS; a TypeScript interface inside Crest's Chromium on Windows, and later Linux) | Views, layout, animation, hover, scroll position, window frames, sidebar width, appearance preferences, presenting the prompts the core asks for, embedding engine views | Browser state, rules, persistence, deciding what happens next |
 | `CrestCore` | Every piece of browser state and every rule: Spaces, tabs, folders, splits, history, archive, windows and what each window shows, which windows a launch reopens and where external opens land, pages and their live state, preferences, downloads, permissions, credentials policy, extension policy (which Spaces may change or receive an extension, and which consent answers an install), import and export, search and completion, the commands and how the menu bar and launcher lay them out, onboarding and setup flows, Quick Window and Peek rules, storage, sync | Rendering, input, compositing, engine handles, image bytes, OS services |
 | Engine bindings (Chromium in portable C++ with a thin shell per OS; WebKit in Swift) | Creating and closing pages, loading, engine navigation history, find, zoom, capture, printing, DevTools, running, verifying and storing extensions, network and cookie stores | Deciding browser rules; changing browser state other than by reporting events |
 | OS services (supplied by each platform) | CloudKit transport, Keychain, authentication prompts, notification delivery, file pickers, default-browser registration, software updates | Rules; deciding when to save or sync |
@@ -179,12 +179,15 @@ Apple UIs keep a generated read model that they update from those changes, so
 reading state never calls into the core. The read model is observable per
 entity (each window, Space, tab and folder is its own observable object that
 notifies only when a value really changes), so a tab's new title redraws that
-tab's row and nothing else. The Windows UI reads the core's
-records directly.
+tab's row and nothing else. The Windows interface keeps a read model of its
+own, in TypeScript, from the same changes: a change replaces only the records
+it names, so the rows it leaves alone keep their state and are not drawn again.
 
 Swift and the core always ship in one build, so the binary wire between them
 has no versioning. The app checks a schema fingerprint when it creates the
-core, so a stale prebuilt core fails at launch instead of misreading data.
+core, so a stale prebuilt core fails at launch instead of misreading data. The
+Windows interface ships beside its core in the same way and checks the same
+fingerprint.
 
 The UI's intents change the core's model on the UI thread. The cloud
 transport's intents run on the transport's own thread instead: a sync merge
@@ -214,8 +217,9 @@ in portable C++ and reports events straight to the core, with no Objective-C
 or Swift in between. Chromium's Mac shell around it handles only view
 embedding, popups and web authentication. Crest's own Mac shell, which both
 Mac products run, owns the windows, menus, launch, reopen, external opens and
-quit, and asks the core each decision it makes about them. WebKit implements
-the same contract in Swift, once, for macOS and iOS.
+quit, and asks the core each decision it makes about them. On Windows, Crest's
+desktop shell takes both roles (see [Windows and Linux](#windows-and-linux)).
+WebKit implements the same contract in Swift, once, for macOS and iOS.
 
 Crest can run more than one engine at a time.
 
@@ -317,14 +321,36 @@ WebKit uses the WebKit website data store of its Space's profile, so the person
 signs in there once and that store keeps the sign-in for later visits. Signing
 out on one engine does not sign out the other.
 
-## Windows, later
+## Windows and Linux
 
-The Windows UI is WinUI 3 in C#, compiled with NativeAOT, with `CrestCore` as
-a project reference in the same process. It calls the core directly and
-reads its records, with no ABI crossing, serialization or second copy of the
-state. As on the Mac, Chromium owns the process and the UI thread. A Windows
-shell asks the core the questions the Mac shell asks, such as which windows a
-launch reopens, where external opens land, whether a quit may go ahead and how
-the menus lay out the commands, and mounts the WinUI views as XAML Islands in
-its windows. A spike must prove that, along with hosting the page surface,
-before any Windows work begins.
+On Windows, Crest's Chromium is the app itself. Started with
+`--crest-control-plane`, its desktop shell (`crest_desktop_*` in the `Desktop`
+engine layer, and `desktop-host.patch`) loads `CrestCore.Native` through the same C ABI the
+Mac links, opens Crest's windows, and asks the core the questions the Mac
+shell asks, such as which windows a launch reopens, where external opens land,
+whether a quit may go ahead and how the menus lay out the commands. Each
+window's interface is the privileged page `chrome://crest-desktop`, written in
+TypeScript in `CrestDesktop/ui`. The shell loads it from the app folder
+instead of compiling it into the engine, so a change to the interface needs
+no new engine.
+
+The interface reaches the core only through the contract. It encodes intents
+and queries with the TypeScript codec the generator emits beside the Swift
+one, the shell carries the bytes as WebUI messages without reading them, and
+the core's changes and answers come back the same way.
+
+The interface embeds the window's pages itself, as the surface embeds upstream
+Chromium built for its own WebUI browser, which `desktop-host.patch` opens to
+Crest's page. Pages and interface draw in one compositor, so the interface
+clips and rounds page cards, keeps Peek, notices and the floating sidebar over
+pages, and moves pages during a Space switch, as the Mac does with Chromium's
+layers in its own layer tree.
+
+A native toolkit cannot do that on Windows. Upstream Chromium has no supported
+way to draw a page into a surface another toolkit supplies, so WinUI 3, WPF or
+React Native for Windows could show Crest's pages only as child windows, which
+draw above everything the toolkit draws, with no transparency, rounded clip or
+transform. Drawing pages off-screen into textures instead would mean
+rebuilding input, IME, accessibility and drag and drop in a permanent patch to
+the fork. Linux reuses the same shell and interface, with a window frame,
+desktop integration and packaging of its own.

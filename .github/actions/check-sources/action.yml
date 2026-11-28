@@ -14,6 +14,10 @@ runs:
         subprocess.run(["xcrun", "swift-format", "lint", "--strict", "--configuration", ".swift-format", *paths], check=True)
         PYTHON
 
+    - name: Compile the desktop comparison recorder
+      shell: bash
+      run: xcrun swiftc -typecheck Scripts/desktop-parity.swift
+
     - name: Test script contracts with macOS tools
       shell: bash
       run: python3 -m unittest discover -s Scripts/Tests

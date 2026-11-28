@@ -1,0 +1,126 @@
+# Crest: gives Crest's Windows build Crest's own identity where Windows shows
+# the app, which a Chromium build otherwise takes from Chromium.
+#
+# - Its icon: chrome.exe and chrome.dll carry Crest's mark as their
+#   application icon (IDR_MAINFRAME), which the taskbar, Alt+Tab, the window,
+#   Explorer and shortcuts show. The overlay's chrome/app/theme/crest/win/
+#   crest.ico is rendered from the mark the interface draws (CrestMark.tsx).
+# - Its name: the version resources of chrome.exe, chrome.dll and the other
+#   binaries read chrome/app/theme/crest/BRANDING after Chromium's BRANDING,
+#   so Task Manager, the taskbar's menu and Explorer say Crest by The Crest
+#   Authors. Chromium's BRANDING stays as it is, because the Mac's framework
+#   and helper names come from it.
+# - Its install mode: Crest's base app name and app user model ID, its
+#   product folder (%LOCALAPPDATA%\Crest\User Data when no --user-data-dir is
+#   given) and its ProgIDs and direct-launch scheme. The CLSIDs and GUIDs stay
+#   Chromium's until a Windows installer registers them.
+# - Its external extensions: the extensions other software registers for the
+#   browser in the registry are read from Software\Crest\Extensions, not
+#   the key under Software\Google, which every Chromium build otherwise reads. The Mac's
+#   engine likewise reads only its own External Extensions folders.
+
+--- a/chrome/app/chrome_exe.rc
++++ b/chrome/app/chrome_exe.rc
+@@ -56,7 +56,7 @@
+ #elif BUILDFLAG(GOOGLE_CHROME_FOR_TESTING_BRANDING)
+ IDR_MAINFRAME           ICON       "theme\\google_chrome\\google_chrome_for_testing\\win\\chrome.ico"
+ #else
+-IDR_MAINFRAME           ICON       "theme\\chromium\\win\\chromium.ico"
++IDR_MAINFRAME           ICON       "theme\\crest\\win\\crest.ico"
+ #endif
+ 
+ // Start a naming scheme to keep icons in order. A leading X is used to keep
+--- a/chrome/app/chrome_dll.rc
++++ b/chrome/app/chrome_dll.rc
+@@ -174,7 +174,7 @@
+ #elif BUILDFLAG(GOOGLE_CHROME_FOR_TESTING_BRANDING)
+ IDR_MAINFRAME       ICON                        "theme\google_chrome\google_chrome_for_testing\win\chrome.ico"
+ #else
+-IDR_MAINFRAME       ICON                        "theme\chromium\win\chromium.ico"
++IDR_MAINFRAME       ICON                        "theme\crest\win\crest.ico"
+ #endif
+ 
+ // We include these resources because all ICON types need to be in the
+--- a/chrome/BUILD.gn
++++ b/chrome/BUILD.gn
+@@ -1685,12 +1685,18 @@
+ 
+ if (is_win) {
+   process_version_rc_template("chrome_exe_version") {
+-    sources = [ "app/chrome_exe.ver" ]
++    sources = [
++      "app/theme/crest/BRANDING",
++      "app/chrome_exe.ver",
++    ]
+     output = "$target_gen_dir/chrome_exe_version.rc"
+   }
+ 
+   process_version_rc_template("chrome_dll_version") {
+-    sources = [ "app/chrome_dll.ver" ]
++    sources = [
++      "app/theme/crest/BRANDING",
++      "app/chrome_dll.ver",
++    ]
+     output = "$target_gen_dir/chrome_dll_version.rc"
+   }
+ 
+@@ -1703,7 +1709,10 @@
+   }
+ 
+   process_version_rc_template("other_version") {
+-    sources = [ "app/other.ver" ]
++    sources = [
++      "app/theme/crest/BRANDING",
++      "app/other.ver",
++    ]
+     output = "$target_gen_dir/other_version.rc"
+   }
+ }
+--- a/chrome/install_static/chromium_install_modes.h
++++ b/chrome/install_static/chromium_install_modes.h
+@@ -21,7 +21,7 @@
+ 
+ // The brand-specific product name to be included as a component of the install
+ // and user data directory paths.
+-inline constexpr wchar_t kProductPathName[] = L"Chromium";
++inline constexpr wchar_t kProductPathName[] = L"Crest";
+ 
+ // The brand-specific safe browsing client name.
+ inline constexpr char kSafeBrowsingName[] = "chromium";
+@@ -54,15 +54,15 @@
+         .logo_suffix = L"",  // No logo suffix for the primary install mode.
+         .app_guid =
+             L"",  // Empty app_guid since no integration with Google Update.
+-        .base_app_name = L"Chromium",              // A distinct base_app_name.
+-        .base_app_id = L"Chromium",                // A distinct base_app_id.
+-        .browser_prog_id_prefix = L"ChromiumHTM",  // Browser ProgID prefix.
++        .base_app_name = L"Crest",                 // A distinct base_app_name.
++        .base_app_id = L"Crest",                   // A distinct base_app_id.
++        .browser_prog_id_prefix = L"CrestHTM",     // Browser ProgID prefix.
+         .browser_prog_id_description =
+-            L"Chromium HTML Document",  // Browser ProgID description.
+-        .direct_launch_url_scheme = "chromium",
+-        .pdf_prog_id_prefix = L"ChromiumPDF",  // PDF ProgID prefix.
++            L"Crest HTML Document",  // Browser ProgID description.
++        .direct_launch_url_scheme = "crest",
++        .pdf_prog_id_prefix = L"CrestPDF",  // PDF ProgID prefix.
+         .pdf_prog_id_description =
+-            L"Chromium PDF Document",  // PDF ProgID description.
++            L"Crest PDF Document",  // PDF ProgID description.
+         .active_setup_guid =
+             L"{7D2B3E1D-D096-4594-9D8F-A6667F12E0AC}",  // Active Setup
+                                                         // GUID.
+--- a/chrome/browser/extensions/external_registry_loader_win.cc
++++ b/chrome/browser/extensions/external_registry_loader_win.cc
+@@ -35,7 +35,10 @@
+ namespace {
+ 
+ // The Registry subkey that contains information about external extensions.
+-const wchar_t kRegistryExtensions[] = L"Software\\Google\\Chrome\\Extensions";
++// Crest reads its own install mode's key, as its Mac engine reads only its
++// own External Extensions folders, never what other software registers
++// under Software\Google.
++const wchar_t kRegistryExtensions[] = L"Software\\Crest\\Extensions";
+ 
+ // Registry value of the key that defines the installation parameter.
+ const wchar_t kRegistryExtensionInstallParam[] = L"install_parameter";

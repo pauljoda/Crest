@@ -1,0 +1,49 @@
+{
+  "entries": [
+    {
+      "id": "desktop-shell-for-windows",
+      "category": "internal",
+      "message": "Crest's desktop shell for Windows draws Crest's interface inside Crest's own Chromium on the shared core: the sidebar, Spaces and their pager, page cards, Peek, the command palette, Site Controls, Settings, Setup and the Getting Started guide, each matched to the Mac's. It is not released yet.",
+      "platforms": ["windows"]
+    },
+    {
+      "id": "desktop-shell-menus-in-window",
+      "category": "internal",
+      "message": "The desktop shell draws its menus in the window, with an icon on every row as the Mac's menus have, submenus beside their rows and keyboard navigation, and the address field's load fill stays inside the field.",
+      "platforms": ["windows"]
+    },
+    {
+      "id": "core-builds-and-tests-on-windows",
+      "category": "internal",
+      "message": "The core builds, tests and publishes for Windows, with Windows shortcut defaults, the system SQLite and the content filter's Windows libraries.",
+      "platforms": ["windows"]
+    },
+    {
+      "id": "chromium-engine-windows-host",
+      "category": "internal",
+      "message": "Crest's Chromium builds on and for Windows from the pinned source, with a Windows host profile, Crest's branding, and a shell that hosts the desktop interface and embeds each page's surface in it.",
+      "platforms": ["windows"]
+    },
+    {
+      "id": "windows-installer-updates-and-publishing",
+      "category": "internal",
+      "message": "Crest for Windows has a per-user installer that registers it as a browser, opens links other apps hand it in the running window, installs only updates signed with Crest's release key, and can publish beside the Mac's releases once Windows builds ship.",
+      "platforms": ["windows"]
+    },
+    {
+      "id": "desktop-shell-mac-comparison-tools",
+      "category": "internal",
+      "message": "Contributors can run the desktop interface beside the native Mac app in isolated sessions, with real Chromium pages in both, and compare their animation frames side by side."
+    },
+    {
+      "id": "chromium-engines-keyed-per-host",
+      "category": "internal",
+      "message": "Each platform's Chromium engine depends only on the sources it compiles, so a change to the desktop shell or Windows needs only the Windows engine published, and the Mac's stays valid."
+    },
+    {
+      "id": "release-notes-and-ci-for-desktop-platforms",
+      "category": "internal",
+      "message": "Release notes can mark changes that reach only Windows or Linux, and continuous integration builds only the apps a change can affect, the desktop shell among them."
+    }
+  ]
+}

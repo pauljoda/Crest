@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Say which Apple app builds a change can affect, so CI skips the others.
+"""Say which app builds a change can affect, so CI skips the others.
 
-Prints `mac=true|false` and `ios=true|false` lines for `$GITHUB_OUTPUT`. A
-change that touches only documentation builds neither app, and one confined to
-one app's own folders leaves the other alone. The version, the release
+Prints `mac=true|false`, `ios=true|false` and `desktop=true|false` lines for
+`$GITHUB_OUTPUT`. A change that touches only documentation builds no app, and
+one confined to one app's own folders leaves the others alone: the Apple apps
+skip a change to the desktop shell for Windows and Linux, and the desktop
+checks skip a change only the Apple apps read. The version, the release
 notes and the generated project ride along with most app changes without
 deciding which app they reach; a change of nothing else builds both. A release
 source, a manual run, and a change whose files cannot be listed build both.
@@ -54,6 +56,26 @@ MAC_ONLY = Area(
     name="macOS only",
     folders=("CrestMac/", "CrestEngines/", "CrestDockTilePlugin/", "CrestTests/", "CrestAgents/", "CrestAgentHelper/"))
 IOS_ONLY = Area(name="iOS only", folders=("CrestMobile/", "CrestMobileTests/"))
+DESKTOP_ONLY = Area(
+    name="desktop only",
+    folders=("CrestDesktop/", ".github/actions/package-windows/"),
+    files=(
+        "Scripts/package-windows.py", "Scripts/windows_update_feed.py", "Scripts/smoke-windows.mjs",
+        ".github/workflows/windows-alpha.yml", ".github/workflows/windows-engine.yml",
+        ".github/workflows/windows-release.yml",
+    ),
+)
+# What only the Apple apps read: their Swift, their project, Xcode Cloud, and
+# the engine sources, which the desktop checks don't build.
+APPLE_ONLY = Area(
+    name="Apple only",
+    folders=(
+        "CrestShared/", "CrestMac/", "CrestMobile/", "CrestMobileTests/", "CrestTests/", "CrestEngines/",
+        "CrestNative/", "CrestShareExtension/", "CrestDockTilePlugin/", "CrestAgents/", "CrestAgentHelper/",
+        "Crest.xcodeproj/", "Config/", "ci_scripts/",
+    ),
+    files=("project.yml",),
+)
 
 
 def git(*arguments: str) -> list[str] | None:
@@ -86,19 +108,21 @@ def changed_paths() -> list[str] | None:
 def main() -> int:
     paths = changed_paths()
     if paths is None:
-        mac = ios = True
-        print("Building both apps: no file list for this run.", file=sys.stderr)
+        mac = ios = desktop = True
+        print("Building every app: no file list for this run.", file=sys.stderr)
     else:
         built = [path for path in paths if not DOCUMENTATION.holds(path)]
         deciding = [path for path in built if not SHARED_METADATA.holds(path)]
         if built and not deciding:
-            mac = ios = True
+            mac = ios = desktop = True
         else:
-            mac = any(not IOS_ONLY.holds(path) for path in deciding)
-            ios = any(not MAC_ONLY.holds(path) for path in deciding)
+            mac = any(not IOS_ONLY.holds(path) and not DESKTOP_ONLY.holds(path) for path in deciding)
+            ios = any(not MAC_ONLY.holds(path) and not DESKTOP_ONLY.holds(path) for path in deciding)
+            desktop = any(not APPLE_ONLY.holds(path) for path in deciding)
         print(f"{len(paths)} changed files, {len(built)} outside documentation.", file=sys.stderr)
     print(f"mac={str(mac).lower()}")
     print(f"ios={str(ios).lower()}")
+    print(f"desktop={str(desktop).lower()}")
     return 0
 
 

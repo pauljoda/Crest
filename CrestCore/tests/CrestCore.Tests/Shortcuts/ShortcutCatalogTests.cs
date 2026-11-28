@@ -59,11 +59,18 @@ public sealed class ShortcutCatalogTests {
     [Theory]
     [InlineData("desktop")]
     [InlineData("mobile")]
+    [InlineData("windows")]
     public void TheDefaultCatalogNeverGivesTwoCommandsOneChord(string platform) {
         var defaults = Commands.Select(command => Default(command, DevicePlatform.Named(platform)!)).OfType<ShortcutChord>().ToArray();
         Assert.Equal(defaults.Length, defaults.Distinct().Count());
         Assert.All(defaults, chord => Assert.True(chord.IsValid));
     }
+
+    /// Control is the Windows key on Windows, whose chords are the system's.
+    [Fact]
+    public void NoWindowsDefaultHoldsTheWindowsKey() => Assert.All(
+        ShortcutCommand.All.Select(command => command.DefaultShortcut(DevicePlatform.Windows)).OfType<ShortcutDefault>(),
+        shortcut => Assert.False(shortcut.Keys.Modifiers.HasFlag(ShortcutModifiers.Control)));
 
     [Theory]
     [InlineData("newQuickWindow", "newBlankWindow", "n", ShortcutChord.Command | ShortcutChord.Option)]

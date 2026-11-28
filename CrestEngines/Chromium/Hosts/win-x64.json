@@ -1,0 +1,109 @@
+{
+  "description": "Preparing and building Crest's Chromium on a Windows x64 host with Visual Studio 2026 and the Windows 11 SDK. The source archive and Crest's shared patches are the source lock's; this file names what the Windows host adds, including the layers of patches and overlay only it compiles, which apply in order after the shared ones.",
+  "layers": ["Desktop", "Windows"],
+  "depsVariables": {
+    "host_os": "win",
+    "host_cpu": "x64",
+    "checkout_win": true,
+    "checkout_x64": true,
+    "non_git_source": true
+  },
+  "dependencies": [
+    "src/third_party/llvm-build/Release+Asserts",
+    "src/third_party/rust-toolchain",
+    "src/third_party/llvm-libclang",
+    "src/third_party/node/win",
+    "src/buildtools/win-format"
+  ],
+  "storageFiles": [
+    {
+      "bucket": "chromium-browser-clang/rc",
+      "sha1File": "src/build/toolchain/win/rc/win/rc.exe.sha1",
+      "output": "src/build/toolchain/win/rc/win/rc.exe"
+    }
+  ],
+  "gitDependencies": [
+    "src/third_party/gperf",
+    "src/third_party/microsoft_dxheaders/src",
+    "src/third_party/microsoft_multimedia_redirection/src",
+    "src/third_party/microsoft_webauthn/src",
+    "src/third_party/perl"
+  ],
+  "cipd": {
+    "src/buildtools/win": {
+      "package": "gn/gn/windows-amd64",
+      "version": "git_revision:938087829fcbcc8fd87835ee301dd522c7637685",
+      "sha256": "819f01138f8c4530b71f9316c7d16dd9e1f8cc5d72aa08a6e19980f05c857879"
+    },
+    "src/third_party/cpython3/host": {
+      "package": "infra/3pp/tools/cpython3/windows-amd64",
+      "version": "version:3@3.11.9.chromium.38",
+      "sha256": "8c83d1aa0e044fe2023bf5e43aec12696f266f07d88962790836fc42eeeadb89"
+    },
+    "src/third_party/dawn/third_party/agility-sdk/src": {
+      "package": "chromium/third_party/agility-sdk",
+      "version": "version:2@1.721.0-preview",
+      "sha256": "7a1ee0b84dd994c5536c1c5308bafce122854e24196c8b46e26a8b383339e054"
+    },
+    "src/third_party/dawn/tools/golang/windows-amd64": {
+      "package": "infra/3pp/tools/go/windows-amd64",
+      "version": "version:3@1.26.6",
+      "sha256": "a058eacbccbd7d700ae8a1d8559ea8240871a73585ee1f260098158b13da88f9"
+    },
+    "src/third_party/devtools-frontend/src/third_party/esbuild": {
+      "package": "infra/3pp/tools/esbuild/windows-amd64",
+      "version": "version:3@0.28.2.chromium.2",
+      "sha256": "bd52d92214dfe6297d3e0b0bac94901d8928223e4be8bf2b16833b68fa0ad369"
+    },
+    "src/third_party/ninja": {
+      "package": "infra/3pp/tools/ninja/windows-amd64",
+      "version": "version:3@1.12.1.chromium.4",
+      "sha256": "0cf1cb1b9d2b8d2d14a9fd38b984f17dd853115db682880b21ceee45e91deb50"
+    },
+    "src/third_party/typescript/windows-amd64/src": {
+      "package": "chromium/third_party/typescript/windows-amd64",
+      "version": "version:2@7.0.2",
+      "sha256": "e300d84b417869ffed75a0fe13976d739b1ca4abd0faddf8f5c0b4e4aaa9c92a"
+    },
+    "src/third_party/webview2": {
+      "package": "chromium/third_party/webview2",
+      "version": "version:2@1.0.3856.49.r1",
+      "sha256": "c5640cd6c2c3754170c8d83eaf7ab810d7faca1062ee7328bb77d3947de7df21",
+      "joinsSource": true
+    },
+    "src/third_party/wtl": {
+      "package": "chromium/third_party/wtl",
+      "version": "version:2@10.1.0",
+      "sha256": "49fd0e78d8bf1ab8e6c1da36164554b70652894719e286364fa1cf402c6909da",
+      "joinsSource": true
+    }
+  },
+  "gn": "src/buildtools/win/gn.exe",
+  "ninja": "src/third_party/ninja/ninja.exe",
+  "developmentBuildArguments": {
+    "target_cpu": "x64",
+    "is_official_build": false,
+    "is_debug": false,
+    "dcheck_always_on": false,
+    "enable_expensive_dchecks": false,
+    "is_component_build": false,
+    "use_thin_lto": false,
+    "chrome_pgo_phase": 0,
+    "symbol_level": 0,
+    "use_siso": false
+  },
+  "performanceBuildArguments": {
+    "target_cpu": "x64",
+    "is_official_build": true,
+    "is_debug": false,
+    "dcheck_always_on": false,
+    "enable_expensive_dchecks": false,
+    "is_component_build": false,
+    "use_thin_lto": true,
+    "chrome_pgo_phase": 0,
+    "symbol_level": 1,
+    "thin_lto_enable_optimizations": true,
+    "v8_enable_builtins_optimization": true,
+    "use_siso": false
+  }
+}

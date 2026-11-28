@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/contracts" },
+    { "path": "packages/core-client" },
+    { "path": "packages/design" }
+  ]
+}

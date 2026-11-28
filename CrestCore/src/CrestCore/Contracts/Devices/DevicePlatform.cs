@@ -1,8 +1,9 @@
 namespace CrestCore.Contracts;
 
 /// The device class a rule answers for: desktop is the Mac, mobile is iPhone
-/// and iPad. A platform carries every budget that differs by device, so a rule
-/// asks the platform rather than naming one.
+/// and iPad, and windows is a Windows PC. A platform carries every budget that
+/// differs by device, so a rule asks the platform rather than naming one.
+/// `All` is append-only, since a platform travels as its index.
 public sealed class DevicePlatform {
     #region Static Variables
 
@@ -35,7 +36,20 @@ public sealed class DevicePlatform {
         setupHoldsFirstWindow: false, showcaseOpensStartPage: true, offersAgents: false, filterConditions: ["env_mobile"],
         engineConditions: ["env_safari", "ext_ublock"]);
 
-    public static IReadOnlyList<DevicePlatform> All { get; } = [Desktop, Mobile];
+    /// A Windows PC runs Crest's Chromium as the Mac does, so it gives back
+    /// pages under pressure as the Mac does and its windows share one set of
+    /// pages. First-run setup opens before any browser window, as on the Mac.
+    /// Setup doesn't offer to import other browsers yet, since reading their
+    /// profiles is the Mac's alone so far, and no agent uses it.
+    public static readonly DevicePlatform Windows = new(name: "windows", warningReleaseLimit: _ => 1,
+        criticalReleaseLimit: eligible => Math.Max(1, (eligible + 1) / 2), keepsSetupDraft: false, choosesLook: true,
+        importsBrowsers: false,
+        sharesPagesAcrossWindows: true,
+        forcesSetup: environment => environment.ForcesOnboardingWelcome || environment.ForcesDesktopSetup,
+        setupHoldsFirstWindow: true, showcaseOpensStartPage: false, offersAgents: false, filterConditions: [],
+        engineConditions: ["env_chromium", "ext_ublock"]);
+
+    public static IReadOnlyList<DevicePlatform> All { get; } = [Desktop, Mobile, Windows];
 
     #endregion
 

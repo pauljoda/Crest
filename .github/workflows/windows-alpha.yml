@@ -1,0 +1,30 @@
+name: Build Windows alpha
+on: workflow_dispatch
+
+permissions:
+  contents: read
+
+jobs:
+  alpha:
+    runs-on: windows-2025
+    timeout-minutes: 90
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Setup takes its version from git, which needs the history.
+          fetch-depth: 0
+      - uses: ./.github/actions/package-windows
+        with:
+          asset_base: Crest-alpha-${{ github.run_number }}.${{ github.run_attempt }}
+          build_number: "0"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Crest-Windows-x64-alpha
+          if-no-files-found: error
+          compression-level: 0
+          path: |
+            ${{ runner.temp }}/crest-windows/out/Installer-*.exe
+            ${{ runner.temp }}/crest-windows/out/Checksum-*.sha256

@@ -9,10 +9,10 @@ import chromium_engine
 from repository import REPOSITORY
 
 
-def release_ready(release, key):
+def release_ready(release, key, host=chromium_engine.MAC):
     if release is None or release.get("draft"):
         return False
-    asset = chromium_engine.asset_name(key)
+    asset = chromium_engine.asset_name(key, host)
     names = {item["name"] for item in release.get("assets", [])
              if item.get("state") == "uploaded" and item.get("size", 0) > 0}
     if key not in (release.get("body") or "") or not {asset, f"{asset}.sha256"} <= names:
@@ -20,8 +20,8 @@ def release_ready(release, key):
     return True
 
 
-def published_release(repository, key):
-    result = subprocess.run(["gh", "api", f"repos/{repository}/releases/tags/{chromium_engine.release_tag(key)}"],
+def published_release(repository, key, host=chromium_engine.MAC):
+    result = subprocess.run(["gh", "api", f"repos/{repository}/releases/tags/{chromium_engine.release_tag(key, host)}"],
                             capture_output=True, text=True)
     if result.returncode:
         if "(HTTP 404)" in result.stderr:
@@ -34,10 +34,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repository", default=os.environ.get("GITHUB_REPOSITORY", REPOSITORY))
     parser.add_argument("--require", action="store_true")
+    parser.add_argument("--host", choices=sorted(chromium_engine.HOST_INPUTS), default=chromium_engine.MAC)
     args = parser.parse_args()
-    key = chromium_engine.engine_key(Path(__file__).resolve().parents[2])
-    ready = release_ready(published_release(args.repository, key), key)
-    tag = chromium_engine.release_tag(key)
+    key = chromium_engine.engine_key(Path(__file__).resolve().parents[2], args.host)
+    ready = release_ready(published_release(args.repository, key, args.host), key, args.host)
+    tag = chromium_engine.release_tag(key, args.host)
     print(f"{tag}: {'published' if ready else 'build required'}")
     if output := os.environ.get("GITHUB_OUTPUT"):
         with Path(output).open("a") as stream:

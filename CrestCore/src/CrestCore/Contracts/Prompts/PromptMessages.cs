@@ -2,19 +2,9 @@ namespace CrestCore.Contracts;
 
 #region Changes
 
-/// A server's request for a user name and password waits on the person.
-public sealed record AuthenticationAsked(Guid PromptId, Guid PageId, AuthenticationQuestion Question) : Change;
-
-/// A site's permission request that its Space's choices do not answer waits
-/// on the person.
-public sealed record PermissionAsked(Guid PromptId, Guid PageId, PermissionQuestion Question) : Change;
-
 /// A prompt no longer waits: the person answered it, its engine withdrew it,
 /// or its page went.
 public sealed record PromptSettled(Guid PromptId) : Change;
-
-/// A page's script dialog waits on the person.
-public sealed record ScriptDialogAsked(Guid PromptId, Guid PageId, ScriptDialogQuestion Question) : Change;
 
 #endregion
 
