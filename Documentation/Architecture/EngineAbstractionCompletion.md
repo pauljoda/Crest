@@ -252,7 +252,7 @@ tear-off placement geometry, drag geometry and default-browser prompt cadence.
   `build-chromium-baseline.py`, then `package-chromium-host.py` in review mode
   with a throwaway user-data directory. Never launch the unbranded Chromium
   build directly, because its keychain item prompts.
-- Product packaging: `.github/workflows/release.yml` and
+- Product packaging: `.github/workflows/release-publish.yml` and
   `.github/workflows/experimental-release.yml` download
   the prebuilt engine, packages `CrestChromiumUIProduct`, signs it with Crest's
   entitlements and embedded provisioning profile, and notarizes it.
@@ -260,7 +260,7 @@ tear-off placement geometry, drag geometry and default-browser prompt cadence.
   sandbox and would strand installed data.
 - The Safe Storage keychain item name must not change. A rename rotates the
   encryption key and resets Chromium's tracked preferences.
-- `release.yml` publishes the Chromium composition as the only Mac download.
+- `release-publish.yml` publishes the Chromium composition as the only Mac download.
   Each feed keeps a `-webkit` twin that offers the same installer, so an
   installed WebKit-only build updates into it. `project.yml` defaults to the
   development update channel. Update feeds follow the product family,

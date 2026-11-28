@@ -21,9 +21,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_sha }}
-          # A merged fork PR's source_sha is its merge commit on main, which
-          # checkout otherwise refuses under the caller's pull_request_target.
-          allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
           persist-credentials: false
       - name: Inspect engine release
         id: engine
@@ -55,11 +52,10 @@ jobs:
       CREST_CHROMIUM_WORKSPACE: ${{ vars.CHROMIUM_WORKSPACE }}
       CHROMIUM_SDK: ${{ vars.CHROMIUM_SDK }}
     steps:
-      # Called only by trusted release dispatches and merged pull requests.
+      # Called only by the release workflows, which never run a pull request's own code.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_sha }}
-          allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
           persist-credentials: false
       - name: Check managed build tools
         run: |
@@ -96,7 +92,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_sha }}
-          allow-unsafe-pr-checkout: ${{ github.event.pull_request.merged == true }}
           persist-credentials: false
       - name: Verify release is ready for packaging
         env:
