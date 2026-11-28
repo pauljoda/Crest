@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "id": "webkit-print-no-longer-quits",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "Printing a page, or saving it as a PDF from the print window, no longer quits Crest in a WebKit Space."
+    }
+  ]
+}
