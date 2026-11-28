@@ -351,6 +351,9 @@ private struct SidebarScrollIndicator: View {
                 .accessibilityLabel("Show more tabs")
                 .accessibilityIdentifier("sidebar-more-tabs")
             }
+            // The stack fills the list whether or not it draws the bar, so
+            // the bubble stays at the foot of the list.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             .animation(reduceMotion ? nil : .easeInOut(duration: Self.fadeDuration), value: activity.showsIndicator)
             .animation(reduceMotion ? nil : .easeInOut(duration: Self.fadeDuration), value: showsBubble)
             .clipped()
