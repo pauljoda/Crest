@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "print-open-pdf-document",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "Printing an open PDF in a Chromium Space with ⌘P prints the document's own pages, with its page count in the print panel, instead of a picture of the PDF viewer. Export as PDF saves the document itself."
+    },
+    {
+      "id": "capture-page-that-failed",
+      "category": "fixed",
+      "platforms": [
+        "mac"
+      ],
+      "message": "Capture Page, Copy Full Page Capture and Capture in Portrait Mode on a page that couldn't be opened capture Crest's error page as it shows, instead of doing nothing or saving a blank image."
+    }
+  ]
+}

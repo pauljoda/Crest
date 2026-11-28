@@ -40,6 +40,29 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     @ObservationIgnored private static let engineAutofillSettingsPaths = [
         "/passwords", "/autofill", "/payments", "/addresses", "/contactInfo",
     ]
+    /// The largest PDF document a page hands over to print or export as
+    /// itself, which its script passes as text a third larger.
+    @ObservationIgnored private static let maximumShownPDFDocumentBytes = 256 * 1024 * 1024
+    /// Whether the page's main document is a PDF and, when it is, the
+    /// document as the page's address serves it, from the cache where it can,
+    /// in base64; a document it can't fetch, such as a file's or one over
+    /// `limit` bytes, comes without its data.
+    @ObservationIgnored private static let shownPDFDocumentScript = """
+        if (document.contentType !== "application/pdf") return { isPDF: false };
+        try {
+          const response = await fetch(location.href, { cache: "force-cache", credentials: "include" });
+          if (!response.ok) return { isPDF: true };
+          const bytes = new Uint8Array(await response.arrayBuffer());
+          if (bytes.length > limit) return { isPDF: true };
+          let binary = "";
+          for (let start = 0; start < bytes.length; start += 0x8000) {
+            binary += String.fromCharCode.apply(null, bytes.subarray(start, start + 0x8000));
+          }
+          return { isPDF: true, data: btoa(binary) };
+        } catch {
+          return { isPDF: true };
+        }
+        """
 
     // MARK: - Variables
 
@@ -137,6 +160,18 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     var isContentBlockingActive: Bool { engineAdapter.isContentBlockingActive }
     var developerPanel: InspectorPanel?
     private(set) var isRegionCapturePresented = false
+    /// Crest's view of the page's failure as it showed when the region
+    /// capture began, which the capture cuts the region from.
+    @ObservationIgnored private var failureCapture: NSImage?
+    /// Whether the page shows Crest's view of its failure in place of its
+    /// content: a navigation that failed, or an engine that couldn't create
+    /// it.
+    var showsFailure: Bool { live.failure != nil || webContentFailureMessage != nil }
+    /// Whether the page has anything to capture: a document its engine
+    /// captures, or Crest's view of its failure, which the window draws.
+    var canCapture: Bool {
+        showsFailure || (live.url != nil && pageEngine.registration.supports(.viewportCapture))
+    }
     /// Where the agent using the page's tab last acted, which the page shows
     /// as the agent's pointer while the agent uses the tab.
     private(set) var agentPointer: BrowserAgentPointer?
@@ -670,13 +705,18 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
     }
 
+    /// Lets the person drag out the part of the page to capture. A page that
+    /// shows its failure is captured as Crest shows it the moment the drag
+    /// begins, before the selection covers it.
     func beginRegionCapture() {
-        guard live.url != nil else { return }
+        guard canCapture, !isRegionCapturePresented else { return }
+        failureCapture = showsFailure ? failureSnapshot() : nil
         isRegionCapturePresented = true
     }
 
     func cancelRegionCapture() {
         isRegionCapturePresented = false
+        failureCapture = nil
     }
 
     func toggleRegionCapture() {
@@ -686,11 +726,20 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     func captureRegion(_ rect: CGRect) {
         guard isRegionCapturePresented else { return }
         isRegionCapturePresented = false
+        let failureCapture = failureCapture
+        self.failureCapture = nil
         Task { [weak self] in
             guard let self else { return }
             do {
-                let png = await withCheckedContinuation { continuation in
-                    enginePage.capture(area: rect) { continuation.resume(returning: $0) }
+                let png: Data?
+                if let failureCapture {
+                    png = Self.pngData(from: failureCapture, cropping: rect)
+                } else if showsFailure {
+                    png = nil
+                } else {
+                    png = await withCheckedContinuation { continuation in
+                        enginePage.capture(area: rect) { continuation.resume(returning: $0) }
+                    }
                 }
                 guard let image = png.flatMap(NSImage.init(data:)) else {
                     throw BrowserDeveloperCaptureError.pageUnavailable
@@ -879,8 +928,17 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
     }
 
     /// The whole page as an image `snapshotWidth` points wide, or as wide in
-    /// points as the engine drew it on this screen.
+    /// points as the engine drew it on this screen. A page that shows its
+    /// failure is pictured as Crest shows it.
     private func fullPageSnapshot(snapshotWidth: CGFloat? = nil) async throws -> NSImage {
+        if showsFailure {
+            guard let snapshot = failureSnapshot() else { throw BrowserDeveloperCaptureError.pageUnavailable }
+            if let snapshotWidth {
+                snapshot.size = NSSize(
+                    width: snapshotWidth, height: snapshot.size.height * snapshotWidth / snapshot.size.width)
+            }
+            return snapshot
+        }
         guard live.url != nil else { throw BrowserDeveloperCaptureError.pageUnavailable }
         let backingScale = nativeView.window?.backingScaleFactor ?? 1
         let data = try await enginePage.export(.png, width: snapshotWidth)
@@ -891,6 +949,31 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         let width = snapshotWidth ?? CGFloat(bitmap.pixelsWide) / backingScale
         image.size = NSSize(width: width, height: CGFloat(bitmap.pixelsHigh) * width / CGFloat(bitmap.pixelsWide))
         return image
+    }
+
+    /// What the window draws over the page's surface, sized in points: the
+    /// view Crest shows in place of a page that failed, which no engine
+    /// draws. Nil when no window shows the page.
+    private func failureSnapshot() -> NSImage? {
+        guard let root = nativeView.window?.contentView else { return nil }
+        let frame = nativeView.convert(nativeView.bounds, to: root)
+        guard !frame.isEmpty, let bitmap = root.bitmapImageRepForCachingDisplay(in: frame) else { return nil }
+        root.cacheDisplay(in: frame, to: bitmap)
+        let image = NSImage(size: frame.size)
+        image.addRepresentation(bitmap)
+        return image
+    }
+
+    /// `rect` of `image`, in its points from its top left, as a PNG at the
+    /// image's own resolution.
+    private static func pngData(from image: NSImage, cropping rect: CGRect) -> Data? {
+        guard let bitmap = image.representations.first as? NSBitmapImageRep, let full = bitmap.cgImage,
+            image.size.width > 0
+        else { return nil }
+        let scale = CGFloat(full.width) / image.size.width
+        let pixels = rect.applying(CGAffineTransform(scaleX: scale, y: scale)).integral
+        guard let cropped = full.cropping(to: pixels) else { return nil }
+        return NSBitmapImageRep(cgImage: cropped).representation(using: .png, properties: [:])
     }
 
     private static func copyImageToPasteboard(_ image: NSImage) -> Bool {
@@ -1010,8 +1093,8 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         }
     }
 
-    /// The engine's own print operation for its view, or one over the PDF
-    /// the engine exports.
+    /// The engine's own print operation for its view, or one over the page's
+    /// PDF: the PDF document it shows, or else the PDF its engine exports.
     private func printOperation(with info: NSPrintInfo) async throws -> NSPrintOperation {
         if let operation = (pageEngine as? any BrowserPrintingPageEngine)?.printOperation(with: info) {
             return operation
@@ -1024,9 +1107,35 @@ final class BrowserPage: NSObject, BrowserMediaSessionCommandEndpoint {
         return operation
     }
 
+    /// The page as a PDF: the PDF document it shows, as it was served, or
+    /// else the PDF its engine makes of the page.
     func pdfData() async throws -> Data {
         guard live.url != nil else { throw BrowserPageExportError.pageUnavailable }
+        if let document = try await shownPDFDocument() { return document }
         return try await enginePage.export(.pdf)
+    }
+
+    /// The PDF document the page shows, when its main document is one, read
+    /// again in Crest's content world from where the page loaded it, or from
+    /// its file. An engine that shows a PDF in a viewer of its own makes a
+    /// PDF of that viewer, not of the document. Nil when the page shows
+    /// something else or its engine runs no content scripts; throws when the
+    /// document can't be read.
+    private func shownPDFDocument() async throws -> Data? {
+        guard let scripting = pageEngine.contentScripting,
+            let answer = try await scripting.callAsyncJavaScriptInMainFrame(
+                Self.shownPDFDocumentScript, arguments: ["limit": Self.maximumShownPDFDocumentBytes])
+                as? [String: Any],
+            answer["isPDF"] as? Bool == true
+        else { return nil }
+        if let encoded = answer["data"] as? String, let document = Data(base64Encoded: encoded) {
+            return document
+        }
+        // A page's own scripts can't read a file, but Crest can.
+        if let url = live.documentURL, url.isFileURL {
+            return try await Task.detached(priority: .userInitiated) { try Data(contentsOf: url) }.value
+        }
+        throw BrowserPageExportError.renderingFailed("The PDF couldn’t be read.")
     }
 
     func exportPDF() {
