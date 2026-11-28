@@ -192,9 +192,13 @@ struct BrowserTabOrganizationMenuContent: View {
 
         Menu("Save in Folder", systemImage: "folder") {
             Group {
+                // A pinned tab the Space's group shares is the primary's, so
+                // this Space has no pick to file and the core would refuse.
+                // The item dims, as the batch menu's New Saved Folder does.
                 Button("New Folder", systemImage: "folder.badge.plus") {
                     performIfCurrent { saveInNewFolder() }
                 }
+                .disabled(!context.space.holds(tabID: tab.id))
 
                 Button("Saved Tabs", systemImage: "bookmark") {
                     performIfCurrent {
