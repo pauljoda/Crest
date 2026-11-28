@@ -251,10 +251,13 @@ workspace lock.
 
 ## Crest's patches
 
-`Patches/series` lists the patches applied over the overlay, in order. A file
-may appear in more than one; each later patch applies to the earlier ones'
-result, and `host-inputs.json` records each file's hash before the first and
-after the last. Every patch states its reason in its header.
+`Patches/series` lists the patches every host applies over the overlay, in
+order. A file may appear in more than one; each later patch applies to the
+earlier ones' result, and `host-inputs.json` records each file's hash before
+the first and after the last. A host then applies the patches of each layer
+its profile names, from `Layers/<name>/Patches/series`, recorded the same way
+in that layer's `host-inputs.json`; the last two rows below are the `Desktop`
+and `Windows` layers'. Every patch states its reason in its header.
 
 | Patch | What it does |
 | --- | --- |

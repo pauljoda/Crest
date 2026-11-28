@@ -215,8 +215,12 @@ Windows Hello, it follows the platform.
 - **Engine inputs need a maintainer.** Changes under
   `CrestEngines/Chromium` (patches, overlay, the host header, the
   control-plane prepare, apply, configure and build scripts) require a
-  prebuilt engine that only maintainers can publish. Say so in the pull
-  request description so the publish is planned with the merge. The same goes
+  prebuilt engine that only maintainers can publish. Each host's engine is
+  keyed only on what it compiles: desktop shell code belongs in
+  `Layers/Desktop` and Windows-only code in `Layers/Windows`, never in the
+  shared `Overlay` or `Patches`, so it needs only the Windows engine. Say in
+  the pull request description which hosts' engines the change needs, so the
+  publishes are planned with the merge. The same goes
   for the content filter crate in `CrestCore/native/ContentFilter`, whose
   prebuilt library a maintainer publishes.
 - **Declare AI use.** Tick both boxes in the pull request template's AI usage

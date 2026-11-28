@@ -1,0 +1,138 @@
+{
+  "chrome/BUILD.gn": {
+    "after": "f255b2a60d2b960a91d6339a7b0ad34d80dd4d13504443f45defd0a6b3f6e4cd",
+    "before": "4022d0abf658fe582323bb782cd76b4e9d1c3fdedc4167c50cac07e89282300b"
+  },
+  "chrome/browser/BUILD.gn": {
+    "after": "de457dceb509bca30b0b96491790b9104456ab6a03824a78ef0255b2bb7d89f0",
+    "before": "923e6a3bbfabfe8e47f305770b6aad5c630014a81d48cf5f0c5219bd8a09feb5"
+  },
+  "chrome/browser/chrome_browser_field_trials.cc": {
+    "after": "393dce3b2b57e96ff49e54eadb8975e61787d8442a24d06dca2e15e17008db7b",
+    "before": "4f45155ae071e98466deb7d32817b26c502b109d364740917c9ac45afe8bd63a"
+  },
+  "chrome/browser/chrome_content_browser_client.cc": {
+    "after": "8a9c58a9f9888f98d670e712f149f495aa0f169238112533ab3b129d716403aa",
+    "before": "9b6a822b526e030e6f2d4498a733bf6224323ebaccd1f1a8b5d3dd19bd2dc53c"
+  },
+  "chrome/browser/chrome_content_browser_client_receiver_bindings.cc": {
+    "after": "75dd790c4470425bb34de37be8ca21d1d7d785eb7cf4f1fac33cf3a82ee93c15",
+    "before": "247926287b50797456c7ebc8b2b0e2db2213a0a38e979dbbeb39e8d1500f3690"
+  },
+  "chrome/browser/download/chrome_download_manager_delegate.cc": {
+    "after": "ded823716588a3b3fc65d71caf2ee24e465c3af453e6e3b73db57f52d1597855",
+    "before": "6217ad6ba7b94db4ea7508b89ab4eb49369816604f2869a5802a2464e0df01ac"
+  },
+  "chrome/browser/download/download_target_determiner.cc": {
+    "after": "60a1cfb1e890907c323273bf55e2f330747427e9ad1aebfb1fa1af835c25ffb3",
+    "before": "64a77af3f78ce0321f2d6b92dcb9dcb6b7119dcecd940679caa3d015bcc42206"
+  },
+  "chrome/browser/download/download_ui_controller.cc": {
+    "after": "8e88b0406abc6de39f0975ef69a5f5202eef19024d57939a72b196c7c8f2afa2",
+    "before": "ac7971b424bc6d4af37b029a83a298e0b162f8614d9517f172f90804c8c56be1"
+  },
+  "chrome/browser/extensions/api/tabs/windows_api.cc": {
+    "after": "1852c170636008570d94130ca723c159df67d7d00881eb1cf2823d21ffbaca0a",
+    "before": "9b1d646de7b25fc5cc1d885b9753d343ba4cac852d330b3004b0baf0c489ffcf"
+  },
+  "chrome/browser/media/webrtc/desktop_capture_devices_util.cc": {
+    "after": "652a1dde37a7f993a1044c704779b07f0efb7b260ac2a1723c74f47867abf0b6",
+    "before": "c4bfd1e3c04dadf43ab44a40a58f2d83b516962943680e6cb1cd824e203a76e5"
+  },
+  "chrome/browser/profiles/profile.cc": {
+    "after": "bbfe997259414d9b925a577529f26bd21b59671102cd8d563d01aad8fd72df12",
+    "before": "04bba93e6dc275d80d96d7c581d137e4d9dad9b645d4f125d1f6b824b1e286f6"
+  },
+  "chrome/browser/resource_coordinator/tab_lifecycle_unit.cc": {
+    "after": "dc86a71f829e70afe774dccde0907006780cc73dce3b8ac52c40484c7af4bbdd",
+    "before": "dd96f43257f3b6ecd776c05f62839a30c40cd1d15fe8b7fc27cb8c95c84bdd77"
+  },
+  "chrome/browser/ui/autofill/chrome_autofill_client.cc": {
+    "after": "ffb4a802131f2f34d897a61c186c3bcc213feab6c45432c18ac89cc4cf2ce939",
+    "before": "52b57fa3d87c476ce90352a7d28a785dedd64a37f9da84ed5f4ab4aaabb6b6b6"
+  },
+  "chrome/browser/ui/autofill/payments/chrome_payments_autofill_client.cc": {
+    "after": "ac7a5a89cc194d4a1fd913d460e85f4e82a6553070b49f273be21159ebfab8c0",
+    "before": "87c26b8b96d08042bf1f57a1f86116c844aa5982b48c2fe3038ee535e3bcab88"
+  },
+  "chrome/browser/ui/browser_web_contents_delegate/browser_web_contents_delegate.cc": {
+    "after": "7da7d3606b4856677644b66f334cbc11d86f671c295d4924ba752fe678e79e0d",
+    "before": "187e9d28679b605ad15fd9314752025ffbe2efb6c889c77943a40f4561df8616"
+  },
+  "chrome/browser/ui/extensions/extension_side_panel_utils.cc": {
+    "after": "63e022af3b2aaf956fbf5699d58a6066283d93f86c2305a8d10eb3d4eb6eccd2",
+    "before": "7a2fe3460e48a3979816de480c442b83c058e70e6da9ab872d659bc2d4a404ab"
+  },
+  "chrome/browser/ui/startup/startup_browser_creator.cc": {
+    "after": "d44c143d3788f0538ef98f3b43a00f992c690cb4088f3f172a67d581efa0eeda",
+    "before": "6df5ec55ef11b3e8e7b00d32748bbd716a0df3046ed54503adcc40fcd4319073"
+  },
+  "chrome/browser/ui/startup/startup_browser_creator_impl.cc": {
+    "after": "c91435f8b90b6425a569a1ec8deb14f7c0964dd32320576f5cd5b77d9a44a59f",
+    "before": "a4772b44bade7424ce93b8100176e25722da9eb2b65eab26abeed21f4e37d9e4"
+  },
+  "chrome/browser/ui/tabs/tab_features.cc": {
+    "after": "63d4305d4a07910175645412127ad07a91c257f617ff2d93b52843f543cbbafb",
+    "before": "05632a0940ba3d10a61996db3ed930eeb86c81e19c50ad5c74353dab8fc63526"
+  },
+  "chrome/browser/ui/toasts/toast_controller.cc": {
+    "after": "da5027a8710141225eec64b9e33d41967cd4e57c5578584efd797ffe2b7be974",
+    "before": "ed2e3fc1085e82f7d4466e0e1b13837d8ef817ebb96f98137e4e7675e74e0335"
+  },
+  "chrome/browser/ui/unload_controller.cc": {
+    "after": "96194eb8370eec7bfbbee6f34030416d5e71a064bd5bf0e58856b0c126258bd7",
+    "before": "9b15df725fe9b9a1e9414517aab3f87ec42465ff3eb45917df40472e1c1ccbdd"
+  },
+  "chrome/browser/ui/views/frame/browser_window_factory.cc": {
+    "after": "abc5e90f1b9dbdedea3283303868d4a88a90c71eae07f085c4c7e9e76160dcd8",
+    "before": "978968e2119eabf01597718230954080d360bb403eb3474b247aa728df250128"
+  },
+  "chrome/browser/ui/views/permissions/permission_prompt_factory.cc": {
+    "after": "eb805a87060d6c88a9f74e520a8652d90c8557bdefb7839eae880fa6991b4e80",
+    "before": "176493d604d3aeca3c5e02a74c63ccd6bcdee44bd6092390a68f2d33029dbe30"
+  },
+  "chrome/browser/ui/views/profiles/profile_picker_view.cc": {
+    "after": "a03a38587e4ec6296f830031c610085dc5704a669843eba5200a446585c69981",
+    "before": "eab66c44f04163df9d8e049d1bb4be469ae8485917ad14fc950af9362b61320a"
+  },
+  "chrome/browser/ui/views/translate/translate_bubble_controller.cc": {
+    "after": "1d4a34cc3f9e997ce2df4510280397806582428800c178ca87d7a9fe7a617414",
+    "before": "f7861e9d43a3c5d2fa9f976c4c3fd50791282242d0cbae1cd19808606b1ef723"
+  },
+  "chrome/renderer/chrome_content_renderer_client.cc": {
+    "after": "61cfbf101b7e172fb9af2be5d1c926f141969f55a6c41b3c06b2a737a993adb1",
+    "before": "41739d56241377251140d84c39a2916df479b680b2d957b25a3d0f9f0e4bd7a3"
+  },
+  "components/performance_manager/freezing/freezer.cc": {
+    "after": "86606f15abb16ce695c131aa370a34054d78288a29bc78d155f9d25db509a426",
+    "before": "46d211d1e7d9ac2956cbbaabe345a2ec0423ebd347ea0cef78758710068cc758"
+  },
+  "components/performance_manager/performance_manager_tab_helper.cc": {
+    "after": "a5000651dd2d80a8bbfaba0947203b5a7f4d0c9fa14bc61c0864bcdb36da214f",
+    "before": "b58a1f0649c18fb3c342fffe708096df4ad293bdf5ea689cdec00c687ce0b1f6"
+  },
+  "components/surface_embed/browser/surface_embed_host.cc": {
+    "after": "6b159b028683da6f6c160811b63fb31c97d892786843f2c9fe4ac71fb6e5c7db",
+    "before": "e6bec8281ee912ba6d1db35e38cba892454d508bc96d375cf4c2692ec937b190"
+  },
+  "components/surface_embed/renderer/surface_embed_web_plugin.cc": {
+    "after": "cc65ad1c6f5e06c84cecc658e14676c95fc5706c154b3746d3d57eaffae3b37a",
+    "before": "4dc9a4d8926f77e010e5cc40751bf848b6b19fc80f3ae4411996d3992fc481dc"
+  },
+  "content/browser/surface_embed/surface_embed_connector_impl.cc": {
+    "after": "c63fdb551c32a8141939cb73fef5483a85c51393a7f4d94359db7dc80d7173fe",
+    "before": "47a42edf8bc5b1bac9ca3cc7c1104a0002e4dbac441b9f50f4fad5d547991483"
+  },
+  "content/browser/surface_embed/surface_embed_connector_impl.h": {
+    "after": "8c30f066993f5daf7d9f2f0cf372bc68a0f6e3b3ce970eae6e781decf790e240",
+    "before": "bb7fa9910817e9a3e3043780b5d9b8af3296dbbf1a7c59305520bab271b0683e"
+  },
+  "content/public/browser/surface_embed_connector.h": {
+    "after": "1ff52929a81a4d2fd69e9066cec2fac66ebbbd253f0222e1c3a37ba376f90745",
+    "before": "cdfed6ba6e4631282987ac11bd49efc41e4f7744f78bda038697afab581057ec"
+  },
+  "third_party/blink/renderer/core/html/html_anchor_element.cc": {
+    "after": "93c7f6ddeb7de44c1730f3f6df4161d6293af8787f654ab91057bc10d1ea5440",
+    "before": "d4aaaf86a176fa86cd203bdad43587d55d994974221c169691d1126b6d6ac79a"
+  }
+}

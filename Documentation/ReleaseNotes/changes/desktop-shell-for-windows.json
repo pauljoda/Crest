@@ -36,6 +36,11 @@
       "message": "Contributors can run the desktop interface beside the native Mac app in isolated sessions, with real Chromium pages in both, and compare their animation frames side by side."
     },
     {
+      "id": "chromium-engines-keyed-per-host",
+      "category": "internal",
+      "message": "Each platform's Chromium engine depends only on the sources it compiles, so a change to the desktop shell or Windows needs only the Windows engine published, and the Mac's stays valid."
+    },
+    {
       "id": "release-notes-and-ci-for-desktop-platforms",
       "category": "internal",
       "message": "Release notes can mark changes that reach only Windows or Linux, and continuous integration builds only the apps a change can affect, the desktop shell among them."

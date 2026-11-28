@@ -187,8 +187,8 @@ py -3 Scripts/control-plane/build-chromium-baseline.py --source C:\CrestBuild\cr
 
 ## Run Crest in its Windows engine
 
-The shell (`CrestEngines/Chromium/Overlay/chrome/browser/ui/crest/crest_desktop_*`
-and `desktop-host.patch`) starts when Chromium is launched with
+The shell (`CrestEngines/Chromium/Layers/Desktop`: `crest_desktop_*` in its
+overlay, and `desktop-host.patch`) starts when Chromium is launched with
 `--crest-control-plane`. It loads `CrestCore.Native.dll` and the interface's
 built files from beside `chrome.exe`, or from the paths `--crest-core` and
 `--crest-interface` name, and opens a Crest window whose interface is

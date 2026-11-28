@@ -1,0 +1,4 @@
+# Windows' own patches, applied after the shared series and the Desktop layer.
+# host-inputs.json beside this folder records each file this layer changes
+# as the layers before it leave it and as this layer does.
+windows-branding.patch

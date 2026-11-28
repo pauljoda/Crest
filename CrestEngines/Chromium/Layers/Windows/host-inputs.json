@@ -1,0 +1,22 @@
+{
+  "chrome/BUILD.gn": {
+    "after": "cbedbcf3d8ee5f0ed57017698df952c2228bad8ee1b08b2003f37bd6497a8cdd",
+    "before": "f255b2a60d2b960a91d6339a7b0ad34d80dd4d13504443f45defd0a6b3f6e4cd"
+  },
+  "chrome/app/chrome_dll.rc": {
+    "after": "c298aefb419e23ae77714aa89f8594f075041d531898906201e7a8401390bdd6",
+    "before": "a9c034c151c9aaba5f3b2a60669b73ecfc2ec119613d669fc1cbf68987ecf399"
+  },
+  "chrome/app/chrome_exe.rc": {
+    "after": "0e9754825658e2c59fa01174e3a168f78135022bc0b77aab2045590962f4bb52",
+    "before": "2ad48370adfcc2a4406132ca559773ec75cbc04a84e66111b5b0133cd9e1dca0"
+  },
+  "chrome/browser/extensions/external_registry_loader_win.cc": {
+    "after": "71fa08f60860aa3607d72baaf3f68789f4a70c9bf3fc06e086b0b916722f4982",
+    "before": "a3668695e76ccd62a8a2ace1808b7e48c3d09e77e784e248d2f74d3c2fee7024"
+  },
+  "chrome/install_static/chromium_install_modes.h": {
+    "after": "6b6d5a71c5ced47ccdf9bc48d6c0e1cd2b034cf3c7d6bbd265ef81e4ef497887",
+    "before": "f1e173ce85627969b995e1844a9260d31aef8f4b27ccdca9ac728b60c4f23cd1"
+  }
+}

@@ -103,13 +103,14 @@ def publish(args):
 
     # The tree must hold this branch's reviewed patch output and overlay.
     validation = run(sys.executable, repo / "Scripts/control-plane/apply-chromium-host.py",
-                     "--source", source, capture_output=True).stdout
+                     "--source", source, "--host", host, capture_output=True).stdout
     if "(after)" not in validation:
         raise SystemExit("Apply the host to the checkout before publishing: " + validation.strip())
-    overlay = repo / "CrestEngines/Chromium/Overlay"
-    for path in overlay.rglob("*"):
-        if path.is_file() and (source / path.relative_to(overlay)).read_bytes() != path.read_bytes():
-            raise SystemExit(f"The checkout's overlay differs from the branch: {path.relative_to(overlay)}")
+    # The shared overlay and each of the host's layers', the sources its engine compiles.
+    for overlay in (root / "Overlay" for root in chromium_engine.layer_roots(host, repo)):
+        for path in overlay.rglob("*"):
+            if path.is_file() and (source / path.relative_to(overlay)).read_bytes() != path.read_bytes():
+                raise SystemExit(f"The checkout's overlay differs from the branch: {path.relative_to(overlay)}")
     headers = [repo / "CrestEngines/Chromium/Apple/CrestChromiumHost.h",
                repo / "CrestCore/native/ContentFilter/include/crest_content_filter.h"]
     headers += [repo / "CrestContracts/include" / name for name in

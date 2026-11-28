@@ -324,8 +324,8 @@ out on one engine does not sign out the other.
 ## Windows and Linux
 
 On Windows, Crest's Chromium is the app, as Chrome and Edge are. Started with
-`--crest-control-plane`, its desktop shell (`crest_desktop_*` in the overlay,
-and `desktop-host.patch`) loads `CrestCore.Native` through the same C ABI the
+`--crest-control-plane`, its desktop shell (`crest_desktop_*` in the `Desktop`
+engine layer, and `desktop-host.patch`) loads `CrestCore.Native` through the same C ABI the
 Mac links, opens Crest's windows, and asks the core the questions the Mac
 shell asks, such as which windows a launch reopens, where external opens land,
 whether a quit may go ahead and how the menus lay out the commands. Each

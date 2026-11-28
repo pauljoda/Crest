@@ -1,0 +1,6 @@
+# The desktop shell's patches, which hosts that draw Crest's interface inside
+# Chromium (Windows, and Linux once it builds) apply after the shared series
+# in ../../../Patches/series. Each later patch applies to the earlier ones'
+# result; host-inputs.json beside this folder records each file this layer
+# changes as the shared series leaves it and as this layer does.
+desktop-host.patch

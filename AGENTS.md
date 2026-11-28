@@ -72,16 +72,26 @@ has the details.
 
 ## Published Chromium engine
 
-- The release workflow cannot build Chromium; it downloads a prebuilt engine
-  named by the key `Scripts/control-plane/chromium_engine.py` computes over
-  its inputs: `CrestEngines/Chromium/source.lock.json`, `host-inputs.json`,
-  `Patches/`, `Overlay/`, `Apple/CrestChromiumHost.h`, and the prepare, apply,
-  configure, and build scripts in `Scripts/control-plane/`.
-- Any change to those inputs needs a new engine published by a maintainer, as
-  described under "Releasing" in `CrestEngines/Chromium/README.md`. A branch
-  whose key has no published `chromium-engine-<key>` release fails its next
-  release. State in the pull request that the change touches engine inputs so
-  the publish is planned with the merge.
+- The release workflows cannot build Chromium; each downloads a prebuilt
+  engine for its host, named by the key `Scripts/control-plane/chromium_engine.py`
+  computes over that host's inputs. Every host shares
+  `CrestEngines/Chromium/source.lock.json`, `host-inputs.json`, `Patches/`,
+  `Overlay/`, the engine contract headers, and the prepare, apply, configure,
+  and build scripts in `Scripts/control-plane/`. Each host adds its own: the
+  Mac's `Apple/CrestChromiumHost.h`, and Windows' `Hosts/win-x64.json` with the
+  layers it names under `Layers/` (`Desktop`, the desktop shell, and
+  `Windows`).
+- Keep code where only the hosts that compile it read it. Desktop shell
+  sources and patches go in `Layers/Desktop`, Windows-only ones in
+  `Layers/Windows`, never in the shared `Overlay/` or `Patches/`, so a desktop
+  change needs only the Windows engine and the Mac's stays valid. A change to
+  a shared input needs every host's engine.
+- Any change to a host's inputs needs that host's engine published by a
+  maintainer, as described under "Releasing" in
+  `CrestEngines/Chromium/README.md`. A branch whose key has no published
+  engine fails that host's next release. State in the pull request which
+  hosts' engine inputs the change touches so the publishes are planned with
+  the merge.
 - Swift, native core, and packaging changes reuse the published engine and
   need no new one.
 - The core links a prebuilt content filter the same way:

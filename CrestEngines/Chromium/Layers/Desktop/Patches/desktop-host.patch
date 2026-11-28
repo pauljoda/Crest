@@ -657,7 +657,7 @@
    if (crest::IsEnabled() && crest::KeepsPageResident(web_contents())) {
 --- a/chrome/browser/chrome_browser_field_trials.cc
 +++ b/chrome/browser/chrome_browser_field_trials.cc
-@@ -55,7 +55,7 @@
+@@ -55,11 +55,15 @@
  #include "ui/gl/gl_switches.h"
  #endif
  
@@ -666,30 +666,27 @@
  #include "chrome/common/chrome_features.h"
  #include "components/lens/lens_features.h"
  #include "components/security_interstitials/core/features.h"
-@@ -63,6 +63,10 @@
  #include "media/base/media_switches.h"
- #endif
- 
-+#if BUILDFLAG(IS_WIN)
-+#include "ui/native_theme/features/native_theme_features.h"
 +#endif
 +
++#if BUILDFLAG(IS_WIN)
++#include "ui/native_theme/features/native_theme_features.h"
+ #endif
+ 
  #if BUILDFLAG(IS_CHROMEOS)
- #include "chrome/common/channel_info.h"
- #include "chromeos/ash/services/multidevice_setup/public/cpp/first_run_field_trial.h"
-@@ -135,14 +139,23 @@
+@@ -134,14 +138,23 @@
      base::FeatureList* feature_list) {
    variations::FeatureOverrides feature_overrides(*feature_list);
  
--#if BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
++  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
+ #if BUILDFLAG(IS_MAC)
 -  // Crest shares a page's screen through the system's own picker, which asks
 -  // the person what to share and needs no Screen Recording access. As in
 -  // Chrome, a page may ask without a click of its own, since sites built for
 -  // Chrome ask from a timer or from a click in another of their windows. A
 -  // command line can still turn the picker off.
-+#if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
-   if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
-+#if BUILDFLAG(IS_MAC)
+-  if (base::CommandLine::ForCurrentProcess()->HasSwitch("crest-control-plane")) {
 +    // Crest shares a page's screen through the system's own picker, which
 +    // asks the person what to share and needs no Screen Recording access. As
 +    // in Chrome, a page may ask without a click of its own, since sites built
@@ -704,10 +701,10 @@
 +    // settings, which the feature's default mode follows.
 +    feature_overrides.EnableFeature(features::kOverlayScrollbar);
 +#endif
-     // Crest keeps federated sign-in (FedCM) off.
-     // Disabling it explicitly also hides the API from pages, which otherwise
-     // keep it, so sites sign in through their own pop-up or redirect, as in
-@@ -160,7 +173,7 @@
+     // An http:// address that can't be upgraded to HTTPS loads over HTTP
+     // without a warning, as in Safari. HTTPS-First's warning is a tab-scoped
+     // dialog, which needs a Views host that Crest's pages don't have.
+@@ -154,7 +167,7 @@
      feature_overrides.DisableFeature(lens::features::kLensOverlay);
      feature_overrides.DisableFeature(lens::features::kLensStandalone);
    }

@@ -1,5 +1,6 @@
 {
-  "description": "Preparing and building Crest's Chromium on a Windows x64 host with Visual Studio 2026 and the Windows 11 SDK. The source archive and Crest's patches are the source lock's; this file names what the Windows host adds.",
+  "description": "Preparing and building Crest's Chromium on a Windows x64 host with Visual Studio 2026 and the Windows 11 SDK. The source archive and Crest's shared patches are the source lock's; this file names what the Windows host adds, including the layers of patches and overlay only it compiles, which apply in order after the shared ones.",
+  "layers": ["Desktop", "Windows"],
   "depsVariables": {
     "host_os": "win",
     "host_cpu": "x64",

@@ -152,6 +152,19 @@ interface adapts Mori's MIT-licensed implementation; provenance and its retained
 license are in `ThirdParty`. Crest uses explicit window assignments, regular
 profiles with lifetime leases, the shared core, and native-page adoption by ID.
 
+`Layers` holds what only some hosts compile, each layer with its own
+`Patches/series`, `Overlay` and `host-inputs.json`: `Desktop`, the desktop
+shell that draws Crest's interface inside Chromium, and `Windows`, Windows'
+branding. A host applies the shared patches and overlay, then the layers its
+profile names (`Hosts/win-x64.json` names both; the Mac names none). A layer's
+`host-inputs.json` records each file it changes as the layers before it leave
+the file and as it does. After a Chromium update refreshes the shared hashes,
+record the layers' again on that host from a freshly prepared tree:
+
+```sh
+py -3 Scripts/control-plane/apply-chromium-host.py --source <chromium src> --record-layers
+```
+
 `Patches/native-host.patch` selects that window implementation only when launched
 with `--crest-control-plane`, starts the native framework without Chromium session
 restoration, and routes quit through the core. The default baseline remains stock.
@@ -658,10 +671,11 @@ the build has nothing left to do. It uploads the zipped `Chromium.app`, checksum
 and provenance into a draft, then publishes `chromium-engine-<key>` only when all
 uploads succeed. Published artifacts are never overwritten.
 
-The Windows engine has its own key, over the same inputs and
-`Hosts/win-x64.json`, so a change to a common input needs it published too.
-Publish it from the Windows build machine, from a performance build of
-`out/CrestBaseline`:
+The Windows engine has its own key, over the shared inputs, `Hosts/win-x64.json`
+and the layers it names (`Layers/Desktop` and `Layers/Windows`), so a change
+confined to those needs only the Windows engine, and a change to a shared input
+needs both. Publish it from the Windows build machine, from a performance build
+of `out/CrestBaseline`:
 
 ```
 py -3 Scripts/control-plane/configure-chromium.py --source <chromium src> --configuration performance
